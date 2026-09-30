@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Trend Detector & Paper Trading Engine - CRUDEOILM</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="dashboard-container">
+        <!-- Safety Warning Banner -->
+        <div class="safety-banner">
+            <span class="warning-icon">⚠️</span>
+            <span class="warning-text">STRICTLY PAPER TRADING ONLY — REAL ORDER EXECUTION IS HARDCODED TO DISABLED (REAL_TRADING = FALSE)</span>
+        </div>
+
+        <!-- Header Bar -->
+        <header class="header-card">
+            <div class="brand-info">
+                <h1 class="logo-title">AI TREND DETECTOR & PAPER TRADING ENGINE</h1>
+                <div class="instrument-tag">
+                    <span class="inst-name" id="inst-name">CRUDEOILM</span>
+                    <span class="exchange-badge" id="inst-exchange">MCX</span>
+                </div>
+            </div>
+
+            <div class="live-price-box">
+                <span class="price-label">LIVE LTP</span>
+                <span class="price-value" id="live-price">₹0.00</span>
+                <span class="last-tick" id="last-tick">Syncing...</span>
+            </div>
+
+            <div class="status-box">
+                <span class="status-label">SYSTEM STATUS</span>
+                <span class="status-pill status-watching" id="system-status">WATCHING</span>
+            </div>
+        </header>
+
+        <!-- Multi-Timeframe Alignment Cards -->
+        <div class="section-title">MULTI-TIMEFRAME STRUCTURE ALIGNMENT</div>
+        <div class="mtf-grid">
+            <div class="mtf-card">
+                <span class="tf-title">1H TIMEFRAME</span>
+                <span class="tf-badge tf-range" id="tf-1h">RANGE</span>
+                <span class="tf-desc">Broader Trend Structure</span>
+            </div>
+            <div class="mtf-card">
+                <span class="tf-title">15M TIMEFRAME</span>
+                <span class="tf-badge tf-range" id="tf-15m">RANGE</span>
+                <span class="tf-desc">Intermediate Structure</span>
+            </div>
+            <div class="mtf-card">
+                <span class="tf-title">5M TIMEFRAME</span>
+                <span class="tf-badge tf-range" id="tf-5m">RANGE</span>
+                <span class="tf-desc">Entry Timing & Breakouts</span>
+            </div>
+        </div>
+
+        <!-- Strategy Evaluation & Signals Grid -->
+        <div class="main-grid">
+            <!-- AI Signal & Confidence Card -->
+            <div class="card signal-card">
+                <div class="card-header">
+                    <h2>AI EVALUATION & ACTION SIGNAL</h2>
+                    <span class="action-pill action-wait" id="action-signal">WAIT</span>
+                </div>
+                <div class="card-body">
+                    <div class="trend-state-row">
+                        <div class="trend-box">
+                            <span class="label">CURRENT TREND STATE</span>
+                            <span class="trend-state-val" id="trend-state">RANGE</span>
+                        </div>
+                        <div class="confidence-box">
+                            <span class="label">SIGNAL QUALITY INDEX</span>
+                            <div class="confidence-meter-container">
+                                <div class="confidence-bar" id="confidence-bar" style="width: 0%"></div>
+                            </div>
+                            <span class="confidence-score" id="confidence-score">0 / 100</span>
+                        </div>
+                    </div>
+
+                    <!-- AI Factual Reasons List -->
+                    <div class="reasons-container">
+                        <h3>AI FACTUAL REASONS (FACTUAL AUDIT LOG)</h3>
+                        <ul class="reasons-list" id="reasons-list">
+                            <li>Initializing multi-timeframe market data...</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Position & Daily Account PnL Card -->
+            <div class="card account-card">
+                <div class="card-header">
+                    <h2>PAPER ACCOUNT & ACTIVE POSITION</h2>
+                    <span class="pos-badge" id="pos-status">NO POSITION</span>
+                </div>
+                <div class="card-body">
+                    <!-- Active Position Details -->
+                    <div class="active-pos-box" id="active-pos-box">
+                        <div class="pos-info-grid">
+                            <div><span class="lbl">Trade ID:</span> <span class="val" id="pos-id">-</span></div>
+                            <div><span class="lbl">Direction:</span> <span class="val" id="pos-dir">-</span></div>
+                            <div><span class="lbl">Entry Price:</span> <span class="val" id="pos-entry">-</span></div>
+                            <div><span class="lbl">Stop Loss:</span> <span class="val" id="pos-sl">-</span></div>
+                            <div><span class="lbl">Target 1 / 2:</span> <span class="val" id="pos-tgt">-</span></div>
+                        </div>
+                        <div class="unrealized-box">
+                            <span class="lbl">UNREALIZED P/L</span>
+                            <span class="unrealized-val" id="unrealized-pnl">₹0.00</span>
+                        </div>
+                    </div>
+
+                    <!-- Today's Realized Metrics -->
+                    <div class="daily-metrics-grid">
+                        <div class="metric-box">
+                            <span class="lbl">TODAY'S NET P/L</span>
+                            <span class="val-pnl" id="daily-net-pnl">₹0.00</span>
+                        </div>
+                        <div class="metric-box">
+                            <span class="lbl">TOTAL TRADES</span>
+                            <span class="val" id="daily-trades-count">0</span>
+                        </div>
+                        <div class="metric-box">
+                            <span class="lbl">DAILY LOSS LIMIT</span>
+                            <span class="val" id="daily-loss-limit">₹3,000.00</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Real-Time Executed Paper Trade Ledger -->
+        <div class="card ledger-card">
+            <div class="card-header">
+                <h2>EXECUTED PAPER TRADE AUDIT LEDGER</h2>
+                <span class="count-badge" id="ledger-count">0 Trades Recorded</span>
+            </div>
+            <div class="table-container">
+                <table class="ledger-table">
+                    <thead>
+                        <tr>
+                            <th>Trade ID</th>
+                            <th>Time</th>
+                            <th>Dir</th>
+                            <th>Entry</th>
+                            <th>Exit</th>
+                            <th>Exit Reason</th>
+                            <th>Trend State</th>
+                            <th>Confidence</th>
+                            <th>Gross P/L</th>
+                            <th>Charges</th>
+                            <th>Slippage</th>
+                            <th>Net P/L</th>
+                        </tr>
+                    </thead>
+                    <tbody id="ledger-tbody">
+                        <tr>
+                            <td colspan="12" class="empty-msg">No executed paper trades yet. Waiting for high-confidence trend signals...</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <script src="/static/js/dashboard.js"></script>
+</body>
+</html>
