@@ -10,6 +10,10 @@ class TradingConfig:
     # Instrument Details
     INSTRUMENT_NAME: str = "CRUDEOILM"
     EXCHANGE: str = "MCX"
+    EXCHANGE_SEGMENT: str = "MCX_FO"
+    DHAN_SECURITY_ID: str = "545802"
+    CONTRACT_EXPIRY: str = "19-OCT-2026"
+    DATA_SOURCE_NAME: str = "Dhan HQ Live Market Feed WebSocket (wss://api-feed.dhan.co)"
     LOT_SIZE: int = 10  # 1 lot CRUDEOILM = 10 barrels
     TICK_SIZE: float = 1.0
     

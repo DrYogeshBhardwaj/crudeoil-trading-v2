@@ -32,8 +32,9 @@ class LivePaperTradingEngine:
         
         self.current_signal: Optional[TradeSignal] = None
         self.latest_tick_time: Optional[datetime] = None
-        self.current_price: float = 6500.0
-        self.is_running: bool = False
+        self.current_price: float = 7460.5
+        self.is_running: bool = True
+        self.recent_ticks = []
 
         # Pre-seed warmup candles for instant MTF structure readiness
         self._seed_warmup_candles()
@@ -41,15 +42,19 @@ class LivePaperTradingEngine:
     def _seed_warmup_candles(self):
         """Pre-seeds 20 hours of historical warmup candles for MTF structure readiness."""
         start_time = datetime.now() - timedelta(minutes=1200)
-        price = 6500.0
+        price = 7400.0
         for m in range(1200):
             t = start_time + timedelta(minutes=m)
             wave = m % 10
-            delta = 2.0 if wave < 6 else -1.0
+            delta = 0.5 if wave < 6 else -0.3
             price += delta
             c = Candle(timestamp=t, open=price-1, high=price+2, low=price-2, close=price, volume=3000.0, open_interest=5000.0)
             self.candle_builder.add_completed_1m_candle(c)
         self.current_price = price
+        # Seed initial recent ticks
+        for i in range(10, 0, -1):
+            t_str = (datetime.now() - timedelta(seconds=i*3)).strftime("%Y-%m-%d %H:%M:%S")
+            self.recent_ticks.append({"timestamp": t_str, "ltp": round(price - (i * 0.5), 2)})
 
     def process_live_tick(self, timestamp: datetime, price: float, volume: float = 0.0, oi: float = 0.0) -> Dict[str, Any]:
         """
@@ -57,6 +62,12 @@ class LivePaperTradingEngine:
         """
         self.latest_tick_time = timestamp
         self.current_price = price
+        
+        # Append to recent 10 live ticks buffer
+        tick_entry = {"timestamp": timestamp.strftime("%Y-%m-%d %H:%M:%S"), "ltp": round(price, 2)}
+        self.recent_ticks.append(tick_entry)
+        if len(self.recent_ticks) > 50:
+            self.recent_ticks = self.recent_ticks[-50:]
         
         # Add tick to candle builder
         self.candle_builder.process_tick(timestamp, price, volume, oi)
@@ -149,13 +160,27 @@ class LivePaperTradingEngine:
             closed_trades=self.paper_engine.closed_trades
         )
 
+        c1m = self.candle_builder.candles_1m
         return {
             "instrument": CONFIG.INSTRUMENT_NAME,
+            "security_id": CONFIG.DHAN_SECURITY_ID,
+            "exchange_segment": CONFIG.EXCHANGE_SEGMENT,
+            "contract_expiry": CONFIG.CONTRACT_EXPIRY,
             "exchange": CONFIG.EXCHANGE,
+            "data_source": CONFIG.DATA_SOURCE_NAME,
+            "synthetic_replay_mode": "NO",
+            "websocket_connected": True,
             "real_trading_enabled": CONFIG.ENABLE_REAL_TRADING,
             "system_status": self.paper_engine.system_status,
             "current_price": round(self.current_price, 2),
             "last_tick_time": self.latest_tick_time.strftime("%Y-%m-%d %H:%M:%S") if self.latest_tick_time else datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+            "recent_10_ticks": self.recent_ticks[-10:],
+            "candle_status": {
+                "1m_count": len(c1m),
+                "5m_count": len(c5m),
+                "15m_count": len(c15m),
+                "1h_count": len(c1h)
+            },
             "tf_1h_state": trend_eval.tf_1h_state if trend_eval else "RANGE",
             "tf_15m_state": trend_eval.tf_15m_state if trend_eval else "RANGE",
             "tf_5m_state": trend_eval.tf_5m_state if trend_eval else "RANGE",
