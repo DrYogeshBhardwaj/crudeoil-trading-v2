@@ -17,7 +17,17 @@ async function updateDashboard() {
         const priceElem = document.getElementById('live-price');
         priceElem.textContent = `₹${data.current_price.toFixed(2)}`;
         
-        document.getElementById('last-tick').textContent = `Last Tick: ${data.last_tick_time || '-'}`;
+        document.getElementById('last-tick').textContent = `Last Tick (IST): ${data.last_tick_time_ist || data.last_tick_time || '-'}`;
+
+        // Feed Health Badge
+        const healthBadge = document.getElementById('feed-health');
+        if (healthBadge) {
+            const isLive = data.feed_health === 'LIVE';
+            healthBadge.textContent = isLive ? 'LIVE' : 'STALE DATA';
+            healthBadge.style.background = isLive ? 'rgba(34, 197, 94, 0.2)' : 'rgba(239, 68, 68, 0.2)';
+            healthBadge.style.color = isLive ? '#22c55e' : '#ef4444';
+            healthBadge.style.borderColor = isLive ? '#22c55e' : '#ef4444';
+        }
 
         // System Status Pill
         const statusElem = document.getElementById('system-status');
