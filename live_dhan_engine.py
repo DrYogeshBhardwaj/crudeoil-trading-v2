@@ -94,6 +94,19 @@ class LivePaperTradingEngine:
         c1h = self.candle_builder.candles_1h
         c15m = self.candle_builder.candles_15m
         c5m = self.candle_builder.candles_5m
+        c1m = self.candle_builder.candles_1m
+
+        # IST Time calculations
+        now_ist = datetime.utcnow() + timedelta(hours=5, minutes=30)
+        last_tick = self.latest_tick_time if self.latest_tick_time else now_ist
+        tick_age_seconds = round((now_ist - last_tick).total_seconds(), 1)
+        
+        # Enforce 10s Stale Data Guard
+        is_data_stale = tick_age_seconds > CONFIG.DATA_STALE_THRESHOLD_SECONDS
+        
+        system_status = "STALE DATA / NO TRADE" if is_data_stale else self.paper_engine.system_status
+        feed_health = "STALE" if is_data_stale else "LIVE"
+        paper_trading_allowed = "NO (DATA STALE)" if is_data_stale else "YES"
 
         trend_eval = TrendDetector.evaluate(c1h, c15m, c5m) if (c1h and c15m and c5m) else None
         
@@ -140,8 +153,13 @@ class LivePaperTradingEngine:
                 "net_pnl": res.net_pnl if res else 0.0
             })
 
+        signal_action = "WAIT" if is_data_stale else (self.current_signal.action if self.current_signal else "WAIT")
+        reasons = self.current_signal.reasons[:] if self.current_signal else []
+        if is_data_stale:
+            reasons.append(f"STALE DATA GUARD: Last received tick age ({tick_age_seconds}s) exceeds max threshold (10.0s). Signals PAUSED.")
+
         signal_dict = {
-            "action": self.current_signal.action if self.current_signal else "WAIT",
+            "action": signal_action,
             "trend_state": self.current_signal.trend_state if self.current_signal else "RANGE",
             "confidence": self.current_signal.confidence if self.current_signal else 0,
             "entry_price": self.current_signal.entry_price if self.current_signal else None,
@@ -149,18 +167,17 @@ class LivePaperTradingEngine:
             "target_1": self.current_signal.target_1 if self.current_signal else None,
             "target_2": self.current_signal.target_2 if self.current_signal else None,
             "risk_inr": round(self.current_signal.risk_inr, 2) if self.current_signal else 0.0,
-            "reasons": self.current_signal.reasons if self.current_signal else []
+            "reasons": reasons
         }
 
         # Daily Report Metrics
         report = DailyReporter.generate_report(
-            date_str=datetime.now().strftime("%Y-%m-%d"),
+            date_str=now_ist.strftime("%Y-%m-%d"),
             total_signals=self.paper_engine.trade_counter,
             wait_signals=0,
             closed_trades=self.paper_engine.closed_trades
         )
 
-        c1m = self.candle_builder.candles_1m
         return {
             "instrument": CONFIG.INSTRUMENT_NAME,
             "security_id": CONFIG.DHAN_SECURITY_ID,
@@ -170,11 +187,15 @@ class LivePaperTradingEngine:
             "data_source": CONFIG.DATA_SOURCE_NAME,
             "synthetic_replay_mode": "NO",
             "websocket_connected": True,
+            "feed_health": feed_health,
+            "tick_age_seconds": tick_age_seconds,
+            "paper_trading_allowed": paper_trading_allowed,
             "real_trading_enabled": CONFIG.ENABLE_REAL_TRADING,
-            "system_status": self.paper_engine.system_status,
+            "system_status": system_status,
             "current_price": round(self.current_price, 2),
-            "last_tick_time": self.latest_tick_time.strftime("%Y-%m-%d %H:%M:%S") if self.latest_tick_time else datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-            "recent_10_ticks": self.recent_ticks[-10:],
+            "server_time_ist": now_ist.strftime("%Y-%m-%d %H:%M:%S"),
+            "last_tick_time_ist": last_tick.strftime("%Y-%m-%d %H:%M:%S"),
+            "recent_20_ticks": self.recent_ticks[-20:],
             "candle_status": {
                 "1m_count": len(c1m),
                 "5m_count": len(c5m),
@@ -191,7 +212,7 @@ class LivePaperTradingEngine:
             "daily_loss_limit_hit": self.paper_engine.daily_loss_limit_hit,
             "total_trades_count": len(self.paper_engine.closed_trades),
             "report_summary": report,
-            "trade_ledger": ledger_list[:50] # Top 50 recent trades
+            "trade_ledger": ledger_list[:50]
         }
 
 # Global Singleton Instance for Service Access
