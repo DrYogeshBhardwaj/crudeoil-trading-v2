@@ -56,6 +56,14 @@ class LivePaperTradingEngine:
             t_str = (datetime.now() - timedelta(seconds=i*3)).strftime("%Y-%m-%d %H:%M:%S")
             self.recent_ticks.append({"timestamp": t_str, "ltp": round(price - (i * 0.5), 2)})
 
+        # Initial strategy evaluation on warmup candles for instant UI accuracy
+        c1h = self.candle_builder.candles_1h
+        c15m = self.candle_builder.candles_15m
+        c5m = self.candle_builder.candles_5m
+        now_ist = datetime.utcnow() + timedelta(hours=5, minutes=30)
+        if c1h and c15m and c5m:
+            self.current_signal = SignalEngine.evaluate_signal(c1h, c15m, c5m, now_ist)
+
     def process_live_tick(self, timestamp: datetime, price: float, volume: float = 0.0, oi: float = 0.0) -> Dict[str, Any]:
         """
         Main tick processor called on every incoming Dhan WebSocket / API tick.
@@ -153,20 +161,28 @@ class LivePaperTradingEngine:
                 "net_pnl": res.net_pnl if res else 0.0
             })
 
-        signal_action = "WAIT" if is_data_stale else (self.current_signal.action if self.current_signal else "WAIT")
-        reasons = self.current_signal.reasons[:] if self.current_signal else []
+        active_sig = self.current_signal
+        if not active_sig and c1h and c15m and c5m:
+            active_sig = SignalEngine.evaluate_signal(c1h, c15m, c5m, now_ist)
+            self.current_signal = active_sig
+
+        signal_action = "WAIT" if is_data_stale else (active_sig.action if active_sig else "WAIT")
+        trend_state = active_sig.trend_state if active_sig else (trend_eval.state if trend_eval else "RANGE")
+        confidence = active_sig.confidence if active_sig else (trend_eval.confidence if trend_eval else 0)
+        reasons = active_sig.reasons[:] if active_sig else (trend_eval.reasons if trend_eval else [])
+
         if is_data_stale:
             reasons.append(f"STALE DATA GUARD: Last received tick age ({tick_age_seconds}s) exceeds max threshold (10.0s). Signals PAUSED.")
 
         signal_dict = {
             "action": signal_action,
-            "trend_state": self.current_signal.trend_state if self.current_signal else "RANGE",
-            "confidence": self.current_signal.confidence if self.current_signal else 0,
-            "entry_price": self.current_signal.entry_price if self.current_signal else None,
-            "stop_loss": self.current_signal.stop_loss if self.current_signal else None,
-            "target_1": self.current_signal.target_1 if self.current_signal else None,
-            "target_2": self.current_signal.target_2 if self.current_signal else None,
-            "risk_inr": round(self.current_signal.risk_inr, 2) if self.current_signal else 0.0,
+            "trend_state": trend_state,
+            "confidence": confidence,
+            "entry_price": active_sig.entry_price if active_sig else None,
+            "stop_loss": active_sig.stop_loss if active_sig else None,
+            "target_1": active_sig.target_1 if active_sig else None,
+            "target_2": active_sig.target_2 if active_sig else None,
+            "risk_inr": round(active_sig.risk_inr, 2) if active_sig else 0.0,
             "reasons": reasons
         }
 

@@ -96,7 +96,14 @@ class SignalEngine:
             if candle_close_beyond and volume_confirmed and follow_through:
                 reasons.append(f"Breakout Confirmed: Candle closed ({candles_5m[-1].close:.1f}) at/above resistance ({resistance:.1f}) with volume.")
             else:
-                reasons.append("WAIT Triggered (False Breakout Filter): Price touch/breakout lacks candle close or volume confirmation.")
+                reasons.append("WAIT Triggered (False Breakout Filter): Multi-Timeframe is Bullish but Breakout Confirmation is Pending.")
+                reasons.append(f"• 1H Structure: {trend_eval.tf_1h_state} ✓")
+                reasons.append(f"• 15M Structure: {trend_eval.tf_15m_state} ✓")
+                reasons.append(f"• 5M Structure: {trend_eval.tf_5m_state} ✓")
+                reasons.append(f"• 5M Resistance Breakout ({candles_5m[-1].close:.1f} >= {resistance:.1f}): {'✓' if candle_close_beyond else '✗ (Pending)'}")
+                reasons.append(f"• Volume Confirmation ({vol_curr:.0f} >= {vol_sma * 0.8:.0f}): {'✓' if volume_confirmed else '✗ (Pending)'}")
+                reasons.append(f"• Bullish Candle Close (Close >= Open): {'✓' if follow_through else '✗ (Pending)'}")
+                reasons.append("• Risk Check: Pending Breakout Confirmation")
                 return TradeSignal(
                     action="WAIT", trend_state=trend_eval.state, confidence=trend_eval.confidence,
                     current_price=current_price, entry_price=None, stop_loss=None,
@@ -112,7 +119,14 @@ class SignalEngine:
             if candle_close_beyond and volume_confirmed and follow_through:
                 reasons.append(f"Breakdown Confirmed: Candle closed ({candles_5m[-1].close:.1f}) at/below support ({support:.1f}) with volume.")
             else:
-                reasons.append("WAIT Triggered (False Breakout Filter): Price touch/breakdown lacks candle close or volume confirmation.")
+                reasons.append("WAIT Triggered (False Breakout Filter): Multi-Timeframe is Bearish but Breakdown Confirmation is Pending.")
+                reasons.append(f"• 1H Structure: {trend_eval.tf_1h_state} ✓")
+                reasons.append(f"• 15M Structure: {trend_eval.tf_15m_state} ✓")
+                reasons.append(f"• 5M Structure: {trend_eval.tf_5m_state} ✓")
+                reasons.append(f"• 5M Support Breakdown ({candles_5m[-1].close:.1f} <= {support:.1f}): {'✓' if candle_close_beyond else '✗ (Pending)'}")
+                reasons.append(f"• Volume Confirmation ({vol_curr:.0f} >= {vol_sma * 0.8:.0f}): {'✓' if volume_confirmed else '✗ (Pending)'}")
+                reasons.append(f"• Bearish Candle Close (Close <= Open): {'✓' if follow_through else '✗ (Pending)'}")
+                reasons.append("• Risk Check: Pending Breakdown Confirmation")
                 return TradeSignal(
                     action="WAIT", trend_state=trend_eval.state, confidence=trend_eval.confidence,
                     current_price=current_price, entry_price=None, stop_loss=None,
