@@ -79,19 +79,10 @@ async def get_ledger():
         "ledger": state["trade_ledger"]
     })
 
-# Background live market simulation tick feeder for dashboard demonstration when live WS is waiting
 @app.on_event("startup")
 async def startup_event():
-    asyncio.create_task(simulate_live_ticks_background())
-
-async def simulate_live_ticks_background():
-    """Simulates real-time tick streaming during live paper mode execution."""
-    price = LIVE_ENGINE.current_price
-    while True:
-        await asyncio.sleep(2)
-        price += round((0.5 if (int(time.time()) // 10) % 2 == 0 else -0.5), 1)
-        now = datetime.now()
-        LIVE_ENGINE.process_live_tick(now, price, volume=2500.0, oi=5000.0)
+    # Production startup: engine is ready to receive live ticks from Dhan WS
+    pass
 
 if __name__ == "__main__":
     import uvicorn
