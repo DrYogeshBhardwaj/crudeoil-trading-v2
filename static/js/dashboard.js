@@ -19,11 +19,12 @@ async function updateDashboard() {
         
         document.getElementById('last-tick').textContent = `Last Tick (IST): ${data.last_tick_time_ist || data.last_tick_time || '-'}`;
 
-        // Feed Health Badge
+        // Feed Health & Mode Badge
         const healthBadge = document.getElementById('feed-health');
         if (healthBadge) {
-            const isLive = data.feed_health === 'LIVE';
-            healthBadge.textContent = isLive ? 'LIVE' : 'STALE DATA';
+            const feedLabel = data.feed_mode_label || (data.feed_health === 'LIVE' ? 'LIVE DHAN FEED' : 'PAPER REPLAY / NO LIVE FEED');
+            const isLive = data.feed_health === 'LIVE' && data.websocket_connected;
+            healthBadge.textContent = feedLabel;
             healthBadge.style.background = isLive ? 'rgba(34, 197, 94, 0.2)' : 'rgba(239, 68, 68, 0.2)';
             healthBadge.style.color = isLive ? '#22c55e' : '#ef4444';
             healthBadge.style.borderColor = isLive ? '#22c55e' : '#ef4444';
@@ -72,7 +73,7 @@ async function updateDashboard() {
             });
         } else {
             const li = document.createElement('li');
-            li.textContent = 'Monitoring live market structure...';
+            li.textContent = 'Monitoring market structure...';
             reasonsList.appendChild(li);
         }
 
@@ -108,14 +109,23 @@ async function updateDashboard() {
             unpnlElem.className = 'unrealized-val';
         }
 
-        // 5. Daily Account Metrics
+        // 5. Virtual Account & Capital Metrics
+        const startCap = data.starting_virtual_capital || 200000;
+        const availCap = data.available_virtual_capital || 200000;
+        const netPnlVal = data.realized_pnl || data.daily_realized_pnl || 0;
+
+        document.getElementById('starting-capital').textContent = `₹${startCap.toLocaleString('en-IN', {minimumFractionDigits: 2})}`;
+        document.getElementById('available-capital').textContent = `₹${availCap.toLocaleString('en-IN', {minimumFractionDigits: 2})}`;
+
         const netPnlElem = document.getElementById('daily-net-pnl');
-        const netPnlVal = data.daily_realized_pnl || 0;
         netPnlElem.textContent = `₹${netPnlVal >= 0 ? '+' : ''}${netPnlVal.toFixed(2)}`;
         netPnlElem.className = `val-pnl ${netPnlVal >= 0 ? 'pnl-positive' : 'pnl-negative'}`;
 
+        document.getElementById('total-charges').textContent = `₹${(data.total_charges || 0).toFixed(2)}`;
         document.getElementById('daily-trades-count').textContent = data.total_trades_count || 0;
-        document.getElementById('daily-loss-limit').textContent = `₹${(data.daily_loss_limit || 3000).toLocaleString('en-IN')}`;
+        document.getElementById('win-rate').textContent = `${data.win_rate_percent || 0.0}%`;
+        document.getElementById('profit-factor').textContent = data.profit_factor_str || '0.00';
+        document.getElementById('max-drawdown').textContent = `₹${(data.max_drawdown_inr || 0).toFixed(2)}`;
 
         // 6. Paper Trade Audit Ledger Table
         const ledger = data.trade_ledger || [];

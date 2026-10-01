@@ -131,10 +131,10 @@ class DatabaseEngine:
                 return d
             return None
 
-    def load_today_trades(self, date_str: str) -> List[Dict[str, Any]]:
+    def load_all_trades(self) -> List[Dict[str, Any]]:
         with self._get_connection() as conn:
             cursor = conn.cursor()
-            cursor.execute("SELECT * FROM paper_trades WHERE entry_timestamp LIKE ? ORDER BY entry_timestamp DESC", (f"{date_str}%",))
+            cursor.execute("SELECT * FROM paper_trades ORDER BY entry_timestamp ASC")
             rows = cursor.fetchall()
             trades = []
             for r in rows:
@@ -143,13 +143,27 @@ class DatabaseEngine:
                 trades.append(t)
             return trades
 
-    def log_audit(self, timestamp_str: str, price: float, action: str, trend_state: str, confidence: int, reasons: list, pos_status: str):
+    def save_heartbeat(self, timestamp_str: str, uptime_seconds: int):
         with self._get_connection() as conn:
             cursor = conn.cursor()
             cursor.execute("""
-                INSERT INTO audit_logs (timestamp, price, action, trend_state, confidence, reasons, position_status)
-                VALUES (?, ?, ?, ?, ?, ?, ?)
-            """, (timestamp_str, price, action, trend_state, confidence, json.dumps(reasons), pos_status))
+                CREATE TABLE IF NOT EXISTS server_heartbeat (
+                    id INTEGER PRIMARY KEY CHECK (id = 1),
+                    last_heartbeat TEXT NOT NULL,
+                    uptime_seconds INTEGER NOT NULL
+                )
+            """)
+            cursor.execute("""
+                INSERT OR REPLACE INTO server_heartbeat (id, last_heartbeat, uptime_seconds)
+                VALUES (1, ?, ?)
+            """, (timestamp_str, uptime_seconds))
             conn.commit()
+
+    def load_last_heartbeat(self) -> Optional[Dict[str, Any]]:
+        with self._get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute("SELECT * FROM server_heartbeat WHERE id = 1")
+            row = cursor.fetchone()
+            return dict(row) if row else None
 
 DB = DatabaseEngine()

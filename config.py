@@ -20,6 +20,9 @@ class TradingConfig:
     # SAFETY LOCK: REAL TRADING EXECUTION IS STRICTLY DISABLED
     ENABLE_REAL_TRADING: bool = False
     
+    # Virtual Capital Account
+    STARTING_VIRTUAL_CAPITAL_INR: float = 200000.0  # Rs. 2,00,000 Starting Virtual Capital
+    
     # Risk Management Rules
     MAX_RISK_PER_TRADE_INR: float = 2500.0  # Max Rs.2,500 risk per trade
     DAILY_LOSS_LIMIT_INR: float = 3000.0     # Max Rs.3,000 daily loss -> Auto PAUSE

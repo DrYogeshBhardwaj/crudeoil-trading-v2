@@ -45,15 +45,27 @@ async def serve_dashboard():
             return HTMLResponse(content=f.read())
     return HTMLResponse("<h2>AI Trend Detector Live Dashboard UI</h2>")
 
+SERVER_START_TIME = datetime.now()
+
 @app.get("/health")
 async def health_check():
     """
-    Health check endpoint reporting service, database, market feed, and real-trading safety lock status.
+    Health check endpoint reporting service, database, market feed, 24x7 uptime, and real-trading safety lock status.
     """
     state = LIVE_ENGINE.get_dashboard_state()
+    uptime_sec = int((datetime.now() - SERVER_START_TIME).total_seconds())
     feed_status = "CONNECTED" if state.get("websocket_connected") and state.get("feed_health") == "LIVE" else "DISCONNECTED/STALE"
+    
+    # Save 24x7 Heartbeat to SQLite DB
+    DB.save_heartbeat(datetime.now().strftime("%Y-%m-%d %H:%M:%S"), uptime_sec)
+
     return JSONResponse({
         "status": "ONLINE",
+        "engine_24x7_status": "ENGINE: RUNNING 24x7",
+        "server_mode_label": "PAPER MODE",
+        "real_trading_label": "REAL TRADING: DISABLED",
+        "browser_label": "BROWSER: VIEW ONLY",
+        "server_uptime_seconds": uptime_sec,
         "market_feed": feed_status,
         "websocket_connected": state.get("websocket_connected"),
         "dhan_client_id": state.get("dhan_client_id"),

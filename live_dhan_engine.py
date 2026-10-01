@@ -323,6 +323,39 @@ class LivePaperTradingEngine:
             closed_trades=self.paper_engine.closed_trades
         )
 
+        # Calculate performance metrics for virtual account
+        closed = self.paper_engine.closed_trades
+        total_trades = len(closed)
+        winning_trades = [t for t in closed if t.pnl_result and t.pnl_result.net_pnl > 0]
+        losing_trades = [t for t in closed if t.pnl_result and t.pnl_result.net_pnl <= 0]
+        win_rate = round((len(winning_trades) / total_trades * 100), 1) if total_trades > 0 else 0.0
+
+        gross_profit = sum(t.pnl_result.gross_pnl for t in winning_trades if t.pnl_result)
+        gross_loss = sum(abs(t.pnl_result.gross_pnl) for t in losing_trades if t.pnl_result)
+        if gross_loss > 0:
+            pf_str = f"{gross_profit / gross_loss:.2f}"
+        else:
+            pf_str = "UNDEFINED (Gross Loss = 0)" if gross_profit > 0 else "0.00"
+
+        peak = 0.0
+        cum_pnl = 0.0
+        max_dd = 0.0
+        for t in closed:
+            if t.pnl_result:
+                cum_pnl += t.pnl_result.net_pnl
+                if cum_pnl > peak:
+                    peak = cum_pnl
+                dd = peak - cum_pnl
+                if dd > max_dd:
+                    max_dd = dd
+
+        starting_cap = self.paper_engine.starting_capital
+        realized_pnl = self.paper_engine.total_realized_pnl
+        current_cap = starting_cap + realized_pnl
+        available_cap = current_cap + unrealized_pnl
+
+        feed_mode_label = "LIVE DHAN FEED" if (self.ws_connected and not is_data_stale) else "PAPER REPLAY / NO LIVE FEED"
+
         return {
             "instrument": CONFIG.INSTRUMENT_NAME,
             "security_id": CONFIG.DHAN_SECURITY_ID,
@@ -331,6 +364,7 @@ class LivePaperTradingEngine:
             "exchange": CONFIG.EXCHANGE,
             "data_source": CONFIG.DATA_SOURCE_NAME,
             "synthetic_replay_mode": "NO",
+            "feed_mode_label": feed_mode_label,
             "websocket_connected": self.ws_connected,
             "dhan_client_id": "PRESENT" if bool(os.environ.get("DHAN_CLIENT_ID", "").strip()) else "MISSING",
             "dhan_access_token": "PRESENT" if bool(os.environ.get("DHAN_ACCESS_TOKEN", "").strip()) else "MISSING",
@@ -355,10 +389,25 @@ class LivePaperTradingEngine:
             "tf_5m_state": trend_eval.tf_5m_state if trend_eval else "RANGE",
             "signal": signal_dict,
             "active_position": active_pos_dict,
+            
+            # Virtual Account Capital Metrics (Rs. 2,00,000 Mode)
+            "starting_virtual_capital": starting_cap,
+            "current_virtual_capital": round(current_cap, 2),
+            "available_virtual_capital": round(available_cap, 2),
+            "realized_pnl": round(realized_pnl, 2),
+            "unrealized_pnl": round(unrealized_pnl, 2),
             "daily_realized_pnl": round(self.paper_engine.daily_net_pnl, 2),
+            "total_charges": round(self.paper_engine.total_charges, 2),
+            "total_slippage": round(self.paper_engine.total_slippage, 2),
             "daily_loss_limit": CONFIG.DAILY_LOSS_LIMIT_INR,
             "daily_loss_limit_hit": self.paper_engine.daily_loss_limit_hit,
-            "total_trades_count": len(self.paper_engine.closed_trades),
+            "total_trades_count": total_trades,
+            "winning_trades_count": len(winning_trades),
+            "losing_trades_count": len(losing_trades),
+            "win_rate_percent": win_rate,
+            "profit_factor_str": pf_str,
+            "max_drawdown_inr": round(max_dd, 2),
+            
             "report_summary": report,
             "trade_ledger": ledger_list[:50]
         }

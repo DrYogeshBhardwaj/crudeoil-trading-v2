@@ -168,7 +168,7 @@ class TestCoreEngine(unittest.TestCase):
 
     def test_07_daily_loss_limit_paused(self):
         """Scenario 7: Daily Loss Limit Hit -> System State PAUSED"""
-        paper_engine = PaperExecutionEngine()
+        paper_engine = PaperExecutionEngine(restore_db=False)
         paper_engine.daily_net_pnl = -3200.0
         
         c1h = self._generate_structured_candles("UP", 60, 6000.0)
@@ -206,7 +206,7 @@ class TestCoreEngine(unittest.TestCase):
 
     def test_10_max_one_lot_enforced(self):
         """Scenario 10: Maximum 1 Lot Enforced Strictly"""
-        paper_engine = PaperExecutionEngine()
+        paper_engine = PaperExecutionEngine(restore_db=False)
         c1h = self._generate_structured_candles("UP", 60, 6000.0)
         c15m = self._generate_structured_candles("UP", 60, 6200.0)
         c5m = self._generate_structured_candles("UP", 60, 6400.0)
@@ -228,7 +228,7 @@ class TestCoreEngine(unittest.TestCase):
 
     def test_11_no_martingale_after_loss(self):
         """Scenario 11: Quantity Never Increases After Loss (No Martingale)"""
-        paper_engine = PaperExecutionEngine()
+        paper_engine = PaperExecutionEngine(restore_db=False)
         
         c1h = self._generate_structured_candles("UP", 60, 6000.0)
         c15m = self._generate_structured_candles("UP", 60, 6200.0)

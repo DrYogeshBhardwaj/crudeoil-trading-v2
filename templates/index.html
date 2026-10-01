@@ -19,15 +19,19 @@
         <header class="header-card">
             <div class="brand-info">
                 <h1 class="logo-title">AI TREND DETECTOR & PAPER TRADING ENGINE</h1>
-                <div class="instrument-tag">
+                <div class="instrument-tag" style="display: flex; gap: 6px; align-items: center; flex-wrap: wrap; margin-top: 6px;">
                     <span class="inst-name" id="inst-name">CRUDEOILM</span>
                     <span class="exchange-badge" id="inst-exchange">MCX</span>
-                    <span class="feed-health-badge" id="feed-health" style="background: rgba(34, 197, 94, 0.2); color: #22c55e; border: 1px solid #22c55e; padding: 2px 8px; border-radius: 4px; font-weight: 700; margin-left: 8px; font-size: 0.8rem;">LIVE</span>
+                    <span style="background: rgba(34, 197, 94, 0.2); color: #22c55e; border: 1px solid #22c55e; padding: 2px 8px; border-radius: 4px; font-weight: 700; font-size: 0.75rem;">ENGINE: RUNNING 24x7</span>
+                    <span style="background: rgba(56, 189, 248, 0.2); color: #38bdf8; border: 1px solid #38bdf8; padding: 2px 8px; border-radius: 4px; font-weight: 700; font-size: 0.75rem;">PAPER MODE</span>
+                    <span style="background: rgba(239, 68, 68, 0.2); color: #ef4444; border: 1px solid #ef4444; padding: 2px 8px; border-radius: 4px; font-weight: 700; font-size: 0.75rem;">REAL TRADING: DISABLED</span>
+                    <span style="background: rgba(168, 85, 247, 0.2); color: #c084fc; border: 1px solid #c084fc; padding: 2px 8px; border-radius: 4px; font-weight: 700; font-size: 0.75rem;">BROWSER: VIEW ONLY</span>
+                    <span class="feed-health-badge" id="feed-health" style="background: rgba(239, 68, 68, 0.2); color: #ef4444; border: 1px solid #ef4444; padding: 2px 8px; border-radius: 4px; font-weight: 700; font-size: 0.75rem;">PAPER REPLAY / NO LIVE FEED</span>
                 </div>
             </div>
 
             <div class="live-price-box">
-                <span class="price-label">LIVE LTP</span>
+                <span class="price-label">LIVE / REPLAY LTP</span>
                 <span class="price-value" id="live-price">₹0.00</span>
                 <span class="last-tick" id="last-tick">Syncing...</span>
             </div>
@@ -94,10 +98,22 @@
             <!-- Position & Daily Account PnL Card -->
             <div class="card account-card">
                 <div class="card-header">
-                    <h2>PAPER ACCOUNT & ACTIVE POSITION</h2>
+                    <h2>VIRTUAL CAPITAL & ACTIVE POSITION (₹2,00,000 MODE)</h2>
                     <span class="pos-badge" id="pos-status">NO POSITION</span>
                 </div>
                 <div class="card-body">
+                    <!-- Virtual Capital Summary Bar -->
+                    <div style="display: flex; justify-content: space-between; background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255, 255, 255, 0.08); padding: 10px 14px; border-radius: 8px; margin-bottom: 12px;">
+                        <div>
+                            <div style="font-size: 0.75rem; color: #94a3b8; font-weight: 600;">STARTING CAPITAL</div>
+                            <div style="font-size: 1.1rem; font-weight: 800; color: #f8fafc;" id="starting-capital">₹2,00,000.00</div>
+                        </div>
+                        <div>
+                            <div style="font-size: 0.75rem; color: #94a3b8; font-weight: 600;">AVAILABLE VIRTUAL CAPITAL</div>
+                            <div style="font-size: 1.1rem; font-weight: 800; color: #38bdf8;" id="available-capital">₹2,00,000.00</div>
+                        </div>
+                    </div>
+
                     <!-- Active Position Details -->
                     <div class="active-pos-box" id="active-pos-box">
                         <div class="pos-info-grid">
@@ -113,19 +129,31 @@
                         </div>
                     </div>
 
-                    <!-- Today's Realized Metrics -->
-                    <div class="daily-metrics-grid">
+                    <!-- Realized Performance Metrics -->
+                    <div class="daily-metrics-grid" style="grid-template-columns: repeat(3, 1fr); gap: 8px;">
                         <div class="metric-box">
-                            <span class="lbl">TODAY'S NET P/L</span>
+                            <span class="lbl">NET REALIZED P/L</span>
                             <span class="val-pnl" id="daily-net-pnl">₹0.00</span>
+                        </div>
+                        <div class="metric-box">
+                            <span class="lbl">ESTIMATED CHARGES</span>
+                            <span class="val" id="total-charges">₹0.00</span>
                         </div>
                         <div class="metric-box">
                             <span class="lbl">TOTAL TRADES</span>
                             <span class="val" id="daily-trades-count">0</span>
                         </div>
                         <div class="metric-box">
-                            <span class="lbl">DAILY LOSS LIMIT</span>
-                            <span class="val" id="daily-loss-limit">₹3,000.00</span>
+                            <span class="lbl">WIN RATE</span>
+                            <span class="val" id="win-rate">0.0%</span>
+                        </div>
+                        <div class="metric-box">
+                            <span class="lbl">PROFIT FACTOR</span>
+                            <span class="val" id="profit-factor">0.00</span>
+                        </div>
+                        <div class="metric-box">
+                            <span class="lbl">MAX DRAWDOWN</span>
+                            <span class="val" id="max-drawdown">₹0.00</span>
                         </div>
                     </div>
                 </div>

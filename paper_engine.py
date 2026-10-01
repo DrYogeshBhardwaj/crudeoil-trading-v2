@@ -34,15 +34,84 @@ class PaperPosition:
     exit_reason: Optional[str] = None
     pnl_result: Optional[PnLResult] = None
 
+from database import DB
+
 class PaperExecutionEngine:
 
-    def __init__(self):
+    def __init__(self, starting_capital: float = CONFIG.STARTING_VIRTUAL_CAPITAL_INR, restore_db: bool = True):
+        self.starting_capital: float = starting_capital
         self.active_position: Optional[PaperPosition] = None
         self.closed_trades: List[PaperPosition] = []
         self.daily_net_pnl: float = 0.0
         self.daily_loss_limit_hit: bool = False
         self.system_status: str = "WATCHING"   # 'WATCHING', 'PAPER ACTIVE', 'PAUSED', 'NO TRADE'
         self.trade_counter: int = 0
+        if restore_db:
+            self._restore_from_db()
+
+    def _restore_from_db(self):
+        """Restores closed trades and active position from SQLite database for crash persistence."""
+        try:
+            db_trades = DB.load_all_trades()
+            for dt in db_trades:
+                entry_ts = datetime.strptime(dt["entry_timestamp"], "%Y-%m-%d %H:%M:%S") if isinstance(dt["entry_timestamp"], str) else dt["entry_timestamp"]
+                exit_ts = datetime.strptime(dt["exit_timestamp"], "%Y-%m-%d %H:%M:%S") if dt.get("exit_timestamp") and isinstance(dt["exit_timestamp"], str) else dt.get("exit_timestamp")
+                
+                pos = PaperPosition(
+                    trade_id=dt["trade_id"],
+                    entry_timestamp=entry_ts,
+                    instrument=dt["instrument"],
+                    direction=dt["direction"],
+                    quantity=dt["quantity"],
+                    entry_price=dt["entry_price"],
+                    stop_loss=dt["stop_loss"],
+                    original_stop_loss=dt["original_stop_loss"],
+                    target_1=dt["target_1"],
+                    target_2=dt["target_2"],
+                    trend_state=dt["trend_state"],
+                    confidence=dt["confidence"],
+                    reasons=dt.get("reasons", []),
+                    status=dt["status"],
+                    exit_timestamp=exit_ts,
+                    exit_price=dt.get("exit_price"),
+                    exit_reason=dt.get("exit_reason")
+                )
+                if dt.get("net_pnl") is not None:
+                    pnl_res = PnLCalculator.calculate_trade_pnl(
+                        direction=dt["direction"],
+                        entry_price=dt["entry_price"],
+                        exit_price=dt["exit_price"],
+                        quantity=dt["quantity"]
+                    )
+                    pos.pnl_result = pnl_res
+
+                if dt["status"] == "OPEN":
+                    self.active_position = pos
+                    self.system_status = "PAPER ACTIVE"
+                else:
+                    self.closed_trades.append(pos)
+                    if pos.pnl_result:
+                        self.daily_net_pnl += pos.pnl_result.net_pnl
+                
+                self.trade_counter += 1
+        except Exception as e:
+            print(f"Warning restoring paper state from DB: {e}")
+
+    @property
+    def total_realized_pnl(self) -> float:
+        return sum(t.pnl_result.net_pnl for t in self.closed_trades if t.pnl_result)
+
+    @property
+    def current_virtual_capital(self) -> float:
+        return self.starting_capital + self.total_realized_pnl
+
+    @property
+    def total_charges(self) -> float:
+        return sum(t.pnl_result.charges.total_deductions - t.pnl_result.charges.slippage for t in self.closed_trades if t.pnl_result)
+
+    @property
+    def total_slippage(self) -> float:
+        return sum(t.pnl_result.charges.slippage for t in self.closed_trades if t.pnl_result)
 
     def process_signal_and_market(self, signal: TradeSignal, current_candle: object) -> Optional[PaperPosition]:
         """
@@ -141,6 +210,24 @@ class PaperExecutionEngine:
             )
             self.active_position = new_pos
             self.system_status = "PAPER ACTIVE"
+            
+            # Persist OPEN position to SQLite DB
+            DB.save_paper_trade({
+                "trade_id": new_pos.trade_id,
+                "entry_timestamp": new_pos.entry_timestamp.strftime("%Y-%m-%d %H:%M:%S"),
+                "instrument": new_pos.instrument,
+                "direction": new_pos.direction,
+                "quantity": new_pos.quantity,
+                "entry_price": new_pos.entry_price,
+                "stop_loss": new_pos.stop_loss,
+                "original_stop_loss": new_pos.original_stop_loss,
+                "target_1": new_pos.target_1,
+                "target_2": new_pos.target_2,
+                "trend_state": new_pos.trend_state,
+                "confidence": new_pos.confidence,
+                "reasons": new_pos.reasons,
+                "status": "OPEN"
+            })
             return new_pos
 
         return None
@@ -162,6 +249,31 @@ class PaperExecutionEngine:
         self.daily_net_pnl += pnl_res.net_pnl
         self.closed_trades.append(pos)
         self.active_position = None
+        
+        # Persist CLOSED trade to SQLite DB
+        DB.save_paper_trade({
+            "trade_id": pos.trade_id,
+            "entry_timestamp": pos.entry_timestamp.strftime("%Y-%m-%d %H:%M:%S"),
+            "instrument": pos.instrument,
+            "direction": pos.direction,
+            "quantity": pos.quantity,
+            "entry_price": pos.entry_price,
+            "stop_loss": pos.stop_loss,
+            "original_stop_loss": pos.original_stop_loss,
+            "target_1": pos.target_1,
+            "target_2": pos.target_2,
+            "trend_state": pos.trend_state,
+            "confidence": pos.confidence,
+            "reasons": pos.reasons,
+            "status": "CLOSED",
+            "exit_timestamp": pos.exit_timestamp.strftime("%Y-%m-%d %H:%M:%S") if pos.exit_timestamp else None,
+            "exit_price": pos.exit_price,
+            "exit_reason": pos.exit_reason,
+            "gross_pnl": pnl_res.gross_pnl,
+            "charges": round(pnl_res.charges.total_deductions - pnl_res.charges.slippage, 2),
+            "slippage": pnl_res.charges.slippage,
+            "net_pnl": pnl_res.net_pnl
+        })
         
         if self.daily_net_pnl <= -CONFIG.DAILY_LOSS_LIMIT_INR:
             self.daily_loss_limit_hit = True
