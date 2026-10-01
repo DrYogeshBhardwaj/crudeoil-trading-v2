@@ -222,9 +222,10 @@ class LiveTestEngine:
 
     def start_60min_test(self):
         """Starts or resets the 60-minute live test session window."""
+        self.test_enabled = True
         self.test_active = True
         self.test_start_time = datetime.now()
-        self.system_status = "LIVE TEST RUNNING (60 MIN WINDOW)"
+        self.system_status = "LIVE TEST RUNNING (60 MIN WINDOW ACTIVE)"
 
     def stop_test(self, reason: str = "MANUAL_STOP"):
         """Stops the 60-minute live test window."""
