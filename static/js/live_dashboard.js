@@ -141,6 +141,57 @@ async function updateLiveDashboard() {
             });
         }
 
+        // 7b. Strategy Evaluation Stream Card
+        const evalCountElem = document.getElementById('eval-count-badge');
+        if (evalCountElem) {
+            evalCountElem.textContent = `${(data.evaluation_count || 0).toLocaleString()} Live Ticks Evaluated`;
+        }
+
+        const evalActionTag = document.getElementById('eval-action-tag');
+        const evalTrendTag = document.getElementById('eval-trend-tag');
+        const evalReasonsText = document.getElementById('eval-reasons-text');
+
+        if (data.latest_evaluation) {
+            const ev = data.latest_evaluation;
+            const act = ev.action || 'WAIT';
+            if (evalActionTag) {
+                evalActionTag.textContent = act;
+                evalActionTag.style.color = act === 'BUY' ? '#10b981' : (act === 'SELL' ? '#ef4444' : '#f59e0b');
+                evalActionTag.style.borderColor = act === 'BUY' ? '#10b981' : (act === 'SELL' ? '#ef4444' : '#f59e0b');
+                evalActionTag.style.background = act === 'BUY' ? 'rgba(16, 185, 129, 0.15)' : (act === 'SELL' ? 'rgba(239, 68, 68, 0.15)' : 'rgba(245, 158, 11, 0.15)');
+            }
+            if (evalTrendTag) {
+                evalTrendTag.textContent = `Trend: ${ev.trend_state || 'RANGE'} (Conf: ${ev.confidence || 0}%) | Time: ${ev.timestamp_ist || '-'}`;
+            }
+            if (evalReasonsText) {
+                const rStr = ev.reasons && ev.reasons.length > 0 ? ev.reasons.join('; ') : 'No entry conditions triggered';
+                evalReasonsText.textContent = `Reasons: ${rStr}`;
+            }
+        } else {
+            if (evalReasonsText) {
+                evalReasonsText.textContent = data.market_status === 'CLOSED' ? 
+                    'Market Session CLOSED (09:00 - 23:30 IST). Strategy evaluation automatically resumes when market opens.' : 
+                    'Waiting for live market tick feed...';
+            }
+        }
+
+        const candleGrid = document.getElementById('candle-counts-grid');
+        if (candleGrid && data.candle_status) {
+            const c = data.candle_status;
+            candleGrid.textContent = `1H: ${c['1h_count'] || 0} | 15M: ${c['15m_count'] || 0} | 5M: ${c['5m_count'] || 0} | 1M: ${c['1m_count'] || 0}`;
+        }
+
+        const logsBox = document.getElementById('live-tick-logs-box');
+        if (logsBox) {
+            const logs = data.latest_evaluation_logs || [];
+            if (logs.length === 0) {
+                logsBox.innerHTML = `<div>${data.market_status === 'CLOSED' ? 'Market Session CLOSED (MCX Hours: 09:00 - 23:30 IST). Live ticks will stream when market opens at 09:00 AM IST.' : 'No tick logs yet. Waiting for live tick stream...'}</div>`;
+            } else {
+                logsBox.innerHTML = logs.map(log => `<div>${log}</div>`).join('');
+                logsBox.scrollTop = logsBox.scrollHeight;
+            }
+        }
+
         // 8. Executed Live Trade Audit Ledger
         const ledger = data.trade_ledger || [];
         document.getElementById('ledger-count').textContent = `${ledger.length} Live Trades Recorded`;

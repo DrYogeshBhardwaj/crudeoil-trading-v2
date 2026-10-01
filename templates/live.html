@@ -200,6 +200,50 @@
             </div>
         </div>
 
+        <!-- Real-Time Strategy Evaluation Stream Panel -->
+        <div class="card signal-card" style="margin-top: 16px;">
+            <div class="card-header" style="display: flex; justify-content: space-between; align-items: center;">
+                <h2>⚡ REAL-TIME STRATEGY EVALUATION STREAM (LIVE DHAN TICKS)</h2>
+                <div>
+                    <span id="eval-count-badge" style="background: rgba(168, 85, 247, 0.2); color: #c084fc; border: 1px solid #c084fc; padding: 3px 10px; border-radius: 4px; font-weight: 800; font-size: 0.8rem;">
+                        0 Live Ticks Evaluated
+                    </span>
+                </div>
+            </div>
+            <div class="card-body">
+                <!-- Evaluation State & Candle Warmup Grid -->
+                <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 12px; margin-bottom: 12px;">
+                    <!-- Latest Evaluation Status -->
+                    <div style="background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.08); padding: 12px; border-radius: 8px;">
+                        <div style="font-size: 0.75rem; color: #94a3b8; font-weight: 700; margin-bottom: 4px;">CURRENT TICK EVALUATION DECISION</div>
+                        <div style="display: flex; align-items: center; gap: 12px;">
+                            <span id="eval-action-tag" style="font-size: 1.1rem; font-weight: 800; color: #f59e0b; background: rgba(245, 158, 11, 0.15); border: 1px solid #f59e0b; padding: 4px 12px; border-radius: 6px;">WAIT</span>
+                            <span id="eval-trend-tag" style="font-size: 0.85rem; color: #cbd5e1; font-weight: 600;">Trend: RANGE</span>
+                        </div>
+                        <div id="eval-reasons-text" style="font-size: 0.78rem; color: #94a3b8; font-family: 'JetBrains Mono', monospace; margin-top: 6px;">
+                            Waiting for live ticks...
+                        </div>
+                    </div>
+                    <!-- MTF Candle State -->
+                    <div style="background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.08); padding: 12px; border-radius: 8px;">
+                        <div style="font-size: 0.75rem; color: #94a3b8; font-weight: 700; margin-bottom: 4px;">MTF CANDLE WARMUP</div>
+                        <div id="candle-counts-grid" style="font-size: 0.78rem; font-family: 'JetBrains Mono', monospace; color: #38bdf8;">
+                            1H: 0 | 15M: 0 | 5M: 0 | 1M: 0
+                        </div>
+                        <div id="market-session-note" style="font-size: 0.7rem; color: #a855f7; margin-top: 6px; font-weight: 600;">
+                            MCX Session: 09:00 - 23:30 IST
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Live Tick Logs Box -->
+                <div style="font-size: 0.75rem; color: #94a3b8; font-weight: 700; margin-bottom: 6px;">RECENT TICK EVALUATION LOGS (LIVE FEED AUDIT)</div>
+                <div id="live-tick-logs-box" style="background: #090d16; border: 1px solid rgba(255,255,255,0.1); padding: 10px; border-radius: 6px; max-height: 180px; overflow-y: auto; font-family: 'JetBrains Mono', monospace; font-size: 0.72rem; color: #38bdf8; line-height: 1.5;">
+                    <div>Syncing tick evaluation stream...</div>
+                </div>
+            </div>
+        </div>
+
         <!-- Executed Live Trade Audit Ledger -->
         <div class="card ledger-card" style="margin-top: 16px;">
             <div class="card-header">
