@@ -603,6 +603,14 @@ class LiveTestEngine:
         if effective_price == 0.0 and fund_info["status"] != "CONNECTED":
             display_status = f"NO LIVE FEED / NO TRADE ({fund_info['status']})"
 
+        ws_logs = []
+        try:
+            from live_dhan_engine import LIVE_ENGINE
+            if hasattr(LIVE_ENGINE, "feed_manager") and hasattr(LIVE_ENGINE.feed_manager, "ws_logs"):
+                ws_logs = LIVE_ENGINE.feed_manager.ws_logs[-20:]
+        except Exception:
+            pass
+
         return {
             "mode": "LIVE_TEST",
             "instrument": CONFIG.INSTRUMENT_NAME,
@@ -632,6 +640,7 @@ class LiveTestEngine:
             "total_trades_count": total_trades,
             "active_position": active_pos_dict,
             "trade_ledger": ledger_list,
+            "dhan_ws_logs": ws_logs,
             "readiness_report": self.get_readiness_report()
         }
 

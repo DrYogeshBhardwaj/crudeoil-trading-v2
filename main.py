@@ -251,6 +251,7 @@ async def db_diagnostic():
 @app.on_event("startup")
 async def startup_event():
     """Starts background Dhan WebSocket listener loop on app startup."""
+    print(f"[{datetime.now()}] [STARTUP] Spawning LIVE_ENGINE.start_feed_loop background task...")
     asyncio.create_task(LIVE_ENGINE.start_feed_loop())
 
 if __name__ == "__main__":

@@ -32,61 +32,80 @@ class DhanFeedManager:
     def __init__(self, engine: "LivePaperTradingEngine"):
         self.engine = engine
         self.feed_url = os.environ.get("DHAN_FEED_URL", "wss://api-feed.dhan.co")
-        self.security_id = CONFIG.DHAN_SECURITY_ID
+        self.security_id = CONFIG.DHAN_SECURITY_ID  # "569901"
         self.exchange_segment = CONFIG.EXCHANGE_SEGMENT
         self.is_running = True
         self.last_error = None
+        self.ws_logs = []
+
+    def add_ws_log(self, msg: str):
+        now_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S IST")
+        entry = f"[{now_str}] {msg}"
+        self.ws_logs.append(entry)
+        if len(self.ws_logs) > 100:
+            self.ws_logs = self.ws_logs[-100:]
+        print(entry)
 
     async def connect_and_listen(self):
         """
-        Main continuous WebSocket listener loop with auto-reconnection and token sanitization.
+        Main continuous WebSocket listener loop with automatic reconnection and token sanitization.
         """
         import websockets
         import struct
         
+        self.add_ws_log("DhanFeedManager loop started.")
         retry_delay = 5
+        
         while self.is_running:
             from live_trading_engine import LIVE_TEST_ENGINE
-            client_id = os.environ.get("DHAN_CLIENT_ID", "").strip() or LIVE_TEST_ENGINE.adapter.client_id
-            access_token = os.environ.get("DHAN_ACCESS_TOKEN", "").strip() or LIVE_TEST_ENGINE.adapter.access_token
+            
+            # Prioritize self-healing verified credentials from LIVE_TEST_ENGINE adapter
+            client_id = LIVE_TEST_ENGINE.adapter.client_id or os.environ.get("DHAN_CLIENT_ID", "").strip()
+            access_token = LIVE_TEST_ENGINE.adapter.access_token or os.environ.get("DHAN_ACCESS_TOKEN", "").strip()
 
             if not client_id or not access_token:
                 self.engine.ws_connected = False
                 missing_list = []
                 if not client_id: missing_list.append("DHAN_CLIENT_ID")
                 if not access_token: missing_list.append("DHAN_ACCESS_TOKEN")
-                self.last_error = f"Missing environment variable(s): {', '.join(missing_list)}"
+                self.last_error = f"Missing credential(s): {', '.join(missing_list)}"
+                self.add_ws_log(f"WS Waiting: {self.last_error}")
                 await asyncio.sleep(5)
                 continue
 
             ws_url = f"{self.feed_url}?version=2&token={access_token}&clientId={client_id}&authType=2"
+            self.add_ws_log(f"Connecting to Dhan WebSocket feed for Security ID {self.security_id} (Client ID: {client_id})...")
+            
             try:
                 async with websockets.connect(ws_url, ping_interval=20, ping_timeout=10) as ws:
                     self.engine.ws_connected = True
                     self.last_error = None
-                    retry_delay = 5  # Reset retry delay on successful connection
-                    print(f"[{datetime.now()}] Connected to Dhan WebSocket Live Feed for Security ID {self.security_id}")
+                    retry_delay = 5
+                    self.add_ws_log(f"WebSocket CONNECTED to {self.feed_url}!")
                     
-                    # Send Dhan HQ API v2 Binary Subscription Packet for MCX CRUDEOILM
+                    # Send Dhan HQ API v2 Binary Subscription Packet for MCX CRUDEOILM (Security ID 569901)
                     sub_bin = self._create_dhan_v2_sub_packet(client_id, self.security_id)
                     await ws.send(sub_bin)
+                    self.add_ws_log(f"Binary Subscription Packet SENT (ReqCode=15, ExchangeSegment=5, SecID={self.security_id}).")
 
-                    # Send fallback JSON subscription payload
+                    # Send fallback JSON subscription payload with MCX_COMM
                     try:
                         sub_payload = {
                             "RequestCode": 15,
                             "InstrumentCount": 1,
                             "InstrumentList": [
                                 {
-                                    "ExchangeSegment": "MCX_FO",
+                                    "ExchangeSegment": "MCX_COMM",
                                     "SecurityId": self.security_id
                                 }
                             ]
                         }
                         await ws.send(json.dumps(sub_payload))
+                        self.add_ws_log(f"JSON Fallback Subscription SENT for MCX_COMM / {self.security_id}.")
                     except Exception:
                         pass
                     
+                    first_tick_logged = False
                     while self.is_running:
                         message = await ws.recv()
                         now_ist = datetime.utcnow() + timedelta(hours=5, minutes=30)
@@ -94,9 +113,12 @@ class DhanFeedManager:
                         if isinstance(message, bytes):
                             price = self._parse_dhan_binary_ltp(message)
                             if price and price > 0:
+                                if not first_tick_logged:
+                                    self.add_ws_log(f"FIRST LIVE TICK RECEIVED -> Security ID: {self.security_id}, LTP: Rs. {price}")
+                                    first_tick_logged = True
+                                
                                 self.engine.process_live_tick(now_ist, price)
                                 try:
-                                    from live_trading_engine import LIVE_TEST_ENGINE
                                     LIVE_TEST_ENGINE.update_live_ltp(price)
                                 except Exception:
                                     pass
@@ -106,9 +128,12 @@ class DhanFeedManager:
                                 price = data.get("LTP") or data.get("ltp") or data.get("last_price")
                                 if price:
                                     flt_price = float(price)
+                                    if not first_tick_logged:
+                                        self.add_ws_log(f"FIRST LIVE TICK RECEIVED (JSON) -> Security ID: {self.security_id}, LTP: Rs. {flt_price}")
+                                        first_tick_logged = True
+                                        
                                     self.engine.process_live_tick(now_ist, flt_price)
                                     try:
-                                        from live_trading_engine import LIVE_TEST_ENGINE
                                         LIVE_TEST_ENGINE.update_live_ltp(flt_price)
                                     except Exception:
                                         pass
@@ -129,18 +154,19 @@ class DhanFeedManager:
                 else:
                     retry_delay = 5
 
-                print(f"[{datetime.now()}] Dhan WS Connection issue: {err_str}. Reconnecting in {retry_delay}s...")
+                self.add_ws_log(f"Dhan WS Disconnected: {err_str}. Reconnecting in {retry_delay}s...")
                 await asyncio.sleep(retry_delay)
 
-    def _create_dhan_v2_sub_packet(self, client_id: str, sec_id: str = "545802") -> bytes:
+    def _create_dhan_v2_sub_packet(self, client_id: str, sec_id: Optional[str] = None) -> bytes:
         """Constructs Dhan HQ API v2 83-byte binary subscription packet for MCX Crude Oil."""
         import struct
+        target_sec_id = sec_id or self.security_id or "569901"
         num_inst = 1
         msg_len = 83 + 4 + (num_inst * 21)
         header = struct.pack('<bH30s50s', 15, msg_len, client_id.encode('utf-8')[:30].ljust(30, b'\0'), b'\0' * 50)
         num_inst_bytes = struct.pack('<I', num_inst)
         # ExchangeSegment = 5 for MCX Commodities/Futures in Dhan HQ v2
-        inst_bytes = struct.pack('<B20s', 5, sec_id.encode('utf-8')[:20].ljust(20, b'\0'))
+        inst_bytes = struct.pack('<B20s', 5, target_sec_id.encode('utf-8')[:20].ljust(20, b'\0'))
         
         padding = b""
         for _ in range(99):
@@ -250,6 +276,8 @@ class LivePaperTradingEngine:
 
     async def start_feed_loop(self):
         """Launches continuous Dhan WebSocket live feed listener AND server-side replay feed."""
+        self.feed_manager.add_ws_log("start_feed_loop() EXECUTED on app startup.")
+        self.feed_manager.add_ws_log("Spawning asyncio.create_task(self.feed_manager.connect_and_listen())...")
         asyncio.create_task(self.feed_manager.connect_and_listen())
         await self.replay_feed.start_replay_loop()
 
