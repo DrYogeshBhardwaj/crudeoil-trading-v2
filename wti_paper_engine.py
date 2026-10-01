@@ -53,6 +53,12 @@ class WTIPaperEngine:
         self.is_running = False
         self.loop_task: Optional[asyncio.Task] = None
 
+        # Pre-populate tick and strategy evaluation on engine startup
+        try:
+            self.process_tick()
+        except Exception as err:
+            print(f"[WTI ENGINE INIT NOTICE] Could not pre-populate tick on init: {err}")
+
     def calculate_pnl_tallies(self) -> Dict[str, Any]:
         """Calculates total realized P&L, trade count, win/loss count, and net equity."""
         closed_trades = [t for t in self.trade_ledger if t.get("status") == "CLOSED"]

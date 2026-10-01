@@ -1,17 +1,6 @@
 """
 Comprehensive Unit & Integration Test Suite for WTI Crude Oil Paper Trading Engine.
-Validates:
-1. Feed Connection Test
-2. Price Parsing Test
-3. Market Hours Calculation Test
-4. Candle Builder & Strategy Evaluation Test
-5. BUY Paper Trade Test
-6. SELL Paper Trade Test
-7. Stop Loss Exit Test
-8. Target Exit Test
-9. P&L & Charges Math Test
-10. Database Restart & Persistence Test
-11. Safety Check (No Dhan / Real Order Broker APIs in WTI Module)
+Validates MCL Mode (100 Barrels) & CL Mode (1,000 Barrels) functionality.
 """
 
 import unittest
@@ -27,8 +16,9 @@ from database import DB
 class TestWTIEngine(unittest.TestCase):
 
     def setUp(self):
-        # Reset WTI DB state before each test run
+        # Reset WTI DB state & enforce MCL mode for default tests
         WTI_ENGINE.reset_paper_account()
+        WTI_ENGINE.set_contract_type("MCL")
 
     def test_1_feed_connection(self):
         """1. Feed connection test"""
@@ -110,8 +100,8 @@ class TestWTIEngine(unittest.TestCase):
         self.assertEqual(pos["status"], "OPEN")
         print(f"[TEST 6 PASS] SELL Paper Trade Entry Created: {pos['trade_id']}")
 
-    def test_7_stop_loss_exit(self):
-        """7. Stop Loss hit test"""
+    def test_7_stop_loss_exit_mcl(self):
+        """7. Stop Loss hit test (MCL mode = 100 barrels)"""
         now_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         WTI_ENGINE._open_position(
             direction="BUY",
@@ -124,7 +114,7 @@ class TestWTIEngine(unittest.TestCase):
             timestamp_str=now_str
         )
 
-        # Trigger exit with price hitting SL ($88.50 <= $89.00)
+        # Trigger exit with price hitting SL ($89.00)
         WTI_ENGINE._close_position(exit_price=89.00, exit_reason="STOP LOSS HIT", timestamp_str=now_str)
 
         self.assertIsNone(WTI_ENGINE.active_position)
@@ -132,12 +122,14 @@ class TestWTIEngine(unittest.TestCase):
         self.assertEqual(closed_trade["status"], "CLOSED")
         self.assertEqual(closed_trade["exit_reason"], "STOP LOSS HIT")
         self.assertEqual(closed_trade["exit_price"], 89.00)
-        # Gross PnL for 1 contract = (89 - 90) * 1 * 1000 = -$1000
-        self.assertEqual(closed_trade["gross_pnl"], -1000.0)
-        print(f"[TEST 7 PASS] Stop Loss Exit Executed: Net PnL = ${closed_trade['net_pnl']}")
+        # Gross PnL for 1 MCL contract = (89 - 90) * 1 * 100 = -$100.00
+        self.assertEqual(closed_trade["gross_pnl"], -100.0)
+        # Charges = $1.00 ($0.50 * 2), Net = -$101.00
+        self.assertEqual(closed_trade["net_pnl"], -101.0)
+        print(f"[TEST 7 PASS] Stop Loss Exit Executed (MCL Mode): Net PnL = ${closed_trade['net_pnl']}")
 
-    def test_8_target_exit(self):
-        """8. Target hit test"""
+    def test_8_target_exit_mcl(self):
+        """8. Target hit test (MCL mode = 100 barrels)"""
         now_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         WTI_ENGINE._open_position(
             direction="BUY",
@@ -150,35 +142,35 @@ class TestWTIEngine(unittest.TestCase):
             timestamp_str=now_str
         )
 
-        # Trigger exit with price hitting Target ($92.00 >= $92.00)
+        # Trigger exit with price hitting Target ($92.00)
         WTI_ENGINE._close_position(exit_price=92.00, exit_reason="TARGET HIT", timestamp_str=now_str)
 
         self.assertIsNone(WTI_ENGINE.active_position)
         closed_trade = WTI_ENGINE.trade_ledger[0]
         self.assertEqual(closed_trade["status"], "CLOSED")
         self.assertEqual(closed_trade["exit_reason"], "TARGET HIT")
-        # Gross PnL for 1 contract = (92 - 90) * 1 * 1000 = +$2000
-        self.assertEqual(closed_trade["gross_pnl"], 2000.0)
-        # Charges = $5.00, Net = $1995.00
-        self.assertEqual(closed_trade["net_pnl"], 1995.0)
-        print(f"[TEST 8 PASS] Target Exit Executed: Net PnL = ${closed_trade['net_pnl']}")
+        # Gross PnL for 1 MCL contract = (92 - 90) * 1 * 100 = +$200.00
+        self.assertEqual(closed_trade["gross_pnl"], 200.0)
+        # Charges = $1.00 ($0.50 * 2), Net = +$199.00
+        self.assertEqual(closed_trade["net_pnl"], 199.0)
+        print(f"[TEST 8 PASS] Target Exit Executed (MCL Mode): Net PnL = ${closed_trade['net_pnl']}")
 
-    def test_9_pnl_and_charges_math(self):
-        """9. P&L & Charges Math test for WTI contract size ($1000/dollar/contract)"""
-        # BUY 1 contract from $90.00 to $91.50
+    def test_9_pnl_and_charges_math_mcl(self):
+        """9. P&L & Charges Math test for MCL contract size ($100/dollar/contract)"""
+        # BUY 1 contract from $90.00 to $91.50 ($1.50 move)
         now_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-        WTI_ENGINE._open_position("BUY", 90.00, 89.00, 92.00, "BULLISH", 85, ["Math test"], now_str)
+        WTI_ENGINE._open_position("BUY", 90.00, 89.00, 92.00, "BULLISH", 85, ["Math test MCL"], now_str)
         WTI_ENGINE._close_position(91.50, "TARGET HIT", now_str)
 
         t = WTI_ENGINE.trade_ledger[0]
-        expected_gross = (91.50 - 90.00) * 1.0 * 1000.0 # $1,500.00
-        expected_charges = 5.00 # $2.50 * 2
-        expected_net = expected_gross - expected_charges # $1,495.00
+        expected_gross = (91.50 - 90.00) * 1.0 * 100.0 # $150.00 ($1.50 move * 100 barrels)
+        expected_charges = 1.00 # $0.50 * 2
+        expected_net = expected_gross - expected_charges # $149.00
 
         self.assertEqual(t["gross_pnl"], expected_gross)
         self.assertEqual(t["charges"], expected_charges)
         self.assertEqual(t["net_pnl"], expected_net)
-        print(f"[TEST 9 PASS] P&L & Charges Math Verified: Gross=${t['gross_pnl']}, Charges=${t['charges']}, Net=${t['net_pnl']}")
+        print(f"[TEST 9 PASS] P&L & Charges Math Verified (MCL): Gross=${t['gross_pnl']}, Charges=${t['charges']}, Net=${t['net_pnl']}")
 
     def test_10_restart_persistence(self):
         """10. Restart / Persistence test"""
@@ -194,7 +186,6 @@ class TestWTIEngine(unittest.TestCase):
 
     def test_11_no_real_order_safety(self):
         """11. No-real-order safety test"""
-        # Ensure Dhan / Broker modules are NOT imported inside WTI modules
         with open(os.path.join(os.path.dirname(__file__), "wti_paper_engine.py"), "r", encoding="utf-8") as f:
             code = f.read()
         self.assertNotIn("Dhan", code)
@@ -213,20 +204,20 @@ class TestWTIEngine(unittest.TestCase):
         self.assertEqual(state["data_status_label"], "DATA: DELAYED NYMEX DATA")
         
         cfg = state["contract_config"]
-        self.assertEqual(cfg["active_contract"], "CL")
-        self.assertEqual(cfg["active_barrels"], 1000)
-        self.assertEqual(cfg["multiplier"], 1000.0)
+        self.assertEqual(cfg["active_contract"], "MCL")
+        self.assertEqual(cfg["active_barrels"], 100)
+        self.assertEqual(cfg["multiplier"], 100.0)
 
-        # Test switching to Micro contract (MCL)
-        WTI_ENGINE.set_contract_type("MCL")
-        state_mcl = WTI_ENGINE.get_dashboard_state()
-        self.assertEqual(state_mcl["contract_config"]["active_contract"], "MCL")
-        self.assertEqual(state_mcl["contract_config"]["active_barrels"], 100)
-        self.assertEqual(state_mcl["contract_config"]["multiplier"], 100.0)
-
-        # Reset back to CL
+        # Test switching to Standard contract (CL)
         WTI_ENGINE.set_contract_type("CL")
-        print("[TEST 12 PASS] Contract Configuration (CL=1000 bbls vs MCL=100 bbls) & Delayed Data Label Verified.")
+        state_cl = WTI_ENGINE.get_dashboard_state()
+        self.assertEqual(state_cl["contract_config"]["active_contract"], "CL")
+        self.assertEqual(state_cl["contract_config"]["active_barrels"], 1000)
+        self.assertEqual(state_cl["contract_config"]["multiplier"], 1000.0)
+
+        # Reset back to MCL
+        WTI_ENGINE.set_contract_type("MCL")
+        print("[TEST 12 PASS] Contract Configuration (MCL=100 bbls vs CL=1000 bbls) & Delayed Data Label Verified.")
 
 if __name__ == "__main__":
     unittest.main()

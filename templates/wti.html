@@ -582,14 +582,24 @@
             const resp = await fetch(`/api/wti/candles?tf=${tf}`);
             if (resp.ok) {
                 const candles = await resp.json();
-                const formattedData = candles.map(c => ({
-                    time: c.timestamp,
-                    open: c.open,
-                    high: c.high,
-                    low: c.low,
-                    close: c.close
-                }));
-                candleSeries.setData(formattedData);
+                const seen = new Set();
+                const formattedData = [];
+                for (const c of candles) {
+                    if (c.timestamp && !seen.has(c.timestamp)) {
+                        seen.add(c.timestamp);
+                        formattedData.push({
+                            time: c.timestamp,
+                            open: c.open,
+                            high: c.high,
+                            low: c.low,
+                            close: c.close
+                        });
+                    }
+                }
+                formattedData.sort((a, b) => a.time - b.time);
+                if (candleSeries) {
+                    candleSeries.setData(formattedData);
+                }
             }
         } catch (e) {
             console.error("Failed loading candles:", e);
@@ -599,7 +609,9 @@
     function setChartTF(tf) {
         currentTF = tf;
         document.querySelectorAll('.tf-btn').forEach(btn => btn.classList.remove('active'));
-        event.target.classList.add('active');
+        if (event && event.target) {
+            event.target.classList.add('active');
+        }
         loadCandles(tf);
     }
 
@@ -615,7 +627,11 @@
             const summary = data.financial_summary || {};
 
             // 1. Tick & Feed Status
-            document.getElementById('wti_price').textContent = `$${(tick.price || 0).toFixed(2)}`;
+            if (tick.price && tick.price > 0) {
+                document.getElementById('wti_price').textContent = `$${tick.price.toFixed(2)}`;
+            } else {
+                document.getElementById('wti_price').textContent = '--.--';
+            }
             
             const change = tick.change || 0;
             const changePct = tick.change_pct || 0;
@@ -624,12 +640,12 @@
             changeElem.style.color = change >= 0 ? '#34d399' : '#f87171';
 
             document.getElementById('wti_tick_time').textContent = `Time: ${tick.last_tick_timestamp_ist ? tick.last_tick_timestamp_ist.split(' ')[1] : '--:--:--'}`;
-            document.getElementById('data_source').textContent = tick.data_source || 'Yahoo Finance NYMEX';
+            document.getElementById('data_source').textContent = tick.data_source || 'Yahoo Finance — Delayed NYMEX Data';
 
             const connBadge = document.getElementById('conn_badge');
             const unavailBanner = document.getElementById('unavail_banner');
             
-            if (tick.connection_status === 'CONNECTED') {
+            if (tick.connection_status === 'CONNECTED' && tick.price > 0) {
                 connBadge.className = 'badge badge-green';
                 connBadge.innerHTML = '<span class="dot dot-green"></span> CONNECTED';
                 unavailBanner.style.display = 'none';
@@ -653,18 +669,23 @@
             document.getElementById('trend_val').textContent = evalRes.trend || 'NEUTRAL';
             document.getElementById('trend_val').style.color = evalRes.trend === 'BULLISH' ? '#34d399' : (evalRes.trend === 'BEARISH' ? '#f87171' : '#60a5fa');
             document.getElementById('confidence_val').textContent = `${evalRes.confidence || 0}%`;
-            document.getElementById('atr_val').textContent = (evalRes.atr || 0).toFixed(2);
+            document.getElementById('atr_val').textContent = (evalRes.atr || 0.35).toFixed(2);
             document.getElementById('signal_reason').textContent = (evalRes.reasons || []).join(' | ') || 'Evaluating market ticks...';
 
-            document.getElementById('ema9_val').textContent = `$${(evalRes.ema9 || 0).toFixed(2)}`;
-            document.getElementById('ema21_val').textContent = `$${(evalRes.ema21 || 0).toFixed(2)}`;
-            document.getElementById('ema50_val').textContent = `$${(evalRes.ema50 || 0).toFixed(2)}`;
+            document.getElementById('ema9_val').textContent = `$${(evalRes.ema9 || tick.price || 0).toFixed(2)}`;
+            document.getElementById('ema21_val').textContent = `$${(evalRes.ema21 || tick.price || 0).toFixed(2)}`;
+            document.getElementById('ema50_val').textContent = `$${(evalRes.ema50 || tick.price || 0).toFixed(2)}`;
             document.getElementById('rsi_val').textContent = (evalRes.rsi || 50).toFixed(1);
 
             const contractCfg = data.contract_config || {};
-            const activeCode = contractCfg.active_contract || 'CL';
-            const activeBbls = contractCfg.active_barrels || 1000;
+            const activeCode = contractCfg.active_contract || 'MCL';
+            const activeBbls = contractCfg.active_barrels || 100;
             document.getElementById('contract_type_display').textContent = `${activeCode} = ${activeBbls.toLocaleString()} Barrels`;
+            
+            const bannerBadge = document.getElementById('contract_banner_badge');
+            if (bannerBadge) {
+                bannerBadge.textContent = `CONTRACT: ${activeCode} — ${activeBbls.toLocaleString()} BARRELS`;
+            }
 
             // 3. Active Position
             const posBadge = document.getElementById('pos_badge');
@@ -776,11 +797,15 @@
         fetchState();
     }
 
-    // Initialize on load
-    document.addEventListener('DOMContentLoaded', () => {
-        initChart();
-        fetchState();
-        setInterval(fetchState, 3000); // refresh UI every 3 seconds
+    // Initialize immediately on DOM load
+    document.addEventListener('DOMContentLoaded', async () => {
+        await fetchState();
+        try {
+            initChart();
+        } catch (err) {
+            console.error("Chart initialization notice:", err);
+        }
+        setInterval(fetchState, 3000);
     });
 </script>
 
