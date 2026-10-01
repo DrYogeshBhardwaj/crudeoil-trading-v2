@@ -98,6 +98,94 @@ async def get_ledger():
         "ledger": state["trade_ledger"]
     })
 
+@app.get("/api/debug/db_diagnostic")
+async def db_diagnostic():
+    """
+    Production Runtime Database & Environment Diagnostic Endpoint.
+    Returns exact runtime paths, file sizes, trade counts, P&L, and state restoration verification.
+    """
+    import sqlite3
+    import subprocess
+    
+    try:
+        git_commit = subprocess.check_output(["git", "rev-parse", "--short", "HEAD"]).decode().strip()
+    except Exception as e:
+        git_commit = f"UNKNOWN ({e})"
+
+    env_db_path = os.environ.get("DATABASE_PATH")
+    data_dir_exists = os.path.exists("/data")
+    
+    seed_abs = os.path.join(os.path.dirname(__file__), "seed_trading.db")
+
+    def inspect_db_file(path_str: str) -> dict:
+        if not os.path.exists(path_str) or os.path.getsize(path_str) == 0:
+            return {"exists": False, "size_bytes": 0}
+        try:
+            with sqlite3.connect(path_str) as conn:
+                conn.row_factory = sqlite3.Row
+                cur = conn.cursor()
+                cur.execute("SELECT COUNT(*) FROM paper_trades")
+                total_trades = cur.fetchone()[0]
+                
+                cur.execute("SELECT COUNT(*) FROM paper_trades WHERE status = 'CLOSED'")
+                closed_trades = cur.fetchone()[0]
+
+                cur.execute("SELECT COUNT(*) FROM paper_trades WHERE status = 'OPEN'")
+                open_trades = cur.fetchone()[0]
+
+                cur.execute("SELECT SUM(net_pnl) FROM paper_trades WHERE status = 'CLOSED'")
+                net_pnl = cur.fetchone()[0] or 0.0
+
+                cur.execute("SELECT trade_id FROM paper_trades WHERE status = 'OPEN' LIMIT 1")
+                row_open = cur.fetchone()
+                active_trade_id = row_open["trade_id"] if row_open else None
+
+                cur.execute("SELECT key, value FROM replay_state")
+                replay_state = {r["key"]: r["value"] for r in cur.fetchall()}
+
+                return {
+                    "exists": True,
+                    "size_bytes": os.path.getsize(path_str),
+                    "total_trades": total_trades,
+                    "closed_trades": closed_trades,
+                    "open_trades": open_trades,
+                    "realized_net_pnl": round(net_pnl, 2),
+                    "active_trade_id": active_trade_id,
+                    "replay_state": replay_state
+                }
+        except Exception as err:
+            return {"exists": True, "error": str(err)}
+
+    active_db_path = DB.db_path
+    active_db_info = inspect_db_file(active_db_path)
+    data_db_info = inspect_db_file("/data/trading.db")
+    seed_db_info = inspect_db_file(seed_abs)
+
+    state = LIVE_ENGINE.get_dashboard_state()
+
+    return JSONResponse({
+        "timestamp_ist": datetime.now().strftime("%Y-%m-%d %H:%M:%S IST"),
+        "git_commit": git_commit,
+        "environment": {
+            "DATABASE_PATH_env": env_db_path,
+            "data_dir_exists": data_dir_exists,
+            "active_db_path": active_db_path,
+            "seed_path": seed_abs
+        },
+        "active_database_inspection": active_db_info,
+        "data_trading_db_inspection": data_db_info,
+        "seed_trading_db_inspection": seed_db_info,
+        "in_memory_live_engine_state": {
+            "total_trades_count": state.get("total_trades_count"),
+            "trade_ledger_length": len(state.get("trade_ledger", [])),
+            "realized_pnl": state.get("realized_pnl"),
+            "active_position": state.get("active_position"),
+            "system_status": state.get("system_status"),
+            "current_price": state.get("current_price"),
+            "last_tick_time_ist": state.get("last_tick_time_ist")
+        }
+    })
+
 @app.on_event("startup")
 async def startup_event():
     """Starts background Dhan WebSocket listener loop on app startup."""
