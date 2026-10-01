@@ -9,7 +9,7 @@ import os
 from datetime import datetime
 from typing import List, Dict, Optional, Any
 
-DB_FILE = os.environ.get("DATABASE_PATH", "trading.db")
+DB_FILE = os.environ.get("DATABASE_PATH", "/tmp/trading.db" if os.name != "nt" else "trading.db")
 
 class DatabaseEngine:
 
@@ -50,6 +50,14 @@ class DatabaseEngine:
                     charges REAL,
                     slippage REAL,
                     net_pnl REAL
+                )
+            """)
+
+            # Replay Progress State Table
+            cursor.execute("""
+                CREATE TABLE IF NOT EXISTS replay_state (
+                    key TEXT PRIMARY KEY,
+                    value TEXT NOT NULL
                 )
             """)
 
@@ -143,6 +151,23 @@ class DatabaseEngine:
                 trades.append(t)
             return trades
 
+    def save_replay_progress(self, index: int, timestamp_str: str):
+        with self._get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute("INSERT OR REPLACE INTO replay_state (key, value) VALUES ('last_index', ?)", (str(index),))
+            cursor.execute("INSERT OR REPLACE INTO replay_state (key, value) VALUES ('last_timestamp', ?)", (timestamp_str,))
+            conn.commit()
+
+    def load_replay_progress(self) -> Tuple[Optional[int], Optional[str]]:
+        with self._get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute("SELECT key, value FROM replay_state WHERE key IN ('last_index', 'last_timestamp')")
+            rows = cursor.fetchall()
+            d = {r["key"]: r["value"] for r in rows}
+            idx = int(d["last_index"]) if "last_index" in d else None
+            ts = d.get("last_timestamp")
+            return idx, ts
+
     def save_heartbeat(self, timestamp_str: str, uptime_seconds: int):
         with self._get_connection() as conn:
             cursor = conn.cursor()
@@ -165,5 +190,7 @@ class DatabaseEngine:
             cursor.execute("SELECT * FROM server_heartbeat WHERE id = 1")
             row = cursor.fetchone()
             return dict(row) if row else None
+
+from typing import Tuple
 
 DB = DatabaseEngine()

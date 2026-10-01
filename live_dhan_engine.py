@@ -155,28 +155,35 @@ class ServerSideReplayFeed:
 
     async def start_replay_loop(self):
         """
-        Main 24x7 server-side replay loop running continuously on Railway.
+        Main 24x7 server-side replay loop running continuously on Railway with DB progress persistence.
         """
-        print(f"[{datetime.now()}] Starting Server-Side Replay Feed with {self.total_candles} candles...")
+        from database import DB
         
-        # 1. Feed initial 1,200 warmup candles instantly for structure readiness
-        warmup_count = min(1200, self.total_candles)
-        for i in range(warmup_count):
+        saved_idx, saved_ts = DB.load_replay_progress()
+        target_resume_idx = max(1200, saved_idx) if saved_idx is not None else 1200
+        warmup_end_idx = min(target_resume_idx, self.total_candles)
+
+        print(f"[{datetime.now()}] Starting Server-Side Replay Feed (Total: {self.total_candles}, Resuming at: {warmup_end_idx})...")
+        
+        # 1. Warmup candles up to resume index for indicator structure readiness
+        for i in range(warmup_end_idx):
             c = self.candles[i]
             self.engine.candle_builder.add_completed_1m_candle(c)
-        self.current_index = warmup_count
+        
+        self.current_index = warmup_end_idx
 
-        self.engine.latest_tick_time = self.candles[warmup_count - 1].timestamp
-        self.engine.current_price = self.candles[warmup_count - 1].close
+        if warmup_end_idx > 0:
+            self.engine.latest_tick_time = self.candles[warmup_end_idx - 1].timestamp
+            self.engine.current_price = self.candles[warmup_end_idx - 1].close
         self.engine.last_replay_wall_time = time.time()
 
         c1h = self.engine.candle_builder.candles_1h
         c15m = self.engine.candle_builder.candles_15m
         c5m = self.engine.candle_builder.candles_5m
         if c1h and c15m and c5m:
-            self.engine.current_signal = SignalEngine.evaluate_signal(c1h, c15m, c5m, self.candles[warmup_count-1].timestamp)
+            self.engine.current_signal = SignalEngine.evaluate_signal(c1h, c15m, c5m, self.candles[warmup_end_idx - 1].timestamp)
 
-        # 2. Step through session candles second-by-second
+        # 2. Step through session candles second-by-second with DB progress persistence
         while self.is_running:
             if self.current_index >= self.total_candles:
                 self.is_completed = True
@@ -186,6 +193,7 @@ class ServerSideReplayFeed:
 
             c = self.candles[self.current_index]
             self.engine.process_replay_candle(c)
+            DB.save_replay_progress(self.current_index, c.timestamp.strftime("%Y-%m-%d %H:%M:%S"))
             self.current_index += 1
             await asyncio.sleep(1.0)  # 1-second step per candle
 
