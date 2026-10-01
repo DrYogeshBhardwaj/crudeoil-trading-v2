@@ -18,11 +18,94 @@ def get_db_path() -> str:
 
 DB_FILE = get_db_path()
 
+def migrate_if_needed(target_db_path: str):
+    """
+    Auto-migrates trade history & replay state from candidate DBs (/tmp/trading.db, trading.db)
+    into target_db_path (/data/trading.db) if target DB is fresh/empty.
+    Preserves all trade IDs, timestamps, status, P&L, and replay progress.
+    """
+    candidate_paths = ["/tmp/trading.db", "trading.db", os.path.join(os.path.dirname(__file__), "trading.db")]
+    
+    target_abs = os.path.abspath(target_db_path)
+    valid_candidates = []
+    
+    for cand in candidate_paths:
+        cand_abs = os.path.abspath(cand)
+        if cand_abs == target_abs:
+            continue
+        if os.path.exists(cand_abs) and os.path.getsize(cand_abs) > 0:
+            valid_candidates.append(cand_abs)
+
+    if not valid_candidates:
+        return
+
+    target_trade_count = 0
+    try:
+        if os.path.exists(target_abs):
+            with sqlite3.connect(target_abs) as target_conn:
+                cur = target_conn.cursor()
+                cur.execute("SELECT COUNT(*) FROM paper_trades WHERE status = 'CLOSED'")
+                target_trade_count = cur.fetchone()[0]
+    except Exception:
+        target_trade_count = 0
+
+    if target_trade_count > 0:
+        return
+
+    best_candidate = None
+    best_count = 0
+    
+    for cand_path in valid_candidates:
+        try:
+            with sqlite3.connect(cand_path) as cand_conn:
+                cur = cand_conn.cursor()
+                cur.execute("SELECT COUNT(*) FROM paper_trades")
+                count = cur.fetchone()[0]
+                if count > best_count:
+                    best_count = count
+                    best_candidate = cand_path
+        except Exception:
+            continue
+
+    if not best_candidate or best_count == 0:
+        return
+
+    print(f"[{datetime.now()}] MIGRATION: Migrating {best_count} paper trades from candidate DB '{best_candidate}' to persistent DB '{target_abs}'...")
+
+    try:
+        os.makedirs(os.path.dirname(target_abs), exist_ok=True)
+        
+        with sqlite3.connect(best_candidate) as cand_conn, sqlite3.connect(target_abs) as target_conn:
+            cand_cur = cand_conn.cursor()
+            target_cur = target_conn.cursor()
+            
+            tables = ["paper_trades", "replay_state", "daily_pnl", "audit_logs", "server_heartbeat"]
+            for table in tables:
+                try:
+                    cand_cur.execute(f"SELECT * FROM {table}")
+                    rows = cand_cur.fetchall()
+                    if rows:
+                        col_names = [description[0] for description in cand_cur.description]
+                        placeholders = ", ".join(["?"] * len(col_names))
+                        cols_str = ", ".join(col_names)
+                        
+                        target_cur.execute(f"DELETE FROM {table}")
+                        for row in rows:
+                            target_cur.execute(f"INSERT OR REPLACE INTO {table} ({cols_str}) VALUES ({placeholders})", tuple(row))
+                except Exception as table_err:
+                    print(f"Table migration notice for {table}: {table_err}")
+                    
+            target_conn.commit()
+            print(f"[{datetime.now()}] MIGRATION SUCCESS: Migrated {best_count} trades into '{target_abs}'.")
+    except Exception as e:
+        print(f"[{datetime.now()}] MIGRATION ERROR: {e}")
+
 class DatabaseEngine:
 
     def __init__(self, db_path: str = DB_FILE):
         self.db_path = db_path
         self._init_db()
+        migrate_if_needed(self.db_path)
 
     def _get_connection(self):
         conn = sqlite3.connect(self.db_path)
