@@ -202,6 +202,69 @@ class DhanLiveAdapter:
             "dhan_client_id": self.client_id
         }
 
+    def fetch_intraday_candles(self, security_id: str = "569901") -> List[Any]:
+        """
+        Fetches today's intraday 1-minute historical candles directly from Dhan HQ API v2 (/v2/charts/intraday).
+        Used strictly for warming up MultiTimeframeCandleBuilder with authentic live market data.
+        """
+        if not self.is_authenticated():
+            return []
+
+        from data_engine import Candle
+        today_str = datetime.now().strftime("%Y-%m-%d")
+        url = f"{self.BASE_URL}/v2/charts/intraday"
+        payload = {
+            "securityId": security_id,
+            "exchangeSegment": "MCX_COMM",
+            "instrument": "FUTCOM",
+            "fromDate": today_str,
+            "toDate": today_str
+        }
+        headers = {
+            "client-id": self.client_id,
+            "access-token": self.access_token,
+            "Content-Type": "application/json"
+        }
+        try:
+            req_data = json.dumps(payload).encode("utf-8")
+            req = urllib.request.Request(url, data=req_data, headers=headers, method="POST")
+            
+            proxy_url = os.environ.get("HTTPS_PROXY") or os.environ.get("HTTP_PROXY") or os.environ.get("QUOTAGUARDSTATIC_URL")
+            handlers = []
+            if proxy_url:
+                handlers.append(urllib.request.ProxyHandler({'http': proxy_url, 'https': proxy_url}))
+            opener = urllib.request.build_opener(*handlers)
+
+            with opener.open(req, timeout=10) as resp:
+                data = json.loads(resp.read().decode("utf-8"))
+                opens = data.get("open", [])
+                highs = data.get("high", [])
+                lows = data.get("low", [])
+                closes = data.get("close", [])
+                volumes = data.get("volume", [])
+                timestamps = data.get("timestamp", [])
+
+                candles = []
+                for i in range(len(closes)):
+                    ts_epoch = float(timestamps[i]) if i < len(timestamps) else 0.0
+                    dt = datetime.fromtimestamp(ts_epoch) if ts_epoch > 0 else datetime.now()
+                    c = Candle(
+                        timestamp=dt,
+                        open=float(opens[i]) if i < len(opens) else float(closes[i]),
+                        high=float(highs[i]) if i < len(highs) else float(closes[i]),
+                        low=float(lows[i]) if i < len(lows) else float(closes[i]),
+                        close=float(closes[i]),
+                        volume=float(volumes[i]) if i < len(volumes) else 0.0,
+                        open_interest=0.0
+                    )
+                    candles.append(c)
+                print(f"[{datetime.now()}] [DHAN WARMUP] Successfully fetched {len(candles)} intraday candles from Dhan HQ API v2 for {security_id}.")
+                return candles
+        except Exception as e:
+            print(f"[{datetime.now()}] [DHAN WARMUP NOTICE] Could not fetch Dhan intraday candles: {e}")
+            return []
+
+
     def place_dhan_order(self, transaction_type: str, security_id: str = "569901", quantity: int = 10, correlation_id: str = "") -> Dict[str, Any]:
         """
         Transmits real order placement POST request to Dhan HQ API v2 (/v2/orders).
@@ -281,10 +344,14 @@ class LiveTestEngine:
     """
     Dedicated 60-Minute Live Test Engine for CRUDEOILM.
     Strictly isolated from Paper Engine state and database tables.
+    Pipes incoming Dhan WebSocket ticks into its own MultiTimeframeCandleBuilder,
+    evaluates strategy signals, enforces risk limits, and executes real Dhan REST orders.
     """
 
     def __init__(self):
+        from data_engine import MultiTimeframeCandleBuilder
         self.adapter = DhanLiveAdapter()
+        self.candle_builder = MultiTimeframeCandleBuilder()
         self.active_position: Optional[LivePosition] = None
         self.closed_trades: List[LivePosition] = []
         
@@ -301,19 +368,30 @@ class LiveTestEngine:
         self.system_status: str = "LIVE TEST READY — ORDER PLACEMENT DISABLED"
         self.trade_counter: int = 0
         
+        self.evaluation_count: int = 0
+        self.latest_signal: Optional[TradeSignal] = None
+        self.evaluation_logs: List[str] = []
+        
         self._restore_from_db()
+        self.warmup_from_dhan_api()
+
+    def warmup_from_dhan_api(self):
+        """Pre-populates LiveTestEngine's MultiTimeframeCandleBuilder with authentic Dhan intraday market candles."""
+        try:
+            candles = self.adapter.fetch_intraday_candles(CONFIG.DHAN_SECURITY_ID)
+            if candles:
+                for c in candles:
+                    self.candle_builder.add_completed_1m_candle(c)
+                w_msg = f"[{datetime.now()}] [LIVE TEST ENGINE WARMUP] Populated MultiTimeframeCandleBuilder with {len(candles)} Dhan intraday candles (1H: {len(self.candle_builder.candles_1h)}, 15M: {len(self.candle_builder.candles_15m)}, 5M: {len(self.candle_builder.candles_5m)})."
+                print(w_msg)
+                self.evaluation_logs.append(w_msg)
+        except Exception as e:
+            print(f"[{datetime.now()}] Notice during Dhan intraday warmup: {e}")
 
     def update_live_ltp(self, price: float):
-        """Updates real-time tick price from authenticated Dhan WebSocket feed only."""
+        """Legacy tick handler — redirects to process_live_tick with current time."""
         if price and price > 0:
-            self.live_ltp = round(price, 2)
-            self.last_live_tick_time = datetime.now()
-            
-            # Auto-start 60-min test if user approval is given and runtime Dhan checks pass
-            if not self.test_active and not self.test_loss_limit_hit:
-                fund_info = self.adapter.fetch_fund_limits()
-                if fund_info["status"] == "CONNECTED" and fund_info.get("available_margin", 0.0) > 0:
-                    self.start_60min_test()
+            self.process_live_tick(datetime.now(), price)
 
     def _restore_from_db(self):
         """Restores live test trade history from live_trades SQLite table."""
@@ -371,6 +449,7 @@ class LiveTestEngine:
         self.test_active = True
         self.test_start_time = datetime.now()
         self.system_status = "LIVE TEST RUNNING (60 MIN WINDOW ACTIVE)"
+        self.warmup_from_dhan_api()
 
     def stop_test(self, reason: str = "MANUAL_STOP"):
         """Stops the 60-minute live test window."""
@@ -395,20 +474,51 @@ class LiveTestEngine:
             return 0
         return remaining
 
-    def process_live_tick(self, signal: TradeSignal, current_candle: object) -> Optional[LivePosition]:
+    def process_live_tick(self, timestamp: datetime, price: float, volume: float = 0.0, oi: float = 0.0) -> Optional[LivePosition]:
         """
-        Evaluates signals for Live Test Mode.
-        ORDER PLACEMENT REMAINS BLOCKED IF LIVE_TEST_ENABLE IS FALSE.
+        Main Live Execution Pipeline processor called on every incoming Dhan WebSocket tick.
+        Flow: Dhan WebSocket → live tick handler → live candle builder → MTF update → SignalEngine.evaluate_signal() → risk checks → real Dhan order API.
         """
-        curr_time = current_candle.timestamp
-        curr_price = current_candle.close
+        if not price or price <= 0:
+            return None
+
+        from data_engine import Candle
+
+        self.live_ltp = round(price, 2)
+        self.last_live_tick_time = timestamp
+        self.evaluation_count += 1
+
+        # 1. Update Live Candle Builder with tick
+        self.candle_builder.process_tick(timestamp, price, volume, oi)
+
+        c1h = self.candle_builder.candles_1h
+        c15m = self.candle_builder.candles_15m
+        c5m = self.candle_builder.candles_5m
+
+        # 2. Evaluate Strategy Signal
+        signal = SignalEngine.evaluate_signal(c1h, c15m, c5m, timestamp)
+        self.latest_signal = signal
+
+        # Diagnostic Log
+        reasons_str = "; ".join(signal.reasons[:3]) if signal.reasons else "None"
+        log_msg = f"[LIVE TICK EVAL #{self.evaluation_count}] IST: {timestamp.strftime('%Y-%m-%d %H:%M:%S')} | LTP: Rs. {price:.2f} | Action: {signal.action} | Trend: {signal.trend_state} | Conf: {signal.confidence}% | Reasons: {reasons_str}"
+        print(log_msg)
+        self.evaluation_logs.append(log_msg)
+        if len(self.evaluation_logs) > 100:
+            self.evaluation_logs = self.evaluation_logs[-100:]
+
+        # Auto-start 60-min window if user approval given and funds connected
+        if not self.test_active and not self.test_loss_limit_hit:
+            fund_info = self.adapter.fetch_fund_limits()
+            if fund_info["status"] == "CONNECTED" and fund_info.get("available_margin", 0.0) > 0:
+                self.start_60min_test()
 
         # Check Test Loss Limit
         if self.net_realized_pnl <= -CONFIG.LIVE_TEST_LOSS_LIMIT_INR:
             self.test_loss_limit_hit = True
             self.system_status = "PAUSED — LIVE TEST LOSS LIMIT HIT (Rs 3,000)"
             if self.active_position:
-                self._close_position(self.active_position, curr_time, curr_price, "TEST_LOSS_LIMIT_PAUSE")
+                self._close_position(self.active_position, timestamp, price, "TEST_LOSS_LIMIT_PAUSE")
             return None
 
         # Check 60-minute countdown expiry
@@ -416,33 +526,32 @@ class LiveTestEngine:
         if rem_sec <= 0:
             self.system_status = "LIVE TEST STOPPED — 60 MIN WINDOW EXPIRED"
             if self.active_position:
-                self._close_position(self.active_position, curr_time, curr_price, "60_MIN_EXPIRED_EXIT")
+                self._close_position(self.active_position, timestamp, price, "60_MIN_EXPIRED_EXIT")
             return None
 
-        # Monitor active live position exits
+        # 3. Monitor active live position exits
         if self.active_position:
             self.system_status = "LIVE POSITION ACTIVE"
             pos = self.active_position
-            
-            # Check Stop Loss Hit
+            current_candle = c5m[-1] if c5m else Candle(timestamp=timestamp, open=price, high=price, low=price, close=price)
+
             if pos.direction == "BUY" and current_candle.low <= pos.stop_loss:
                 exit_price = min(pos.stop_loss, current_candle.open)
-                return self._close_position(pos, curr_time, exit_price, "STOP_LOSS_HIT")
+                return self._close_position(pos, timestamp, exit_price, "STOP_LOSS_HIT")
             elif pos.direction == "SELL" and current_candle.high >= pos.stop_loss:
                 exit_price = max(pos.stop_loss, current_candle.open)
-                return self._close_position(pos, curr_time, exit_price, "STOP_LOSS_HIT")
+                return self._close_position(pos, timestamp, exit_price, "STOP_LOSS_HIT")
 
-            # Check Target 2 Hit
             if pos.direction == "BUY" and current_candle.high >= pos.target_2:
                 exit_price = max(pos.target_2, current_candle.open)
-                return self._close_position(pos, curr_time, exit_price, "TARGET_2_HIT")
+                return self._close_position(pos, timestamp, exit_price, "TARGET_2_HIT")
             elif pos.direction == "SELL" and current_candle.low <= pos.target_2:
                 exit_price = min(pos.target_2, current_candle.open)
-                return self._close_position(pos, curr_time, exit_price, "TARGET_2_HIT")
+                return self._close_position(pos, timestamp, exit_price, "TARGET_2_HIT")
 
             return None
 
-        # Safety Check: Order placement blocked unless test_enabled is True
+        # 4. Safety Check: Order placement blocked unless test_enabled is True
         if not self.test_enabled:
             self.system_status = "LIVE TEST READY — ORDER EXECUTION BLOCKED (LIVE_TEST_ENABLE=FALSE)"
             return None
@@ -450,14 +559,24 @@ class LiveTestEngine:
         if not self.test_active:
             return None
 
-        # Evaluate Entry
+        # 5. Evaluate Entry Signal & Risk Checks
         if signal.action in ["BUY", "SELL"] and signal.entry_price is not None:
-            # Enforce max 1 open position safety check
             if self.active_position is not None:
                 return None
 
+            # Verify Max Risk Rule (Rs. 2,500)
+            if signal.risk_inr > CONFIG.LIVE_TEST_MAX_RISK_PER_TRADE_INR:
+                risk_msg = f"[RISK CHECK REJECTED] Signal Risk Rs.{signal.risk_inr:.2f} > Max Limit Rs.{CONFIG.LIVE_TEST_MAX_RISK_PER_TRADE_INR:.2f}"
+                print(risk_msg)
+                self.evaluation_logs.append(risk_msg)
+                return None
+
             self.trade_counter += 1
-            trade_id = f"LT-{CONFIG.INSTRUMENT_NAME}-{curr_time.strftime('%Y%m%d')}-{self.trade_counter:03d}"
+            trade_id = f"LT-{CONFIG.INSTRUMENT_NAME}-{timestamp.strftime('%Y%m%d')}-{self.trade_counter:03d}"
+
+            order_log = f"[REAL DHAN ORDER ATTEMPT] {signal.action} {CONFIG.INSTRUMENT_NAME} | Qty: {CONFIG.LOT_SIZE} | CID: {trade_id}"
+            print(order_log)
+            self.evaluation_logs.append(order_log)
 
             # Transmit real market order to Dhan HQ REST API (/v2/orders)
             order_res = self.adapter.place_dhan_order(
@@ -466,12 +585,12 @@ class LiveTestEngine:
                 quantity=CONFIG.LOT_SIZE,
                 correlation_id=trade_id
             )
-            dhan_order_id = str(order_res.get("order_id", f"DHAN-LIVE-{curr_time.strftime('%H%M%S')}"))
+            dhan_order_id = str(order_res.get("order_id", f"DHAN-LIVE-{timestamp.strftime('%H%M%S')}"))
 
             new_pos = LivePosition(
                 trade_id=trade_id,
                 dhan_order_id=dhan_order_id,
-                entry_timestamp=curr_time,
+                entry_timestamp=timestamp,
                 instrument=CONFIG.INSTRUMENT_NAME,
                 direction=signal.action,
                 quantity=1,
@@ -510,6 +629,7 @@ class LiveTestEngine:
             return new_pos
 
         return None
+
 
     def _close_position(self, pos: LivePosition, exit_time: datetime, exit_price: float, reason: str) -> LivePosition:
         # Transmit real exit square-off market order to Dhan HQ REST API (/v2/orders)
@@ -708,6 +828,23 @@ class LiveTestEngine:
         except Exception:
             pass
 
+        latest_eval_dict = None
+        if self.latest_signal:
+            sig = self.latest_signal
+            latest_eval_dict = {
+                "timestamp_ist": self.last_live_tick_time.strftime("%Y-%m-%d %H:%M:%S IST") if self.last_live_tick_time else "-",
+                "ltp": round(effective_price, 2),
+                "action": sig.action,
+                "trend_state": sig.trend_state,
+                "confidence": sig.confidence,
+                "entry_price": sig.entry_price,
+                "stop_loss": sig.stop_loss,
+                "target_1": sig.target_1,
+                "target_2": sig.target_2,
+                "risk_inr": sig.risk_inr,
+                "reasons": sig.reasons
+            }
+
         return {
             "mode": "LIVE_TEST",
             "instrument": CONFIG.INSTRUMENT_NAME,
@@ -737,6 +874,15 @@ class LiveTestEngine:
             "total_trades_count": total_trades,
             "active_position": active_pos_dict,
             "trade_ledger": ledger_list,
+            "evaluation_count": self.evaluation_count,
+            "latest_evaluation": latest_eval_dict,
+            "latest_evaluation_logs": self.evaluation_logs[-20:],
+            "candle_status": {
+                "1m_count": len(self.candle_builder.candles_1m),
+                "5m_count": len(self.candle_builder.candles_5m),
+                "15m_count": len(self.candle_builder.candles_15m),
+                "1h_count": len(self.candle_builder.candles_1h)
+            },
             "dhan_ws_logs": ws_logs,
             "readiness_report": self.get_readiness_report()
         }

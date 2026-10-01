@@ -117,9 +117,15 @@ class DhanFeedManager:
                                     self.add_ws_log(f"FIRST LIVE TICK RECEIVED -> Security ID: {self.security_id}, LTP: Rs. {price}")
                                     first_tick_logged = True
                                 
-                                self.engine.process_live_tick(now_ist, price)
+                                # 1. LIVE EXECUTION PIPELINE FOR REAL LIVE TEST ENGINE
                                 try:
-                                    LIVE_TEST_ENGINE.update_live_ltp(price)
+                                    LIVE_TEST_ENGINE.process_live_tick(now_ist, price)
+                                except Exception as ex_lte:
+                                    print(f"[{now_ist}] Error in LIVE_TEST_ENGINE.process_live_tick: {ex_lte}")
+
+                                # 2. Separate Paper Engine
+                                try:
+                                    self.engine.process_live_tick(now_ist, price)
                                 except Exception:
                                     pass
                         elif isinstance(message, str):
@@ -132,9 +138,15 @@ class DhanFeedManager:
                                         self.add_ws_log(f"FIRST LIVE TICK RECEIVED (JSON) -> Security ID: {self.security_id}, LTP: Rs. {flt_price}")
                                         first_tick_logged = True
                                         
-                                    self.engine.process_live_tick(now_ist, flt_price)
+                                    # 1. LIVE EXECUTION PIPELINE FOR REAL LIVE TEST ENGINE
                                     try:
-                                        LIVE_TEST_ENGINE.update_live_ltp(flt_price)
+                                        LIVE_TEST_ENGINE.process_live_tick(now_ist, flt_price)
+                                    except Exception as ex_lte:
+                                        print(f"[{now_ist}] Error in LIVE_TEST_ENGINE.process_live_tick: {ex_lte}")
+
+                                    # 2. Separate Paper Engine
+                                    try:
+                                        self.engine.process_live_tick(now_ist, flt_price)
                                     except Exception:
                                         pass
                             except Exception:
