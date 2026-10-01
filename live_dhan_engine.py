@@ -46,8 +46,9 @@ class DhanFeedManager:
         
         retry_delay = 5
         while self.is_running:
-            client_id = os.environ.get("DHAN_CLIENT_ID", "").strip()
-            access_token = os.environ.get("DHAN_ACCESS_TOKEN", "").strip()
+            from live_trading_engine import LIVE_TEST_ENGINE
+            client_id = os.environ.get("DHAN_CLIENT_ID", "").strip() or LIVE_TEST_ENGINE.adapter.client_id
+            access_token = os.environ.get("DHAN_ACCESS_TOKEN", "").strip() or LIVE_TEST_ENGINE.adapter.access_token
 
             if not client_id or not access_token:
                 self.engine.ws_connected = False

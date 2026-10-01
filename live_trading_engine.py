@@ -54,6 +54,18 @@ class DhanLiveAdapter:
     def __init__(self):
         self.client_id = os.environ.get("DHAN_CLIENT_ID", "").strip()
         self.access_token = os.environ.get("DHAN_ACCESS_TOKEN", "").strip()
+        
+        # Fallback to local gitignored dhan_credentials.json if missing from env
+        if not self.client_id or not self.access_token:
+            cred_path = os.path.join(os.path.dirname(__file__), "dhan_credentials.json")
+            if os.path.exists(cred_path):
+                try:
+                    with open(cred_path, "r", encoding="utf-8") as f:
+                        cdata = json.load(f)
+                        if not self.client_id: self.client_id = str(cdata.get("DHAN_CLIENT_ID", "")).strip()
+                        if not self.access_token: self.access_token = str(cdata.get("DHAN_ACCESS_TOKEN", "")).strip()
+                except Exception:
+                    pass
 
     @staticmethod
     def get_outbound_public_ip() -> str:
@@ -169,6 +181,12 @@ class LiveTestEngine:
         if price and price > 0:
             self.live_ltp = round(price, 2)
             self.last_live_tick_time = datetime.now()
+            
+            # Auto-start 60-min test if user approval is given and runtime Dhan checks pass
+            if not self.test_active and not self.test_loss_limit_hit:
+                fund_info = self.adapter.fetch_fund_limits()
+                if fund_info["status"] == "CONNECTED" and fund_info.get("available_margin", 0.0) > 0:
+                    self.start_60min_test()
 
     def _restore_from_db(self):
         """Restores live test trade history from live_trades SQLite table."""

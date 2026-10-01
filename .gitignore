@@ -4,3 +4,4 @@ __pycache__/
 *.pyc
 .env
 .venv/
+dhan_credentials.json
