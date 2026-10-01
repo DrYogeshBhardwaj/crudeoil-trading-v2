@@ -524,9 +524,17 @@ class LiveTestEngine:
         timer_str = f"{mins:02d}:{secs:02d}"
 
         # Decouple price: Only use live feed LTP from Dhan WebSocket, never replay price
-        effective_price = self.live_ltp if self.live_ltp is not None else (current_price if (current_price and current_price > 0 and fund_info["status"] == "CONNECTED") else 0.0)
-        
-        feed_status_text = "LIVE FEED ACTIVE" if effective_price > 0 else "NO LIVE FEED / NO TRADE"
+        now = datetime.now()
+        is_stale = False
+        last_tick_str = "NO LIVE FEED"
+        if self.last_live_tick_time:
+            tick_age = (now - self.last_live_tick_time).total_seconds()
+            last_tick_str = self.last_live_tick_time.strftime("%Y-%m-%d %H:%M:%S IST")
+            if tick_age > CONFIG.DATA_STALE_THRESHOLD_SECONDS:
+                is_stale = True
+
+        effective_price = self.live_ltp if (self.live_ltp is not None and not is_stale) else 0.0
+        feed_status_text = "LIVE FEED ACTIVE" if effective_price > 0 else ("FEED STALE (>10s) — NO TRADE" if is_stale else "NO LIVE FEED / NO TRADE")
         
         closed = self.closed_trades
         total_trades = len(closed)
@@ -605,6 +613,7 @@ class LiveTestEngine:
             "dhan_client_id": self.adapter.client_id or "NOT_CONFIGURED",
             "available_margin_inr": fund_info.get("available_margin", 0.0),
             "current_price": round(effective_price, 2),
+            "last_tick_time_ist": last_tick_str,
             "feed_status_text": feed_status_text,
             "system_status": display_status,
             "live_test_enable_flag": self.test_enabled,

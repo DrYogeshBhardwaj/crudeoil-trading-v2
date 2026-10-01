@@ -24,6 +24,12 @@ async function updateLiveDashboard() {
             }
         }
 
+        const tickElem = document.getElementById('last-tick');
+        if (tickElem) {
+            tickElem.textContent = data.last_tick_time_ist ? `Last Tick: ${data.last_tick_time_ist}` : 'Syncing Live Feed...';
+            tickElem.style.color = (data.current_price && data.current_price > 0) ? '#38bdf8' : '#94a3b8';
+        }
+
         // 2. Dhan Status & Client ID
         const dhanStatusElem = document.getElementById('dhan-status-badge');
         if (dhanStatusElem) {

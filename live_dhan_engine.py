@@ -67,17 +67,25 @@ class DhanFeedManager:
                     retry_delay = 5  # Reset retry delay on successful connection
                     print(f"[{datetime.now()}] Connected to Dhan WebSocket Live Feed for Security ID {self.security_id}")
                     
-                    sub_payload = {
-                        "RequestCode": 15,
-                        "InstrumentCount": 1,
-                        "InstrumentList": [
-                            {
-                                "ExchangeSegment": self.exchange_segment,
-                                "SecurityId": self.security_id
-                            }
-                        ]
-                    }
-                    await ws.send(json.dumps(sub_payload))
+                    # Send Dhan HQ API v2 Binary Subscription Packet for MCX CRUDEOILM
+                    sub_bin = self._create_dhan_v2_sub_packet(client_id, self.security_id)
+                    await ws.send(sub_bin)
+
+                    # Send fallback JSON subscription payload
+                    try:
+                        sub_payload = {
+                            "RequestCode": 15,
+                            "InstrumentCount": 1,
+                            "InstrumentList": [
+                                {
+                                    "ExchangeSegment": "MCX_FO",
+                                    "SecurityId": self.security_id
+                                }
+                            ]
+                        }
+                        await ws.send(json.dumps(sub_payload))
+                    except Exception:
+                        pass
                     
                     while self.is_running:
                         message = await ws.recv()
@@ -124,28 +132,41 @@ class DhanFeedManager:
                 print(f"[{datetime.now()}] Dhan WS Connection issue: {err_str}. Reconnecting in {retry_delay}s...")
                 await asyncio.sleep(retry_delay)
 
+    def _create_dhan_v2_sub_packet(self, client_id: str, sec_id: str = "545802") -> bytes:
+        """Constructs Dhan HQ API v2 83-byte binary subscription packet for MCX Crude Oil."""
+        import struct
+        num_inst = 1
+        msg_len = 83 + 4 + (num_inst * 21)
+        header = struct.pack('<bH30s50s', 15, msg_len, client_id.encode('utf-8')[:30].ljust(30, b'\0'), b'\0' * 50)
+        num_inst_bytes = struct.pack('<I', num_inst)
+        # ExchangeSegment = 5 for MCX Commodities/Futures in Dhan HQ v2
+        inst_bytes = struct.pack('<B20s', 5, sec_id.encode('utf-8')[:20].ljust(20, b'\0'))
+        
+        padding = b""
+        for _ in range(99):
+            padding += struct.pack('<B20s', 0, b'\0' * 20)
+            
+        return header + num_inst_bytes + inst_bytes + padding
+
     def _parse_dhan_binary_ltp(self, raw_bytes: bytes) -> Optional[float]:
-        """Parses Dhan binary feed packet for LTP across Ticker, Quote, and Full depth packets."""
+        """Parses Dhan binary feed packet for LTP across Ticker (16B), Quote (50B), and Full depth packets."""
         import struct
         try:
-            if len(raw_bytes) < 8:
-                return None
-            
-            # Check float32 at byte offset 8
+            if len(raw_bytes) >= 16:
+                # Format: <BHBIfI -> header_code(B), msg_len(H), exchange_seg(B), sec_id(I), ltp(f), ltt(I)
+                header_code, msg_len, ex_seg, sec_id, ltp_float, ltt = struct.unpack_from('<BHBIfI', raw_bytes, 0)
+                if 1000.0 <= ltp_float <= 25000.0:
+                    return round(ltp_float, 2)
+
             if len(raw_bytes) >= 12:
                 ltp_float = struct.unpack_from('<f', raw_bytes, 8)[0]
                 if 1000.0 <= ltp_float <= 25000.0:
                     return round(ltp_float, 2)
-                
-                ltp_int = struct.unpack_from('<i', raw_bytes, 8)[0]
-                if 100000 <= ltp_int <= 2500000:
-                    return round(ltp_int / 100.0, 2)
 
-            # Fallback for 8-byte minimal binary header
             if len(raw_bytes) >= 8:
-                ltp_int = struct.unpack_from('<i', raw_bytes, 4)[0]
-                if 100000 <= ltp_int <= 2500000:
-                    return round(ltp_int / 100.0, 2)
+                ltp_float = struct.unpack_from('<f', raw_bytes, 4)[0]
+                if 1000.0 <= ltp_float <= 25000.0:
+                    return round(ltp_float, 2)
         except Exception:
             pass
         return None
