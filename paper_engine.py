@@ -125,7 +125,7 @@ class PaperExecutionEngine:
         # Check Daily Loss Limit status
         if self.daily_net_pnl <= -CONFIG.DAILY_LOSS_LIMIT_INR:
             self.daily_loss_limit_hit = True
-            self.system_status = "PAUSED"
+            self.system_status = "PAUSED — DAILY LOSS LIMIT"
             if self.active_position:
                 self._close_position(self.active_position, curr_time, curr_price, "DAILY_LOSS_LIMIT_PAUSE")
             return None
@@ -181,8 +181,9 @@ class PaperExecutionEngine:
             return None
 
         # 2. EVALUATE NEW PAPER TRADE ENTRY
-        if self.daily_loss_limit_hit:
-            self.system_status = "PAUSED"
+        if self.daily_loss_limit_hit or self.daily_net_pnl <= -CONFIG.DAILY_LOSS_LIMIT_INR:
+            self.daily_loss_limit_hit = True
+            self.system_status = "PAUSED — DAILY LOSS LIMIT"
             return None
 
         self.system_status = "WATCHING"
@@ -277,7 +278,7 @@ class PaperExecutionEngine:
         
         if self.daily_net_pnl <= -CONFIG.DAILY_LOSS_LIMIT_INR:
             self.daily_loss_limit_hit = True
-            self.system_status = "PAUSED"
+            self.system_status = "PAUSED — DAILY LOSS LIMIT"
         else:
             self.system_status = "WATCHING"
 

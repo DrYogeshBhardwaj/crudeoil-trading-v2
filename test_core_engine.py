@@ -176,11 +176,12 @@ class TestCoreEngine(unittest.TestCase):
         c5m = self._generate_structured_candles("UP", 60, 6400.0)
 
         signal = SignalEngine.evaluate_signal(c1h, c15m, c5m, c5m[-1].timestamp)
-        paper_engine.process_signal_and_market(signal, c5m[-1])
+        pos = paper_engine.process_signal_and_market(signal, c5m[-1])
         
-        self.assertEqual(paper_engine.system_status, "PAUSED")
+        self.assertIsNone(pos, "No new position should be opened when daily loss limit is hit")
+        self.assertEqual(paper_engine.system_status, "PAUSED — DAILY LOSS LIMIT")
         self.assertTrue(paper_engine.daily_loss_limit_hit)
-        print("[PASS] Test 7: Daily Loss Limit Hit -> PAUSED")
+        print("[PASS] Test 7: Daily Loss Limit Hit -> PAUSED — DAILY LOSS LIMIT & New Order Blocked")
 
     def test_08_websocket_stale_data_no_trade(self):
         """Scenario 8: WebSocket Stale (>10 sec) -> NO TRADE / Stale True"""

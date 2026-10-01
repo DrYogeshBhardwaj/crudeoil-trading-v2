@@ -136,6 +136,38 @@ async function updateDashboard() {
         document.getElementById('profit-factor').textContent = data.profit_factor_str || '0.00';
         document.getElementById('max-drawdown').textContent = `₹${(data.max_drawdown_inr || 0).toFixed(2)}`;
 
+        // Loss Protection & Risk Controls
+        const riskDailyLossElem = document.getElementById('risk-daily-loss');
+        if (riskDailyLossElem) riskDailyLossElem.textContent = `₹${(data.daily_loss_inr || 0).toFixed(2)}`;
+        
+        const riskLimitElem = document.getElementById('risk-daily-limit');
+        if (riskLimitElem) riskLimitElem.textContent = `₹${(data.daily_loss_limit_inr || 3000).toFixed(2)}`;
+        
+        const riskCurrDDElem = document.getElementById('risk-curr-dd');
+        if (riskCurrDDElem) riskCurrDDElem.textContent = `₹${(data.current_drawdown_inr || 0).toFixed(2)}`;
+        
+        const riskMaxDDElem = document.getElementById('risk-max-dd');
+        if (riskMaxDDElem) riskMaxDDElem.textContent = `₹${(data.max_drawdown_inr || 0).toFixed(2)}`;
+
+        const riskStatusElem = document.getElementById('risk-status');
+        if (riskStatusElem) {
+            const statusStr = data.risk_status || 'NORMAL — RISK PROTECTED';
+            riskStatusElem.textContent = statusStr;
+            if (data.daily_loss_limit_hit || statusStr.includes('PAUSED')) {
+                riskStatusElem.style.background = 'rgba(239, 68, 68, 0.25)';
+                riskStatusElem.style.color = '#ef4444';
+                riskStatusElem.style.borderColor = '#ef4444';
+            } else if (statusStr.includes('ACTIVE')) {
+                riskStatusElem.style.background = 'rgba(56, 189, 248, 0.2)';
+                riskStatusElem.style.color = '#38bdf8';
+                riskStatusElem.style.borderColor = '#38bdf8';
+            } else {
+                riskStatusElem.style.background = 'rgba(34, 197, 94, 0.2)';
+                riskStatusElem.style.color = '#22c55e';
+                riskStatusElem.style.borderColor = '#22c55e';
+            }
+        }
+
         // 6. Paper Trade Audit Ledger Table
         const ledger = data.trade_ledger || [];
         document.getElementById('ledger-count').textContent = `${ledger.length} Trades Recorded`;

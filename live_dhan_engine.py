@@ -417,12 +417,16 @@ class LivePaperTradingEngine:
                 if dd > max_dd:
                     max_dd = dd
 
-        starting_cap = self.paper_engine.starting_capital
-        realized_pnl = self.paper_engine.total_realized_pnl
-        current_cap = starting_cap + realized_pnl
-        available_cap = current_cap + unrealized_pnl
+        daily_net_pnl = self.paper_engine.daily_net_pnl
+        daily_loss_inr = abs(daily_net_pnl) if daily_net_pnl < 0 else 0.0
+        curr_dd = round(peak - cum_pnl, 2) if (peak - cum_pnl) > 0 else 0.0
 
-        feed_mode_label = "LIVE DHAN FEED" if (self.ws_connected and not is_data_stale) else "PAPER REPLAY / NO LIVE FEED"
+        if self.paper_engine.daily_loss_limit_hit:
+            risk_status = "PAUSED — DAILY LOSS LIMIT"
+        elif active_pos_dict is not None:
+            risk_status = "ACTIVE — HARD SL IN PLACE"
+        else:
+            risk_status = "NORMAL — RISK PROTECTED"
 
         return {
             "instrument": CONFIG.INSTRUMENT_NAME,
@@ -475,6 +479,12 @@ class LivePaperTradingEngine:
             "win_rate_percent": win_rate,
             "profit_factor_str": pf_str,
             "max_drawdown_inr": round(max_dd, 2),
+            
+            # Loss Protection & Risk Metrics
+            "daily_loss_inr": round(daily_loss_inr, 2),
+            "daily_loss_limit_inr": CONFIG.DAILY_LOSS_LIMIT_INR,
+            "current_drawdown_inr": curr_dd,
+            "risk_status": risk_status,
             
             "report_summary": report,
             "trade_ledger": ledger_list[:50]
