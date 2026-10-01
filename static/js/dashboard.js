@@ -91,6 +91,8 @@ async function updateDashboard() {
             
             document.getElementById('pos-id').textContent = pos.trade_id;
             document.getElementById('pos-dir').textContent = pos.direction;
+            const posTimeElem = document.getElementById('pos-time');
+            if (posTimeElem) posTimeElem.textContent = pos.entry_timestamp || '-';
             document.getElementById('pos-entry').textContent = `₹${pos.entry_price.toFixed(1)}`;
             document.getElementById('pos-sl').textContent = `₹${pos.stop_loss.toFixed(1)}`;
             document.getElementById('pos-tgt').textContent = `₹${pos.target_1.toFixed(1)} / ₹${pos.target_2.toFixed(1)}`;
@@ -105,6 +107,8 @@ async function updateDashboard() {
             
             document.getElementById('pos-id').textContent = '-';
             document.getElementById('pos-dir').textContent = '-';
+            const posTimeElem = document.getElementById('pos-time');
+            if (posTimeElem) posTimeElem.textContent = '-';
             document.getElementById('pos-entry').textContent = '-';
             document.getElementById('pos-sl').textContent = '-';
             document.getElementById('pos-tgt').textContent = '-';
@@ -138,7 +142,7 @@ async function updateDashboard() {
         
         const tbody = document.getElementById('ledger-tbody');
         if (ledger.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="12" class="empty-msg">No executed paper trades yet. Waiting for high-confidence trend signals...</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="13" class="empty-msg">No executed paper trades yet. Waiting for high-confidence trend signals...</td></tr>';
         } else {
             tbody.innerHTML = '';
             ledger.forEach(t => {
@@ -147,6 +151,7 @@ async function updateDashboard() {
                 tr.innerHTML = `
                     <td><strong>${t.trade_id}</strong></td>
                     <td>${t.entry_time}</td>
+                    <td>${t.exit_time}</td>
                     <td><span class="tf-badge ${t.direction === 'BUY' ? 'tf-bullish' : 'tf-bearish'}">${t.direction}</span></td>
                     <td>₹${t.entry_price.toFixed(1)}</td>
                     <td>${t.exit_price ? '₹' + t.exit_price.toFixed(1) : '-'}</td>

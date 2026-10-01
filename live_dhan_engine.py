@@ -325,7 +325,7 @@ class LivePaperTradingEngine:
             active_pos_dict = {
                 "trade_id": pos.trade_id,
                 "direction": pos.direction,
-                "entry_timestamp": pos.entry_timestamp.strftime("%Y-%m-%d %H:%M:%S"),
+                "entry_timestamp": pos.entry_timestamp.strftime("%Y-%m-%d %H:%M:%S IST") if pos.entry_timestamp else "-",
                 "entry_price": pos.entry_price,
                 "stop_loss": pos.stop_loss,
                 "target_1": pos.target_1,
@@ -341,8 +341,8 @@ class LivePaperTradingEngine:
             res = t.pnl_result
             ledger_list.append({
                 "trade_id": t.trade_id,
-                "entry_time": t.entry_timestamp.strftime("%H:%M:%S"),
-                "exit_time": t.exit_timestamp.strftime("%H:%M:%S") if t.exit_timestamp else "-",
+                "entry_time": t.entry_timestamp.strftime("%Y-%m-%d %H:%M:%S IST") if t.entry_timestamp else "-",
+                "exit_time": t.exit_timestamp.strftime("%Y-%m-%d %H:%M:%S IST") if t.exit_timestamp else "-",
                 "direction": t.direction,
                 "entry_price": t.entry_price,
                 "exit_price": t.exit_price,
@@ -443,8 +443,8 @@ class LivePaperTradingEngine:
             "real_trading_enabled": CONFIG.ENABLE_REAL_TRADING,
             "system_status": system_status,
             "current_price": round(self.current_price, 2) if self.latest_tick_time else 0.0,
-            "server_time_ist": now_ist.strftime("%Y-%m-%d %H:%M:%S"),
-            "last_tick_time_ist": last_tick.strftime("%Y-%m-%d %H:%M:%S") if last_tick else "NONE",
+            "server_time_ist": now_ist.strftime("%Y-%m-%d %H:%M:%S IST"),
+            "last_tick_time_ist": last_tick.strftime("%Y-%m-%d %H:%M:%S IST") if last_tick else "NONE",
             "recent_20_ticks": self.recent_ticks[-20:],
             "candle_status": {
                 "1m_count": len(c1m),

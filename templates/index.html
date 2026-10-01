@@ -38,9 +38,9 @@
 
             <!-- Indian Standard Time (IST) Clock & Replay Time Box -->
             <div class="ist-clock-box" style="display: flex; flex-direction: column; align-items: flex-end; background: rgba(0, 0, 0, 0.25); border: 1px solid rgba(56, 189, 248, 0.2); padding: 8px 14px; border-radius: 8px;">
-                <span style="font-size: 0.68rem; color: #94a3b8; font-weight: 700; letter-spacing: 0.5px;">INDIAN STANDARD TIME (IST)</span>
+                <span style="font-size: 0.68rem; color: #94a3b8; font-weight: 700; letter-spacing: 0.5px;">CURRENT IST (SYSTEM)</span>
                 <span id="live-ist-clock" style="font-family: 'JetBrains Mono', monospace; font-size: 1.15rem; font-weight: 800; color: #38bdf8;">--:--:-- IST</span>
-                <span id="replay-ist-time" style="font-size: 0.72rem; color: #c084fc; font-weight: 600; margin-top: 2px;">Replay Tick: Syncing...</span>
+                <span id="replay-ist-time" style="font-size: 0.72rem; color: #c084fc; font-weight: 600; margin-top: 2px;">Replay Time (IST): Syncing...</span>
             </div>
 
             <div class="status-box">
@@ -126,6 +126,7 @@
                         <div class="pos-info-grid">
                             <div><span class="lbl">Trade ID:</span> <span class="val" id="pos-id">-</span></div>
                             <div><span class="lbl">Direction:</span> <span class="val" id="pos-dir">-</span></div>
+                            <div><span class="lbl">Trade Time (IST):</span> <span class="val" id="pos-time">-</span></div>
                             <div><span class="lbl">Entry Price:</span> <span class="val" id="pos-entry">-</span></div>
                             <div><span class="lbl">Stop Loss:</span> <span class="val" id="pos-sl">-</span></div>
                             <div><span class="lbl">Target 1 / 2:</span> <span class="val" id="pos-tgt">-</span></div>
@@ -178,7 +179,8 @@
                     <thead>
                         <tr>
                             <th>Trade ID</th>
-                            <th>Time</th>
+                            <th>Entry Time (IST)</th>
+                            <th>Exit Time (IST)</th>
                             <th>Dir</th>
                             <th>Entry</th>
                             <th>Exit</th>
