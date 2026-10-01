@@ -35,6 +35,7 @@ class DhanFeedManager:
         self.security_id = CONFIG.DHAN_SECURITY_ID
         self.exchange_segment = CONFIG.EXCHANGE_SEGMENT
         self.is_running = True
+        self.last_error = None
 
     async def connect_and_listen(self):
         """
@@ -49,6 +50,10 @@ class DhanFeedManager:
 
             if not client_id or not access_token:
                 self.engine.ws_connected = False
+                missing_list = []
+                if not client_id: missing_list.append("DHAN_CLIENT_ID")
+                if not access_token: missing_list.append("DHAN_ACCESS_TOKEN")
+                self.last_error = f"Missing environment variable(s): {', '.join(missing_list)}"
                 await asyncio.sleep(5)
                 continue
 
@@ -56,6 +61,7 @@ class DhanFeedManager:
             try:
                 async with websockets.connect(ws_url, ping_interval=20, ping_timeout=10) as ws:
                     self.engine.ws_connected = True
+                    self.last_error = None
                     print(f"[{datetime.now()}] Connected to Dhan WebSocket Live Feed for Security ID {self.security_id}")
                     
                     sub_payload = {
@@ -91,6 +97,9 @@ class DhanFeedManager:
                 err_str = str(e)
                 if access_token and access_token in err_str:
                     err_str = err_str.replace(access_token, "[REDACTED]")
+                if client_id and client_id in err_str:
+                    err_str = err_str.replace(client_id, "[REDACTED]")
+                self.last_error = err_str
                 print(f"[{datetime.now()}] Dhan WS Connection issue: {err_str}. Reconnecting in 5s...")
                 await asyncio.sleep(5)
 
@@ -314,6 +323,9 @@ class LivePaperTradingEngine:
             "data_source": CONFIG.DATA_SOURCE_NAME,
             "synthetic_replay_mode": "NO",
             "websocket_connected": self.ws_connected,
+            "dhan_client_id": "PRESENT" if bool(os.environ.get("DHAN_CLIENT_ID", "").strip()) else "MISSING",
+            "dhan_access_token": "PRESENT" if bool(os.environ.get("DHAN_ACCESS_TOKEN", "").strip()) else "MISSING",
+            "last_ws_error": self.feed_manager.last_error if hasattr(self.feed_manager, "last_error") else None,
             "feed_health": feed_health,
             "tick_age_seconds": tick_age_seconds,
             "paper_trading_allowed": paper_trading_allowed,
