@@ -28,7 +28,9 @@ def migrate_if_needed(target_db_path: str):
         "/data/trading.db",
         "/tmp/trading.db",
         "trading.db",
-        os.path.join(os.path.dirname(__file__), "trading.db")
+        "seed_trading.db",
+        os.path.join(os.path.dirname(__file__), "trading.db"),
+        os.path.join(os.path.dirname(__file__), "seed_trading.db")
     ]
     
     target_abs = os.path.abspath(target_db_path)
