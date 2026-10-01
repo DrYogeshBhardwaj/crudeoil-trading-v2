@@ -44,6 +44,7 @@ class DhanFeedManager:
         import websockets
         import struct
         
+        retry_delay = 5
         while self.is_running:
             client_id = os.environ.get("DHAN_CLIENT_ID", "").strip()
             access_token = os.environ.get("DHAN_ACCESS_TOKEN", "").strip()
@@ -62,6 +63,7 @@ class DhanFeedManager:
                 async with websockets.connect(ws_url, ping_interval=20, ping_timeout=10) as ws:
                     self.engine.ws_connected = True
                     self.last_error = None
+                    retry_delay = 5  # Reset retry delay on successful connection
                     print(f"[{datetime.now()}] Connected to Dhan WebSocket Live Feed for Security ID {self.security_id}")
                     
                     sub_payload = {
@@ -100,8 +102,15 @@ class DhanFeedManager:
                 if client_id and client_id in err_str:
                     err_str = err_str.replace(client_id, "[REDACTED]")
                 self.last_error = err_str
-                print(f"[{datetime.now()}] Dhan WS Connection issue: {err_str}. Reconnecting in 5s...")
-                await asyncio.sleep(5)
+                
+                # Dynamic backoff for Dhan HTTP 429 Rate Limit
+                if "429" in err_str:
+                    retry_delay = min(retry_delay * 2 + 5, 30)
+                else:
+                    retry_delay = 5
+
+                print(f"[{datetime.now()}] Dhan WS Connection issue: {err_str}. Reconnecting in {retry_delay}s...")
+                await asyncio.sleep(retry_delay)
 
     def _parse_dhan_binary_ltp(self, raw_bytes: bytes) -> Optional[float]:
         """Parses Dhan binary feed packet for LTP across Ticker, Quote, and Full depth packets."""
