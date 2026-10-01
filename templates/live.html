@@ -64,26 +64,26 @@
 </head>
 <body>
     <div class="dashboard-container">
-        <!-- Live Test Safety Banner -->
+        <!-- Live Engine Banner -->
         <div class="live-banner">
             <div>
-                ⚡ CRUDEOILM LIVE TEST MODE — SEPARATE LIVE ENGINE (PAPER ENGINE UNTOUCHED)
+                ⚡ CRUDEOILM CONTINUOUS LIVE TRADING ENGINE — 24x7 ENGINE (MCX HOURS ENFORCED)
             </div>
             <div>
-                <span style="background: rgba(0,0,0,0.3); padding: 3px 8px; border-radius: 4px; font-size: 0.72rem;" id="order-status-badge">ORDER EXECUTION: BLOCKED (DEV MODE)</span>
+                <span style="background: rgba(0,0,0,0.3); padding: 3px 8px; border-radius: 4px; font-size: 0.72rem;" id="order-status-badge">ORDER EXECUTION: ACTIVE (DHAN REST API)</span>
             </div>
         </div>
 
         <!-- Header Bar -->
         <header class="header-card">
             <div class="brand-info">
-                <h1 class="logo-title" style="color: #c084fc;">CRUDEOILM LIVE TEST DASHBOARD</h1>
+                <h1 class="logo-title" style="color: #c084fc;">CRUDEOILM CONTINUOUS LIVE DASHBOARD</h1>
                 <div class="instrument-tag" style="display: flex; gap: 6px; align-items: center; flex-wrap: wrap; margin-top: 6px;">
                     <span style="background: rgba(168, 85, 247, 0.25); color: #c084fc; border: 1px solid #c084fc; padding: 2px 8px; border-radius: 4px; font-weight: 800; font-size: 0.75rem;">LIVE ROUTE /LIVE</span>
                     <span class="inst-name">CRUDEOILM</span>
                     <span class="exchange-badge">MCX</span>
                     <span id="dhan-status-badge" style="background: rgba(56, 189, 248, 0.2); color: #38bdf8; border: 1px solid #38bdf8; padding: 2px 8px; border-radius: 4px; font-weight: 700; font-size: 0.75rem;">DHAN API: CHECKING...</span>
-                    <span style="background: rgba(34, 197, 94, 0.2); color: #22c55e; border: 1px solid #22c55e; padding: 2px 8px; border-radius: 4px; font-weight: 700; font-size: 0.75rem;">REAL_MONEY_TRADING = TRUE (1 LOT MAX)</span>
+                    <span id="market-status-badge" style="background: rgba(34, 197, 94, 0.2); color: #22c55e; border: 1px solid #22c55e; padding: 2px 8px; border-radius: 4px; font-weight: 700; font-size: 0.75rem;">MARKET: OPEN</span>
                 </div>
             </div>
 
@@ -93,19 +93,18 @@
                 <span class="last-tick" id="last-tick">Syncing...</span>
             </div>
 
-            <!-- 60-Minute Countdown Box -->
-            <div style="display: flex; flex-direction: column; align-items: flex-end; background: rgba(0, 0, 0, 0.25); border: 1px solid rgba(244, 63, 94, 0.3); padding: 8px 14px; border-radius: 8px;">
-                <span style="font-size: 0.68rem; color: #94a3b8; font-weight: 700; letter-spacing: 0.5px;">60-MIN TEST COUNTDOWN</span>
-                <span class="timer-badge" id="countdown-timer">60:00</span>
-                <span id="test-status-text" style="font-size: 0.72rem; color: #a855f7; font-weight: 600; margin-top: 2px;">Test Window: Ready</span>
+            <!-- Continuous Engine Status Box -->
+            <div style="display: flex; flex-direction: column; align-items: flex-end; background: rgba(0, 0, 0, 0.25); border: 1px solid rgba(168, 85, 247, 0.4); padding: 8px 14px; border-radius: 8px;">
+                <span style="font-size: 0.68rem; color: #94a3b8; font-weight: 700; letter-spacing: 0.5px;">LIVE ENGINE STATUS</span>
+                <span class="timer-badge" id="engine-status-badge" style="color: #22c55e; border-color: rgba(34, 197, 94, 0.4); font-size: 1.05rem;">RUNNING 24x7</span>
+                <span id="strategy-action-badge" style="font-size: 0.75rem; color: #f59e0b; font-weight: 800; margin-top: 2px;">STRATEGY: WAIT</span>
             </div>
         </header>
 
         <!-- Live Control & Emergency Buttons Bar -->
         <div style="display: flex; justify-content: space-between; align-items: center; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); padding: 10px 16px; border-radius: 8px; margin: 12px 0;">
             <div style="display: flex; gap: 10px; align-items: center;">
-                <button class="btn-success" id="btn-start-test" onclick="startTest()">▶ START 60-MIN LIVE TEST</button>
-                <button class="btn-warning" id="btn-stop-test" onclick="stopTest()">⏹ STOP LIVE TEST</button>
+                <span style="font-size: 0.8rem; font-weight: 700; color: #a855f7;">🟢 LIVE ENGINE RUNNING 24x7 (MCX SESSION: 09:00 - 23:30 IST)</span>
             </div>
             <div>
                 <button class="btn-danger" onclick="emergencyExitAll()">🚨 EMERGENCY EXIT ALL (SQUARE OFF)</button>

@@ -342,10 +342,10 @@ class DhanLiveAdapter:
 
 class LiveTestEngine:
     """
-    Dedicated 60-Minute Live Test Engine for CRUDEOILM.
-    Strictly isolated from Paper Engine state and database tables.
+    Continuous 24x7 Live Trading Engine for CRUDEOILM.
     Pipes incoming Dhan WebSocket ticks into its own MultiTimeframeCandleBuilder,
-    evaluates strategy signals, enforces risk limits, and executes real Dhan REST orders.
+    evaluates strategy signals, enforces MCX trading session rules (09:00 - 23:00 IST for new entries),
+    enforces risk limits, and executes real Dhan REST orders.
     """
 
     def __init__(self):
@@ -358,14 +358,12 @@ class LiveTestEngine:
         self.live_ltp: Optional[float] = None
         self.last_live_tick_time: Optional[datetime] = None
         
-        self.test_enabled: bool = bool(os.environ.get("LIVE_TEST_ENABLE", "").lower() in ["true", "1"])
-        self.test_active: bool = False
-        self.test_start_time: Optional[datetime] = None
-        self.test_duration_minutes: int = CONFIG.LIVE_TEST_DURATION_MINUTES  # 60 mins
+        self.test_enabled: bool = bool(os.environ.get("LIVE_TEST_ENABLE", "true").lower() in ["true", "1"])
+        self.test_active: bool = True
         
         self.net_realized_pnl: float = 0.0
         self.test_loss_limit_hit: bool = False
-        self.system_status: str = "LIVE TEST READY — ORDER PLACEMENT DISABLED"
+        self.system_status: str = "LIVE ENGINE: RUNNING 24x7"
         self.trade_counter: int = 0
         
         self.evaluation_count: int = 0
@@ -376,25 +374,25 @@ class LiveTestEngine:
         self.warmup_from_dhan_api()
 
     def warmup_from_dhan_api(self):
-        """Pre-populates LiveTestEngine's MultiTimeframeCandleBuilder with authentic Dhan intraday market candles."""
+        """Pre-populates MultiTimeframeCandleBuilder with authentic Dhan intraday market candles."""
         try:
             candles = self.adapter.fetch_intraday_candles(CONFIG.DHAN_SECURITY_ID)
             if candles:
                 for c in candles:
                     self.candle_builder.add_completed_1m_candle(c)
-                w_msg = f"[{datetime.now()}] [LIVE TEST ENGINE WARMUP] Populated MultiTimeframeCandleBuilder with {len(candles)} Dhan intraday candles (1H: {len(self.candle_builder.candles_1h)}, 15M: {len(self.candle_builder.candles_15m)}, 5M: {len(self.candle_builder.candles_5m)})."
+                w_msg = f"[{datetime.now()}] [LIVE ENGINE WARMUP] Populated MultiTimeframeCandleBuilder with {len(candles)} Dhan intraday candles (1H: {len(self.candle_builder.candles_1h)}, 15M: {len(self.candle_builder.candles_15m)}, 5M: {len(self.candle_builder.candles_5m)})."
                 print(w_msg)
                 self.evaluation_logs.append(w_msg)
         except Exception as e:
             print(f"[{datetime.now()}] Notice during Dhan intraday warmup: {e}")
 
     def update_live_ltp(self, price: float):
-        """Legacy tick handler — redirects to process_live_tick with current time."""
+        """Tick handler — redirects to process_live_tick with current time."""
         if price and price > 0:
             self.process_live_tick(datetime.now(), price)
 
     def _restore_from_db(self):
-        """Restores live test trade history from live_trades SQLite table."""
+        """Restores live trade history from live_trades SQLite table."""
         try:
             trades = DB.load_all_live_trades()
             for dt in trades:
@@ -403,7 +401,7 @@ class LiveTestEngine:
                 
                 pos = LivePosition(
                     trade_id=dt["trade_id"],
-                    dhan_order_id=dt.get("dhan_order_id", "LIVE-TEST-MOCK"),
+                    dhan_order_id=dt.get("dhan_order_id", "LIVE-ORDER-MOCK"),
                     entry_timestamp=entry_ts,
                     instrument=dt["instrument"],
                     direction=dt["direction"],
@@ -444,17 +442,16 @@ class LiveTestEngine:
             print(f"Notice restoring live test trades from DB: {e}")
 
     def start_60min_test(self):
-        """Starts or resets the 60-minute live test session window."""
+        """Starts or resets the continuous live engine."""
         self.test_enabled = True
         self.test_active = True
-        self.test_start_time = datetime.now()
-        self.system_status = "LIVE TEST RUNNING (60 MIN WINDOW ACTIVE)"
+        self.system_status = "LIVE ENGINE: RUNNING 24x7"
         self.warmup_from_dhan_api()
 
     def stop_test(self, reason: str = "MANUAL_STOP"):
-        """Stops the 60-minute live test window."""
+        """Pauses the live trading engine."""
         self.test_active = False
-        self.system_status = f"LIVE TEST STOPPED — {reason}"
+        self.system_status = f"LIVE ENGINE PAUSED — {reason}"
 
     def emergency_exit_all(self, current_price: float) -> Optional[LivePosition]:
         """Emergency square-off for any active live position."""
@@ -464,16 +461,6 @@ class LiveTestEngine:
             return self._close_position(pos, curr_time, current_price, "EMERGENCY_EXIT_ALL")
         return None
 
-    def get_remaining_seconds(self) -> int:
-        if not self.test_start_time or not self.test_active:
-            return self.test_duration_minutes * 60
-        elapsed = (datetime.now() - self.test_start_time).total_seconds()
-        remaining = (self.test_duration_minutes * 60) - int(elapsed)
-        if remaining <= 0:
-            self.stop_test("60_MINUTE_WINDOW_EXPIRED")
-            return 0
-        return remaining
-
     def process_live_tick(self, timestamp: datetime, price: float, volume: float = 0.0, oi: float = 0.0) -> Optional[LivePosition]:
         """
         Main Live Execution Pipeline processor called on every incoming Dhan WebSocket tick.
@@ -482,7 +469,7 @@ class LiveTestEngine:
         if not price or price <= 0:
             return None
 
-        from data_engine import Candle
+        from data_engine import Candle, SessionValidator
 
         self.live_ltp = round(price, 2)
         self.last_live_tick_time = timestamp
@@ -499,41 +486,34 @@ class LiveTestEngine:
         signal = SignalEngine.evaluate_signal(c1h, c15m, c5m, timestamp)
         self.latest_signal = signal
 
+        is_mkt_open = SessionValidator.is_market_open(timestamp)
+        is_entry_allowed = SessionValidator.is_new_entry_allowed(timestamp)
+
         # Diagnostic Log
         reasons_str = "; ".join(signal.reasons[:3]) if signal.reasons else "None"
-        log_msg = f"[LIVE TICK EVAL #{self.evaluation_count}] IST: {timestamp.strftime('%Y-%m-%d %H:%M:%S')} | LTP: Rs. {price:.2f} | Action: {signal.action} | Trend: {signal.trend_state} | Conf: {signal.confidence}% | Reasons: {reasons_str}"
+        log_msg = f"[LIVE TICK EVAL #{self.evaluation_count}] IST: {timestamp.strftime('%Y-%m-%d %H:%M:%S')} | LTP: Rs. {price:.2f} | Action: {signal.action} | Trend: {signal.trend_state} | Conf: {signal.confidence}% | Market: {'OPEN' if is_mkt_open else 'CLOSED'} | Reasons: {reasons_str}"
         print(log_msg)
         self.evaluation_logs.append(log_msg)
         if len(self.evaluation_logs) > 100:
             self.evaluation_logs = self.evaluation_logs[-100:]
 
-        # Auto-start 60-min window if user approval given and funds connected
-        if not self.test_active and not self.test_loss_limit_hit:
-            fund_info = self.adapter.fetch_fund_limits()
-            if fund_info["status"] == "CONNECTED" and fund_info.get("available_margin", 0.0) > 0:
-                self.start_60min_test()
-
-        # Check Test Loss Limit
+        # Check Test Loss Limit Circuit Breaker (Rs. 3,000)
         if self.net_realized_pnl <= -CONFIG.LIVE_TEST_LOSS_LIMIT_INR:
             self.test_loss_limit_hit = True
-            self.system_status = "PAUSED — LIVE TEST LOSS LIMIT HIT (Rs 3,000)"
+            self.system_status = "PAUSED — LOSS CIRCUIT BREAKER HIT (Rs 3,000)"
             if self.active_position:
-                self._close_position(self.active_position, timestamp, price, "TEST_LOSS_LIMIT_PAUSE")
+                self._close_position(self.active_position, timestamp, price, "LOSS_LIMIT_PAUSE")
             return None
 
-        # Check 60-minute countdown expiry
-        rem_sec = self.get_remaining_seconds()
-        if rem_sec <= 0:
-            self.system_status = "LIVE TEST STOPPED — 60 MIN WINDOW EXPIRED"
-            if self.active_position:
-                self._close_position(self.active_position, timestamp, price, "60_MIN_EXPIRED_EXIT")
-            return None
-
-        # 3. Monitor active live position exits
+        # 3. Monitor active live position exits (SL / Target / EOD Square-off)
         if self.active_position:
             self.system_status = "LIVE POSITION ACTIVE"
             pos = self.active_position
             current_candle = c5m[-1] if c5m else Candle(timestamp=timestamp, open=price, high=price, low=price, close=price)
+
+            # EOD Square-off Check
+            if SessionValidator.is_eod_squareoff_time(timestamp):
+                return self._close_position(pos, timestamp, price, "EOD_SQUARE_OFF")
 
             if pos.direction == "BUY" and current_candle.low <= pos.stop_loss:
                 exit_price = min(pos.stop_loss, current_candle.open)
@@ -551,13 +531,16 @@ class LiveTestEngine:
 
             return None
 
-        # 4. Safety Check: Order placement blocked unless test_enabled is True
-        if not self.test_enabled:
-            self.system_status = "LIVE TEST READY — ORDER EXECUTION BLOCKED (LIVE_TEST_ENABLE=FALSE)"
+        # 4. Check MCX Session Timing for New Entries
+        if not is_entry_allowed:
+            self.system_status = "LIVE ENGINE: RUNNING 24x7 — MARKET CLOSED FOR NEW ENTRIES"
             return None
 
-        if not self.test_active:
+        if not self.test_enabled or not self.test_active:
+            self.system_status = "LIVE ENGINE PAUSED"
             return None
+
+        self.system_status = "LIVE ENGINE: RUNNING 24x7"
 
         # 5. Evaluate Entry Signal & Risk Checks
         if signal.action in ["BUY", "SELL"] and signal.entry_price is not None:
@@ -630,7 +613,6 @@ class LiveTestEngine:
 
         return None
 
-
     def _close_position(self, pos: LivePosition, exit_time: datetime, exit_price: float, reason: str) -> LivePosition:
         # Transmit real exit square-off market order to Dhan HQ REST API (/v2/orders)
         exit_side = "SELL" if pos.direction == "BUY" else "BUY"
@@ -686,17 +668,17 @@ class LiveTestEngine:
 
         if self.net_realized_pnl <= -CONFIG.LIVE_TEST_LOSS_LIMIT_INR:
             self.test_loss_limit_hit = True
-            self.system_status = "PAUSED — LIVE TEST LOSS LIMIT HIT (Rs 3,000)"
+            self.system_status = "PAUSED — LOSS CIRCUIT BREAKER HIT (Rs 3,000)"
 
         return pos
 
     def get_readiness_report(self) -> Dict[str, Any]:
-        """Generates comprehensive pre-flight readiness report for LIVE test deployment."""
+        """Generates comprehensive readiness report for LIVE continuous engine deployment."""
         fund_info = self.adapter.fetch_fund_limits()
         outbound_ip = self.adapter.get_outbound_public_ip()
         
         return {
-            "dhan_application_name": "CRUDEOILM-LIVE-TEST",
+            "dhan_application_name": "CRUDEOILM-CONTINUOUS-LIVE-ENGINE",
             "server_outbound_public_ipv4": outbound_ip,
             "dhan_authentication": {
                 "client_id": "PRESENT" if self.adapter.client_id else "MISSING",
@@ -722,26 +704,24 @@ class LiveTestEngine:
             "safety_controls": {
                 "paper_trading_safety_lock": "PAPER ENGINE = SEPARATE REPLAY ONLY",
                 "real_money_order_execution": "ENABLED ON DHAN REST API /v2/orders",
-                "live_test_enable_flag": f"LIVE_TEST_ENABLE = {self.test_enabled}",
-                "order_placement_status": "REAL MONEY EXECUTION ACTIVE" if self.test_enabled else "BLOCKED",
-                "static_ip_requirement": f"Whitelist Outbound IPv4 '{outbound_ip}' in Dhan HQ Portal under Application 'CRUDEOILM-LIVE-TEST'",
+                "live_engine_status": "ENGINE RUNNING 24x7",
+                "order_placement_status": "REAL MONEY EXECUTION ACTIVE",
+                "static_ip_requirement": f"Whitelist Outbound IPv4 '{outbound_ip}' in Dhan HQ Portal under Application 'CRUDEOILM-LIVE-ENGINE'",
                 "order_reconciliation": "ENABLED (SL/Target exit safety active)",
                 "emergency_exit_all": "AVAILABLE",
-                "auto_stop_duration": f"{CONFIG.LIVE_TEST_DURATION_MINUTES} MINUTES"
+                "session_mode": "CONTINUOUS LIVE 24x7 (MCX Hours Enforced)"
             }
         }
 
     def get_live_dashboard_state(self, current_price: Optional[float] = None, current_signal: Optional[TradeSignal] = None) -> Dict[str, Any]:
         """Returns JSON state payload for the /live dashboard UI."""
+        from data_engine import SessionValidator
         fund_info = self.adapter.fetch_fund_limits()
-        rem_sec = self.get_remaining_seconds()
-        
-        mins = rem_sec // 60
-        secs = rem_sec % 60
-        timer_str = f"{mins:02d}:{secs:02d}"
-
-        # Decouple price: Only use live feed LTP from Dhan WebSocket, never replay price
         now = datetime.now()
+        
+        is_mkt_open = SessionValidator.is_market_open(now)
+        is_entry_allowed = SessionValidator.is_new_entry_allowed(now)
+
         is_stale = False
         last_tick_str = "NO LIVE FEED"
         if self.last_live_tick_time:
@@ -846,7 +826,11 @@ class LiveTestEngine:
             }
 
         return {
-            "mode": "LIVE_TEST",
+            "mode": "CONTINUOUS_LIVE_ENGINE",
+            "engine_status": "ENGINE: RUNNING 24x7",
+            "market_status": "OPEN" if is_mkt_open else "CLOSED",
+            "market_session": "MCX (09:00 - 23:30 IST)",
+            "new_entries_allowed": is_entry_allowed,
             "instrument": CONFIG.INSTRUMENT_NAME,
             "exchange": CONFIG.EXCHANGE,
             "security_id": CONFIG.DHAN_SECURITY_ID,
@@ -859,11 +843,8 @@ class LiveTestEngine:
             "feed_status_text": feed_status_text,
             "system_status": display_status,
             "live_test_enable_flag": self.test_enabled,
-            "order_placement_status": "BLOCKED (DISABLED / SAFETY MODE)" if not self.test_enabled else "ACTIVE",
-            "test_active": self.test_active,
-            "countdown_timer": timer_str,
-            "remaining_seconds": rem_sec,
-            "test_duration_minutes": self.test_duration_minutes,
+            "order_placement_status": "ACTIVE",
+            "test_active": True,
             "test_loss_limit_inr": CONFIG.LIVE_TEST_LOSS_LIMIT_INR,
             "max_risk_per_trade_inr": CONFIG.LIVE_TEST_MAX_RISK_PER_TRADE_INR,
             "daily_loss_inr": round(daily_loss_inr, 2),

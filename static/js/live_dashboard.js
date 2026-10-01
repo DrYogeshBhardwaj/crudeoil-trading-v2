@@ -46,18 +46,26 @@ async function updateLiveDashboard() {
         const marginElem = document.getElementById('avail-margin');
         if (marginElem) marginElem.textContent = `₹${(data.available_margin_inr || 0).toLocaleString('en-IN', {minimumFractionDigits: 2})}`;
 
-        // 3. Order Execution Status Badge
-        const orderBadge = document.getElementById('order-status-badge');
-        if (orderBadge) {
-            orderBadge.textContent = `ORDER PLACEMENT: ${data.order_placement_status}`;
+        // 3. Market Status Badge
+        const marketBadge = document.getElementById('market-status-badge');
+        if (marketBadge) {
+            const isMktOpen = data.market_status === 'OPEN';
+            marketBadge.textContent = `MARKET: ${data.market_status || 'OPEN'}`;
+            marketBadge.style.background = isMktOpen ? 'rgba(34, 197, 94, 0.2)' : 'rgba(239, 68, 68, 0.2)';
+            marketBadge.style.color = isMktOpen ? '#22c55e' : '#ef4444';
+            marketBadge.style.borderColor = isMktOpen ? '#22c55e' : '#ef4444';
         }
 
-        // 4. 60-Minute Countdown Timer
-        const timerElem = document.getElementById('countdown-timer');
-        if (timerElem) timerElem.textContent = data.countdown_timer || '60:00';
+        // 4. Continuous Live Engine Status & Strategy Action
+        const engineBadge = document.getElementById('engine-status-badge');
+        if (engineBadge) engineBadge.textContent = data.engine_status || 'RUNNING 24x7';
 
-        const testStatusText = document.getElementById('test-status-text');
-        if (testStatusText) testStatusText.textContent = `Test Status: ${data.system_status}`;
+        const actionBadge = document.getElementById('strategy-action-badge');
+        if (actionBadge && data.latest_evaluation) {
+            const act = data.latest_evaluation.action || 'WAIT';
+            actionBadge.textContent = `STRATEGY: ${act} (${data.latest_evaluation.trend_state || 'RANGE'})`;
+            actionBadge.style.color = act === 'BUY' ? '#10b981' : (act === 'SELL' ? '#ef4444' : '#f59e0b');
+        }
 
         // 5. Daily Loss & Drawdown
         const dailyLossElem = document.getElementById('live-daily-loss');

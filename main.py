@@ -86,15 +86,15 @@ async def update_live_credentials(payload: dict):
 
 @app.post("/api/live/start_test")
 async def start_live_test():
-    """Starts 60-minute live test session window."""
+    """Starts or resumes continuous 24x7 live engine."""
     LIVE_TEST_ENGINE.start_60min_test()
-    return JSONResponse({"status": "STARTED", "message": "60-minute live test window started."})
+    return JSONResponse({"status": "STARTED", "message": "Continuous 24x7 live trading engine started."})
 
 @app.post("/api/live/stop_test")
 async def stop_live_test():
-    """Stops 60-minute live test session window."""
+    """Pauses continuous 24x7 live engine."""
     LIVE_TEST_ENGINE.stop_test("MANUAL_STOP")
-    return JSONResponse({"status": "STOPPED", "message": "Live test window stopped manually."})
+    return JSONResponse({"status": "STOPPED", "message": "Continuous live trading engine paused."})
 
 @app.post("/api/live/emergency_exit")
 async def emergency_exit():
