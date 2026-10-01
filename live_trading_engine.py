@@ -89,8 +89,15 @@ class DhanLiveAdapter:
                 "error": "DHAN_CLIENT_ID or DHAN_ACCESS_TOKEN Railway secret missing."
             }
 
-        endpoints = [f"{self.BASE_URL}/fundlimit", f"{self.BASE_URL}/user/fundlimit"]
+        endpoints = [f"{self.BASE_URL}/fundlimit", f"{self.BASE_URL}/user/fundlimit", f"{self.BASE_URL}/v2/fundlimit"]
         last_error = None
+        
+        # Configure proxy handler if HTTPS_PROXY or HTTP_PROXY is configured in environment
+        proxy_url = os.environ.get("HTTPS_PROXY") or os.environ.get("HTTP_PROXY") or os.environ.get("QUOTAGUARDSTATIC_URL")
+        handlers = []
+        if proxy_url:
+            handlers.append(urllib.request.ProxyHandler({'http': proxy_url, 'https': proxy_url}))
+        opener = urllib.request.build_opener(*handlers)
         
         for url in endpoints:
             try:
@@ -100,7 +107,7 @@ class DhanLiveAdapter:
                     "Content-Type": "application/json"
                 }
                 req = urllib.request.Request(url, headers=headers, method="GET")
-                with urllib.request.urlopen(req, timeout=5) as resp:
+                with opener.open(req, timeout=5) as resp:
                     data = json.loads(resp.read().decode("utf-8"))
                     avail = float(data.get("availMargin", data.get("availableBalance", data.get("sodLimit", 0.0))))
                     return {
@@ -141,6 +148,9 @@ class LiveTestEngine:
         self.active_position: Optional[LivePosition] = None
         self.closed_trades: List[LivePosition] = []
         
+        self.live_ltp: Optional[float] = None
+        self.last_live_tick_time: Optional[datetime] = None
+        
         self.test_enabled: bool = bool(os.environ.get("LIVE_TEST_ENABLE", "").lower() in ["true", "1"])
         self.test_active: bool = False
         self.test_start_time: Optional[datetime] = None
@@ -152,6 +162,12 @@ class LiveTestEngine:
         self.trade_counter: int = 0
         
         self._restore_from_db()
+
+    def update_live_ltp(self, price: float):
+        """Updates real-time tick price from authenticated Dhan WebSocket feed only."""
+        if price and price > 0:
+            self.live_ltp = round(price, 2)
+            self.last_live_tick_time = datetime.now()
 
     def _restore_from_db(self):
         """Restores live test trade history from live_trades SQLite table."""
@@ -426,7 +442,7 @@ class LiveTestEngine:
             }
         }
 
-    def get_live_dashboard_state(self, current_price: float = 0.0, current_signal: Optional[TradeSignal] = None) -> Dict[str, Any]:
+    def get_live_dashboard_state(self, current_price: Optional[float] = None, current_signal: Optional[TradeSignal] = None) -> Dict[str, Any]:
         """Returns JSON state payload for the /live dashboard UI."""
         fund_info = self.adapter.fetch_fund_limits()
         rem_sec = self.get_remaining_seconds()
@@ -435,6 +451,11 @@ class LiveTestEngine:
         secs = rem_sec % 60
         timer_str = f"{mins:02d}:{secs:02d}"
 
+        # Decouple price: Only use live feed LTP from Dhan WebSocket, never replay price
+        effective_price = self.live_ltp if self.live_ltp is not None else (current_price if (current_price and current_price > 0 and fund_info["status"] == "CONNECTED") else 0.0)
+        
+        feed_status_text = "LIVE FEED ACTIVE" if effective_price > 0 else "NO LIVE FEED / NO TRADE"
+        
         closed = self.closed_trades
         total_trades = len(closed)
         
@@ -457,10 +478,11 @@ class LiveTestEngine:
         unrealized_pnl = 0.0
         if self.active_position:
             pos = self.active_position
-            if pos.direction == "BUY":
-                unrealized_pnl = (current_price - pos.entry_price) * CONFIG.LOT_SIZE
-            else:
-                unrealized_pnl = (pos.entry_price - current_price) * CONFIG.LOT_SIZE
+            if effective_price > 0:
+                if pos.direction == "BUY":
+                    unrealized_pnl = (effective_price - pos.entry_price) * CONFIG.LOT_SIZE
+                else:
+                    unrealized_pnl = (pos.entry_price - effective_price) * CONFIG.LOT_SIZE
                 
             active_pos_dict = {
                 "trade_id": pos.trade_id,
@@ -497,6 +519,10 @@ class LiveTestEngine:
                 "net_pnl": res.net_pnl if res else 0.0
             })
 
+        display_status = self.system_status
+        if effective_price == 0.0 and fund_info["status"] != "CONNECTED":
+            display_status = f"NO LIVE FEED / NO TRADE ({fund_info['status']})"
+
         return {
             "mode": "LIVE_TEST",
             "instrument": CONFIG.INSTRUMENT_NAME,
@@ -506,10 +532,11 @@ class LiveTestEngine:
             "dhan_connection": fund_info["status"],
             "dhan_client_id": self.adapter.client_id or "NOT_CONFIGURED",
             "available_margin_inr": fund_info.get("available_margin", 0.0),
-            "current_price": round(current_price, 2),
-            "system_status": self.system_status,
+            "current_price": round(effective_price, 2),
+            "feed_status_text": feed_status_text,
+            "system_status": display_status,
             "live_test_enable_flag": self.test_enabled,
-            "order_placement_status": "BLOCKED (DISABLED / DEV MODE)" if not self.test_enabled else "ACTIVE",
+            "order_placement_status": "BLOCKED (DISABLED / SAFETY MODE)" if not self.test_enabled else "ACTIVE",
             "test_active": self.test_active,
             "countdown_timer": timer_str,
             "remaining_seconds": rem_sec,

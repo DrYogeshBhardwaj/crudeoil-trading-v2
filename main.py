@@ -58,10 +58,8 @@ async def serve_live_dashboard():
 @app.get("/api/live/state")
 async def get_live_state():
     """Returns real-time JSON state for the separate /live dashboard."""
-    paper_state = LIVE_ENGINE.get_dashboard_state()
-    curr_price = paper_state.get("current_price", 0.0)
-    curr_sig = LIVE_ENGINE.current_signal
-    return JSONResponse(LIVE_TEST_ENGINE.get_live_dashboard_state(curr_price, curr_sig))
+    # Strictly decoupled from PAPER replay feed
+    return JSONResponse(LIVE_TEST_ENGINE.get_live_dashboard_state())
 
 @app.get("/api/live/readiness")
 async def get_live_readiness():

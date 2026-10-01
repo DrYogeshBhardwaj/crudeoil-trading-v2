@@ -12,7 +12,17 @@ async function updateLiveDashboard() {
 
         // 1. Live Price & Last Tick
         const priceElem = document.getElementById('live-price');
-        if (priceElem) priceElem.textContent = `₹${(data.current_price || 0).toFixed(2)}`;
+        if (priceElem) {
+            if (data.current_price && data.current_price > 0) {
+                priceElem.textContent = `₹${data.current_price.toFixed(2)}`;
+                priceElem.style.color = '#10b981';
+                priceElem.style.fontSize = '1.8rem';
+            } else {
+                priceElem.textContent = 'NO LIVE FEED / NO TRADE';
+                priceElem.style.color = '#f43f5e';
+                priceElem.style.fontSize = '0.95rem';
+            }
+        }
 
         // 2. Dhan Status & Client ID
         const dhanStatusElem = document.getElementById('dhan-status-badge');

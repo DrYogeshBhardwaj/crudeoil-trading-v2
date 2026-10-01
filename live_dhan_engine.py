@@ -86,12 +86,23 @@ class DhanFeedManager:
                             price = self._parse_dhan_binary_ltp(message)
                             if price and price > 0:
                                 self.engine.process_live_tick(now_ist, price)
+                                try:
+                                    from live_trading_engine import LIVE_TEST_ENGINE
+                                    LIVE_TEST_ENGINE.update_live_ltp(price)
+                                except Exception:
+                                    pass
                         elif isinstance(message, str):
                             try:
                                 data = json.loads(message)
                                 price = data.get("LTP") or data.get("ltp") or data.get("last_price")
                                 if price:
-                                    self.engine.process_live_tick(now_ist, float(price))
+                                    flt_price = float(price)
+                                    self.engine.process_live_tick(now_ist, flt_price)
+                                    try:
+                                        from live_trading_engine import LIVE_TEST_ENGINE
+                                        LIVE_TEST_ENGINE.update_live_ltp(flt_price)
+                                    except Exception:
+                                        pass
                             except Exception:
                                 pass
             except Exception as e:
