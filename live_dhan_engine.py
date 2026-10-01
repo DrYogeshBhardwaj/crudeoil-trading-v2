@@ -87,23 +87,6 @@ class DhanFeedManager:
                     sub_bin = self._create_dhan_v2_sub_packet(client_id, self.security_id)
                     await ws.send(sub_bin)
                     self.add_ws_log(f"Binary Subscription Packet SENT (ReqCode=15, ExchangeSegment=5, SecID={self.security_id}).")
-
-                    # Send fallback JSON subscription payload with MCX_COMM
-                    try:
-                        sub_payload = {
-                            "RequestCode": 15,
-                            "InstrumentCount": 1,
-                            "InstrumentList": [
-                                {
-                                    "ExchangeSegment": "MCX_COMM",
-                                    "SecurityId": self.security_id
-                                }
-                            ]
-                        }
-                        await ws.send(json.dumps(sub_payload))
-                        self.add_ws_log(f"JSON Fallback Subscription SENT for MCX_COMM / {self.security_id}.")
-                    except Exception:
-                        pass
                     
                     first_tick_logged = False
                     while self.is_running:
