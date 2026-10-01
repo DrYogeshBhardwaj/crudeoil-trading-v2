@@ -9,7 +9,14 @@ import os
 from datetime import datetime
 from typing import List, Dict, Optional, Any
 
-DB_FILE = os.environ.get("DATABASE_PATH", "/tmp/trading.db" if os.name != "nt" else "trading.db")
+def get_db_path() -> str:
+    if os.environ.get("DATABASE_PATH"):
+        return os.environ["DATABASE_PATH"]
+    if os.path.exists("/data"):
+        return "/data/trading.db"
+    return "/tmp/trading.db" if os.name != "nt" else "trading.db"
+
+DB_FILE = get_db_path()
 
 class DatabaseEngine:
 
