@@ -52,20 +52,43 @@ class DhanLiveAdapter:
     BASE_URL = "https://api.dhan.co"
     
     def __init__(self):
+        self.reload_credentials()
+
+    def reload_credentials(self):
         self.client_id = os.environ.get("DHAN_CLIENT_ID", "").strip()
         self.access_token = os.environ.get("DHAN_ACCESS_TOKEN", "").strip()
         
-        # Fallback to local gitignored dhan_credentials.json if missing from env
-        if not self.client_id or not self.access_token:
-            cred_path = os.path.join(os.path.dirname(__file__), "dhan_credentials.json")
-            if os.path.exists(cred_path):
-                try:
-                    with open(cred_path, "r", encoding="utf-8") as f:
-                        cdata = json.load(f)
-                        if not self.client_id: self.client_id = str(cdata.get("DHAN_CLIENT_ID", "")).strip()
-                        if not self.access_token: self.access_token = str(cdata.get("DHAN_ACCESS_TOKEN", "")).strip()
-                except Exception:
-                    pass
+        # Fallback to persistent /data/dhan_credentials.json or local gitignored credentials file
+        paths_to_check = [
+            "/data/dhan_credentials.json",
+            os.path.join(os.path.dirname(__file__), "dhan_credentials.json")
+        ]
+        for cp in paths_to_check:
+            if not self.client_id or not self.access_token:
+                if os.path.exists(cp):
+                    try:
+                        with open(cp, "r", encoding="utf-8") as f:
+                            cdata = json.load(f)
+                            if not self.client_id: self.client_id = str(cdata.get("DHAN_CLIENT_ID", "")).strip()
+                            if not self.access_token: self.access_token = str(cdata.get("DHAN_ACCESS_TOKEN", "")).strip()
+                    except Exception:
+                        pass
+
+    def update_credentials(self, client_id: str, access_token: str):
+        """Updates and persists active Dhan API credentials without exposing tokens in logs."""
+        self.client_id = client_id.strip()
+        self.access_token = access_token.strip()
+        os.environ["DHAN_CLIENT_ID"] = self.client_id
+        os.environ["DHAN_ACCESS_TOKEN"] = self.access_token
+        
+        # Persist to /data volume if present, otherwise local file
+        target_dir = "/data" if os.path.exists("/data") else os.path.dirname(__file__)
+        target_file = os.path.join(target_dir, "dhan_credentials.json")
+        try:
+            with open(target_file, "w", encoding="utf-8") as f:
+                json.dump({"DHAN_CLIENT_ID": self.client_id, "DHAN_ACCESS_TOKEN": self.access_token}, f)
+        except Exception as e:
+            print(f"Notice saving credentials to {target_file}: {e}")
 
     @staticmethod
     def get_outbound_public_ip() -> str:

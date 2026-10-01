@@ -66,6 +66,24 @@ async def get_live_readiness():
     """Returns pre-flight readiness report for LIVE test deployment."""
     return JSONResponse(LIVE_TEST_ENGINE.get_readiness_report())
 
+@app.post("/api/live/update_credentials")
+async def update_live_credentials(payload: dict):
+    """Updates and persists active Dhan API credentials on running server instance."""
+    cid = str(payload.get("client_id", "")).strip()
+    token = str(payload.get("access_token", "")).strip()
+    if not cid or not token:
+        raise HTTPException(status_code=400, detail="client_id and access_token are required.")
+    
+    LIVE_TEST_ENGINE.adapter.update_credentials(cid, token)
+    fund_info = LIVE_TEST_ENGINE.adapter.fetch_fund_limits()
+    
+    return JSONResponse({
+        "status": fund_info["status"],
+        "dhan_client_id": cid,
+        "available_margin_inr": fund_info.get("available_margin", 0.0),
+        "message": "Dhan credentials updated and verified successfully."
+    })
+
 @app.post("/api/live/start_test")
 async def start_live_test():
     """Starts 60-minute live test session window."""
