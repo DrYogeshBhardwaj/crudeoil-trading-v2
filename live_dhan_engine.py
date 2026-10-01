@@ -138,6 +138,54 @@ class DhanFeedManager:
             pass
         return None
 
+from replay_test import generate_multiday_session_data
+
+class ServerSideReplayFeed:
+    """
+    Continuous 24x7 Server-Side Historical Replay Feed Manager.
+    Streams 5,400 CRUDEOILM candles (1,200 warmup + 4,200 multi-day session candles)
+    second-by-second directly into the trading engine 24x7 without Dhan WS dependency.
+    """
+    def __init__(self, engine: "LivePaperTradingEngine"):
+        self.engine = engine
+        self.is_running = True
+        self.candles = generate_multiday_session_data()
+        self.current_index = 0
+        self.total_candles = len(self.candles)
+        self.is_completed = False
+
+    async def start_replay_loop(self):
+        """
+        Main 24x7 server-side replay loop running continuously on Railway.
+        """
+        print(f"[{datetime.now()}] Starting Server-Side Replay Feed with {self.total_candles} candles...")
+        
+        # 1. Feed initial 1,200 warmup candles instantly for structure readiness
+        warmup_count = min(1200, self.total_candles)
+        for i in range(warmup_count):
+            c = self.candles[i]
+            self.engine.candle_builder.add_completed_1m_candle(c)
+        self.current_index = warmup_count
+
+        c1h = self.engine.candle_builder.candles_1h
+        c15m = self.engine.candle_builder.candles_15m
+        c5m = self.engine.candle_builder.candles_5m
+        if c1h and c15m and c5m:
+            self.engine.current_signal = SignalEngine.evaluate_signal(c1h, c15m, c5m, self.candles[warmup_count-1].timestamp)
+
+        # 2. Step through session candles second-by-second
+        while self.is_running:
+            if self.current_index >= self.total_candles:
+                self.is_completed = True
+                self.engine.replay_ended = True
+                await asyncio.sleep(2)
+                continue
+
+            c = self.candles[self.current_index]
+            self.engine.process_replay_candle(c)
+            self.current_index += 1
+            await asyncio.sleep(1.0)  # 1-second step per candle
+
 class LivePaperTradingEngine:
 
     def __init__(self):
@@ -147,39 +195,44 @@ class LivePaperTradingEngine:
         
         self.current_signal: Optional[TradeSignal] = None
         self.latest_tick_time: Optional[datetime] = None
-        self.current_price: float = 7460.5
+        self.current_price: float = 6500.0
         self.is_running: bool = True
         self.ws_connected: bool = False
+        self.replay_ended: bool = False
         self.recent_ticks = []
         self.feed_manager = DhanFeedManager(self)
-
-        # Pre-seed warmup candles for instant MTF structure readiness
-        self._seed_warmup_candles()
+        self.replay_feed = ServerSideReplayFeed(self)
 
     async def start_feed_loop(self):
-        """Launches continuous background Dhan WebSocket feed loop."""
-        await self.feed_manager.connect_and_listen()
+        """Launches continuous server-side 24x7 historical replay feed loop."""
+        await self.replay_feed.start_replay_loop()
 
-    def _seed_warmup_candles(self):
-        """Pre-seeds 20 hours of historical warmup candles for MTF structure readiness."""
-        start_time = datetime.now() - timedelta(minutes=1200)
-        price = 7400.0
-        for m in range(1200):
-            t = start_time + timedelta(minutes=m)
-            wave = m % 10
-            delta = 0.5 if wave < 6 else -0.3
-            price += delta
-            c = Candle(timestamp=t, open=price-1, high=price+2, low=price-2, close=price, volume=3000.0, open_interest=5000.0)
-            self.candle_builder.add_completed_1m_candle(c)
-        self.current_price = price
+    def process_replay_candle(self, candle: Candle) -> Dict[str, Any]:
+        """
+        Processes a continuous server-side replay candle through structure, trend, signal, and paper engine.
+        """
+        self.latest_tick_time = candle.timestamp
+        self.current_price = candle.close
+        
+        tick_entry = {"timestamp": candle.timestamp.strftime("%Y-%m-%d %H:%M:%S"), "ltp": round(candle.close, 2)}
+        self.recent_ticks.append(tick_entry)
+        if len(self.recent_ticks) > 50:
+            self.recent_ticks = self.recent_ticks[-50:]
 
-        # Initial strategy evaluation on warmup candles for instant UI accuracy
+        self.candle_builder.add_completed_1m_candle(candle)
+
         c1h = self.candle_builder.candles_1h
         c15m = self.candle_builder.candles_15m
         c5m = self.candle_builder.candles_5m
-        now_ist = datetime.utcnow() + timedelta(hours=5, minutes=30)
-        if c1h and c15m and c5m:
-            self.current_signal = SignalEngine.evaluate_signal(c1h, c15m, c5m, now_ist)
+
+        signal = SignalEngine.evaluate_signal(c1h, c15m, c5m, candle.timestamp)
+        self.current_signal = signal
+
+        current_candle = c5m[-1] if c5m else candle
+        pos_event = self.paper_engine.process_signal_and_market(signal, current_candle)
+        self.audit_logger.log_decision(candle.timestamp, candle.close, signal, self.paper_engine.system_status)
+
+        return self.get_dashboard_state()
 
     def process_live_tick(self, timestamp: datetime, price: float, volume: float = 0.0, oi: float = 0.0) -> Dict[str, Any]:
         """
@@ -233,15 +286,15 @@ class LivePaperTradingEngine:
             tick_age_seconds = 9999.0
             is_data_stale = True
 
-        # Enforce Stale Data & Connection Guards
-        if not self.ws_connected or is_data_stale:
-            system_status = "STALE DATA / NO TRADE"
-            feed_health = "DISCONNECTED" if not self.ws_connected else "STALE DATA"
-            paper_trading_allowed = "NO (DISCONNECTED)" if not self.ws_connected else "NO (DATA STALE)"
+        # Replay Mode & Status Calculations
+        if self.replay_ended:
+            system_status = "REPLAY DATA ENDED / WAITING"
+            feed_health = "REPLAY ENDED"
+            paper_trading_allowed = "NO (REPLAY ENDED)"
         else:
             system_status = self.paper_engine.system_status
-            feed_health = "LIVE"
-            paper_trading_allowed = "YES"
+            feed_health = "ACTIVE REPLAY"
+            paper_trading_allowed = "YES (PAPER REPLAY)"
 
         trend_eval = TrendDetector.evaluate(c1h, c15m, c5m) if (c1h and c15m and c5m) else None
         
@@ -293,15 +346,12 @@ class LivePaperTradingEngine:
             active_sig = SignalEngine.evaluate_signal(c1h, c15m, c5m, now_ist)
             self.current_signal = active_sig
 
-        signal_action = "WAIT" if (is_data_stale or not self.ws_connected) else (active_sig.action if active_sig else "WAIT")
-        trend_state = active_sig.trend_state if active_sig else (trend_eval.state if trend_eval else "RANGE")
-        confidence = active_sig.confidence if active_sig else (trend_eval.confidence if trend_eval else 0)
-        reasons = active_sig.reasons[:] if active_sig else (trend_eval.reasons if trend_eval else [])
-
-        if not self.ws_connected:
-            reasons.append("STALE DATA GUARD: Dhan WebSocket disconnected. Signals PAUSED.")
-        elif is_data_stale:
-            reasons.append(f"STALE DATA GUARD: Last received tick age ({tick_age_seconds}s) exceeds max threshold (10.0s). Signals PAUSED.")
+        if self.replay_ended:
+            signal_action = "WAIT"
+            reasons = ["REPLAY DATA ENDED / WAITING: All 5,400 multi-day historical candles executed. System WAITING."]
+        else:
+            signal_action = active_sig.action if active_sig else "WAIT"
+            reasons = active_sig.reasons[:] if active_sig else (trend_eval.reasons if trend_eval else [])
 
         signal_dict = {
             "action": signal_action,
