@@ -147,7 +147,7 @@ async function updateLiveDashboard() {
         
         const tbody = document.getElementById('ledger-tbody');
         if (ledger.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="12" class="empty-msg">No executed live test trades yet. Order placement remains blocked until explicit safety mode approval.</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="12" class="empty-msg">No executed live trades yet. Real money execution is ACTIVE and waiting for a valid BUY/SELL strategy signal.</td></tr>';
         } else {
             tbody.innerHTML = '';
             ledger.forEach(t => {

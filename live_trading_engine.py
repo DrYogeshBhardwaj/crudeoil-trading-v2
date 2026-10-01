@@ -211,7 +211,8 @@ class DhanLiveAdapter:
             return []
 
         from data_engine import Candle
-        today_str = datetime.now().strftime("%Y-%m-%d")
+        from datetime import timezone
+        today_str = (datetime.now(timezone.utc) + timedelta(hours=5, minutes=30)).strftime("%Y-%m-%d")
         url = f"{self.BASE_URL}/v2/charts/intraday"
         payload = {
             "securityId": security_id,
@@ -247,7 +248,10 @@ class DhanLiveAdapter:
                 candles = []
                 for i in range(len(closes)):
                     ts_epoch = float(timestamps[i]) if i < len(timestamps) else 0.0
-                    dt = datetime.fromtimestamp(ts_epoch) if ts_epoch > 0 else datetime.now()
+                    if ts_epoch > 0:
+                        dt = datetime.fromtimestamp(ts_epoch, tz=timezone.utc).replace(tzinfo=None) + timedelta(hours=5, minutes=30)
+                    else:
+                        dt = datetime.now(timezone.utc) + timedelta(hours=5, minutes=30)
                     c = Candle(
                         timestamp=dt,
                         open=float(opens[i]) if i < len(opens) else float(closes[i]),
@@ -260,6 +264,14 @@ class DhanLiveAdapter:
                     candles.append(c)
                 print(f"[{datetime.now()}] [DHAN WARMUP] Successfully fetched {len(candles)} intraday candles from Dhan HQ API v2 for {security_id}.")
                 return candles
+        except urllib.error.HTTPError as he:
+            err_b = ""
+            try:
+                err_b = he.read().decode("utf-8")
+            except Exception:
+                pass
+            print(f"[{datetime.now()}] [DHAN WARMUP NOTICE] HTTP {he.code}: {he.reason} - {err_b}")
+            return []
         except Exception as e:
             print(f"[{datetime.now()}] [DHAN WARMUP NOTICE] Could not fetch Dhan intraday candles: {e}")
             return []
