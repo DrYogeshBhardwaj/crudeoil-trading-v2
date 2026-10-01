@@ -187,11 +187,11 @@ body {
     color: var(--text-muted);
 }
 
-/* Grid Layout */
 .main-grid {
     display: grid;
     grid-template-columns: 1fr 1fr;
     gap: 20px;
+    align-items: stretch;
 }
 
 .card {
@@ -202,6 +202,7 @@ body {
     display: flex;
     flex-direction: column;
     gap: 16px;
+    min-height: 440px;
 }
 
 .card-header {
@@ -258,7 +259,6 @@ body {
     background: rgba(255, 255, 255, 0.1);
     border-radius: 4px;
     overflow: hidden;
-
 }
 
 .confidence-bar {
@@ -273,6 +273,12 @@ body {
     color: var(--text-main);
 }
 
+.reasons-container {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+}
+
 .reasons-container h3 {
     font-size: 0.8rem;
     color: var(--text-muted);
@@ -284,6 +290,18 @@ body {
     display: flex;
     flex-direction: column;
     gap: 6px;
+    max-height: 220px;
+    overflow-y: auto;
+    padding-right: 4px;
+}
+
+.reasons-list::-webkit-scrollbar {
+    width: 4px;
+}
+
+.reasons-list::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 2px;
 }
 
 .reasons-list li {
