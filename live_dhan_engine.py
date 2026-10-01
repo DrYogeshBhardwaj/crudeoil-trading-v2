@@ -249,7 +249,8 @@ class LivePaperTradingEngine:
         self.replay_feed = ServerSideReplayFeed(self)
 
     async def start_feed_loop(self):
-        """Launches continuous server-side 24x7 historical replay feed loop."""
+        """Launches continuous Dhan WebSocket live feed listener AND server-side replay feed."""
+        asyncio.create_task(self.feed_manager.connect_and_listen())
         await self.replay_feed.start_replay_loop()
 
     def process_replay_candle(self, candle: Candle) -> Dict[str, Any]:
