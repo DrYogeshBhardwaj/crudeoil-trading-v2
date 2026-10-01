@@ -51,13 +51,17 @@ async def health_check():
     Health check endpoint reporting service, database, market feed, and real-trading safety lock status.
     """
     state = LIVE_ENGINE.get_dashboard_state()
+    feed_status = "CONNECTED" if state.get("websocket_connected") and state.get("feed_health") == "LIVE" else "DISCONNECTED/STALE"
     return JSONResponse({
         "status": "ONLINE",
-        "market_feed": "CONNECTED" if LIVE_ENGINE.latest_tick_time else "INITIALIZING",
-        "paper_engine": LIVE_ENGINE.paper_engine.system_status,
+        "market_feed": feed_status,
+        "websocket_connected": state.get("websocket_connected"),
+        "feed_health": state.get("feed_health"),
+        "tick_age_seconds": state.get("tick_age_seconds"),
+        "paper_engine": state.get("system_status"),
         "real_trading": "DISABLED (STRICTLY HARDCODED FALSE)",
         "real_trading_enabled": CONFIG.ENABLE_REAL_TRADING,
-        "last_tick_timestamp": state.get("last_tick_time"),
+        "last_tick_timestamp": state.get("last_tick_time_ist"),
         "database_status": "CONNECTED",
         "instrument": CONFIG.INSTRUMENT_NAME,
         "environment": "PAPER_MODE",
@@ -81,8 +85,8 @@ async def get_ledger():
 
 @app.on_event("startup")
 async def startup_event():
-    # Production startup: engine is ready to receive live ticks from Dhan WS
-    pass
+    """Starts background Dhan WebSocket listener loop on app startup."""
+    asyncio.create_task(LIVE_ENGINE.start_feed_loop())
 
 if __name__ == "__main__":
     import uvicorn

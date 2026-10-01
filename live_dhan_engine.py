@@ -23,6 +23,103 @@ from signal_engine import SignalEngine, TradeSignal
 from structure_analyzer import StructureAnalyzer
 from trend_detector import TrendDetector
 
+class DhanFeedManager:
+    """
+    Continuous Dhan WebSocket Connection Manager with Automatic Reconnection.
+    Streams live ticks from wss://api-feed.dhan.co for CRUDEOILM.
+    Strictly sanitizes credentials from all log outputs.
+    """
+    def __init__(self, engine: "LivePaperTradingEngine"):
+        self.engine = engine
+        self.feed_url = os.environ.get("DHAN_FEED_URL", "wss://api-feed.dhan.co")
+        self.security_id = CONFIG.DHAN_SECURITY_ID
+        self.exchange_segment = CONFIG.EXCHANGE_SEGMENT
+        self.is_running = True
+
+    async def connect_and_listen(self):
+        """
+        Main continuous WebSocket listener loop with auto-reconnection and token sanitization.
+        """
+        import websockets
+        import struct
+        
+        while self.is_running:
+            client_id = os.environ.get("DHAN_CLIENT_ID", "").strip()
+            access_token = os.environ.get("DHAN_ACCESS_TOKEN", "").strip()
+
+            if not client_id or not access_token:
+                self.engine.ws_connected = False
+                await asyncio.sleep(5)
+                continue
+
+            ws_url = f"{self.feed_url}?version=2&token={access_token}&clientId={client_id}&authType=2"
+            try:
+                async with websockets.connect(ws_url, ping_interval=20, ping_timeout=10) as ws:
+                    self.engine.ws_connected = True
+                    print(f"[{datetime.now()}] Connected to Dhan WebSocket Live Feed for Security ID {self.security_id}")
+                    
+                    sub_payload = {
+                        "RequestCode": 15,
+                        "InstrumentCount": 1,
+                        "InstrumentList": [
+                            {
+                                "ExchangeSegment": self.exchange_segment,
+                                "SecurityId": self.security_id
+                            }
+                        ]
+                    }
+                    await ws.send(json.dumps(sub_payload))
+                    
+                    while self.is_running:
+                        message = await ws.recv()
+                        now_ist = datetime.utcnow() + timedelta(hours=5, minutes=30)
+                        
+                        if isinstance(message, bytes):
+                            price = self._parse_dhan_binary_ltp(message)
+                            if price and price > 0:
+                                self.engine.process_live_tick(now_ist, price)
+                        elif isinstance(message, str):
+                            try:
+                                data = json.loads(message)
+                                price = data.get("LTP") or data.get("ltp") or data.get("last_price")
+                                if price:
+                                    self.engine.process_live_tick(now_ist, float(price))
+                            except Exception:
+                                pass
+            except Exception as e:
+                self.engine.ws_connected = False
+                err_str = str(e)
+                if access_token and access_token in err_str:
+                    err_str = err_str.replace(access_token, "[REDACTED]")
+                print(f"[{datetime.now()}] Dhan WS Connection issue: {err_str}. Reconnecting in 5s...")
+                await asyncio.sleep(5)
+
+    def _parse_dhan_binary_ltp(self, raw_bytes: bytes) -> Optional[float]:
+        """Parses Dhan binary feed packet for LTP across Ticker, Quote, and Full depth packets."""
+        import struct
+        try:
+            if len(raw_bytes) < 8:
+                return None
+            
+            # Check float32 at byte offset 8
+            if len(raw_bytes) >= 12:
+                ltp_float = struct.unpack_from('<f', raw_bytes, 8)[0]
+                if 1000.0 <= ltp_float <= 25000.0:
+                    return round(ltp_float, 2)
+                
+                ltp_int = struct.unpack_from('<i', raw_bytes, 8)[0]
+                if 100000 <= ltp_int <= 2500000:
+                    return round(ltp_int / 100.0, 2)
+
+            # Fallback for 8-byte minimal binary header
+            if len(raw_bytes) >= 8:
+                ltp_int = struct.unpack_from('<i', raw_bytes, 4)[0]
+                if 100000 <= ltp_int <= 2500000:
+                    return round(ltp_int / 100.0, 2)
+        except Exception:
+            pass
+        return None
+
 class LivePaperTradingEngine:
 
     def __init__(self):
@@ -34,10 +131,16 @@ class LivePaperTradingEngine:
         self.latest_tick_time: Optional[datetime] = None
         self.current_price: float = 7460.5
         self.is_running: bool = True
+        self.ws_connected: bool = False
         self.recent_ticks = []
+        self.feed_manager = DhanFeedManager(self)
 
         # Pre-seed warmup candles for instant MTF structure readiness
         self._seed_warmup_candles()
+
+    async def start_feed_loop(self):
+        """Launches continuous background Dhan WebSocket feed loop."""
+        await self.feed_manager.connect_and_listen()
 
     def _seed_warmup_candles(self):
         """Pre-seeds 20 hours of historical warmup candles for MTF structure readiness."""
@@ -51,10 +154,6 @@ class LivePaperTradingEngine:
             c = Candle(timestamp=t, open=price-1, high=price+2, low=price-2, close=price, volume=3000.0, open_interest=5000.0)
             self.candle_builder.add_completed_1m_candle(c)
         self.current_price = price
-        # Seed initial recent ticks
-        for i in range(10, 0, -1):
-            t_str = (datetime.now() - timedelta(seconds=i*3)).strftime("%Y-%m-%d %H:%M:%S")
-            self.recent_ticks.append({"timestamp": t_str, "ltp": round(price - (i * 0.5), 2)})
 
         # Initial strategy evaluation on warmup candles for instant UI accuracy
         c1h = self.candle_builder.candles_1h
@@ -71,7 +170,7 @@ class LivePaperTradingEngine:
         self.latest_tick_time = timestamp
         self.current_price = price
         
-        # Append to recent 10 live ticks buffer
+        # Append to recent live ticks buffer
         tick_entry = {"timestamp": timestamp.strftime("%Y-%m-%d %H:%M:%S"), "ltp": round(price, 2)}
         self.recent_ticks.append(tick_entry)
         if len(self.recent_ticks) > 50:
@@ -106,15 +205,25 @@ class LivePaperTradingEngine:
 
         # IST Time calculations
         now_ist = datetime.utcnow() + timedelta(hours=5, minutes=30)
-        last_tick = self.latest_tick_time if self.latest_tick_time else now_ist
-        tick_age_seconds = round((now_ist - last_tick).total_seconds(), 1)
         
-        # Enforce 10s Stale Data Guard
-        is_data_stale = tick_age_seconds > CONFIG.DATA_STALE_THRESHOLD_SECONDS
-        
-        system_status = "STALE DATA / NO TRADE" if is_data_stale else self.paper_engine.system_status
-        feed_health = "STALE" if is_data_stale else "LIVE"
-        paper_trading_allowed = "NO (DATA STALE)" if is_data_stale else "YES"
+        if self.latest_tick_time is not None:
+            last_tick = self.latest_tick_time
+            tick_age_seconds = round((now_ist - last_tick).total_seconds(), 1)
+            is_data_stale = tick_age_seconds > CONFIG.DATA_STALE_THRESHOLD_SECONDS
+        else:
+            last_tick = None
+            tick_age_seconds = 9999.0
+            is_data_stale = True
+
+        # Enforce Stale Data & Connection Guards
+        if not self.ws_connected or is_data_stale:
+            system_status = "STALE DATA / NO TRADE"
+            feed_health = "DISCONNECTED" if not self.ws_connected else "STALE DATA"
+            paper_trading_allowed = "NO (DISCONNECTED)" if not self.ws_connected else "NO (DATA STALE)"
+        else:
+            system_status = self.paper_engine.system_status
+            feed_health = "LIVE"
+            paper_trading_allowed = "YES"
 
         trend_eval = TrendDetector.evaluate(c1h, c15m, c5m) if (c1h and c15m and c5m) else None
         
@@ -166,12 +275,14 @@ class LivePaperTradingEngine:
             active_sig = SignalEngine.evaluate_signal(c1h, c15m, c5m, now_ist)
             self.current_signal = active_sig
 
-        signal_action = "WAIT" if is_data_stale else (active_sig.action if active_sig else "WAIT")
+        signal_action = "WAIT" if (is_data_stale or not self.ws_connected) else (active_sig.action if active_sig else "WAIT")
         trend_state = active_sig.trend_state if active_sig else (trend_eval.state if trend_eval else "RANGE")
         confidence = active_sig.confidence if active_sig else (trend_eval.confidence if trend_eval else 0)
         reasons = active_sig.reasons[:] if active_sig else (trend_eval.reasons if trend_eval else [])
 
-        if is_data_stale:
+        if not self.ws_connected:
+            reasons.append("STALE DATA GUARD: Dhan WebSocket disconnected. Signals PAUSED.")
+        elif is_data_stale:
             reasons.append(f"STALE DATA GUARD: Last received tick age ({tick_age_seconds}s) exceeds max threshold (10.0s). Signals PAUSED.")
 
         signal_dict = {
@@ -202,15 +313,15 @@ class LivePaperTradingEngine:
             "exchange": CONFIG.EXCHANGE,
             "data_source": CONFIG.DATA_SOURCE_NAME,
             "synthetic_replay_mode": "NO",
-            "websocket_connected": True,
+            "websocket_connected": self.ws_connected,
             "feed_health": feed_health,
             "tick_age_seconds": tick_age_seconds,
             "paper_trading_allowed": paper_trading_allowed,
             "real_trading_enabled": CONFIG.ENABLE_REAL_TRADING,
             "system_status": system_status,
-            "current_price": round(self.current_price, 2),
+            "current_price": round(self.current_price, 2) if self.latest_tick_time else 0.0,
             "server_time_ist": now_ist.strftime("%Y-%m-%d %H:%M:%S"),
-            "last_tick_time_ist": last_tick.strftime("%Y-%m-%d %H:%M:%S"),
+            "last_tick_time_ist": last_tick.strftime("%Y-%m-%d %H:%M:%S") if last_tick else "NONE",
             "recent_20_ticks": self.recent_ticks[-20:],
             "candle_status": {
                 "1m_count": len(c1m),
@@ -233,3 +344,4 @@ class LivePaperTradingEngine:
 
 # Global Singleton Instance for Service Access
 LIVE_ENGINE = LivePaperTradingEngine()
+
