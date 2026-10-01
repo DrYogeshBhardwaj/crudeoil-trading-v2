@@ -410,6 +410,12 @@ class LiveTestEngine:
         self._restore_from_db()
         self.warmup_from_dhan_api()
 
+    def _async_warmup_worker(self):
+        try:
+            self.warmup_from_dhan_api()
+        finally:
+            self._warming_up = False
+
     def warmup_from_dhan_api(self):
         """Pre-populates MultiTimeframeCandleBuilder with authentic Dhan intraday market candles."""
         try:
@@ -518,8 +524,10 @@ class LiveTestEngine:
         self.last_live_tick_time = timestamp
         self.evaluation_count += 1
 
-        if not getattr(self, '_warmed_up', False) and (self.evaluation_count == 1 or self.evaluation_count % 30 == 0):
-            self.warmup_from_dhan_api()
+        if not getattr(self, '_warmed_up', False) and not getattr(self, '_warming_up', False) and (self.evaluation_count == 1 or self.evaluation_count % 60 == 0):
+            self._warming_up = True
+            import threading
+            threading.Thread(target=self._async_warmup_worker, daemon=True).start()
 
         # 1. Update Live Candle Builder with tick
         self.candle_builder.process_tick(timestamp, price, volume, oi)
