@@ -792,7 +792,14 @@ class LiveTestEngine:
                 is_stale = True
 
         effective_price = self.live_ltp if (self.live_ltp is not None and not is_stale) else 0.0
-        feed_status_text = "LIVE FEED ACTIVE" if effective_price > 0 else ("FEED STALE (>10s) — NO TRADE" if is_stale else "NO LIVE FEED / NO TRADE")
+        if not is_mkt_open:
+            feed_status_text = "MCX MARKET CLOSED (09:00 - 23:30 IST) — Market Re-opens at 09:00 AM IST"
+        elif effective_price > 0:
+            feed_status_text = "LIVE MARKET FEED ACTIVE"
+        elif is_stale:
+            feed_status_text = "FEED STALE (>10s) — NO TRADE"
+        else:
+            feed_status_text = "WAITING FOR LIVE TICKS (MCX SESSION OPEN)"
         
         closed = self.closed_trades
         total_trades = len(closed)
