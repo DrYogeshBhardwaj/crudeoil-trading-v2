@@ -7,7 +7,7 @@ import sqlite3
 import json
 import os
 from datetime import datetime
-from typing import List, Dict, Optional, Any
+from typing import List, Dict, Optional, Any, Tuple
 
 def get_db_path() -> str:
     if os.environ.get("DATABASE_PATH"):
@@ -197,7 +197,5 @@ class DatabaseEngine:
             cursor.execute("SELECT * FROM server_heartbeat WHERE id = 1")
             row = cursor.fetchone()
             return dict(row) if row else None
-
-from typing import Tuple
 
 DB = DatabaseEngine()
