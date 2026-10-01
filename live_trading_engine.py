@@ -89,7 +89,7 @@ class DhanLiveAdapter:
                 "error": "DHAN_CLIENT_ID or DHAN_ACCESS_TOKEN Railway secret missing."
             }
 
-        endpoints = [f"{self.BASE_URL}/fundlimit", f"{self.BASE_URL}/user/fundlimit", f"{self.BASE_URL}/v2/fundlimit"]
+        endpoints = [f"{self.BASE_URL}/v2/fundlimit", f"{self.BASE_URL}/fundlimit", f"{self.BASE_URL}/user/fundlimit"]
         last_error = None
         
         # Configure proxy handler if HTTPS_PROXY or HTTP_PROXY is configured in environment
@@ -109,13 +109,14 @@ class DhanLiveAdapter:
                 req = urllib.request.Request(url, headers=headers, method="GET")
                 with opener.open(req, timeout=5) as resp:
                     data = json.loads(resp.read().decode("utf-8"))
-                    avail = float(data.get("availMargin", data.get("availableBalance", data.get("sodLimit", 0.0))))
-                    return {
-                        "status": "CONNECTED",
-                        "available_margin": round(avail, 2),
-                        "dhan_client_id": self.client_id,
-                        "raw_response": data
-                    }
+                    if isinstance(data, dict):
+                        avail = float(data.get("availabelBalance", data.get("availableBalance", data.get("availMargin", data.get("sodLimit", 0.0)))))
+                        return {
+                            "status": "CONNECTED",
+                            "available_margin": round(avail, 2),
+                            "dhan_client_id": self.client_id,
+                            "raw_response": data
+                        }
             except urllib.error.HTTPError as he:
                 if he.code in [401, 403]:
                     status_lbl = "EXPIRED_TOKEN_401" if he.code == 401 else "IP_RESTRICTED_403"
