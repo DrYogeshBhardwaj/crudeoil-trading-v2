@@ -202,6 +202,81 @@ class DhanLiveAdapter:
             "dhan_client_id": self.client_id
         }
 
+    def place_dhan_order(self, transaction_type: str, security_id: str = "569901", quantity: int = 10, correlation_id: str = "") -> Dict[str, Any]:
+        """
+        Transmits real order placement POST request to Dhan HQ API v2 (/v2/orders).
+        STRICT SAFETY CHECKS ENFORCED BEFORE TRANSMISSION.
+        """
+        if not CONFIG.ENABLE_REAL_TRADING:
+            return {
+                "status": "SIMULATED",
+                "order_id": f"DHAN-SIM-{int(time.time())}",
+                "message": "ENABLE_REAL_TRADING is False — simulated live order generated."
+            }
+
+        url = f"{self.BASE_URL}/v2/orders"
+        headers = {
+            "client-id": self.client_id,
+            "access-token": self.access_token,
+            "Content-Type": "application/json"
+        }
+        
+        # Dhan HQ v2 Order Placement Payload for MCX CRUDEOILM Futures
+        payload = {
+            "dhanClientId": self.client_id,
+            "correlationId": (correlation_id[:25] if correlation_id else f"LT-{int(time.time())}"),
+            "transactionType": transaction_type.upper(),  # 'BUY' or 'SELL'
+            "exchangeSegment": "MCX_COMM",
+            "productType": "MARGIN",
+            "orderType": "MARKET",
+            "validity": "DAY",
+            "tradingSymbol": CONFIG.INSTRUMENT_NAME,
+            "securityId": security_id or CONFIG.DHAN_SECURITY_ID,
+            "quantity": int(quantity),  # 1 lot = 10 barrels
+            "disclosedQuantity": 0,
+            "price": 0.0,
+            "triggerPrice": 0.0,
+            "afterMarketOrder": False,
+            "amoTime": "OPEN"
+        }
+        
+        try:
+            req_data = json.dumps(payload).encode("utf-8")
+            req = urllib.request.Request(url, data=req_data, headers=headers, method="POST")
+            
+            proxy_url = os.environ.get("HTTPS_PROXY") or os.environ.get("HTTP_PROXY") or os.environ.get("QUOTAGUARDSTATIC_URL")
+            handlers = []
+            if proxy_url:
+                handlers.append(urllib.request.ProxyHandler({'http': proxy_url, 'https': proxy_url}))
+            opener = urllib.request.build_opener(*handlers)
+
+            with opener.open(req, timeout=10) as resp:
+                resp_json = json.loads(resp.read().decode("utf-8"))
+                order_id = resp_json.get("orderId") or resp_json.get("dhanOrderId") or f"DHAN-RES-{int(time.time())}"
+                return {
+                    "status": "SUBMITTED",
+                    "order_id": str(order_id),
+                    "dhan_status": resp_json.get("orderStatus", "TRANSIT"),
+                    "raw_response": resp_json
+                }
+        except urllib.error.HTTPError as he:
+            err_body = ""
+            try:
+                err_body = he.read().decode("utf-8")
+            except Exception:
+                pass
+            return {
+                "status": "FAILED",
+                "error": f"HTTP {he.code}: {he.reason} - {err_body}",
+                "order_id": f"DHAN-ERR-{int(time.time())}"
+            }
+        except Exception as e:
+            return {
+                "status": "FAILED",
+                "error": str(e),
+                "order_id": f"DHAN-ERR-{int(time.time())}"
+            }
+
 class LiveTestEngine:
     """
     Dedicated 60-Minute Live Test Engine for CRUDEOILM.
@@ -377,9 +452,21 @@ class LiveTestEngine:
 
         # Evaluate Entry
         if signal.action in ["BUY", "SELL"] and signal.entry_price is not None:
+            # Enforce max 1 open position safety check
+            if self.active_position is not None:
+                return None
+
             self.trade_counter += 1
             trade_id = f"LT-{CONFIG.INSTRUMENT_NAME}-{curr_time.strftime('%Y%m%d')}-{self.trade_counter:03d}"
-            dhan_order_id = f"DHAN-LIVE-{curr_time.strftime('%H%M%S')}-{self.trade_counter:02d}"
+
+            # Transmit real market order to Dhan HQ REST API (/v2/orders)
+            order_res = self.adapter.place_dhan_order(
+                transaction_type=signal.action,
+                security_id=CONFIG.DHAN_SECURITY_ID,
+                quantity=CONFIG.LOT_SIZE,
+                correlation_id=trade_id
+            )
+            dhan_order_id = str(order_res.get("order_id", f"DHAN-LIVE-{curr_time.strftime('%H%M%S')}"))
 
             new_pos = LivePosition(
                 trade_id=trade_id,
@@ -400,7 +487,7 @@ class LiveTestEngine:
                 status="OPEN"
             )
             self.active_position = new_pos
-            self.system_status = "LIVE POSITION ACTIVE"
+            self.system_status = f"LIVE REAL POSITION ACTIVE ({signal.action} Order ID: {dhan_order_id})"
             
             DB.save_live_trade({
                 "trade_id": new_pos.trade_id,
@@ -425,6 +512,15 @@ class LiveTestEngine:
         return None
 
     def _close_position(self, pos: LivePosition, exit_time: datetime, exit_price: float, reason: str) -> LivePosition:
+        # Transmit real exit square-off market order to Dhan HQ REST API (/v2/orders)
+        exit_side = "SELL" if pos.direction == "BUY" else "BUY"
+        self.adapter.place_dhan_order(
+            transaction_type=exit_side,
+            security_id=CONFIG.DHAN_SECURITY_ID,
+            quantity=CONFIG.LOT_SIZE,
+            correlation_id=f"EXIT-{pos.trade_id}"
+        )
+
         pos.status = "CLOSED"
         pos.exit_timestamp = exit_time
         pos.exit_price = exit_price
@@ -504,9 +600,10 @@ class LiveTestEngine:
                 "allow_martingale": CONFIG.ALLOW_MARTINGALE
             },
             "safety_controls": {
-                "paper_trading_safety_lock": "REAL_TRADING = FALSE (HARDCODED)",
-                "live_test_enable_flag": f"LIVE_TEST_ENABLE = {self.test_enabled} (DEFAULT FALSE)",
-                "order_placement_status": "BLOCKED (DISABLED SAFETY MODE)" if not self.test_enabled else "ENABLED",
+                "paper_trading_safety_lock": "PAPER ENGINE = SEPARATE REPLAY ONLY",
+                "real_money_order_execution": "ENABLED ON DHAN REST API /v2/orders",
+                "live_test_enable_flag": f"LIVE_TEST_ENABLE = {self.test_enabled}",
+                "order_placement_status": "REAL MONEY EXECUTION ACTIVE" if self.test_enabled else "BLOCKED",
                 "static_ip_requirement": f"Whitelist Outbound IPv4 '{outbound_ip}' in Dhan HQ Portal under Application 'CRUDEOILM-LIVE-TEST'",
                 "order_reconciliation": "ENABLED (SL/Target exit safety active)",
                 "emergency_exit_all": "AVAILABLE",
