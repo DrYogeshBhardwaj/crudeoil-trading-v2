@@ -52,6 +52,10 @@ class DhanLiveAdapter:
     BASE_URL = "https://api.dhan.co"
     
     def __init__(self):
+        self._cached_fund_info = None
+        self._cached_fund_time = 0
+        self._cached_ip = None
+        self._cached_ip_time = 0
         self.reload_credentials()
 
     def reload_credentials(self):
@@ -100,21 +104,29 @@ class DhanLiveAdapter:
         except Exception as e:
             print(f"Notice saving credentials to {target_file}: {e}")
 
-    @staticmethod
-    def get_outbound_public_ip() -> str:
+    def get_outbound_public_ip(self) -> str:
         """Determines the actual fixed outbound public IPv4 of the running container server."""
+        now_ts = time.time()
+        if self._cached_ip and (now_ts - self._cached_ip_time) < 60:
+            return self._cached_ip
         try:
             req = urllib.request.Request("https://api.ipify.org?format=json", headers={"User-Agent": "CRUDEOILM-LIVE-TEST"})
-            with urllib.request.urlopen(req, timeout=5) as resp:
+            with urllib.request.urlopen(req, timeout=3) as resp:
                 data = json.loads(resp.read().decode("utf-8"))
-                return data.get("ip", "UNKNOWN")
+                ip = data.get("ip", "UNKNOWN")
+                self._cached_ip = ip
+                self._cached_ip_time = now_ts
+                return ip
         except Exception:
             try:
                 req = urllib.request.Request("https://ifconfig.me/ip", headers={"User-Agent": "CRUDEOILM-LIVE-TEST"})
-                with urllib.request.urlopen(req, timeout=5) as resp:
-                    return resp.read().decode("utf-8").strip()
+                with urllib.request.urlopen(req, timeout=3) as resp:
+                    ip = resp.read().decode("utf-8").strip()
+                    self._cached_ip = ip
+                    self._cached_ip_time = now_ts
+                    return ip
             except Exception as e:
-                return f"IP_FETCH_ERROR ({e})"
+                return self._cached_ip or f"IP_FETCH_ERROR ({e})"
 
     def is_authenticated(self) -> bool:
         return bool(self.client_id and self.access_token)
@@ -126,13 +138,20 @@ class DhanLiveAdapter:
 
     def fetch_fund_limits(self) -> Dict[str, Any]:
         """Fetches available margin and fund balances from Dhan REST API."""
+        now_ts = time.time()
+        if self._cached_fund_info and (now_ts - self._cached_fund_time) < 30:
+            return self._cached_fund_info
+
         if not self.is_authenticated():
-            return {
+            res = {
                 "status": "UNAUTHENTICATED",
                 "available_margin": 0.0,
                 "dhan_client_id": self.client_id or "MISSING",
                 "error": "DHAN_CLIENT_ID or DHAN_ACCESS_TOKEN Railway secret missing."
             }
+            self._cached_fund_info = res
+            self._cached_fund_time = now_ts
+            return res
 
         endpoints = [f"{self.BASE_URL}/v2/fundlimit", f"{self.BASE_URL}/fundlimit", f"{self.BASE_URL}/user/fundlimit"]
         last_error = None
