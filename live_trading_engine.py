@@ -85,41 +85,50 @@ class DhanLiveAdapter:
             return {
                 "status": "UNAUTHENTICATED",
                 "available_margin": 0.0,
-                "dhan_client_id": "MISSING",
-                "error": "DHAN_CLIENT_ID or DHAN_ACCESS_TOKEN environment variable not set."
+                "dhan_client_id": self.client_id or "MISSING",
+                "error": "DHAN_CLIENT_ID or DHAN_ACCESS_TOKEN Railway secret missing."
             }
 
-        try:
-            url = f"{self.BASE_URL}/user/fundlimit"
-            headers = {
-                "client-id": self.client_id,
-                "access-token": self.access_token,
-                "Content-Type": "application/json"
-            }
-            req = urllib.request.Request(url, headers=headers, method="GET")
-            with urllib.request.urlopen(req, timeout=5) as resp:
-                data = json.loads(resp.read().decode("utf-8"))
-                avail = float(data.get("availMargin", data.get("availableBalance", 0.0)))
-                return {
-                    "status": "CONNECTED",
-                    "available_margin": round(avail, 2),
-                    "dhan_client_id": self.client_id,
-                    "raw_response": data
+        endpoints = [f"{self.BASE_URL}/fundlimit", f"{self.BASE_URL}/user/fundlimit"]
+        last_error = None
+        
+        for url in endpoints:
+            try:
+                headers = {
+                    "client-id": self.client_id,
+                    "access-token": self.access_token,
+                    "Content-Type": "application/json"
                 }
-        except urllib.error.HTTPError as he:
-            return {
-                "status": "HTTP_ERROR",
-                "error_code": he.code,
-                "available_margin": 0.0,
-                "dhan_client_id": self.client_id
-            }
-        except Exception as e:
-            return {
-                "status": "CONNECTION_FAILED",
-                "error": str(e),
-                "available_margin": 0.0,
-                "dhan_client_id": self.client_id
-            }
+                req = urllib.request.Request(url, headers=headers, method="GET")
+                with urllib.request.urlopen(req, timeout=5) as resp:
+                    data = json.loads(resp.read().decode("utf-8"))
+                    avail = float(data.get("availMargin", data.get("availableBalance", data.get("sodLimit", 0.0))))
+                    return {
+                        "status": "CONNECTED",
+                        "available_margin": round(avail, 2),
+                        "dhan_client_id": self.client_id,
+                        "raw_response": data
+                    }
+            except urllib.error.HTTPError as he:
+                if he.code in [401, 403]:
+                    status_lbl = "EXPIRED_TOKEN_401" if he.code == 401 else "IP_RESTRICTED_403"
+                    return {
+                        "status": status_lbl,
+                        "error_code": he.code,
+                        "available_margin": 0.0,
+                        "dhan_client_id": self.client_id,
+                        "error": f"Dhan HTTP {he.code}: {he.reason}. Token may be expired or IP not whitelisted."
+                    }
+                last_error = f"HTTP {he.code}: {he.reason}"
+            except Exception as e:
+                last_error = str(e)
+
+        return {
+            "status": "CONNECTION_FAILED",
+            "error": last_error,
+            "available_margin": 0.0,
+            "dhan_client_id": self.client_id
+        }
 
 class LiveTestEngine:
     """

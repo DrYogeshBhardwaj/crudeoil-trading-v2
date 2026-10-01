@@ -103,7 +103,8 @@ async function updateLiveDashboard() {
                 `Available Margin: ₹${rep.account_limits.available_margin_inr.toLocaleString('en-IN')}`,
                 `Safety Flag: ${rep.safety_controls.live_test_enable_flag}`,
                 `Order Placement Status: ${rep.safety_controls.order_placement_status}`,
-                `Static IP Check: ${rep.safety_controls.static_ip_status}`,
+                `Outbound Server IPv4: ${rep.server_outbound_public_ipv4 || 'FETCHING'} (DYNAMIC EGRESS IP)`,
+                `Static IP Requirement: ${rep.safety_controls.static_ip_requirement || '-'}`,
                 `Order Reconciliation: ${rep.safety_controls.order_reconciliation}`,
                 `Emergency Exit All: ${rep.safety_controls.emergency_exit_all}`,
                 `60-Min Auto Stop: ${rep.safety_controls.auto_stop_duration}`
