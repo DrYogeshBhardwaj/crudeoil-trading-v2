@@ -182,7 +182,13 @@ class DhanLiveAdapter:
                             "raw_response": data
                         }
             except urllib.error.HTTPError as he:
-                if he.code in [401, 403]:
+                err_body = ""
+                try:
+                    err_body = he.read().decode("utf-8")
+                except Exception:
+                    pass
+
+                if he.code in [400, 401, 403]:
                     # Attempt self-healing recovery using active verified token if current token is expired
                     active_cid = "1113639152"
                     active_token = "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzUxMiJ9.eyJ1c2VyUmVnaW9uIjoiUjEiLCJpc3MiOiJkaGFuIiwicGFydG5lcklkIjoiIiwiZXhwIjoxNzkwOTQ5NjY5LCJpYXQiOjE3OTA4NjMyNjksInRva2VuQ29uc3VtZXJUeXBlIjoiU0VMRiIsIndlYmhvb2tVcmwiOiIiLCJkaGFuQ2xpZW50SWQiOiIxMTEzNjM5MTUyIn0.59QPu_FIyTS6Kh7E0j42pZ8vGdP4cjit2_wZ-7kh8PKX0UyWX54SiM-1A-jJ-WTaOTRhTYDFd6VxRQdNxPjCrw"
@@ -207,15 +213,15 @@ class DhanLiveAdapter:
                         except Exception as rec_err:
                             pass
 
-                    status_lbl = "EXPIRED_TOKEN_401" if he.code == 401 else "IP_RESTRICTED_403"
+                    status_lbl = "INVALID_TOKEN_400" if he.code == 400 else ("EXPIRED_TOKEN_401" if he.code == 401 else "IP_RESTRICTED_403")
                     return {
                         "status": status_lbl,
                         "error_code": he.code,
                         "available_margin": 0.0,
                         "dhan_client_id": self.client_id,
-                        "error": f"Dhan HTTP {he.code}: {he.reason}. Token may be expired or IP not whitelisted."
+                        "error": f"Dhan HTTP {he.code}: {he.reason} ({err_body}). Access Token is invalid/expired or IP not whitelisted."
                     }
-                last_error = f"HTTP {he.code}: {he.reason}"
+                last_error = f"HTTP {he.code}: {he.reason} - {err_body}"
             except Exception as e:
                 last_error = str(e)
 

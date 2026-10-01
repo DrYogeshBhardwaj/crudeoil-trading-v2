@@ -60,6 +60,7 @@ class DhanFeedManager:
             from live_trading_engine import LIVE_TEST_ENGINE
             
             # Prioritize self-healing verified credentials from LIVE_TEST_ENGINE adapter
+            LIVE_TEST_ENGINE.adapter.reload_credentials()
             client_id = LIVE_TEST_ENGINE.adapter.client_id or os.environ.get("DHAN_CLIENT_ID", "").strip()
             access_token = LIVE_TEST_ENGINE.adapter.access_token or os.environ.get("DHAN_ACCESS_TOKEN", "").strip()
 
