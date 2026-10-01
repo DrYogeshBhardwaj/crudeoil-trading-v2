@@ -20,11 +20,16 @@ DB_FILE = get_db_path()
 
 def migrate_if_needed(target_db_path: str):
     """
-    Auto-migrates trade history & replay state from candidate DBs (/tmp/trading.db, trading.db)
-    into target_db_path (/data/trading.db) if target DB is fresh/empty.
-    Preserves all trade IDs, timestamps, status, P&L, and replay progress.
+    Auto-migrates trade history & replay state from candidate DBs (/data/trading.db, /tmp/trading.db, trading.db)
+    into target_db_path (/data/trading.db) if target DB has fewer trades than candidate DB.
+    Preserves all trade IDs, timestamps, status, P&L, and replay progress without duplication.
     """
-    candidate_paths = ["/tmp/trading.db", "trading.db", os.path.join(os.path.dirname(__file__), "trading.db")]
+    candidate_paths = [
+        "/data/trading.db",
+        "/tmp/trading.db",
+        "trading.db",
+        os.path.join(os.path.dirname(__file__), "trading.db")
+    ]
     
     target_abs = os.path.abspath(target_db_path)
     valid_candidates = []
@@ -44,13 +49,10 @@ def migrate_if_needed(target_db_path: str):
         if os.path.exists(target_abs):
             with sqlite3.connect(target_abs) as target_conn:
                 cur = target_conn.cursor()
-                cur.execute("SELECT COUNT(*) FROM paper_trades WHERE status = 'CLOSED'")
+                cur.execute("SELECT COUNT(*) FROM paper_trades")
                 target_trade_count = cur.fetchone()[0]
     except Exception:
         target_trade_count = 0
-
-    if target_trade_count > 0:
-        return
 
     best_candidate = None
     best_count = 0
@@ -67,10 +69,10 @@ def migrate_if_needed(target_db_path: str):
         except Exception:
             continue
 
-    if not best_candidate or best_count == 0:
+    if not best_candidate or best_count <= target_trade_count:
         return
 
-    print(f"[{datetime.now()}] MIGRATION: Migrating {best_count} paper trades from candidate DB '{best_candidate}' to persistent DB '{target_abs}'...")
+    print(f"[{datetime.now()}] MIGRATION: Migrating {best_count} paper trades from candidate DB '{best_candidate}' to target DB '{target_abs}'...")
 
     try:
         os.makedirs(os.path.dirname(target_abs), exist_ok=True)
@@ -89,7 +91,6 @@ def migrate_if_needed(target_db_path: str):
                         placeholders = ", ".join(["?"] * len(col_names))
                         cols_str = ", ".join(col_names)
                         
-                        target_cur.execute(f"DELETE FROM {table}")
                         for row in rows:
                             target_cur.execute(f"INSERT OR REPLACE INTO {table} ({cols_str}) VALUES ({placeholders})", tuple(row))
                 except Exception as table_err:
@@ -177,6 +178,15 @@ class DatabaseEngine:
                     confidence INTEGER NOT NULL,
                     reasons TEXT,
                     position_status TEXT NOT NULL
+                )
+            """)
+
+            # Server Heartbeat Table
+            cursor.execute("""
+                CREATE TABLE IF NOT EXISTS server_heartbeat (
+                    id INTEGER PRIMARY KEY CHECK (id = 1),
+                    last_heartbeat TEXT NOT NULL,
+                    uptime_seconds INTEGER NOT NULL
                 )
             """)
 
