@@ -84,10 +84,19 @@ class DhanFeedManager:
                     retry_delay = 5
                     self.add_ws_log(f"WebSocket CONNECTED to {self.feed_url}!")
                     
-                    # Send Dhan HQ API v2 Binary Subscription Packet for MCX CRUDEOILM (Security ID 569901)
-                    sub_bin = self._create_dhan_v2_sub_packet(client_id, self.security_id)
-                    await ws.send(sub_bin)
-                    self.add_ws_log(f"Binary Subscription Packet SENT (ReqCode=15, ExchangeSegment=5, SecID={self.security_id}).")
+                    # Send Dhan HQ API v2 JSON Subscription Packet for MCX CRUDEOILM (Security ID 569901)
+                    sub_json = {
+                        "RequestCode": 15,
+                        "InstrumentCount": 1,
+                        "InstrumentList": [
+                            {
+                                "ExchangeSegment": "MCX_COMM",
+                                "SecurityId": str(self.security_id or "569901")
+                            }
+                        ]
+                    }
+                    await ws.send(json.dumps(sub_json))
+                    self.add_ws_log(f"v2 JSON Subscription Packet SENT (ReqCode=15, ExchangeSegment=MCX_COMM, SecID={self.security_id}).")
                     
                     first_tick_logged = False
                     while self.is_running:
