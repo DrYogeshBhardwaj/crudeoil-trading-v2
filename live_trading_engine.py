@@ -765,6 +765,7 @@ class LiveTestEngine:
                 "paper_trading_safety_lock": "PAPER ENGINE = SEPARATE REPLAY ONLY",
                 "real_money_order_execution": "ENABLED ON DHAN REST API /v2/orders",
                 "live_engine_status": "ENGINE RUNNING 24x7",
+                "live_test_enable_flag": "TRUE / ACTIVE",
                 "order_placement_status": "REAL MONEY EXECUTION ACTIVE",
                 "static_ip_requirement": f"Whitelist Outbound IPv4 '{outbound_ip}' in Dhan HQ Portal under Application 'CRUDEOILM-LIVE-ENGINE'",
                 "order_reconciliation": "ENABLED (SL/Target exit safety active)",

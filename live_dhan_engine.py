@@ -144,9 +144,9 @@ class DhanFeedManager:
                     err_str = err_str.replace(client_id, "[REDACTED]")
                 self.last_error = err_str
                 
-                # Dynamic backoff for Dhan HTTP 429 Rate Limit
+                # Dynamic backoff for Dhan HTTP 429 Rate Limit (Allow Dhan 120s session lock to clear)
                 if "429" in err_str:
-                    retry_delay = min(retry_delay * 2 + 5, 30)
+                    retry_delay = min(max(retry_delay * 2, 60), 120)
                 else:
                     retry_delay = 5
 

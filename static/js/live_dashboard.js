@@ -125,7 +125,7 @@ async function updateLiveDashboard() {
                 `Dhan Auth: ${rep.dhan_authentication.status} (Client ID: ${rep.dhan_authentication.client_id})`,
                 `Market Feed: ${rep.market_feed.instrument} ${rep.market_feed.exchange} (Sec ID: ${rep.market_feed.security_id}, Lot Size: ${rep.market_feed.lot_size})`,
                 `Available Margin: ₹${rep.account_limits.available_margin_inr.toLocaleString('en-IN')}`,
-                `Safety Flag: ${rep.safety_controls.live_test_enable_flag}`,
+                `Safety Flag: ${rep.safety_controls.live_test_enable_flag || (data.live_test_enable_flag ? 'TRUE / ACTIVE' : 'FALSE / BLOCKED')}`,
                 `Order Placement Status: ${rep.safety_controls.order_placement_status}`,
                 `Outbound Server IPv4: ${rep.server_outbound_public_ipv4 || 'FETCHING'} (DYNAMIC EGRESS IP)`,
                 `Static IP Requirement: ${rep.safety_controls.static_ip_requirement || '-'}`,
