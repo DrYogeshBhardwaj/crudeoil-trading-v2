@@ -138,8 +138,6 @@ class DhanFeedManager:
             pass
         return None
 
-from replay_test import generate_multiday_session_data
-
 class ServerSideReplayFeed:
     """
     Continuous 24x7 Server-Side Historical Replay Feed Manager.
@@ -147,6 +145,7 @@ class ServerSideReplayFeed:
     second-by-second directly into the trading engine 24x7 without Dhan WS dependency.
     """
     def __init__(self, engine: "LivePaperTradingEngine"):
+        from replay_test import generate_multiday_session_data
         self.engine = engine
         self.is_running = True
         self.candles = generate_multiday_session_data()
@@ -166,6 +165,10 @@ class ServerSideReplayFeed:
             c = self.candles[i]
             self.engine.candle_builder.add_completed_1m_candle(c)
         self.current_index = warmup_count
+
+        self.engine.latest_tick_time = self.candles[warmup_count - 1].timestamp
+        self.engine.current_price = self.candles[warmup_count - 1].close
+        self.engine.last_replay_wall_time = time.time()
 
         c1h = self.engine.candle_builder.candles_1h
         c15m = self.engine.candle_builder.candles_15m
@@ -196,6 +199,7 @@ class LivePaperTradingEngine:
         self.current_signal: Optional[TradeSignal] = None
         self.latest_tick_time: Optional[datetime] = None
         self.current_price: float = 6500.0
+        self.last_replay_wall_time: float = time.time()
         self.is_running: bool = True
         self.ws_connected: bool = False
         self.replay_ended: bool = False
@@ -213,6 +217,7 @@ class LivePaperTradingEngine:
         """
         self.latest_tick_time = candle.timestamp
         self.current_price = candle.close
+        self.last_replay_wall_time = time.time()
         
         tick_entry = {"timestamp": candle.timestamp.strftime("%Y-%m-%d %H:%M:%S"), "ltp": round(candle.close, 2)}
         self.recent_ticks.append(tick_entry)
@@ -240,6 +245,7 @@ class LivePaperTradingEngine:
         """
         self.latest_tick_time = timestamp
         self.current_price = price
+        self.last_replay_wall_time = time.time()
         
         # Append to recent live ticks buffer
         tick_entry = {"timestamp": timestamp.strftime("%Y-%m-%d %H:%M:%S"), "ltp": round(price, 2)}
@@ -279,7 +285,7 @@ class LivePaperTradingEngine:
         
         if self.latest_tick_time is not None:
             last_tick = self.latest_tick_time
-            tick_age_seconds = round((now_ist - last_tick).total_seconds(), 1)
+            tick_age_seconds = round(time.time() - self.last_replay_wall_time, 1)
             is_data_stale = tick_age_seconds > CONFIG.DATA_STALE_THRESHOLD_SECONDS
         else:
             last_tick = None
@@ -349,9 +355,13 @@ class LivePaperTradingEngine:
         if self.replay_ended:
             signal_action = "WAIT"
             reasons = ["REPLAY DATA ENDED / WAITING: All 5,400 multi-day historical candles executed. System WAITING."]
+            trend_state = trend_eval.state if trend_eval else "RANGE"
+            confidence = 0
         else:
             signal_action = active_sig.action if active_sig else "WAIT"
             reasons = active_sig.reasons[:] if active_sig else (trend_eval.reasons if trend_eval else [])
+            trend_state = active_sig.trend_state if active_sig else (trend_eval.state if trend_eval else "RANGE")
+            confidence = active_sig.confidence if active_sig else (trend_eval.confidence if trend_eval else 0)
 
         signal_dict = {
             "action": signal_action,
