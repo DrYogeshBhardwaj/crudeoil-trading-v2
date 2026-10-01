@@ -17,6 +17,8 @@ from config import CONFIG
 from live_dhan_engine import LIVE_ENGINE
 from live_trading_engine import LIVE_TEST_ENGINE
 from database import DB
+from wti_paper_engine import WTI_ENGINE
+from wti_feed import WTI_FEED
 
 app = FastAPI(
     title="AI Trend Detector & Paper Trading Engine V1",
@@ -54,6 +56,62 @@ async def serve_live_dashboard():
         with open(live_path, "r", encoding="utf-8") as f:
             return HTMLResponse(content=f.read())
     return HTMLResponse("<h2>CRUDEOILM Live Test Dashboard</h2>")
+
+@app.get("/wti", response_class=HTMLResponse)
+async def serve_wti_dashboard():
+    """Serves the separate WTI Crude Oil Paper Trading Dashboard."""
+    wti_path = os.path.join(os.path.dirname(__file__), "templates", "wti.html")
+    if os.path.exists(wti_path):
+        with open(wti_path, "r", encoding="utf-8") as f:
+            return HTMLResponse(content=f.read())
+    return HTMLResponse("<h2>WTI Crude Oil Paper Trading Dashboard</h2>")
+
+@app.get("/api/wti/state")
+async def get_wti_state():
+    """Returns real-time JSON state for the separate /wti paper trading dashboard."""
+    return JSONResponse(WTI_ENGINE.get_dashboard_state())
+
+@app.get("/api/wti/candles")
+async def get_wti_candles(tf: str = "5m", range_str: str = "1d"):
+    """Returns historical OHLCV candles for WTI Crude Oil chart."""
+    candles = WTI_FEED.fetch_historical_candles(tf, range_str)
+    return JSONResponse(candles)
+
+@app.post("/api/wti/emergency_exit")
+async def wti_emergency_exit():
+    """Triggers manual emergency exit for WTI active paper position."""
+    pos = WTI_ENGINE.emergency_exit_position()
+    return JSONResponse({
+        "status": "EMERGENCY_EXIT_EXECUTED" if pos else "NO_ACTIVE_POSITION",
+        "message": f"Emergency exit executed for active WTI position." if pos else "No active WTI position to exit."
+    })
+
+@app.post("/api/wti/reset")
+async def wti_reset_account():
+    """Resets WTI paper account balance to $100,000 and clears trade history."""
+    WTI_ENGINE.reset_paper_account()
+    return JSONResponse({
+        "status": "ACCOUNT_RESET",
+        "message": "WTI Paper account reset successfully. Capital restored to $100,000 USD."
+    })
+
+@app.post("/api/wti/config")
+async def wti_update_config(payload: dict):
+    """Updates WTI virtual capital configuration or contract type (CL=1,000 bbls / MCL=100 bbls)."""
+    updated = []
+    capital = payload.get("virtual_capital")
+    if capital is not None and float(capital) > 0:
+        WTI_ENGINE.set_virtual_capital(float(capital))
+        updated.append(f"Virtual capital: ${capital}")
+
+    contract_type = payload.get("contract_type")
+    if contract_type in ("CL", "MCL"):
+        WTI_ENGINE.set_contract_type(contract_type)
+        updated.append(f"Contract type: {contract_type}")
+
+    if updated:
+        return JSONResponse({"status": "SUCCESS", "message": f"Updated: {', '.join(updated)}"})
+    return JSONResponse({"status": "ERROR", "message": "No valid config fields provided"}, status_code=400)
 
 @app.get("/api/live/state")
 async def get_live_state():
@@ -250,9 +308,12 @@ async def db_diagnostic():
 
 @app.on_event("startup")
 async def startup_event():
-    """Starts background Dhan WebSocket listener loop on app startup."""
+    """Starts background Dhan WebSocket listener loop and WTI Paper feed loop on app startup."""
     print(f"[{datetime.now()}] [STARTUP] Spawning LIVE_ENGINE.start_feed_loop background task...")
     asyncio.create_task(LIVE_ENGINE.start_feed_loop())
+
+    print(f"[{datetime.now()}] [STARTUP] Spawning WTI_ENGINE.start_feed_loop background task...")
+    asyncio.create_task(WTI_ENGINE.start_feed_loop())
 
 if __name__ == "__main__":
     import uvicorn
