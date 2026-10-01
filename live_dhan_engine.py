@@ -162,12 +162,7 @@ class DhanFeedManager:
         num_inst_bytes = struct.pack('<I', num_inst)
         # ExchangeSegment = 5 for MCX Commodities/Futures in Dhan HQ v2
         inst_bytes = struct.pack('<B20s', 5, target_sec_id.encode('utf-8')[:20].ljust(20, b'\0'))
-        
-        padding = b""
-        for _ in range(99):
-            padding += struct.pack('<B20s', 0, b'\0' * 20)
-            
-        return header + num_inst_bytes + inst_bytes + padding
+        return header + num_inst_bytes + inst_bytes
 
     def _parse_dhan_binary_ltp(self, raw_bytes: bytes) -> Optional[float]:
         """Parses Dhan binary feed packet for LTP across Ticker (16B), Quote (50B), and Full depth packets."""
