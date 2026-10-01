@@ -305,10 +305,12 @@ class LivePaperTradingEngine:
             system_status = "REPLAY DATA ENDED / WAITING"
             feed_health = "REPLAY ENDED"
             paper_trading_allowed = "NO (REPLAY ENDED)"
+            feed_mode_label = "PAPER REPLAY (ENDED)"
         else:
             system_status = self.paper_engine.system_status
             feed_health = "ACTIVE REPLAY"
             paper_trading_allowed = "YES (PAPER REPLAY)"
+            feed_mode_label = "PAPER REPLAY"
 
         trend_eval = TrendDetector.evaluate(c1h, c15m, c5m) if (c1h and c15m and c5m) else None
         
@@ -427,6 +429,11 @@ class LivePaperTradingEngine:
             risk_status = "ACTIVE — HARD SL IN PLACE"
         else:
             risk_status = "NORMAL — RISK PROTECTED"
+
+        starting_cap = self.paper_engine.starting_capital
+        realized_pnl = self.paper_engine.total_realized_pnl
+        current_cap = self.paper_engine.current_virtual_capital
+        available_cap = current_cap
 
         return {
             "instrument": CONFIG.INSTRUMENT_NAME,
