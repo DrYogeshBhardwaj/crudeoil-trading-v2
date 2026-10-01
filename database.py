@@ -192,7 +192,97 @@ class DatabaseEngine:
                 )
             """)
 
+            # Live Test Trades Table (Separate Namespace for LIVE Mode)
+            cursor.execute("""
+                CREATE TABLE IF NOT EXISTS live_trades (
+                    trade_id TEXT PRIMARY KEY,
+                    dhan_order_id TEXT,
+                    entry_timestamp TEXT NOT NULL,
+                    instrument TEXT NOT NULL,
+                    direction TEXT NOT NULL,
+                    quantity INTEGER NOT NULL,
+                    entry_price REAL NOT NULL,
+                    fill_price REAL,
+                    stop_loss REAL NOT NULL,
+                    original_stop_loss REAL NOT NULL,
+                    target_1 REAL NOT NULL,
+                    target_2 REAL NOT NULL,
+                    trend_state TEXT NOT NULL,
+                    confidence INTEGER NOT NULL,
+                    reasons TEXT,
+                    status TEXT NOT NULL,
+                    exit_timestamp TEXT,
+                    exit_price REAL,
+                    exit_reason TEXT,
+                    gross_pnl REAL,
+                    charges REAL,
+                    slippage REAL,
+                    net_pnl REAL
+                )
+            """)
+
             conn.commit()
+
+    def save_live_trade(self, pos_dict: Dict[str, Any]):
+        with self._get_connection() as conn:
+            cursor = conn.cursor()
+            reasons_json = json.dumps(pos_dict.get("reasons", []))
+            cursor.execute("""
+                INSERT OR REPLACE INTO live_trades (
+                    trade_id, dhan_order_id, entry_timestamp, instrument, direction, quantity,
+                    entry_price, fill_price, stop_loss, original_stop_loss, target_1, target_2,
+                    trend_state, confidence, reasons, status, exit_timestamp, exit_price,
+                    exit_reason, gross_pnl, charges, slippage, net_pnl
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """, (
+                pos_dict["trade_id"],
+                pos_dict.get("dhan_order_id", "LIVE-MOCK"),
+                pos_dict["entry_timestamp"],
+                pos_dict["instrument"],
+                pos_dict["direction"],
+                pos_dict["quantity"],
+                pos_dict["entry_price"],
+                pos_dict.get("fill_price", pos_dict["entry_price"]),
+                pos_dict["stop_loss"],
+                pos_dict["original_stop_loss"],
+                pos_dict["target_1"],
+                pos_dict["target_2"],
+                pos_dict["trend_state"],
+                pos_dict["confidence"],
+                reasons_json,
+                pos_dict["status"],
+                pos_dict.get("exit_timestamp"),
+                pos_dict.get("exit_price"),
+                pos_dict.get("exit_reason"),
+                pos_dict.get("gross_pnl"),
+                pos_dict.get("charges"),
+                pos_dict.get("slippage"),
+                pos_dict.get("net_pnl")
+            ))
+            conn.commit()
+
+    def load_active_live_position(self) -> Optional[Dict[str, Any]]:
+        with self._get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute("SELECT * FROM live_trades WHERE status = 'OPEN' LIMIT 1")
+            row = cursor.fetchone()
+            if row:
+                d = dict(row)
+                d["reasons"] = json.loads(d["reasons"]) if d["reasons"] else []
+                return d
+            return None
+
+    def load_all_live_trades(self) -> List[Dict[str, Any]]:
+        with self._get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute("SELECT * FROM live_trades ORDER BY entry_timestamp ASC")
+            rows = cursor.fetchall()
+            trades = []
+            for r in rows:
+                t = dict(r)
+                t["reasons"] = json.loads(t["reasons"]) if t["reasons"] else []
+                trades.append(t)
+            return trades
 
     def save_paper_trade(self, pos_dict: Dict[str, Any]):
         with self._get_connection() as conn:

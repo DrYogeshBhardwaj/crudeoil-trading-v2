@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CRUDEOILM LIVE TEST — Dhan HQ Engine</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+    <style>
+        .live-banner {
+            background: linear-gradient(90deg, #7c3aed, #db2777);
+            color: #ffffff;
+            font-weight: 800;
+            padding: 8px 16px;
+            text-align: center;
+            font-size: 0.82rem;
+            letter-spacing: 0.5px;
+            border-radius: 6px;
+            margin-bottom: 12px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .timer-badge {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 1.25rem;
+            font-weight: 800;
+            color: #f43f5e;
+            background: rgba(0, 0, 0, 0.4);
+            padding: 4px 12px;
+            border-radius: 6px;
+            border: 1px solid rgba(244, 63, 94, 0.4);
+        }
+        .btn-danger {
+            background: #ef4444;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            font-weight: 700;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        .btn-danger:hover { background: #dc2626; }
+        .btn-warning {
+            background: #f59e0b;
+            color: black;
+            border: none;
+            padding: 8px 16px;
+            font-weight: 700;
+            border-radius: 6px;
+            cursor: pointer;
+        }
+        .btn-success {
+            background: #10b981;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            font-weight: 700;
+            border-radius: 6px;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+    <div class="dashboard-container">
+        <!-- Live Test Safety Banner -->
+        <div class="live-banner">
+            <div>
+                ⚡ CRUDEOILM LIVE TEST MODE — SEPARATE LIVE ENGINE (PAPER ENGINE UNTOUCHED)
+            </div>
+            <div>
+                <span style="background: rgba(0,0,0,0.3); padding: 3px 8px; border-radius: 4px; font-size: 0.72rem;" id="order-status-badge">ORDER EXECUTION: BLOCKED (DEV MODE)</span>
+            </div>
+        </div>
+
+        <!-- Header Bar -->
+        <header class="header-card">
+            <div class="brand-info">
+                <h1 class="logo-title" style="color: #c084fc;">CRUDEOILM LIVE TEST DASHBOARD</h1>
+                <div class="instrument-tag" style="display: flex; gap: 6px; align-items: center; flex-wrap: wrap; margin-top: 6px;">
+                    <span style="background: rgba(168, 85, 247, 0.25); color: #c084fc; border: 1px solid #c084fc; padding: 2px 8px; border-radius: 4px; font-weight: 800; font-size: 0.75rem;">LIVE ROUTE /LIVE</span>
+                    <span class="inst-name">CRUDEOILM</span>
+                    <span class="exchange-badge">MCX</span>
+                    <span id="dhan-status-badge" style="background: rgba(56, 189, 248, 0.2); color: #38bdf8; border: 1px solid #38bdf8; padding: 2px 8px; border-radius: 4px; font-weight: 700; font-size: 0.75rem;">DHAN API: CHECKING...</span>
+                    <span style="background: rgba(239, 68, 68, 0.2); color: #ef4444; border: 1px solid #ef4444; padding: 2px 8px; border-radius: 4px; font-weight: 700; font-size: 0.75rem;">REAL_TRADING = FALSE</span>
+                </div>
+            </div>
+
+            <div class="live-price-box">
+                <span class="price-label">LIVE MARKET LTP</span>
+                <span class="price-value" id="live-price">₹0.00</span>
+                <span class="last-tick" id="last-tick">Syncing...</span>
+            </div>
+
+            <!-- 60-Minute Countdown Box -->
+            <div style="display: flex; flex-direction: column; align-items: flex-end; background: rgba(0, 0, 0, 0.25); border: 1px solid rgba(244, 63, 94, 0.3); padding: 8px 14px; border-radius: 8px;">
+                <span style="font-size: 0.68rem; color: #94a3b8; font-weight: 700; letter-spacing: 0.5px;">60-MIN TEST COUNTDOWN</span>
+                <span class="timer-badge" id="countdown-timer">60:00</span>
+                <span id="test-status-text" style="font-size: 0.72rem; color: #a855f7; font-weight: 600; margin-top: 2px;">Test Window: Ready</span>
+            </div>
+        </header>
+
+        <!-- Live Control & Emergency Buttons Bar -->
+        <div style="display: flex; justify-content: space-between; align-items: center; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); padding: 10px 16px; border-radius: 8px; margin: 12px 0;">
+            <div style="display: flex; gap: 10px; align-items: center;">
+                <button class="btn-success" id="btn-start-test" onclick="startTest()">▶ START 60-MIN LIVE TEST</button>
+                <button class="btn-warning" id="btn-stop-test" onclick="stopTest()">⏹ STOP LIVE TEST</button>
+            </div>
+            <div>
+                <button class="btn-danger" onclick="emergencyExitAll()">🚨 EMERGENCY EXIT ALL (SQUARE OFF)</button>
+            </div>
+        </div>
+
+        <!-- Risk & Account Metrics Row -->
+        <div class="main-grid">
+            <!-- Account & Dhan Margins Card -->
+            <div class="card account-card">
+                <div class="card-header">
+                    <h2>DHAN ACCOUNT MARGIN & LIVE TEST RISK</h2>
+                    <span class="pos-badge" id="live-pos-status">NO LIVE POSITION</span>
+                </div>
+                <div class="card-body">
+                    <!-- Margin Summary Bar -->
+                    <div style="display: flex; justify-content: space-between; background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255, 255, 255, 0.08); padding: 10px 14px; border-radius: 8px; margin-bottom: 12px;">
+                        <div>
+                            <div style="font-size: 0.75rem; color: #94a3b8; font-weight: 600;">AVAILABLE DHAN MARGIN</div>
+                            <div style="font-size: 1.1rem; font-weight: 800; color: #38bdf8;" id="avail-margin">₹0.00</div>
+                        </div>
+                        <div>
+                            <div style="font-size: 0.75rem; color: #94a3b8; font-weight: 600;">DHAN CLIENT ID</div>
+                            <div style="font-size: 1.1rem; font-weight: 800; color: #c084fc;" id="dhan-client-id">-</div>
+                        </div>
+                    </div>
+
+                    <!-- Live Risk Control Bar -->
+                    <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; text-align: center; background: rgba(239, 68, 68, 0.05); border: 1px solid rgba(239, 68, 68, 0.2); padding: 10px; border-radius: 8px; margin-bottom: 12px;">
+                        <div>
+                            <div style="font-size: 0.65rem; color: #94a3b8; font-weight: 600;">TEST LOSS LIMIT</div>
+                            <div style="font-size: 0.95rem; font-weight: 800; color: #f59e0b;">₹3,000.00</div>
+                        </div>
+                        <div>
+                            <div style="font-size: 0.65rem; color: #94a3b8; font-weight: 600;">MAX RISK / TRADE</div>
+                            <div style="font-size: 0.95rem; font-weight: 800; color: #ef4444;">₹2,500.00</div>
+                        </div>
+                        <div>
+                            <div style="font-size: 0.65rem; color: #94a3b8; font-weight: 600;">MAX LOTS</div>
+                            <div style="font-size: 0.95rem; font-weight: 800; color: #38bdf8;">1 LOT (10 BBL)</div>
+                        </div>
+                        <div>
+                            <div style="font-size: 0.65rem; color: #94a3b8; font-weight: 600;">CURRENT LOSS</div>
+                            <div id="live-daily-loss" style="font-size: 0.95rem; font-weight: 800; color: #f87171;">₹0.00</div>
+                        </div>
+                    </div>
+
+                    <!-- Active Live Position -->
+                    <div class="active-pos-box">
+                        <div class="pos-info-grid">
+                            <div><span class="lbl">Live Trade ID:</span> <span class="val" id="pos-id">-</span></div>
+                            <div><span class="lbl">Dhan Order ID:</span> <span class="val" id="pos-order-id">-</span></div>
+                            <div><span class="lbl">Direction:</span> <span class="val" id="pos-dir">-</span></div>
+                            <div><span class="lbl">Fill Price:</span> <span class="val" id="pos-fill">-</span></div>
+                            <div><span class="lbl">Stop Loss:</span> <span class="val" id="pos-sl">-</span></div>
+                            <div><span class="lbl">Target 1 / 2:</span> <span class="val" id="pos-tgt">-</span></div>
+                        </div>
+                        <div class="unrealized-box">
+                            <span class="lbl">UNREALIZED P/L</span>
+                            <span class="unrealized-val" id="unrealized-pnl">₹0.00</span>
+                        </div>
+                    </div>
+
+                    <!-- Realized Performance Grid -->
+                    <div class="daily-metrics-grid" style="grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 12px;">
+                        <div class="metric-box">
+                            <span class="lbl">LIVE NET REALIZED P/L</span>
+                            <span class="val-pnl" id="live-net-pnl">₹0.00</span>
+                        </div>
+                        <div class="metric-box">
+                            <span class="lbl">ESTIMATED CHARGES</span>
+                            <span class="val" id="live-charges">₹0.00</span>
+                        </div>
+                        <div class="metric-box">
+                            <span class="lbl">TOTAL LIVE TRADES</span>
+                            <span class="val" id="live-trades-count">0</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Readiness & Diagnostic Panel Card -->
+            <div class="card signal-card">
+                <div class="card-header">
+                    <h2>LIVE DEPLOYMENT READINESS REPORT</h2>
+                    <span style="background: rgba(34, 197, 94, 0.2); color: #22c55e; border: 1px solid #22c55e; padding: 2px 8px; border-radius: 4px; font-weight: 700; font-size: 0.72rem;">DEV / SAFETY MODE</span>
+                </div>
+                <div class="card-body">
+                    <ul class="reasons-list" id="readiness-list" style="font-size: 0.8rem; font-family: 'JetBrains Mono', monospace;">
+                        <li>Checking Dhan API authentication...</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <!-- Executed Live Trade Audit Ledger -->
+        <div class="card ledger-card" style="margin-top: 16px;">
+            <div class="card-header">
+                <h2>EXECUTED LIVE TEST TRADE AUDIT LEDGER</h2>
+                <span class="count-badge" id="ledger-count">0 Trades Recorded</span>
+            </div>
+            <div class="table-container">
+                <table class="ledger-table">
+                    <thead>
+                        <tr>
+                            <th>Trade ID</th>
+                            <th>Dhan Order ID</th>
+                            <th>Entry Time (IST)</th>
+                            <th>Exit Time (IST)</th>
+                            <th>Dir</th>
+                            <th>Fill Price</th>
+                            <th>Exit Price</th>
+                            <th>Exit Reason</th>
+                            <th>Gross P/L</th>
+                            <th>Charges</th>
+                            <th>Slippage</th>
+                            <th>Net P/L</th>
+                        </tr>
+                    </thead>
+                    <tbody id="ledger-tbody">
+                        <tr>
+                            <td colspan="12" class="empty-msg">No executed live test trades yet. Order placement remains blocked until explicit safety mode approval.</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <script src="/static/js/live_dashboard.js"></script>
+</body>
+</html>

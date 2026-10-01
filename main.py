@@ -15,6 +15,7 @@ from datetime import datetime
 
 from config import CONFIG
 from live_dhan_engine import LIVE_ENGINE
+from live_trading_engine import LIVE_TEST_ENGINE
 from database import DB
 
 app = FastAPI(
@@ -44,6 +45,51 @@ async def serve_dashboard():
         with open(index_path, "r", encoding="utf-8") as f:
             return HTMLResponse(content=f.read())
     return HTMLResponse("<h2>AI Trend Detector Live Dashboard UI</h2>")
+
+@app.get("/live", response_class=HTMLResponse)
+async def serve_live_dashboard():
+    """Serves the separate CRUDEOILM Live Test Dashboard interface."""
+    live_path = os.path.join(os.path.dirname(__file__), "templates", "index.html") if not os.path.exists(os.path.join(os.path.dirname(__file__), "templates", "live.html")) else os.path.join(os.path.dirname(__file__), "templates", "live.html")
+    if os.path.exists(live_path):
+        with open(live_path, "r", encoding="utf-8") as f:
+            return HTMLResponse(content=f.read())
+    return HTMLResponse("<h2>CRUDEOILM Live Test Dashboard</h2>")
+
+@app.get("/api/live/state")
+async def get_live_state():
+    """Returns real-time JSON state for the separate /live dashboard."""
+    paper_state = LIVE_ENGINE.get_dashboard_state()
+    curr_price = paper_state.get("current_price", 0.0)
+    curr_sig = LIVE_ENGINE.current_signal
+    return JSONResponse(LIVE_TEST_ENGINE.get_live_dashboard_state(curr_price, curr_sig))
+
+@app.get("/api/live/readiness")
+async def get_live_readiness():
+    """Returns pre-flight readiness report for LIVE test deployment."""
+    return JSONResponse(LIVE_TEST_ENGINE.get_readiness_report())
+
+@app.post("/api/live/start_test")
+async def start_live_test():
+    """Starts 60-minute live test session window."""
+    LIVE_TEST_ENGINE.start_60min_test()
+    return JSONResponse({"status": "STARTED", "message": "60-minute live test window started."})
+
+@app.post("/api/live/stop_test")
+async def stop_live_test():
+    """Stops 60-minute live test session window."""
+    LIVE_TEST_ENGINE.stop_test("MANUAL_STOP")
+    return JSONResponse({"status": "STOPPED", "message": "Live test window stopped manually."})
+
+@app.post("/api/live/emergency_exit")
+async def emergency_exit():
+    """Triggers emergency square-off for any active live position."""
+    paper_state = LIVE_ENGINE.get_dashboard_state()
+    curr_price = paper_state.get("current_price", 0.0)
+    pos = LIVE_TEST_ENGINE.emergency_exit_all(curr_price)
+    return JSONResponse({
+        "status": "EMERGENCY_EXIT_EXECUTED",
+        "message": f"Emergency exit executed for active position." if pos else "No active live position to exit."
+    })
 
 SERVER_START_TIME = datetime.now()
 
