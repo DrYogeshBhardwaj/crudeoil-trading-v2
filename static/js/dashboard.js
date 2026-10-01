@@ -17,7 +17,12 @@ async function updateDashboard() {
         const priceElem = document.getElementById('live-price');
         priceElem.textContent = `₹${data.current_price.toFixed(2)}`;
         
-        document.getElementById('last-tick').textContent = `Last Tick (IST): ${data.last_tick_time_ist || data.last_tick_time || '-'}`;
+        const tickTimeStr = data.last_tick_time_ist || data.last_tick_time || '-';
+        document.getElementById('last-tick').textContent = `Last Tick (IST): ${tickTimeStr}`;
+        const replayTimeElem = document.getElementById('replay-ist-time');
+        if (replayTimeElem) {
+            replayTimeElem.textContent = `Replay Tick: ${tickTimeStr}`;
+        }
 
         // Feed Health & Mode Badge
         const healthBadge = document.getElementById('feed-health');
@@ -171,6 +176,17 @@ function updateTFBadge(elemId, state) {
     else elem.classList.add('tf-range');
 }
 
-// Initial fetch and poll every 2 seconds
+function updateISTClock() {
+    const clockElem = document.getElementById('live-ist-clock');
+    if (!clockElem) return;
+    const now = new Date();
+    const options = { timeZone: 'Asia/Kolkata', hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' };
+    const istStr = new Intl.DateTimeFormat('en-IN', options).format(now);
+    clockElem.textContent = `${istStr} IST`;
+}
+
+// Initial fetch, IST clock interval, and dashboard polling
+updateISTClock();
+setInterval(updateISTClock, 1000);
 updateDashboard();
 setInterval(updateDashboard, 2000);
