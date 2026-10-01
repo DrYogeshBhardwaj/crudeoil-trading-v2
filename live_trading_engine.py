@@ -58,6 +58,11 @@ class DhanLiveAdapter:
         self.client_id = os.environ.get("DHAN_CLIENT_ID", "").strip()
         self.access_token = os.environ.get("DHAN_ACCESS_TOKEN", "").strip()
         
+        if self.client_id in ["DHAN_CLIENT_ID", "DHAN_ACCESS_TOKEN", "YOUR_DHAN_CLIENT_ID"]:
+            self.client_id = ""
+        if self.access_token in ["DHAN_ACCESS_TOKEN", "YOUR_DHAN_ACCESS_TOKEN"]:
+            self.access_token = ""
+
         # Fallback to persistent /data/dhan_credentials.json or local gitignored credentials file
         paths_to_check = [
             "/data/dhan_credentials.json",
@@ -381,6 +386,7 @@ class LiveTestEngine:
         self.evaluation_count: int = 0
         self.latest_signal: Optional[TradeSignal] = None
         self.evaluation_logs: List[str] = []
+        self._warmed_up: bool = False
         
         self._restore_from_db()
         self.warmup_from_dhan_api()
@@ -388,10 +394,16 @@ class LiveTestEngine:
     def warmup_from_dhan_api(self):
         """Pre-populates MultiTimeframeCandleBuilder with authentic Dhan intraday market candles."""
         try:
+            self.adapter.reload_credentials()
             candles = self.adapter.fetch_intraday_candles(CONFIG.DHAN_SECURITY_ID)
-            if candles:
+            if candles and len(candles) > 0:
+                self.candle_builder.candles_1m = []
+                self.candle_builder.candles_5m = []
+                self.candle_builder.candles_15m = []
+                self.candle_builder.candles_1h = []
                 for c in candles:
                     self.candle_builder.add_completed_1m_candle(c)
+                self._warmed_up = True
                 w_msg = f"[{datetime.now()}] [LIVE ENGINE WARMUP] Populated MultiTimeframeCandleBuilder with {len(candles)} Dhan intraday candles (1H: {len(self.candle_builder.candles_1h)}, 15M: {len(self.candle_builder.candles_15m)}, 5M: {len(self.candle_builder.candles_5m)})."
                 print(w_msg)
                 self.evaluation_logs.append(w_msg)
@@ -486,6 +498,9 @@ class LiveTestEngine:
         self.live_ltp = round(price, 2)
         self.last_live_tick_time = timestamp
         self.evaluation_count += 1
+
+        if not getattr(self, '_warmed_up', False) and (self.evaluation_count == 1 or self.evaluation_count % 30 == 0):
+            self.warmup_from_dhan_api()
 
         # 1. Update Live Candle Builder with tick
         self.candle_builder.process_tick(timestamp, price, volume, oi)
