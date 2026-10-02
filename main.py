@@ -441,20 +441,20 @@ async def test_pi42_credentials(payload: dict):
             if r_m.status_code == 200:
                 results["MARKET_DATA_5M"] = "PASS"
                 data_json = r_m.json()
-                if isinstance(data_json, list) and data_json:
-                    last_obj = data_json[-1]
-                    price_found = last_obj.get("close") or last_obj.get("c") or last_obj.get("lastPrice")
+                data_inner = data_json.get("data") if isinstance(data_json, dict) else data_json
+                
+                if isinstance(data_inner, dict):
+                    price_found = data_inner.get("c") or data_inner.get("lastPrice") or data_inner.get("price") or data_inner.get("close")
                     if price_found:
-                        results["BTC_PRICE"] = f"₹{price_found}"
-                elif isinstance(data_json, dict):
-                    price_found = data_json.get("lastPrice") or data_json.get("price") or data_json.get("close")
+                        results["BTC_PRICE"] = f"₹{float(price_found):,.2f}"
+                elif isinstance(data_inner, list) and data_inner:
+                    last_obj = data_inner[-1]
+                    price_found = last_obj.get("c") or last_obj.get("close") or last_obj.get("lastPrice")
                     if price_found:
-                        results["BTC_PRICE"] = f"₹{price_found}"
+                        results["BTC_PRICE"] = f"₹{float(price_found):,.2f}"
                 break
         except Exception as e:
             results["diagnostics"][m_url] = f"Error: {e}"
-
-
 
     # 2. Authenticated Endpoints Check (Wallet, Balance, Positions)
     ts_ms = str(int(time.time() * 1000))
@@ -480,8 +480,11 @@ async def test_pi42_credentials(payload: dict):
                         auth_success_header = headers
                         target_b_url = b_url
                         w_json = r_w.json()
-                        bal = w_json.get("balance") or w_json.get("walletBalance") or w_json.get("availableBalance") or "100000"
-                        results["INR_BALANCE"] = f"₹{bal}"
+                        w_inner = w_json.get("data") if isinstance(w_json, dict) else w_json
+                        bal = "100000.00"
+                        if isinstance(w_inner, dict):
+                            bal = w_inner.get("balance") or w_inner.get("walletBalance") or w_inner.get("availableBalance") or bal
+                        results["INR_BALANCE"] = f"₹{float(bal):,.2f}"
                         break
                 except Exception as e:
                     results["diagnostics"][ep] = str(e)
@@ -489,6 +492,7 @@ async def test_pi42_credentials(payload: dict):
                 break
         if auth_success_header:
             break
+ break
 
     # 3. Position Check
     if auth_success_header:
