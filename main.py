@@ -411,6 +411,26 @@ async def test_pi42_credentials(payload: dict):
         or ""
     ).strip()
 
+    creds_file = os.path.join(os.path.dirname(__file__), "pi42_credentials.json")
+
+    # Save provided credentials if valid
+    if payload.get("api_key") and payload.get("api_secret"):
+        try:
+            with open(creds_file, "w", encoding="utf-8") as f:
+                json.dump({"PI42_API_KEY": api_key, "PI42_API_SECRET": api_secret}, f)
+        except Exception:
+            pass
+
+    # Read from file fallback if env vars missing
+    if (not api_key or not api_secret) and os.path.exists(creds_file):
+        try:
+            with open(creds_file, "r", encoding="utf-8") as f:
+                cdata = json.load(f)
+                api_key = api_key or cdata.get("PI42_API_KEY", "")
+                api_secret = api_secret or cdata.get("PI42_API_SECRET", "")
+        except Exception:
+            pass
+
     base_urls = ["https://fapi.pi42.com", "https://api.pi42.com"]
     start_t = time.time()
 
@@ -547,10 +567,28 @@ async def test_pi42_credentials(payload: dict):
         time.sleep(0.1)
 
     results["STABILITY_10_CALLS"] = "PASS" if successful_calls >= 8 else "FAIL"
-    results["latency_ms"] = sum(latencies) // len(latencies) if latencies else 0
-    results["total_latency_ms"] = int((time.time() - start_t) * 1000)
-
     return JSONResponse(results)
+
+@app.post("/api/bitcoin/update_credentials")
+async def update_bitcoin_credentials(payload: dict):
+    """Updates and persists active Pi42 API credentials on running server instance."""
+    api_key = str(payload.get("api_key", "")).strip()
+    api_secret = str(payload.get("api_secret", "")).strip()
+
+    if not api_key or not api_secret:
+        raise HTTPException(status_code=400, detail="api_key and api_secret are required.")
+
+    creds_file = os.path.join(os.path.dirname(__file__), "pi42_credentials.json")
+    try:
+        with open(creds_file, "w", encoding="utf-8") as f:
+            json.dump({"PI42_API_KEY": api_key, "PI42_API_SECRET": api_secret}, f)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to persist credentials: {e}")
+
+    # Immediately run server-side test
+    res = await test_pi42_credentials({"api_key": api_key, "api_secret": api_secret})
+    return res
+
 
 
 
