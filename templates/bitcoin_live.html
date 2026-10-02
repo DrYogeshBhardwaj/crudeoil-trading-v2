@@ -243,6 +243,7 @@
             </div>
             <div style="font-size:1.1rem; font-weight:700; color:#10b981;">Futures Balance: <span id="fut_bal">₹0.00</span></div>
             <div class="card-sub">Spot Balance: <strong id="spot_bal">₹0.00</strong></div>
+            <button onclick="transferSpotToFutures()" style="margin-top:6px; background:#38bdf8; color:#000; border:none; padding:5px 10px; border-radius:4px; font-weight:700; font-size:0.75rem; cursor:pointer;">🔄 Transfer Spot → Futures (₹5,000)</button>
         </div>
 
         <!-- 3. NEW ENTRIES STATUS -->
@@ -365,6 +366,22 @@
             }
         } catch(e) {
             console.error('Error fetching live state:', e);
+        }
+    }
+
+    async function transferSpotToFutures() {
+        if (!confirm("Do you want to transfer ₹5,000 INR from Spot Wallet to Futures Wallet?")) return;
+        try {
+            const resp = await fetch('/api/bitcoin/live/transfer-spot-to-futures', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ amount: 5000.0 })
+            });
+            const res = await resp.json();
+            alert(res.message);
+            updateDashboard();
+        } catch(e) {
+            alert('Error executing transfer: ' + e);
         }
     }
 

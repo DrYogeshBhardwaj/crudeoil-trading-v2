@@ -225,6 +225,22 @@ async def toggle_bitcoin_live_trading(payload: dict):
         })
     return JSONResponse({"status": "ERROR", "message": "No valid enable boolean provided"}, status_code=400)
 
+@app.post("/api/bitcoin/live/transfer-spot-to-futures")
+async def transfer_spot_to_futures(payload: dict):
+    """Transfers specified INR amount from Spot Wallet to Futures Wallet."""
+    amount = payload.get("amount", 5000.0)
+    res = BITCOIN_LIVE_ENGINE.adapter.transfer_inr_spot_to_futures(float(amount))
+    if res.get("success"):
+        return JSONResponse({
+            "status": "SUCCESS",
+            "message": f"Successfully transferred ₹{float(amount):,.2f} from Spot to Futures Wallet!",
+            "data": res.get("data")
+        })
+    return JSONResponse({
+        "status": "ERROR",
+        "message": f"Transfer failed: {res.get('error', 'Unknown error')} (Status {res.get('status_code', 'N/A')})"
+    }, status_code=400)
+
 @app.get("/api/live/state")
 async def get_live_state():
     """Returns real-time JSON state for the separate /live dashboard."""

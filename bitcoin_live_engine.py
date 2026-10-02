@@ -80,9 +80,11 @@ class MudrexLiveAdapter:
                 data = resp.json()
                 inner = data.get("data") if isinstance(data, dict) else data
                 if isinstance(inner, dict):
-                    return float(inner.get("available_balance") or inner.get("balance") or 0.0)
+                    val = inner.get("withdrawable") or inner.get("total") or inner.get("available_balance") or inner.get("balance") or 0.0
+                    return float(val)
                 elif isinstance(inner, list) and inner:
-                    return float(inner[0].get("available_balance") or inner[0].get("balance") or 0.0)
+                    val = inner[0].get("withdrawable") or inner[0].get("total") or inner[0].get("available_balance") or inner[0].get("balance") or 0.0
+                    return float(val)
             return 0.0
         except Exception:
             return 0.0
@@ -97,12 +99,39 @@ class MudrexLiveAdapter:
                 data = resp.json()
                 inner = data.get("data") if isinstance(data, dict) else data
                 if isinstance(inner, dict):
-                    return float(inner.get("available_balance") or inner.get("balance") or 0.0)
+                    val = inner.get("balance") or inner.get("available_balance") or inner.get("total") or 0.0
+                    return float(val)
                 elif isinstance(inner, list) and inner:
-                    return float(inner[0].get("available_balance") or inner[0].get("balance") or 0.0)
+                    val = inner[0].get("balance") or inner[0].get("available_balance") or inner[0].get("total") or 0.0
+                    return float(val)
             return 0.0
         except Exception:
             return 0.0
+
+    def transfer_inr_spot_to_futures(self, amount: float) -> Dict[str, Any]:
+        """
+        Transfers INR funds from Spot Wallet to Futures Wallet.
+        Endpoint: POST /futures/transfers/inr
+        """
+        try:
+            headers = self._get_headers()
+            url = f"{self.BASE_URL}/futures/transfers/inr"
+            payload = {
+                "amount": str(amount),
+                "type": "DEPOSIT"
+            }
+            resp = requests.post(url, headers=headers, json=payload, timeout=8)
+            if resp.status_code in (200, 201):
+                return {"success": True, "data": resp.json()}
+            else:
+                # Fallback payload structure without 'type' if Mudrex API expects direct amount
+                payload_alt = {"amount": str(amount)}
+                resp_alt = requests.post(url, headers=headers, json=payload_alt, timeout=8)
+                if resp_alt.status_code in (200, 201):
+                    return {"success": True, "data": resp_alt.json()}
+                return {"success": False, "status_code": resp.status_code, "error": resp.text}
+        except Exception as e:
+            return {"success": False, "error": str(e)}
 
     def fetch_btcusdt_asset(self) -> Dict[str, Any]:
         """Fetches exact BTCUSDT futures instrument metadata from Mudrex."""
