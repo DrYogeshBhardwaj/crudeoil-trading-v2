@@ -609,6 +609,161 @@ async def test_pi42_credentials(payload: dict = {}):
         }, status_code=500)
 
 
+@app.api_route("/api/debug/test-mudrex", methods=["GET", "POST"])
+async def test_mudrex_credentials():
+    """Executes comprehensive server-side Read-Only tests against Mudrex API."""
+    import requests
+    import os
+    import time
+    import traceback
+
+    try:
+        def get_valid_val(val_list: list) -> str:
+            for val in val_list:
+                if val:
+                    v = str(val).strip()
+                    if v and not v.startswith("${{") and "VALUE or" not in v and "REF" not in v:
+                        return v
+            return ""
+
+        api_key = get_valid_val([
+            os.environ.get("MUDREX_API_KEY"),
+            os.environ.get("MUDREX_KEY"),
+            os.environ.get("BITCOIN_API_KEY"),
+            os.environ.get("MUDREX_KEY_ID")
+        ])
+
+        api_secret = get_valid_val([
+            os.environ.get("MUDREX_API_SECRET"),
+            os.environ.get("MUDREX_SECRET"),
+            os.environ.get("BITCOIN_API_SECRET"),
+            os.environ.get("MUDREX_SECRET_KEY")
+        ])
+
+        base_url = "https://trade.mudrex.com/fapi/v1"
+        
+        headers = {
+            "X-Authentication": api_secret,
+            "Content-Type": "application/json",
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"
+        }
+        if api_key:
+            headers["X-Api-Key"] = api_key
+
+        results = {
+            "MUDREX_API_KEY_present": "YES" if bool(api_key) else "NO",
+            "MUDREX_API_SECRET_present": "YES" if bool(api_secret) else "NO",
+            "API_AUTHENTICATION": "FAIL",
+            "INR_SPOT_BALANCE": "UNKNOWN",
+            "INR_FUTURES_BALANCE": "UNKNOWN",
+            "BTC_MARKET_PRICE": "FAIL",
+            "BTC_FUTURES_DISCOVERY": "FAIL",
+            "OPEN_POSITIONS": "NONE",
+            "OPEN_ORDERS": "NONE",
+            "REAL_ORDERS_PLACED": 0,
+            "diagnostics": {}
+        }
+
+        # 1. Public Market Price Data
+        try:
+            r_mkt = requests.get(f"{base_url}/price/kline?assets=BTC/USDT&aggregation=5m", timeout=5)
+            results["diagnostics"]["BTC_PRICE_DATA"] = f"Status {r_mkt.status_code}: {r_mkt.text[:150]}"
+            if r_mkt.status_code == 200:
+                results["BTC_MARKET_PRICE"] = "PASS"
+            else:
+                r_mkt2 = requests.get("https://api.pi42.com/v1/market/ticker24Hr/BTCINR", timeout=5)
+                results["diagnostics"]["BTC_PRICE_DATA_FALLBACK"] = f"Status {r_mkt2.status_code}: {r_mkt2.text[:150]}"
+                if r_mkt2.status_code == 200:
+                    results["BTC_MARKET_PRICE"] = "PASS"
+        except Exception as e:
+            results["diagnostics"]["BTC_PRICE_DATA"] = f"Exception: {e}"
+
+        # 2. Futures Asset Discovery
+        for asset_ep in ["/futures/assets", "/assets", "/exchangeInfo"]:
+            try:
+                r_ast = requests.get(f"{base_url}{asset_ep}", headers=headers, timeout=5)
+                results["diagnostics"][f"ASSET_DISCOVERY_{asset_ep}"] = f"Status {r_ast.status_code}: {r_ast.text[:150]}"
+                if r_ast.status_code == 200:
+                    results["BTC_FUTURES_DISCOVERY"] = "PASS"
+                    break
+            except Exception as e:
+                results["diagnostics"][f"ASSET_DISCOVERY_{asset_ep}"] = f"Exception: {e}"
+
+        # 3. Spot Wallet Funds (GET /wallet/funds?currency=INR)
+        try:
+            r_spot = requests.get(f"{base_url}/wallet/funds?currency=INR", headers=headers, timeout=5)
+            results["diagnostics"]["SPOT_WALLET"] = f"Status {r_spot.status_code}: {r_spot.text[:150]}"
+            if r_spot.status_code in (200, 201):
+                results["API_AUTHENTICATION"] = "PASS"
+                data_spot = r_spot.json()
+                inner_spot = data_spot.get("data") if isinstance(data_spot, dict) else data_spot
+                bal_s = "0.00"
+                if isinstance(inner_spot, dict):
+                    bal_s = inner_spot.get("available_balance") or inner_spot.get("balance") or inner_spot.get("funds") or bal_s
+                elif isinstance(inner_spot, list) and inner_spot:
+                    bal_s = inner_spot[0].get("available_balance") or inner_spot[0].get("balance") or inner_spot[0].get("funds") or bal_s
+                results["INR_SPOT_BALANCE"] = f"₹{float(bal_s):,.2f}"
+            else:
+                results["diagnostics"]["SPOT_WALLET_ERR"] = f"HTTP {r_spot.status_code}: {r_spot.text}"
+        except Exception as e:
+            results["diagnostics"]["SPOT_WALLET_EX"] = str(e)
+
+        # 4. Futures Wallet Funds (GET /futures/funds?trade_currency=INR)
+        try:
+            r_fut = requests.get(f"{base_url}/futures/funds?trade_currency=INR", headers=headers, timeout=5)
+            results["diagnostics"]["FUTURES_WALLET"] = f"Status {r_fut.status_code}: {r_fut.text[:150]}"
+            if r_fut.status_code in (200, 201):
+                results["API_AUTHENTICATION"] = "PASS"
+                data_fut = r_fut.json()
+                inner_fut = data_fut.get("data") if isinstance(data_fut, dict) else data_fut
+                bal_f = "0.00"
+                if isinstance(inner_fut, dict):
+                    bal_f = inner_fut.get("available_balance") or inner_fut.get("balance") or inner_fut.get("funds") or bal_f
+                elif isinstance(inner_fut, list) and inner_fut:
+                    bal_f = inner_fut[0].get("available_balance") or inner_fut[0].get("balance") or inner_fut[0].get("funds") or bal_f
+                results["INR_FUTURES_BALANCE"] = f"₹{float(bal_f):,.2f}"
+            else:
+                results["diagnostics"]["FUTURES_WALLET_ERR"] = f"HTTP {r_fut.status_code}: {r_fut.text}"
+        except Exception as e:
+            results["diagnostics"]["FUTURES_WALLET_EX"] = str(e)
+
+        # 5. Open Positions (GET /futures/positions?trade_currency=INR)
+        try:
+            r_pos = requests.get(f"{base_url}/futures/positions?trade_currency=INR", headers=headers, timeout=5)
+            results["diagnostics"]["OPEN_POSITIONS"] = f"Status {r_pos.status_code}: {r_pos.text[:150]}"
+            if r_pos.status_code in (200, 201):
+                data_pos = r_pos.json()
+                inner_pos = data_pos.get("data") if isinstance(data_pos, dict) else data_pos
+                if isinstance(inner_pos, list) and len(inner_pos) > 0:
+                    results["OPEN_POSITIONS"] = str(inner_pos)
+                else:
+                    results["OPEN_POSITIONS"] = "NONE"
+            else:
+                results["OPEN_POSITIONS"] = "NONE"
+        except Exception as e:
+            results["diagnostics"]["OPEN_POSITIONS_EX"] = str(e)
+
+        # 6. Open Orders (GET /futures/orders?trade_currency=INR)
+        try:
+            r_ord = requests.get(f"{base_url}/futures/orders?trade_currency=INR", headers=headers, timeout=5)
+            results["diagnostics"]["OPEN_ORDERS"] = f"Status {r_ord.status_code}: {r_ord.text[:150]}"
+            if r_ord.status_code in (200, 201):
+                data_ord = r_ord.json()
+                inner_ord = data_ord.get("data") if isinstance(data_ord, dict) else data_ord
+                if isinstance(inner_ord, list) and len(inner_ord) > 0:
+                    results["OPEN_ORDERS"] = str(inner_ord)
+                else:
+                    results["OPEN_ORDERS"] = "NONE"
+            else:
+                results["OPEN_ORDERS"] = "NONE"
+        except Exception as e:
+            results["diagnostics"]["OPEN_ORDERS_EX"] = str(e)
+
+        return JSONResponse(results)
+    except Exception as err:
+        return JSONResponse({"error": str(err), "traceback": traceback.format_exc()}, status_code=500)
+
+
 
 
 
