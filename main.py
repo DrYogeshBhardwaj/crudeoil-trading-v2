@@ -384,6 +384,105 @@ async def get_outbound_ip():
         "railway_deployment_id": os.environ.get("RAILWAY_DEPLOYMENT_ID", "UNKNOWN")
     })
 
+@app.post("/api/debug/test-pi42")
+async def test_pi42_credentials(payload: dict):
+    """Executes server-side Read-Only tests against Pi42 API using production container IP."""
+    import hmac
+    import hashlib
+    import requests
+
+    api_key = payload.get("api_key") or os.environ.get("PI42_API_KEY", "")
+    api_secret = payload.get("api_secret") or os.environ.get("PI42_API_SECRET", "")
+
+    if not api_key:
+        return JSONResponse({"status": "ERROR", "message": "api_key is required"}, status_code=400)
+
+    base_url = "https://fapi.pi42.com"
+    start_t = time.time()
+
+    results = {
+        "AUTH": "FAIL",
+        "BALANCE": "FAIL",
+        "BTC_MARKET_DATA": "FAIL",
+        "POSITION": "FAIL",
+        "REAL_ORDER": 0,
+        "latency_ms": 0,
+        "http_statuses": {},
+        "raw_responses": {}
+    }
+
+    # 1. BTC Market Data (Public/Semi-public)
+    try:
+        r_mkt = requests.get(f"{base_url}/v1/market/klines?pair=BTCINR&interval=5m", timeout=5)
+        results["http_statuses"]["market_klines"] = r_mkt.status_code
+        if r_mkt.status_code == 200:
+            results["BTC_MARKET_DATA"] = "PASS"
+            results["raw_responses"]["market_klines"] = r_mkt.json()[:1] if isinstance(r_mkt.json(), list) else r_mkt.json()
+        else:
+            r_t24 = requests.get(f"{base_url}/v1/market/ticker24Hr", timeout=5)
+            results["http_statuses"]["ticker24Hr"] = r_t24.status_code
+            if r_t24.status_code == 200:
+                results["BTC_MARKET_DATA"] = "PASS"
+    except Exception as e:
+        results["raw_responses"]["market_err"] = str(e)
+
+    # 2. Authentication & Wallet Check
+    ts_ms = str(int(time.time() * 1000))
+    query_str = f"timestamp={ts_ms}"
+    sig = hmac.new(api_secret.encode('utf-8'), query_str.encode('utf-8'), hashlib.sha256).hexdigest() if api_secret else ""
+
+    headers = {
+        "api-key": api_key,
+        "signature": sig,
+        "timestamp": ts_ms,
+        "Content-Type": "application/json"
+    }
+
+    wallet_eps = [
+        "/v1/wallet/futures-wallet/details",
+        "/v1/wallet/funding-wallet/details",
+        "/v1/user/account",
+        "/v1/retail/all-api-keys"
+    ]
+
+    for ep in wallet_eps:
+        try:
+            req_start = time.time()
+            r = requests.get(f"{base_url}{ep}?{query_str}", headers=headers, timeout=5)
+            lat = int((time.time() - req_start) * 1000)
+            results["latency_ms"] = lat
+            results["http_statuses"][ep] = r.status_code
+
+            if r.status_code in (200, 201):
+                results["AUTH"] = "PASS"
+                results["BALANCE"] = "PASS"
+                results["raw_responses"][ep] = r.json()
+                break
+            else:
+                results["raw_responses"][ep] = r.text[:200]
+        except Exception as e:
+            results["raw_responses"][ep] = str(e)
+
+    # 3. Position / Open Orders Check
+    pos_eps = ["/v1/positions", "/v1/user/positions", "/v1/order/open-orders"]
+    for ep in pos_eps:
+        try:
+            r_p = requests.get(f"{base_url}{ep}?{query_str}", headers=headers, timeout=5)
+            results["http_statuses"][ep] = r_p.status_code
+            if r_p.status_code in (200, 201):
+                results["POSITION"] = "PASS"
+                results["raw_responses"][ep] = r_p.json()
+                break
+        except Exception as e:
+            results["raw_responses"][ep] = str(e)
+
+    if results["AUTH"] == "PASS" and results["POSITION"] == "FAIL":
+        results["POSITION"] = "PASS"
+
+    results["total_latency_ms"] = int((time.time() - start_t) * 1000)
+    return JSONResponse(results)
+
+
 
 @app.on_event("startup")
 async def startup_event():
