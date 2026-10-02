@@ -394,9 +394,6 @@ async def test_pi42_credentials(payload: dict):
     api_key = payload.get("api_key") or os.environ.get("PI42_API_KEY", "")
     api_secret = payload.get("api_secret") or os.environ.get("PI42_API_SECRET", "")
 
-    if not api_key:
-        return JSONResponse({"status": "ERROR", "message": "api_key is required"}, status_code=400)
-
     base_urls = ["https://fapi.pi42.com", "https://api.pi42.com"]
     start_t = time.time()
 
