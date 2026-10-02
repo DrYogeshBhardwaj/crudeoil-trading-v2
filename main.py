@@ -912,30 +912,27 @@ async def test_mudrex_credentials():
             {"symbol": "BTCUSDT", "side": "BUY", "order_type": "LIMIT", "price": "7500000", "quantity": "0.001", "trade_currency": "INR", "TriggerType": "MARK_PRICE"}
         ]
 
-        candidate_order_types = [
-            "MARKET", "LIMIT", "STOP_LOSS_MARKET", "TAKE_PROFIT_MARKET",
-            "STOP_LOSS", "TAKE_PROFIT", "STOP_MARKET", "STOP_LIMIT",
-            "market", "limit", "stop_loss_market", "take_profit_market",
-            "MARKET_ORDER", "LIMIT_ORDER", "REGULAR", "1", "2", "3", 1, 2, 3
+        candidate_trigger_probes = [
+            {"symbol": "BTCUSDT", "side": "BUY", "order_type": "MARKET", "TriggerType": 1, "quantity": "0.001", "trade_currency": "INR", "price": "8125000"},
+            {"symbol": "BTCUSDT", "side": "BUY", "order_type": "MARKET", "TriggerType": 1, "quantity": "0.001", "trade_currency": "INR", "trigger_price": "8125000"},
+            {"symbol": "BTCUSDT", "side": "BUY", "order_type": "MARKET", "TriggerType": 2, "quantity": "0.001", "trade_currency": "INR", "price": "8125000"},
+            {"symbol": "BTCUSDT", "side": "BUY", "order_type": "MARKET", "TriggerType": 2, "quantity": "0.001", "trade_currency": "INR", "trigger_price": "8125000"},
+            {"symbol": "BTCUSDT", "side": "BUY", "order_type": "MARKET", "TriggerType": "MARK_PRICE", "quantity": "0.001", "trade_currency": "INR", "price": "8125000"},
+            {"symbol": "BTCUSDT", "side": "BUY", "order_type": "MARKET", "TriggerType": "MARK_PRICE", "quantity": "0.001", "trade_currency": "INR", "trigger_price": "8125000"},
+            {"symbol": "BTCUSDT", "side": "BUY", "order_type": "LIMIT", "TriggerType": 1, "quantity": "0.001", "trade_currency": "INR", "price": "8125000"},
+            {"symbol": "BTCUSDT", "side": "BUY", "order_type": "LIMIT", "TriggerType": 2, "quantity": "0.001", "trade_currency": "INR", "price": "8125000"},
+            {"symbol": "BTCUSDT", "side": "BUY", "order_type": "MARKET", "trigger_type": 1, "quantity": "0.001", "trade_currency": "INR", "price": "8125000"},
+            {"symbol": "BTCUSDT", "side": "BUY", "order_type": "MARKET", "trigger_type": 2, "quantity": "0.001", "trade_currency": "INR", "price": "8125000"}
         ]
 
-        for ot in candidate_order_types:
-            for tt in ["MARKET", "LIMIT"]:
-                p = {
-                    "symbol": "BTCUSDT",
-                    "side": "BUY",
-                    "order_type": ot,
-                    "trigger_type": tt,
-                    "quantity": "0.001",
-                    "trade_currency": "INR"
-                }
-                try:
-                    r_probe = requests.post(order_url, headers=headers, json=p, timeout=5)
-                    order_probe_results[f"ot_{ot}_tt_{tt}"] = f"HTTP {r_probe.status_code}: {r_probe.text}"
-                    if r_probe.status_code in (200, 201):
-                        results["REAL_ORDERS_PLACED"] += 1
-                except Exception as ex:
-                    order_probe_results[f"ot_{ot}_tt_{tt}_ex"] = str(ex)
+        for i, p in enumerate(candidate_trigger_probes):
+            try:
+                r_probe = requests.post(order_url, headers=headers, json=p, timeout=5)
+                order_probe_results[f"probe_tp_{i}"] = f"HTTP {r_probe.status_code}: {r_probe.text}"
+                if r_probe.status_code in (200, 201):
+                    results["REAL_ORDERS_PLACED"] += 1
+            except Exception as ex:
+                order_probe_results[f"probe_tp_{i}_ex"] = str(ex)
 
         results["diagnostics"]["ORDER_PROBES"] = order_probe_results
 
