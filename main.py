@@ -225,6 +225,23 @@ async def toggle_bitcoin_live_trading(payload: dict):
         })
     return JSONResponse({"status": "ERROR", "message": "No valid enable boolean provided"}, status_code=400)
 
+@app.post("/api/bitcoin/live/execute-order")
+async def execute_bitcoin_live_manual_order(payload: dict):
+    """Triggers an instant manual BUY or SELL live market order on Mudrex."""
+    side = payload.get("side", "BUY")
+    res = BITCOIN_LIVE_ENGINE.execute_manual_trade(side)
+    if res.get("success"):
+        return JSONResponse({
+            "status": "SUCCESS",
+            "message": f"Successfully placed Live 1-Click {side.upper()} Market Order on Mudrex!",
+            "trade": res.get("trade"),
+            "mudrex_response": res.get("mudrex_response")
+        })
+    return JSONResponse({
+        "status": "ERROR",
+        "message": res.get("error", "Failed to execute manual live order on Mudrex")
+    }, status_code=400)
+
 @app.post("/api/bitcoin/live/transfer-spot-to-futures")
 async def transfer_spot_to_futures(payload: dict):
     """Transfers specified INR amount from Spot Wallet to Futures Wallet."""

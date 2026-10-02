@@ -619,6 +619,75 @@ class BitcoinLiveEngine:
         except Exception as err:
             print(f"[{datetime.now()}] [BITCOIN LIVE TICK ERROR] {err}")
 
+    def execute_manual_trade(self, side: str) -> Dict[str, Any]:
+        """Manually triggers a BUY or SELL live market order on Mudrex with risk SL/TP."""
+        side = side.upper()
+        if side not in ("BUY", "SELL"):
+            return {"success": False, "error": f"Invalid trade side: {side}"}
+        
+        allowed, reason = self.are_new_entries_allowed()
+        if not allowed:
+            return {"success": False, "error": f"Manual trade blocked: {reason}"}
+
+        tick = BITCOIN_FEED.fetch_latest_tick()
+        curr_price = float(tick.get("price", 0.0)) if isinstance(tick, dict) else (float(tick.price) if hasattr(tick, "price") else 0.0)
+
+        if curr_price <= 0:
+            return {"success": False, "error": "Live BTC market price unavailable"}
+
+        candles = BITCOIN_FEED.fetch_historical_candles("5m", "5d")
+        eval_res = BITCOIN_STRATEGY.evaluate_market(candles, curr_price)
+
+        qty = 0.001 # Min lot size for BTCUSDT
+        atr = eval_res.get("atr", 20000.0)
+        sl_val = round(curr_price - (1.5 * atr), 2) if side == "BUY" else round(curr_price + (1.5 * atr), 2)
+        tp_val = round(curr_price + (3.0 * atr), 2) if side == "BUY" else round(curr_price - (3.0 * atr), 2)
+
+        order_res = self.adapter.place_futures_order(
+            symbol="BTCUSDT",
+            side=side,
+            quantity=qty,
+            order_type="MARKET",
+            stoploss_price=sl_val
+        )
+
+        if order_res.get("success"):
+            mudrex_data = order_res.get("data", {})
+            pos_id = str(mudrex_data.get("position_id") or mudrex_data.get("id") or f"MUDREX_{int(time.time())}")
+            now_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            trade_id = f"BTC_LIVE_{int(time.time())}"
+
+            pos_dict = {
+                "trade_id": trade_id,
+                "mudrex_position_id": pos_id,
+                "entry_timestamp": now_str,
+                "symbol": "BTCUSDT",
+                "direction": side,
+                "quantity": qty,
+                "entry_price": curr_price,
+                "stop_loss": sl_val,
+                "stoploss_order_id": None,
+                "target": tp_val,
+                "trend_state": "MANUAL",
+                "confidence": 100,
+                "reasons": ["Manual 1-Click Execution via Live Dashboard"],
+                "status": "OPEN",
+                "exit_timestamp": None,
+                "exit_price": None,
+                "exit_reason": None,
+                "gross_pnl": 0.0,
+                "charges": 0.0,
+                "net_pnl": 0.0
+            }
+
+            DB.save_bitcoin_live_trade(pos_dict)
+            if pos_id and sl_val:
+                self.adapter.attach_stop_loss(pos_id, sl_val, tp_val)
+
+            return {"success": True, "trade": pos_dict, "mudrex_response": order_res}
+        else:
+            return {"success": False, "error": order_res.get("error", "Mudrex Order Placement Failed")}
+
     async def start_feed_loop(self):
         """Continuous background loop for Bitcoin Live Engine."""
         self.is_running = True

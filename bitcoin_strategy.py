@@ -165,27 +165,27 @@ class BitcoinStrategyEvaluator:
         sl_price = 0.0
         target_price = 0.0
 
-        if score >= 4:
+        if score >= 2:
             trend = "BULLISH"
             action = "BUY"
-            confidence = min(95, 65 + (score * 4))
+            confidence = min(95, 65 + (score * 5))
             sl_distance = max(15000.0, round(1.5 * atr, 2))
             target_distance = max(30000.0, round(3.0 * atr, 2))
             sl_price = round(current_price - sl_distance, 2)
             target_price = round(current_price + target_distance, 2)
-        elif score <= -4:
+        elif score <= -2:
             trend = "BEARISH"
             action = "SELL"
-            confidence = min(95, 65 + (abs(score) * 4))
+            confidence = min(95, 65 + (abs(score) * 5))
             sl_distance = max(15000.0, round(1.5 * atr, 2))
             target_distance = max(30000.0, round(3.0 * atr, 2))
             sl_price = round(current_price + sl_distance, 2)
             target_price = round(current_price - target_distance, 2)
         else:
-            trend = "BULLISH" if score > 0 else ("BEARISH" if score < 0 else "NEUTRAL")
+            trend = "NEUTRAL"
             action = "WAIT"
-            confidence = 50 + (abs(score) * 3)
-            reasons.append("Crypto market in consolidation / low signal clarity")
+            confidence = 50
+            reasons.append("Crypto market in exact neutral balance / no directional bias")
 
         return {
             "action": action,
