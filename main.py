@@ -375,13 +375,15 @@ async def get_outbound_ip():
     except Exception as e:
         outbound_ip = f"ERROR ({e})"
 
+    env_keys = [k for k in os.environ.keys() if "PI42" in k.upper() or "BITCOIN" in k.upper() or "KEY" in k.upper() or "SECRET" in k.upper()]
     return JSONResponse({
         "timestamp_ist": datetime.now().strftime("%Y-%m-%d %H:%M:%S IST"),
         "outbound_ip_ifconfig": outbound_ip,
         "outbound_ip_ipify": ipify_ip,
         "railway_environment": os.environ.get("RAILWAY_ENVIRONMENT", "production"),
         "railway_service_id": os.environ.get("RAILWAY_SERVICE_ID", "UNKNOWN"),
-        "railway_deployment_id": os.environ.get("RAILWAY_DEPLOYMENT_ID", "UNKNOWN")
+        "railway_deployment_id": os.environ.get("RAILWAY_DEPLOYMENT_ID", "UNKNOWN"),
+        "pi42_env_keys_detected": env_keys
     })
 
 @app.post("/api/debug/test-pi42")
