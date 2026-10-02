@@ -426,19 +426,20 @@ async def test_pi42_credentials(payload: dict):
 
     # 1. BTC Market Data (Public/Semi-public)
     try:
-        r_mkt = requests.get(f"{base_url}/v1/market/klines?pair=BTCINR&interval=5m", headers=ua_headers, timeout=6)
+        r_mkt = requests.get(f"{base_url}/v1/market/klines?symbol=BTCINR&interval=5M", headers=ua_headers, timeout=6)
         results["http_statuses"]["market_klines"] = r_mkt.status_code
         if r_mkt.status_code == 200:
             results["BTC_MARKET_DATA"] = "PASS"
             results["raw_responses"]["market_klines"] = r_mkt.json()[:1] if isinstance(r_mkt.json(), list) else r_mkt.json()
         else:
-            r_t24 = requests.get(f"{base_url}/v1/market/ticker24Hr", headers=ua_headers, timeout=6)
+            r_t24 = requests.get(f"{base_url}/v1/market/ticker24Hr?symbol=BTCINR", headers=ua_headers, timeout=6)
             results["http_statuses"]["ticker24Hr"] = r_t24.status_code
             if r_t24.status_code == 200:
                 results["BTC_MARKET_DATA"] = "PASS"
-                results["raw_responses"]["ticker24Hr"] = r_t24.json()[:1] if isinstance(r_t24.json(), list) else r_t24.json()
+                results["raw_responses"]["ticker24Hr"] = r_t24.json()
     except Exception as e:
         results["raw_responses"]["market_err"] = str(e)
+
 
     # 2. Authentication & Wallet Check (testing variants)
     ts_ms = str(int(time.time() * 1000))
