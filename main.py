@@ -913,10 +913,10 @@ async def test_mudrex_credentials():
         ]
 
         candidate_trigger_types = [
-            "NONE", "", "MARKET", "LIMIT", "MARK", "LAST", "INDEX", 
-            "MARK_PRICE", "LAST_PRICE", "STOP_LOSS", "TAKE_PROFIT", 
-            "STOP_LOSS_MARKET", "TAKE_PROFIT_MARKET", "REGULAR", 
-            "IMMEDIATE", "GTC", "IOC", "FOK", 1, 2, 3
+            "STOP_LOSS", "TAKE_PROFIT", "STOP_LOSS_MARKET", "TAKE_PROFIT_MARKET",
+            "MARK_PRICE", "LAST_PRICE", "INDEX_PRICE", "MARK", "LAST", "INDEX",
+            "SPOT", "FUTURES", "REGULAR", "SYSTEM", "DEFAULT", "NONE", "MARKET", "LIMIT",
+            "0", "1", "2", "3", 0, 1, 2, 3, None
         ]
 
         for i, tt in enumerate(candidate_trigger_types):
@@ -924,17 +924,17 @@ async def test_mudrex_credentials():
                 "symbol": "BTCUSDT",
                 "side": "BUY",
                 "order_type": "MARKET",
-                "TriggerType": tt,
+                "trigger_type": tt,
                 "quantity": "0.001",
                 "trade_currency": "INR"
             }
             try:
                 r_probe = requests.post(order_url, headers=headers, json=p, timeout=5)
-                order_probe_results[f"probe_tt_{tt}"] = f"HTTP {r_probe.status_code}: {r_probe.text}"
+                order_probe_results[f"trigger_type_{tt}"] = f"HTTP {r_probe.status_code}: {r_probe.text}"
                 if r_probe.status_code in (200, 201):
                     results["REAL_ORDERS_PLACED"] += 1
             except Exception as ex:
-                order_probe_results[f"probe_tt_{tt}_ex"] = str(ex)
+                order_probe_results[f"trigger_type_{tt}_ex"] = str(ex)
 
         results["diagnostics"]["ORDER_PROBES"] = order_probe_results
 
