@@ -695,11 +695,11 @@ async def test_mudrex_credentials():
             results["diagnostics"]["BTC_PRICE_DATA"] = f"Exception: {e}"
 
         # 2. Futures Asset Discovery
-        for asset_ep in ["/futures/assets", "/assets", "/exchangeInfo"]:
+        for asset_ep in ["/futures/assets?trade_currency=INR", "/futures/assets", "/futures/symbols?trade_currency=INR"]:
             try:
                 r_ast = requests.get(f"{base_url}{asset_ep}", headers=headers, timeout=5)
                 results["diagnostics"][f"ASSET_DISCOVERY_{asset_ep}"] = f"Status {r_ast.status_code}: {r_ast.text[:150]}"
-                if r_ast.status_code == 200:
+                if r_ast.status_code in (200, 201):
                     results["BTC_FUTURES_DISCOVERY"] = "PASS"
                     break
             except Exception as e:
