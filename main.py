@@ -375,18 +375,29 @@ async def get_outbound_ip():
     except Exception as e:
         outbound_ip = f"ERROR ({e})"
 
-    has_key = bool(
-        os.environ.get("PI42_API_KEY")
-        or os.environ.get("PI42_KEY")
-        or os.environ.get("BITCOIN_API_KEY")
-        or os.environ.get("PI42_APIKEY")
-    )
-    has_secret = bool(
-        os.environ.get("PI42_API_SECRET")
-        or os.environ.get("PI42_SECRET")
-        or os.environ.get("BITCOIN_API_SECRET")
-        or os.environ.get("PI42_APISECRET")
-    )
+    def is_valid_cred(val: Optional[str]) -> bool:
+        if not val:
+            return False
+        v = val.strip()
+        if not v or v.startswith("${{") or "VALUE or" in v or "REF" in v:
+            return False
+        return True
+
+    key_candidates = [
+        os.environ.get("PI42_API_KEY"),
+        os.environ.get("PI42_KEY"),
+        os.environ.get("BITCOIN_API_KEY"),
+        os.environ.get("PI42_APIKEY")
+    ]
+    secret_candidates = [
+        os.environ.get("PI42_API_SECRET"),
+        os.environ.get("PI42_SECRET"),
+        os.environ.get("BITCOIN_API_SECRET"),
+        os.environ.get("PI42_APISECRET")
+    ]
+
+    has_key = any(is_valid_cred(k) for k in key_candidates)
+    has_secret = any(is_valid_cred(s) for s in secret_candidates)
 
     return JSONResponse({
         "timestamp_ist": datetime.now().strftime("%Y-%m-%d %H:%M:%S IST"),
@@ -406,23 +417,30 @@ async def test_pi42_credentials(payload: dict):
     import hashlib
     import requests
 
-    api_key = (
-        payload.get("api_key")
-        or os.environ.get("PI42_API_KEY")
-        or os.environ.get("PI42_KEY")
-        or os.environ.get("BITCOIN_API_KEY")
-        or os.environ.get("PI42_APIKEY")
-        or ""
-    ).strip()
+    def get_valid_val(val_list: list) -> str:
+        for val in val_list:
+            if val:
+                v = str(val).strip()
+                if v and not v.startswith("${{") and "VALUE or" not in v and "REF" not in v:
+                    return v
+        return ""
 
-    api_secret = (
-        payload.get("api_secret")
-        or os.environ.get("PI42_API_SECRET")
-        or os.environ.get("PI42_SECRET")
-        or os.environ.get("BITCOIN_API_SECRET")
-        or os.environ.get("PI42_APISECRET")
-        or ""
-    ).strip()
+    api_key = get_valid_val([
+        payload.get("api_key"),
+        os.environ.get("PI42_API_KEY"),
+        os.environ.get("PI42_KEY"),
+        os.environ.get("BITCOIN_API_KEY"),
+        os.environ.get("PI42_APIKEY")
+    ])
+
+    api_secret = get_valid_val([
+        payload.get("api_secret"),
+        os.environ.get("PI42_API_SECRET"),
+        os.environ.get("PI42_SECRET"),
+        os.environ.get("BITCOIN_API_SECRET"),
+        os.environ.get("PI42_APISECRET")
+    ])
+
 
     base_urls = ["https://fapi.pi42.com", "https://api.pi42.com"]
     start_t = time.time()
