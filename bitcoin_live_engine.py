@@ -283,7 +283,7 @@ class MudrexLiveAdapter:
         if stoploss_price:
             payload["stoploss_price"] = str(stoploss_price)
 
-        last_error = ""
+        errors = []
         for url in candidate_urls:
             try:
                 resp = requests.post(url, headers=headers, json=payload, timeout=8)
@@ -292,11 +292,11 @@ class MudrexLiveAdapter:
                     print(f"[{datetime.now()}] [MUDREX ORDER SUCCESS] Endpoint {url} succeeded! Data: {data}")
                     return {"success": True, "data": data, "endpoint": url}
                 else:
-                    last_error = f"Endpoint {url} -> HTTP {resp.status_code}: {resp.text}"
+                    errors.append(f"[{resp.status_code}] {resp.text[:120]}")
             except Exception as ex:
-                last_error = f"Endpoint {url} Exception: {ex}"
+                errors.append(f"Ex: {ex}")
 
-        return {"success": False, "error": last_error}
+        return {"success": False, "error": " | ".join(errors[:3])}
 
 
 class BitcoinLiveEngine:
