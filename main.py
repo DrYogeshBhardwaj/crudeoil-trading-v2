@@ -452,6 +452,8 @@ async def test_pi42_credentials(payload: dict):
     }
 
     results = {
+        "PI42_API_KEY_present": "YES" if bool(api_key) else "NO",
+        "PI42_API_SECRET_present": "YES" if bool(api_secret) else "NO",
         "AUTH": "FAIL",
         "INR_BALANCE": "UNKNOWN",
         "BTC_PRICE": "UNKNOWN",
@@ -505,21 +507,30 @@ async def test_pi42_credentials(payload: dict):
     ts_ms = str(int(time.time() * 1000))
     query_str = f"timestamp={ts_ms}"
     sig = hmac.new(api_secret.encode('utf-8'), query_str.encode('utf-8'), hashlib.sha256).hexdigest() if api_secret else ""
+    sig_raw_ts = hmac.new(api_secret.encode('utf-8'), ts_ms.encode('utf-8'), hashlib.sha256).hexdigest() if api_secret else ""
 
     auth_headers_list = [
-        {"x-api-key": api_key, "signature": sig, "timestamp": ts_ms, **ua_headers},
-        {"api-key": api_key, "signature": sig, "timestamp": ts_ms, **ua_headers}
+        ("hdr_x_api_key_query_sig", {"x-api-key": api_key, "signature": sig, "timestamp": ts_ms, **ua_headers}),
+        ("hdr_x_api_key_raw_sig", {"x-api-key": api_key, "signature": sig_raw_ts, "timestamp": ts_ms, **ua_headers}),
+        ("hdr_api_key_query_sig", {"api-key": api_key, "signature": sig, "timestamp": ts_ms, **ua_headers})
     ]
 
-    wallet_eps = ["/v1/wallet/futures-wallet/details", "/v1/wallet/funding-wallet/details"]
+    wallet_eps = [
+        "/v1/wallet/futures-wallet/details",
+        "/v1/wallet/funding-wallet/details",
+        "/v1/positions",
+        "/v1/user/profile"
+    ]
     auth_success_header = None
     target_b_url = base_urls[0]
 
     for b_url in base_urls:
-        for headers in auth_headers_list:
+        for tag, headers in auth_headers_list:
             for ep in wallet_eps:
                 try:
-                    r_w = requests.get(f"{b_url}{ep}?{query_str}", headers=headers, timeout=5)
+                    full_auth_url = f"{b_url}{ep}?{query_str}"
+                    r_w = requests.get(full_auth_url, headers=headers, timeout=5)
+                    results["diagnostics"][f"AUTH_{tag}_{ep}"] = f"Status {r_w.status_code}: {r_w.text[:120]}"
                     if r_w.status_code in (200, 201):
                         results["AUTH"] = "PASS"
                         auth_success_header = headers
@@ -532,7 +543,7 @@ async def test_pi42_credentials(payload: dict):
                         results["INR_BALANCE"] = f"₹{float(bal):,.2f}"
                         break
                 except Exception as e:
-                    results["diagnostics"][ep] = str(e)
+                    results["diagnostics"][f"AUTH_{tag}_{ep}"] = f"Exception: {e}"
             if auth_success_header:
                 break
         if auth_success_header:
