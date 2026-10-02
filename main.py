@@ -357,7 +357,7 @@ async def db_diagnostic():
 
 @app.get("/api/debug/outbound-ip")
 async def get_outbound_ip():
-    """Returns current public outbound IP address of the production server (deployment test)."""
+    """Returns current public outbound IP address of the production server (static IP verification)."""
     import requests
     outbound_ip = "UNKNOWN"
     ipify_ip = "UNKNOWN"
