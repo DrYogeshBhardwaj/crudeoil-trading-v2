@@ -400,6 +400,12 @@ async def test_pi42_credentials(payload: dict):
     base_url = "https://fapi.pi42.com"
     start_t = time.time()
 
+    ua_headers = {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
+        "Accept": "application/json, text/plain, */*",
+        "Content-Type": "application/json"
+    }
+
     results = {
         "AUTH": "FAIL",
         "BALANCE": "FAIL",
@@ -413,16 +419,17 @@ async def test_pi42_credentials(payload: dict):
 
     # 1. BTC Market Data (Public/Semi-public)
     try:
-        r_mkt = requests.get(f"{base_url}/v1/market/klines?pair=BTCINR&interval=5m", timeout=5)
+        r_mkt = requests.get(f"{base_url}/v1/market/klines?pair=BTCINR&interval=5m", headers=ua_headers, timeout=6)
         results["http_statuses"]["market_klines"] = r_mkt.status_code
         if r_mkt.status_code == 200:
             results["BTC_MARKET_DATA"] = "PASS"
             results["raw_responses"]["market_klines"] = r_mkt.json()[:1] if isinstance(r_mkt.json(), list) else r_mkt.json()
         else:
-            r_t24 = requests.get(f"{base_url}/v1/market/ticker24Hr", timeout=5)
+            r_t24 = requests.get(f"{base_url}/v1/market/ticker24Hr", headers=ua_headers, timeout=6)
             results["http_statuses"]["ticker24Hr"] = r_t24.status_code
             if r_t24.status_code == 200:
                 results["BTC_MARKET_DATA"] = "PASS"
+                results["raw_responses"]["ticker24Hr"] = r_t24.json()[:1] if isinstance(r_t24.json(), list) else r_t24.json()
     except Exception as e:
         results["raw_responses"]["market_err"] = str(e)
 
@@ -431,11 +438,11 @@ async def test_pi42_credentials(payload: dict):
     query_str = f"timestamp={ts_ms}"
     sig = hmac.new(api_secret.encode('utf-8'), query_str.encode('utf-8'), hashlib.sha256).hexdigest() if api_secret else ""
 
-    headers = {
+    auth_headers = {
+        **ua_headers,
         "api-key": api_key,
         "signature": sig,
-        "timestamp": ts_ms,
-        "Content-Type": "application/json"
+        "timestamp": ts_ms
     }
 
     wallet_eps = [
@@ -448,7 +455,7 @@ async def test_pi42_credentials(payload: dict):
     for ep in wallet_eps:
         try:
             req_start = time.time()
-            r = requests.get(f"{base_url}{ep}?{query_str}", headers=headers, timeout=5)
+            r = requests.get(f"{base_url}{ep}?{query_str}", headers=auth_headers, timeout=6)
             lat = int((time.time() - req_start) * 1000)
             results["latency_ms"] = lat
             results["http_statuses"][ep] = r.status_code
@@ -467,7 +474,7 @@ async def test_pi42_credentials(payload: dict):
     pos_eps = ["/v1/positions", "/v1/user/positions", "/v1/order/open-orders"]
     for ep in pos_eps:
         try:
-            r_p = requests.get(f"{base_url}{ep}?{query_str}", headers=headers, timeout=5)
+            r_p = requests.get(f"{base_url}{ep}?{query_str}", headers=auth_headers, timeout=6)
             results["http_statuses"][ep] = r_p.status_code
             if r_p.status_code in (200, 201):
                 results["POSITION"] = "PASS"
@@ -481,6 +488,7 @@ async def test_pi42_credentials(payload: dict):
 
     results["total_latency_ms"] = int((time.time() - start_t) * 1000)
     return JSONResponse(results)
+
 
 
 
