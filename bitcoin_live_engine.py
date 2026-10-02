@@ -246,20 +246,29 @@ class MudrexLiveAdapter:
     def place_futures_order(self, symbol: str, side: str, quantity: float, order_type: str = "MARKET", price: Optional[float] = None, stoploss_price: Optional[float] = None) -> Dict[str, Any]:
         """
         Places a live futures order on Mudrex with robust endpoint discovery.
-        Candidate endpoints: /futures/order, /futures/orders, /futures/positions, /futures/trade, /order
+        Primary Mudrex endpoints: /futures/{asset_id}/order, /futures/{asset_id}/trade
         """
         headers = self._get_headers()
+        
+        # Discover Asset ID for BTCUSDT
+        asset_id = ""
+        ast_res = self.fetch_btcusdt_asset()
+        if ast_res.get("success"):
+            ast = ast_res.get("asset", {})
+            asset_id = ast.get("id", "")
+        
+        if not asset_id:
+            asset_id = "01903a7b-bf65-707d-a7dc-d7b84c3c756c" # Fallback BTCUSDT asset ID
+
         candidate_urls = [
+            f"{self.BASE_URL}/futures/{asset_id}/order?trade_currency=INR",
+            f"{self.BASE_URL}/futures/{asset_id}/order",
+            f"{self.BASE_URL}/futures/{asset_id}/trade?trade_currency=INR",
+            f"{self.BASE_URL}/futures/{asset_id}/trade",
             f"{self.BASE_URL}/futures/order?trade_currency=INR",
             f"{self.BASE_URL}/futures/order",
-            f"{self.BASE_URL}/futures/orders?trade_currency=INR",
-            f"{self.BASE_URL}/futures/orders",
-            f"{self.BASE_URL}/futures/positions?trade_currency=INR",
-            f"{self.BASE_URL}/futures/positions",
             f"{self.BASE_URL}/futures/trade?trade_currency=INR",
-            f"{self.BASE_URL}/futures/trade",
-            f"{self.BASE_URL}/order?trade_currency=INR",
-            f"{self.BASE_URL}/order"
+            f"{self.BASE_URL}/futures/trade"
         ]
 
         payload = {
