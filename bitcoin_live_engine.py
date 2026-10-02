@@ -526,6 +526,9 @@ class BitcoinLiveEngine:
             if action in ("BUY", "SELL"):
                 # Execute live order on Mudrex
                 qty = 0.001 # Min lot size for BTCUSDT
+                sl_val = eval_res.get("stop_loss") or eval_res.get("sl_price")
+                tp_val = eval_res.get("target") or eval_res.get("target_price")
+
                 print(f"[{datetime.now()}] [BITCOIN LIVE ENGINE] Strategy Signal {action} @ ₹{curr_price:,.2f}! Sending order to Mudrex...")
                 
                 order_res = self.adapter.place_futures_order(
@@ -533,7 +536,7 @@ class BitcoinLiveEngine:
                     side=action,
                     quantity=qty,
                     order_type="MARKET",
-                    stoploss_price=eval_res.get("stop_loss")
+                    stoploss_price=sl_val
                 )
 
                 if order_res.get("success"):
@@ -550,9 +553,9 @@ class BitcoinLiveEngine:
                         "direction": action,
                         "quantity": qty,
                         "entry_price": curr_price,
-                        "stop_loss": eval_res.get("stop_loss"),
+                        "stop_loss": sl_val,
                         "stoploss_order_id": None,
-                        "target": eval_res.get("target"),
+                        "target": tp_val,
                         "trend_state": eval_res.get("trend", "NEUTRAL"),
                         "confidence": eval_res.get("confidence", 50),
                         "reasons": eval_res.get("reasons", []),
@@ -568,8 +571,8 @@ class BitcoinLiveEngine:
                     DB.save_bitcoin_live_trade(pos_dict)
 
                     # Attach SL risk order if not automatically set
-                    if pos_id and eval_res.get("stop_loss"):
-                        sl_res = self.adapter.attach_stop_loss(pos_id, eval_res["stop_loss"], eval_res.get("target"))
+                    if pos_id and sl_val:
+                        sl_res = self.adapter.attach_stop_loss(pos_id, sl_val, tp_val)
                         if not sl_res.get("success"):
                             print(f"[{datetime.now()}] [WARNING] Failed to attach SL on Mudrex: {sl_res}")
                 else:
