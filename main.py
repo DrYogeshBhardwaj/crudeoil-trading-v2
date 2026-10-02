@@ -419,34 +419,41 @@ async def test_pi42_credentials(payload: dict):
     }
 
     # 1. Fetch Market Data & BTC Price (Public)
-    for b_url in base_urls:
-        try:
-            # Ticker (GET /v1/market/ticker24Hr/BTCINR)
-            r_t24 = requests.get(f"{b_url}/v1/market/ticker24Hr/BTCINR", headers=ua_headers, timeout=5)
-            if r_t24.status_code == 200:
-                t_data = r_t24.json()
-                price_val = t_data.get("lastPrice") or t_data.get("price") or t_data.get("close")
-                if price_val:
-                    results["BTC_PRICE"] = f"₹{price_val}"
-                    results["MARKET_DATA_5M"] = "PASS"
+    market_test_urls = [
+        ("GET", f"https://fapi.pi42.com/v1/market/klines?symbol=BTCINR&interval=5m"),
+        ("GET", f"https://api.pi42.com/v1/market/ticker24Hr/BTCINR"),
+        ("GET", f"https://api.pi42.com/v1/market/ticker24Hr"),
+        ("POST", f"https://fapi.pi42.com/v1/market/klines", {"symbol": "BTCINR", "interval": "5m"}),
+        ("POST", f"https://api.pi42.com/v1/market/klines", {"pair": "BTCINR", "interval": "5m"})
+    ]
 
-            # Klines (POST /v1/market/klines)
-            k_payload = {"pair": "BTCINR", "interval": "5m"}
-            r_mkt = requests.post(f"{b_url}/v1/market/klines", json=k_payload, headers=ua_headers, timeout=5)
-            if r_mkt.status_code == 200:
-                results["MARKET_DATA_5M"] = "PASS"
-                data_k = r_mkt.json()
-                if isinstance(data_k, list) and data_k and results["BTC_PRICE"] == "UNKNOWN":
-                    results["BTC_PRICE"] = f"₹{data_k[-1].get('close', data_k[-1].get('c', 'N/A'))}"
-                break
+    for m_item in market_test_urls:
+        method = m_item[0]
+        m_url = m_item[1]
+        m_body = m_item[2] if len(m_item) > 2 else None
+        try:
+            if method == "GET":
+                r_m = requests.get(m_url, headers=ua_headers, timeout=5)
             else:
-                k_payload_2 = {"symbol": "BTCINR", "interval": "5m"}
-                r_mkt2 = requests.post(f"{b_url}/v1/market/klines", json=k_payload_2, headers=ua_headers, timeout=5)
-                if r_mkt2.status_code == 200:
-                    results["MARKET_DATA_5M"] = "PASS"
-                    break
+                r_m = requests.post(m_url, json=m_body, headers=ua_headers, timeout=5)
+            
+            results["diagnostics"][m_url] = f"Status {r_m.status_code}: {r_m.text[:150]}"
+            if r_m.status_code == 200:
+                results["MARKET_DATA_5M"] = "PASS"
+                data_json = r_m.json()
+                if isinstance(data_json, list) and data_json:
+                    last_obj = data_json[-1]
+                    price_found = last_obj.get("close") or last_obj.get("c") or last_obj.get("lastPrice")
+                    if price_found:
+                        results["BTC_PRICE"] = f"₹{price_found}"
+                elif isinstance(data_json, dict):
+                    price_found = data_json.get("lastPrice") or data_json.get("price") or data_json.get("close")
+                    if price_found:
+                        results["BTC_PRICE"] = f"₹{price_found}"
+                break
         except Exception as e:
-            results["diagnostics"]["market_error"] = str(e)
+            results["diagnostics"][m_url] = f"Error: {e}"
+
 
 
     # 2. Authenticated Endpoints Check (Wallet, Balance, Positions)
