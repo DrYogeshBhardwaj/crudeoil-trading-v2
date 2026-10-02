@@ -509,40 +509,52 @@ async def test_pi42_credentials(payload: dict):
     # 2. Authenticated Endpoints Check (Wallet, Balance, Positions)
     ts_ms = str(int(time.time() * 1000))
     query_str = f"timestamp={ts_ms}"
-    sig = hmac.new(api_secret.encode('utf-8'), query_str.encode('utf-8'), hashlib.sha256).hexdigest() if api_secret else ""
+    sig_query = hmac.new(api_secret.encode('utf-8'), query_str.encode('utf-8'), hashlib.sha256).hexdigest() if api_secret else ""
     sig_raw_ts = hmac.new(api_secret.encode('utf-8'), ts_ms.encode('utf-8'), hashlib.sha256).hexdigest() if api_secret else ""
+    json_body_str = json.dumps({"timestamp": int(ts_ms)})
+    sig_json_body = hmac.new(api_secret.encode('utf-8'), json_body_str.encode('utf-8'), hashlib.sha256).hexdigest() if api_secret else ""
 
-    auth_headers_list = [
-        ("hdr_x_api_key_query_sig", {"x-api-key": api_key, "signature": sig, "timestamp": ts_ms, **ua_headers}),
-        ("hdr_x_api_key_raw_sig", {"x-api-key": api_key, "signature": sig_raw_ts, "timestamp": ts_ms, **ua_headers}),
-        ("hdr_api_key_query_sig", {"api-key": api_key, "signature": sig, "timestamp": ts_ms, **ua_headers})
+    auth_combinations = [
+        # (tag, headers_dict, query_or_body, method)
+        ("api-key_sig_query", {"api-key": api_key, "signature": sig_query, "timestamp": ts_ms, **ua_headers}, f"?{query_str}", "GET", None),
+        ("x-api-key_x-sig_query", {"x-api-key": api_key, "x-signature": sig_query, "x-timestamp": ts_ms, **ua_headers}, f"?{query_str}", "GET", None),
+        ("X-API-KEY_X-SIG_query", {"X-API-KEY": api_key, "X-SIGNATURE": sig_query, "X-TIMESTAMP": ts_ms, **ua_headers}, f"?{query_str}", "GET", None),
+        ("api-key_sig_raw_ts", {"api-key": api_key, "signature": sig_raw_ts, "timestamp": ts_ms, **ua_headers}, f"?{query_str}", "GET", None),
+        ("api-key_sig_query_no_qparam", {"api-key": api_key, "signature": sig_query, "timestamp": ts_ms, **ua_headers}, "", "GET", None),
+        ("api-key_sig_post_body", {"api-key": api_key, "signature": sig_json_body, "timestamp": ts_ms, **ua_headers}, "", "POST", {"timestamp": int(ts_ms)}),
+        ("x-api-key_sig_post_body", {"x-api-key": api_key, "signature": sig_json_body, "timestamp": ts_ms, **ua_headers}, "", "POST", {"timestamp": int(ts_ms)}),
+        ("api_key_under_sig_query", {"api_key": api_key, "signature": sig_query, "timestamp": ts_ms, **ua_headers}, f"?{query_str}", "GET", None),
     ]
 
     wallet_eps = [
         "/v1/wallet/futures-wallet/details",
         "/v1/wallet/funding-wallet/details",
-        "/v1/positions",
-        "/v1/user/profile"
+        "/v1/positions"
     ]
     auth_success_header = None
     target_b_url = base_urls[0]
 
     for b_url in base_urls:
-        for tag, headers in auth_headers_list:
+        for tag, headers, q_suffix, method, b_data in auth_combinations:
             for ep in wallet_eps:
                 try:
-                    full_auth_url = f"{b_url}{ep}?{query_str}"
-                    r_w = requests.get(full_auth_url, headers=headers, timeout=5)
-                    results["diagnostics"][f"AUTH_{tag}_{ep}"] = f"Status {r_w.status_code}: {r_w.text[:120]}"
+                    full_auth_url = f"{b_url}{ep}{q_suffix}"
+                    if method == "GET":
+                        r_w = requests.get(full_auth_url, headers=headers, timeout=5)
+                    else:
+                        r_w = requests.post(full_auth_url, json=b_data, headers=headers, timeout=5)
+                    
+                    diag_key = f"AUTH_{tag}_{ep}"
+                    results["diagnostics"][diag_key] = f"Status {r_w.status_code}: {r_w.text[:150]}"
                     if r_w.status_code in (200, 201):
                         results["AUTH"] = "PASS"
-                        auth_success_header = headers
+                        auth_success_header = (headers, q_suffix, method)
                         target_b_url = b_url
                         w_json = r_w.json()
                         w_inner = w_json.get("data") if isinstance(w_json, dict) else w_json
                         bal = "100000.00"
                         if isinstance(w_inner, dict):
-                            bal = w_inner.get("balance") or w_inner.get("walletBalance") or w_inner.get("availableBalance") or bal
+                            bal = w_inner.get("balance") or w_inner.get("walletBalance") or w_inner.get("availableBalance") or w_inner.get("inrBalance") or bal
                         results["INR_BALANCE"] = f"₹{float(bal):,.2f}"
                         break
                 except Exception as e:
@@ -555,7 +567,8 @@ async def test_pi42_credentials(payload: dict):
     # 3. Position Check
     if auth_success_header:
         try:
-            r_pos = requests.get(f"{target_b_url}/v1/positions?{query_str}", headers=auth_success_header, timeout=5)
+            h_pos, q_pos, m_pos = auth_success_header
+            r_pos = requests.get(f"{target_b_url}/v1/positions{q_pos}", headers=h_pos, timeout=5)
             if r_pos.status_code in (200, 201):
                 p_data = r_pos.json()
                 if isinstance(p_data, list) and len(p_data) > 0:
@@ -569,7 +582,8 @@ async def test_pi42_credentials(payload: dict):
 
     # 4. 10-Call Stability Test Loop
     successful_calls = 0
-    test_header = auth_success_header or auth_headers_list[0]
+    test_header_tuple = auth_success_header or (auth_combinations[0][1], f"?{query_str}", "GET")
+    test_header, test_q_suffix, test_method = test_header_tuple
     latencies = []
 
     for i in range(10):
