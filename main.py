@@ -627,6 +627,7 @@ async def test_mudrex_credentials():
             return ""
 
         mudrex_env_keys = [k for k in os.environ.keys() if "MUDREX" in k.upper()]
+        all_env_keys = sorted(list(os.environ.keys()))
 
         api_key = get_valid_val([
             os.environ.get("MUDREX_API_KEY"),
@@ -664,6 +665,7 @@ async def test_mudrex_credentials():
             headers["X-Api-Key"] = api_key
 
         results = {
+            "all_env_keys": all_env_keys,
             "MUDREX_env_keys_found": mudrex_env_keys,
             "MUDREX_API_KEY_present": "YES" if bool(api_key) else "NO",
             "MUDREX_API_SECRET_present": "YES" if bool(api_secret) else "NO",
