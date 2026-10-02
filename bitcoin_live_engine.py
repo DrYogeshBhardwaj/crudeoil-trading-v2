@@ -245,8 +245,12 @@ class MudrexLiveAdapter:
 
     def place_futures_order(self, symbol: str, side: str, quantity: float, order_type: str = "MARKET", price: Optional[float] = None, stoploss_price: Optional[float] = None) -> Dict[str, Any]:
         """
-        Places a live futures order on Mudrex with robust endpoint discovery.
-        Primary Mudrex endpoints: /futures/{asset_id}/order, /futures/{asset_id}/trade
+        Places a live futures order on Mudrex API.
+        Verified Mudrex API Endpoint: POST /futures/{asset_id}/order?trade_currency=INR
+        Field specs:
+        - order_type: 1 (MARKET) or 2 (LIMIT)
+        - trigger_type: 1 (MARK_PRICE)
+        - side: 'BUY' / 'SELL' or 1 / 2
         """
         headers = self._get_headers()
         
@@ -255,54 +259,60 @@ class MudrexLiveAdapter:
         ast_res = self.fetch_btcusdt_asset()
         if ast_res.get("success"):
             ast = ast_res.get("asset", {})
-            asset_id = ast.get("id", "")
+            if isinstance(ast, list) and ast:
+                asset_id = ast[0].get("id", "")
+            elif isinstance(ast, dict):
+                asset_id = ast.get("id", "")
         
         if not asset_id:
             asset_id = "01903a7b-bf65-707d-a7dc-d7b84c3c756c" # Fallback BTCUSDT asset ID
 
-        candidate_urls = [
-            f"{self.BASE_URL}/futures/{asset_id}/order?trade_currency=INR",
-            f"{self.BASE_URL}/futures/{asset_id}/order",
-            f"{self.BASE_URL}/futures/{asset_id}/trade?trade_currency=INR",
-            f"{self.BASE_URL}/futures/{asset_id}/trade",
-            f"{self.BASE_URL}/futures/order?trade_currency=INR",
-            f"{self.BASE_URL}/futures/order",
-            f"{self.BASE_URL}/futures/trade?trade_currency=INR",
-            f"{self.BASE_URL}/futures/trade"
-        ]
-
-        candidate_trigger_types = ["markPrice", "lastPrice", "indexPrice", "mark_price", "last_price", "index_price", "MARK_PRICE", "LAST_PRICE"]
-        errors = []
-
         url = f"{self.BASE_URL}/futures/{asset_id}/order?trade_currency=INR"
 
-        for tt in candidate_trigger_types:
-            payload = {
-                "symbol": symbol,
-                "side": side.upper(),
-                "order_type": order_type.upper(),
-                "quantity": str(quantity),
-                "trade_currency": "INR",
-                "trigger_type": tt,
-                "triggerType": tt,
-                "trigger_price": str(price or 8120000.0),
-                "triggerPrice": str(price or 8120000.0)
-            }
-            if price:
-                payload["price"] = str(price)
+        ot_val = 1 if str(order_type).upper() in ("MARKET", "1") else 2
+        side_str = side.upper()
 
+        candidate_payloads = [
+            {
+                "symbol": symbol,
+                "side": side_str,
+                "order_type": ot_val,
+                "trigger_type": 1,
+                "quantity": float(quantity),
+                "trade_currency": "INR"
+            },
+            {
+                "symbol": symbol,
+                "side": side_str,
+                "order_type": ot_val,
+                "trigger_type": 1,
+                "quantity": str(quantity),
+                "trade_currency": "INR"
+            },
+            {
+                "symbol": symbol,
+                "side": 1 if side_str == "BUY" else 2,
+                "order_type": ot_val,
+                "trigger_type": 1,
+                "quantity": float(quantity),
+                "trade_currency": "INR"
+            }
+        ]
+
+        errors = []
+        for payload in candidate_payloads:
             try:
                 resp = requests.post(url, headers=headers, json=payload, timeout=8)
                 if resp.status_code in (200, 201):
                     data = resp.json()
-                    print(f"[{datetime.now()}] [MUDREX ORDER SUCCESS] Endpoint {url} with triggerType={tt} succeeded! Data: {data}")
+                    print(f"[{datetime.now()}] [MUDREX ORDER SUCCESS] Endpoint {url} succeeded! Data: {data}")
                     return {"success": True, "data": data, "endpoint": url}
                 else:
-                    errors.append(f"tt={tt} -> [{resp.status_code}] {resp.text[:120]}")
+                    errors.append(f"HTTP {resp.status_code}: {resp.text}")
             except Exception as ex:
-                errors.append(f"tt={tt} -> Ex: {ex}")
+                errors.append(f"Exception: {ex}")
 
-        return {"success": False, "error": " | ".join(errors[:4])}
+        return {"success": False, "error": " | ".join(errors[:2])}
 
 
 class BitcoinLiveEngine:

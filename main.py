@@ -892,47 +892,6 @@ async def test_mudrex_credentials():
         if not btc_asset_id:
             btc_asset_id = "01903a7b-bf65-707d-a7dc-d7b84c3c756c"
 
-        results["target_btc_asset_id"] = btc_asset_id
-        order_url = f"{base_url}/futures/{btc_asset_id}/order?trade_currency=INR"
-        order_probe_results = {}
-        
-        # Test variations of payload fields with order_type: MARKET
-        # Test PascalCase variations of payload fields
-        # Test variations of float quantity and trigger_type: MARK_PRICE / LAST_PRICE
-        # Test trigger_type variants: MARK, LAST, INDEX, 1, 2, 3
-        # Test trigger_type variants: STOP_LOSS_MARKET, TAKE_PROFIT_MARKET, TRAILING_STOP_MARKET
-        candidate_payloads = [
-            {"symbol": "BTCUSDT", "side": "BUY", "order_type": "MARKET", "TriggerType": "MARK_PRICE", "quantity": "0.001", "trade_currency": "INR"},
-            {"symbol": "BTCUSDT", "side": "BUY", "order_type": "MARKET", "TriggerType": "LAST_PRICE", "quantity": "0.001", "trade_currency": "INR"},
-            {"symbol": "BTCUSDT", "side": "BUY", "order_type": "MARKET", "TriggerType": "MARKET", "quantity": "0.001", "trade_currency": "INR"},
-            {"symbol": "BTCUSDT", "side": "BUY", "order_type": "MARKET", "TriggerType": "STOP_LOSS_MARKET", "quantity": "0.001", "trade_currency": "INR"},
-            {"Symbol": "BTCUSDT", "Side": "BUY", "OrderType": "MARKET", "TriggerType": "MARK_PRICE", "Quantity": "0.001", "TradeCurrency": "INR"},
-            {"symbol": "BTCUSDT", "side": "BUY", "order_type": "MARKET", "quantity": "0.001", "trade_currency": "INR", "trigger_type": "MARK_PRICE", "TriggerType": "MARK_PRICE"},
-            {"symbol": "BTCUSDT", "side": "BUY", "order_type": "LIMIT", "price": "7500000", "quantity": "0.001", "trade_currency": "INR"},
-            {"symbol": "BTCUSDT", "side": "BUY", "order_type": "LIMIT", "price": "7500000", "quantity": "0.001", "trade_currency": "INR", "TriggerType": "MARK_PRICE"}
-        ]
-
-        qty_keys = ["quantity", "qty", "contract", "contracts", "contract_quantity", "amount", "margin", "units", "size"]
-        
-        for k in qty_keys:
-            p = {
-                "symbol": "BTCUSDT",
-                "side": "BUY",
-                "order_type": 1,
-                "trigger_type": 1,
-                k: 0.001,
-                "trade_currency": "INR"
-            }
-            try:
-                r_probe = requests.post(order_url, headers=headers, json=p, timeout=5)
-                order_probe_results[f"qty_key_{k}"] = f"HTTP {r_probe.status_code}: {r_probe.text}"
-                if r_probe.status_code in (200, 201):
-                    results["REAL_ORDERS_PLACED"] += 1
-            except Exception as ex:
-                order_probe_results[f"qty_key_{k}_ex"] = str(ex)
-
-        results["diagnostics"]["ORDER_PROBES"] = order_probe_results
-
         return JSONResponse(results)
     except Exception as err:
         return JSONResponse({"error": str(err), "traceback": traceback.format_exc()}, status_code=500)
