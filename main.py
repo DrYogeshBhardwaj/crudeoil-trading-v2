@@ -391,8 +391,23 @@ async def test_pi42_credentials(payload: dict):
     import hashlib
     import requests
 
-    api_key = payload.get("api_key") or os.environ.get("PI42_API_KEY", "")
-    api_secret = payload.get("api_secret") or os.environ.get("PI42_API_SECRET", "")
+    api_key = (
+        payload.get("api_key")
+        or os.environ.get("PI42_API_KEY")
+        or os.environ.get("PI42_KEY")
+        or os.environ.get("BITCOIN_API_KEY")
+        or os.environ.get("PI42_APIKEY")
+        or ""
+    ).strip()
+
+    api_secret = (
+        payload.get("api_secret")
+        or os.environ.get("PI42_API_SECRET")
+        or os.environ.get("PI42_SECRET")
+        or os.environ.get("BITCOIN_API_SECRET")
+        or os.environ.get("PI42_APISECRET")
+        or ""
+    ).strip()
 
     base_urls = ["https://fapi.pi42.com", "https://api.pi42.com"]
     start_t = time.time()
