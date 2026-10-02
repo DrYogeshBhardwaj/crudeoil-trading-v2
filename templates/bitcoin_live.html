@@ -306,6 +306,32 @@
         </div>
     </div>
 
+    <!-- LIVE STRATEGY EVALUATION STREAM LOGS -->
+    <div class="control-panel" style="margin-bottom:20px;">
+        <h3 style="margin-top:0; color:#38bdf8; display:flex; align-items:center; gap:8px;">
+            📊 REAL-TIME MUDREX STRATEGY EVALUATION STREAM
+        </h3>
+        <div style="max-height: 280px; overflow-y: auto; border: 1px solid rgba(255,255,255,0.08); border-radius: 8px;">
+            <table style="width: 100%; border-collapse: collapse; font-size: 0.82rem; text-align: left;">
+                <thead style="background: rgba(15, 23, 42, 0.95); position: sticky; top: 0; color: #94a3b8;">
+                    <tr style="border-bottom: 1px solid rgba(255,255,255,0.1);">
+                        <th style="padding: 10px;">TIMESTAMP (IST)</th>
+                        <th style="padding: 10px;">PRICE (INR)</th>
+                        <th style="padding: 10px;">ACTION</th>
+                        <th style="padding: 10px;">EMA 9 / 21</th>
+                        <th style="padding: 10px;">RSI (14)</th>
+                        <th style="padding: 10px;">ANALYSIS / REASON</th>
+                    </tr>
+                </thead>
+                <tbody id="eval_stream_tbody">
+                    <tr>
+                        <td colspan="6" style="padding: 16px; text-align: center; color: #94a3b8;">Waiting for live strategy evaluation stream...</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
 </div>
 
 <script>
@@ -348,6 +374,26 @@
             } else {
                 mb.innerText = '⏸️ TRADING PAUSED';
                 mb.className = 'badge-status badge-amber';
+            }
+
+            // Render Evaluation Stream Logs
+            if (data.evaluation_stream && data.evaluation_stream.length > 0) {
+                let html = '';
+                data.evaluation_stream.forEach(ev => {
+                    let actionBadge = `<span class="badge-status badge-amber">WAIT</span>`;
+                    if (ev.action === 'BUY') actionBadge = `<span class="badge-status badge-green">BUY</span>`;
+                    if (ev.action === 'SELL') actionBadge = `<span class="badge-status badge-red">SELL</span>`;
+
+                    html += `<tr style="border-bottom: 1px solid rgba(255,255,255,0.05);">
+                        <td style="padding: 8px 10px; font-family:'JetBrains Mono', monospace; color:#94a3b8;">${ev.timestamp}</td>
+                        <td style="padding: 8px 10px; font-weight:700;">₹${Number(ev.price || 0).toLocaleString('en-IN')}</td>
+                        <td style="padding: 8px 10px;">${actionBadge}</td>
+                        <td style="padding: 8px 10px; font-family:'JetBrains Mono', monospace; font-size:0.78rem;">₹${Math.round(ev.ema9 || 0)} / ₹${Math.round(ev.ema21 || 0)}</td>
+                        <td style="padding: 8px 10px; font-family:'JetBrains Mono', monospace;">${ev.rsi || 50}</td>
+                        <td style="padding: 8px 10px; color:#cbd5e1;">${ev.reason || ''}</td>
+                    </tr>`;
+                });
+                document.getElementById('eval_stream_tbody').innerHTML = html;
             }
         } catch(e) {
             console.error('Error fetching live state:', e);

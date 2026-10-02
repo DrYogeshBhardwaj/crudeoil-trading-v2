@@ -156,7 +156,21 @@ class MudrexLiveAdapter:
             resp = requests.get(url, headers=headers, timeout=5)
             if resp.status_code in (200, 201):
                 return {"success": True, "data": resp.json()}
-            return {"success": False, "status_code": resp.status_code, "error": resp.text}
+            
+            # Fallback to asset details leverage info
+            ast_res = self.fetch_btcusdt_asset()
+            if ast_res.get("success"):
+                ast = ast_res.get("asset", {})
+                if ast and "min_leverage" in ast:
+                    return {
+                        "success": True,
+                        "data": {
+                            "min_leverage": ast.get("min_leverage", "1"),
+                            "max_leverage": ast.get("max_leverage", "150"),
+                            "leverage_step": ast.get("leverage_step", "0.01")
+                        }
+                    }
+            return {"success": False, "status_code": resp.status_code if 'resp' in locals() else 500, "error": resp.text if 'resp' in locals() else "Unknown"}
         except Exception as e:
             return {"success": False, "error": str(e)}
 
@@ -303,6 +317,8 @@ class BitcoinLiveEngine:
 
         self.consecutive_api_failures = 0
         self.last_api_status = "UNKNOWN"
+        self.evaluation_stream = []
+        self.last_evaluation = {}
 
     def save_settings(self):
         """Persists risk configuration & state flags to SQLite DB."""
@@ -464,6 +480,8 @@ class BitcoinLiveEngine:
             "futures_inr_balance": fut_bal,
             "mudrex_api_status": "AUTHENTICATED" if self.adapter.test_authentication().get("success") else "DISCONNECTED",
             "live_trading_enabled": self.live_trading_enabled,
+            "evaluation_stream": self.evaluation_stream[:25],
+            "latest_evaluation": self.last_evaluation,
             "disclaimer": "BITCOIN LIVE ENGINE — MUDREX API INTEGRATED — ZERO ORDERS PLACED IN PRE-FLIGHT"
         }
 
@@ -480,6 +498,26 @@ class BitcoinLiveEngine:
             candles = BITCOIN_FEED.fetch_historical_candles("5m", "5d")
             eval_res = BITCOIN_STRATEGY.evaluate_market(candles, curr_price)
             self.last_evaluation = eval_res
+
+            # Log evaluation stream for real-time live monitoring
+            from datetime import timezone, timedelta
+            ist_tz = timezone(timedelta(hours=5, minutes=30))
+            now_ist_str = datetime.now(ist_tz).strftime("%Y-%m-%d %H:%M:%S")
+            reasons_str = " | ".join(eval_res.get("reasons", []))
+            eval_log_entry = {
+                "timestamp": now_ist_str,
+                "price": curr_price,
+                "action": eval_res.get("action", "WAIT"),
+                "trend_state": eval_res.get("trend", "NEUTRAL"),
+                "confidence": eval_res.get("confidence", 50),
+                "reason": reasons_str,
+                "ema9": eval_res.get("ema9", curr_price),
+                "ema21": eval_res.get("ema21", curr_price),
+                "rsi": eval_res.get("rsi", 50.0)
+            }
+            self.evaluation_stream.insert(0, eval_log_entry)
+            if len(self.evaluation_stream) > 100:
+                self.evaluation_stream = self.evaluation_stream[:100]
 
             # Check open position state on Mudrex
             active_pos = DB.load_active_bitcoin_live_position()
