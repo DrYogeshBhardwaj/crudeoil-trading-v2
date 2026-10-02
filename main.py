@@ -211,6 +211,15 @@ async def reset_bitcoin_live_circuit_breaker():
         "message": "Bitcoin Live Engine Emergency Circuit Breaker reset successfully."
     })
 
+@app.post("/api/bitcoin/live/reset-pnl")
+async def reset_bitcoin_live_pnl():
+    """Manually resets today's realized P&L and daily loss limit flags."""
+    BITCOIN_LIVE_ENGINE.reset_daily_pnl()
+    return JSONResponse({
+        "status": "SUCCESS",
+        "message": "Bitcoin Live Engine Daily Realized P&L reset to ₹0.00."
+    })
+
 @app.post("/api/bitcoin/live/toggle-trading")
 async def toggle_bitcoin_live_trading(payload: dict):
     """Toggles live trading execution on or off."""

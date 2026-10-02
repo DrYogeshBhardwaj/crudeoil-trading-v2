@@ -401,6 +401,15 @@ class BitcoinLiveEngine:
         self.consecutive_api_failures = 0
         self.save_settings()
 
+    def reset_daily_pnl(self):
+        """Resets daily realized P&L and daily loss limit flag."""
+        self.today_realized_pnl = 0.0
+        self.daily_loss_limit_hit = False
+        self.circuit_breaker_tripped = False
+        self.circuit_breaker_reason = ""
+        self.save_settings()
+        print(f"[{datetime.now()}] [RESET DAILY P&L] Reset today's P&L to ₹0.00.")
+
     def are_new_entries_allowed(self) -> Tuple[bool, str]:
         """Checks whether new trade entries are allowed based on strict risk rules."""
         if not self.live_trading_enabled:
