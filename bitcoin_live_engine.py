@@ -271,37 +271,37 @@ class MudrexLiveAdapter:
             f"{self.BASE_URL}/futures/trade"
         ]
 
-        trigger_types = ["MARK_PRICE", "LAST_PRICE", "INDEX_PRICE", "PRICE"]
+        candidate_trigger_types = [None, "MARKET", "LIMIT", "STOP", "MARK", "LAST", "INDEX", "NONE", "market", "limit", "stop", "mark", "last"]
         errors = []
 
-        for url in candidate_urls[:4]:
-            for tt in trigger_types:
-                payload = {
-                    "symbol": symbol,
-                    "side": side.upper(),
-                    "order_type": order_type.upper(),
-                    "quantity": str(quantity),
-                    "trade_currency": "INR",
-                    "trigger_type": tt,
-                    "triggerType": tt
-                }
-                if price:
-                    payload["price"] = str(price)
-                if stoploss_price:
-                    payload["stoploss_price"] = str(stoploss_price)
+        url = f"{self.BASE_URL}/futures/{asset_id}/order?trade_currency=INR"
 
-                try:
-                    resp = requests.post(url, headers=headers, json=payload, timeout=8)
-                    if resp.status_code in (200, 201):
-                        data = resp.json()
-                        print(f"[{datetime.now()}] [MUDREX ORDER SUCCESS] Endpoint {url} with triggerType={tt} succeeded! Data: {data}")
-                        return {"success": True, "data": data, "endpoint": url}
-                    else:
-                        errors.append(f"[{resp.status_code}] {resp.text[:120]}")
-                except Exception as ex:
-                    errors.append(f"Ex: {ex}")
+        for tt in candidate_trigger_types:
+            payload = {
+                "symbol": symbol,
+                "side": side.upper(),
+                "order_type": order_type.upper(),
+                "quantity": str(quantity),
+                "trade_currency": "INR"
+            }
+            if tt is not None:
+                payload["trigger_type"] = tt
+                payload["triggerType"] = tt
+            if price:
+                payload["price"] = str(price)
 
-        return {"success": False, "error": " | ".join(errors[:3])}
+            try:
+                resp = requests.post(url, headers=headers, json=payload, timeout=8)
+                if resp.status_code in (200, 201):
+                    data = resp.json()
+                    print(f"[{datetime.now()}] [MUDREX ORDER SUCCESS] Endpoint {url} with triggerType={tt} succeeded! Data: {data}")
+                    return {"success": True, "data": data, "endpoint": url}
+                else:
+                    errors.append(f"tt={tt} -> [{resp.status_code}] {resp.text[:120]}")
+            except Exception as ex:
+                errors.append(f"tt={tt} -> Ex: {ex}")
+
+        return {"success": False, "error": " | ".join(errors[:4])}
 
 
 class BitcoinLiveEngine:
