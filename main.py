@@ -912,25 +912,24 @@ async def test_mudrex_credentials():
             {"symbol": "BTCUSDT", "side": "BUY", "order_type": "LIMIT", "price": "7500000", "quantity": "0.001", "trade_currency": "INR", "TriggerType": "MARK_PRICE"}
         ]
 
-        candidate_trigger_probes = [
-            {"symbol": "BTCUSDT", "side": 1, "order_type": 1, "trigger_type": 1, "quantity": 0.001, "trade_currency": "INR"},
-            {"symbol": "BTCUSDT", "side": 1, "order_type": 1, "trigger_type": 1, "quantity": "0.001", "trade_currency": "INR"},
-            {"symbol": "BTCUSDT", "side": 1, "order_type": 1, "trigger_type": 1, "quantity": 1, "trade_currency": "INR"},
-            {"symbol": "BTCUSDT", "side": 2, "order_type": 1, "trigger_type": 1, "quantity": 0.001, "trade_currency": "INR"},
-            {"symbol": "BTCUSDT", "side": "BUY", "order_type": 1, "trigger_type": 1, "quantity": 0.001, "trade_currency": "INR"},
-            {"symbol": "BTCUSDT", "side": "BUY", "order_type": 1, "trigger_type": 1, "quantity": "0.001", "trade_currency": "INR"},
-            {"symbol": "BTCUSDT", "side": "BUY", "order_type": 1, "trigger_type": 1, "quantity": 1, "trade_currency": "INR"},
-            {"symbol": "BTCUSDT", "side": "BUY", "order_type": 1, "trigger_type": 1, "quantity": 500, "trade_currency": "INR"}
-        ]
-
-        for i, p in enumerate(candidate_trigger_probes):
+        qty_keys = ["quantity", "qty", "contract", "contracts", "contract_quantity", "amount", "margin", "units", "size"]
+        
+        for k in qty_keys:
+            p = {
+                "symbol": "BTCUSDT",
+                "side": "BUY",
+                "order_type": 1,
+                "trigger_type": 1,
+                k: 0.001,
+                "trade_currency": "INR"
+            }
             try:
                 r_probe = requests.post(order_url, headers=headers, json=p, timeout=5)
-                order_probe_results[f"combo_probe_{i}_{p.get('side')}_{p.get('quantity')}"] = f"HTTP {r_probe.status_code}: {r_probe.text}"
+                order_probe_results[f"qty_key_{k}"] = f"HTTP {r_probe.status_code}: {r_probe.text}"
                 if r_probe.status_code in (200, 201):
                     results["REAL_ORDERS_PLACED"] += 1
             except Exception as ex:
-                order_probe_results[f"combo_probe_{i}_ex"] = str(ex)
+                order_probe_results[f"qty_key_{k}_ex"] = str(ex)
 
         results["diagnostics"]["ORDER_PROBES"] = order_probe_results
 
