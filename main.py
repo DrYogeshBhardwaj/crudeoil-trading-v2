@@ -876,20 +876,19 @@ async def test_mudrex_credentials():
         order_url = f"{base_url}/futures/01903a7b-bf65-707d-a7dc-d7b84c3c756c/order?trade_currency=INR"
         order_probe_results = {}
         
-        # Test variations of payload fields
+        # Test variations of payload fields with order_type: MARKET
         candidate_payloads = [
-            {"symbol": "BTCUSDT", "side": "BUY", "quantity": "0.001", "trade_currency": "INR"},
-            {"symbol": "BTCUSDT", "side": "BUY", "order_type": "MARKET", "quantity": "0.001", "trade_currency": "INR"},
-            {"symbol": "BTCUSDT", "side": "BUY", "orderType": "MARKET", "quantity": "0.001", "trade_currency": "INR"},
-            {"symbol": "BTCUSDT", "side": "BUY", "orderType": "MARKET", "triggerType": "MARKET", "quantity": "0.001", "trade_currency": "INR"},
-            {"symbol": "BTCUSDT", "side": "BUY", "orderType": "MARKET", "triggerType": "LIMIT", "quantity": "0.001", "trade_currency": "INR"},
-            {"symbol": "BTCUSDT", "side": "BUY", "orderType": "MARKET", "triggerType": "PRICE", "quantity": "0.001", "trade_currency": "INR"},
-            {"symbol": "BTCUSDT", "side": "BUY", "orderType": "MARKET", "triggerType": "MARK_PRICE", "quantity": "0.001", "trade_currency": "INR"},
-            {"symbol": "BTCUSDT", "side": "BUY", "orderType": "MARKET", "triggerType": "LAST_PRICE", "quantity": "0.001", "trade_currency": "INR"},
-            {"symbol": "BTCUSDT", "side": "BUY", "orderType": "MARKET", "triggerType": "INDEX_PRICE", "quantity": "0.001", "trade_currency": "INR"},
-            {"symbol": "BTCUSDT", "side": "BUY", "orderType": "MARKET", "triggerType": "NONE", "quantity": "0.001", "trade_currency": "INR"},
-            {"symbol": "BTCUSDT", "side": "BUY", "orderType": "MARKET", "triggerType": 1, "quantity": "0.001", "trade_currency": "INR"},
-            {"symbol": "BTCUSDT", "side": "BUY", "orderType": "MARKET", "triggerType": 2, "quantity": "0.001", "trade_currency": "INR"}
+            {"symbol": "BTCUSDT", "side": "BUY", "order_type": "MARKET", "trigger_type": "MARKET", "quantity": "0.001", "trade_currency": "INR"},
+            {"symbol": "BTCUSDT", "side": "BUY", "order_type": "MARKET", "trigger_type": "LIMIT", "quantity": "0.001", "trade_currency": "INR"},
+            {"symbol": "BTCUSDT", "side": "BUY", "order_type": "MARKET", "trigger_type": "STOP", "quantity": "0.001", "trade_currency": "INR"},
+            {"symbol": "BTCUSDT", "side": "BUY", "order_type": "MARKET", "trigger_type": "STOP_LOSS", "quantity": "0.001", "trade_currency": "INR"},
+            {"symbol": "BTCUSDT", "side": "BUY", "order_type": "MARKET", "trigger_type": "TAKE_PROFIT", "quantity": "0.001", "trade_currency": "INR"},
+            {"symbol": "BTCUSDT", "side": "BUY", "order_type": "MARKET", "trigger_type": "MARK_PRICE", "quantity": "0.001", "trade_currency": "INR"},
+            {"symbol": "BTCUSDT", "side": "BUY", "order_type": "MARKET", "trigger_type": "LAST_PRICE", "quantity": "0.001", "trade_currency": "INR"},
+            {"symbol": "BTCUSDT", "side": "BUY", "order_type": "MARKET", "trigger_type": "INDEX_PRICE", "quantity": "0.001", "trade_currency": "INR"},
+            {"symbol": "BTCUSDT", "side": "BUY", "order_type": "MARKET", "trigger_type": "NONE", "quantity": "0.001", "trade_currency": "INR"},
+            {"symbol": "BTCUSDT", "side": "BUY", "order_type": "MARKET", "trigger_type": 1, "quantity": "0.001", "trade_currency": "INR"},
+            {"symbol": "BTCUSDT", "side": "BUY", "order_type": "MARKET", "trigger_type": 0, "quantity": "0.001", "trade_currency": "INR"}
         ]
 
         for i, p in enumerate(candidate_payloads):
