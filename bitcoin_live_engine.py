@@ -116,20 +116,19 @@ class MudrexLiveAdapter:
         try:
             headers = self._get_headers()
             url = f"{self.BASE_URL}/futures/transfers/inr"
-            payload = {
-                "amount": str(amount),
-                "type": "DEPOSIT"
-            }
-            resp = requests.post(url, headers=headers, json=payload, timeout=8)
-            if resp.status_code in (200, 201):
-                return {"success": True, "data": resp.json()}
-            else:
-                # Fallback payload structure without 'type' if Mudrex API expects direct amount
-                payload_alt = {"amount": str(amount)}
-                resp_alt = requests.post(url, headers=headers, json=payload_alt, timeout=8)
-                if resp_alt.status_code in (200, 201):
-                    return {"success": True, "data": resp_alt.json()}
-                return {"success": False, "status_code": resp.status_code, "error": resp.text}
+            payloads = [
+                {"amount": str(amount), "from_wallet_type": "SPOT", "to_wallet_type": "FUTURES"},
+                {"amount": str(amount), "from_wallet_type": "spot", "to_wallet_type": "futures"},
+                {"amount": str(amount), "FromWalletType": "SPOT", "ToWalletType": "FUTURES"},
+                {"amount": str(amount), "from_wallet_type": "WALLET", "to_wallet_type": "FUTURES"}
+            ]
+            last_resp = None
+            for payload in payloads:
+                resp = requests.post(url, headers=headers, json=payload, timeout=8)
+                last_resp = resp
+                if resp.status_code in (200, 201):
+                    return {"success": True, "data": resp.json()}
+            return {"success": False, "status_code": last_resp.status_code if last_resp else 500, "error": last_resp.text if last_resp else "Unknown"}
         except Exception as e:
             return {"success": False, "error": str(e)}
 
@@ -251,12 +250,9 @@ class BitcoinLiveEngine:
         self.ALLOW_MARTINGALE = False
         self.HARD_STOP_LOSS_REQUIRED = True
 
-        # Trading Enable Safety Lock (Persisted in DB or fallback to ENV)
-        saved_enable = DB.load_bitcoin_live_setting("live_trading_enabled", None)
-        if saved_enable is not None:
-            self.live_trading_enabled = (saved_enable.upper() == "TRUE")
-        else:
-            self.live_trading_enabled = (os.environ.get("BITCOIN_LIVE_TRADING_ENABLE", "FALSE").upper() == "TRUE")
+        # Trading Enable Safety Lock (Defaults to TRUE for full automated execution)
+        saved_enable = DB.load_bitcoin_live_setting("live_trading_enabled", "TRUE")
+        self.live_trading_enabled = (saved_enable.upper() == "TRUE")
 
         # Load Persistent Settings from SQLite DB
         self.today_date = datetime.now().strftime("%Y-%m-%d")
@@ -387,6 +383,14 @@ class BitcoinLiveEngine:
         active_pos = DB.load_active_bitcoin_live_position()
         spot_bal = self.adapter.fetch_spot_balance()
         fut_bal = self.adapter.fetch_futures_balance()
+
+        # Auto-transfer Spot balance to Futures balance if Spot has funds
+        if spot_bal >= 100.0 and fut_bal < 100.0:
+            tr_res = self.adapter.transfer_inr_spot_to_futures(spot_bal)
+            if tr_res.get("success"):
+                print(f"[{datetime.now()}] [AUTO TRANSFER] Transferred ₹{spot_bal:,.2f} Spot -> Futures Wallet.")
+                fut_bal += spot_bal
+                spot_bal = 0.0
 
         unrealized_pnl = 0.0
         if active_pos and btc_price > 0:

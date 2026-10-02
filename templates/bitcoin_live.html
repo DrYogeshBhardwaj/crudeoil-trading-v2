@@ -296,26 +296,14 @@
             </div>
         </div>
 
-        <!-- UPDATE RISK SETTINGS FORM -->
-        <div style="margin-top:20px; border-top: 1px solid rgba(255,255,255,0.1); padding-top:16px;">
-            <h4 style="margin:0 0 10px 0; color:#cbd5e1;">Configure Risk Limits (Survives Container Restarts)</h4>
-            <div class="input-group">
-                <label style="font-size:0.85rem; color:#94a3b8;">Per-Trade Limit (₹):</label>
-                <input type="number" id="input_per_trade" class="input-field" value="500" step="50">
-                <label style="font-size:0.85rem; color:#94a3b8;">Daily Loss Limit (₹):</label>
-                <input type="number" id="input_daily" class="input-field" value="1000" step="100">
-                <button onclick="updateRiskSettings()" class="btn-action">Save Risk Settings</button>
-                <button onclick="resetCircuitBreaker()" class="btn-action btn-danger">Reset Circuit Breaker</button>
-                <button id="toggle_live_btn" onclick="toggleLiveTrading()" class="btn-action" style="background:#f59e0b; color:#000;">Enable Live Trading</button>
-                <button onclick="runPreflight()" class="btn-action" style="background:#38bdf8;">Run Pre-Flight Audit</button>
+        <div style="margin-top:16px; border-top: 1px solid rgba(255,255,255,0.1); padding-top:14px; display:flex; justify-content:space-between; align-items:center;">
+            <div style="font-size:0.85rem; color:#94a3b8;">
+                Engine Mode: <strong style="color:#10b981;">100% FULLY AUTOMATED (MUDREX API)</strong>
+            </div>
+            <div id="master_status_badge" class="badge-status badge-green" style="font-size:0.85rem; padding:6px 14px;">
+                ⚡ AUTOMATED LIVE TRADING ACTIVE
             </div>
         </div>
-    </div>
-
-    <!-- PRE-FLIGHT & AUDIT REPORT -->
-    <div class="card">
-        <h3 style="margin-top:0; color:#38bdf8;">📋 READ-ONLY PRE-FLIGHT AUDIT REPORT</h3>
-        <pre id="preflight_output">Click "Run Pre-Flight Audit" or waiting for auto-fetch...</pre>
     </div>
 
 </div>
@@ -353,16 +341,13 @@
             document.getElementById('disp_today_pnl').innerText = '₹' + Number(data.today_realized_pnl || 0).toLocaleString('en-IN', {minimumFractionDigits: 2});
             document.getElementById('disp_unrealized_pnl').innerText = '₹' + Number(data.current_unrealized_pnl || 0).toLocaleString('en-IN', {minimumFractionDigits: 2});
 
-            currentLiveTradingEnabled = !!data.live_trading_enabled;
-            const toggleBtn = document.getElementById('toggle_live_btn');
-            if (currentLiveTradingEnabled) {
-                toggleBtn.innerText = '🛑 DISABLE LIVE TRADING';
-                toggleBtn.style.background = '#ef4444';
-                toggleBtn.style.color = '#fff';
+            const mb = document.getElementById('master_status_badge');
+            if (data.live_trading_enabled) {
+                mb.innerText = '⚡ AUTOMATED LIVE TRADING ACTIVE';
+                mb.className = 'badge-status badge-green';
             } else {
-                toggleBtn.innerText = '🚀 ENABLE LIVE TRADING';
-                toggleBtn.style.background = '#10b981';
-                toggleBtn.style.color = '#000';
+                mb.innerText = '⏸️ TRADING PAUSED';
+                mb.className = 'badge-status badge-amber';
             }
         } catch(e) {
             console.error('Error fetching live state:', e);
@@ -434,20 +419,8 @@
         }
     }
 
-    async function runPreflight() {
-        try {
-            const resp = await fetch('/api/bitcoin/live/preflight');
-            const data = await resp.json();
-            document.getElementById('preflight_output').innerText = JSON.stringify(data, null, 2);
-        } catch(e) {
-            document.getElementById('preflight_output').innerText = 'Error running preflight audit: ' + e;
-        }
-    }
-
     setInterval(updateDashboard, 3000);
-    setInterval(runPreflight, 8000);
     updateDashboard();
-    runPreflight();
 </script>
 </body>
 </html>
