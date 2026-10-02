@@ -376,7 +376,7 @@ async def get_outbound_ip():
         except Exception as e:
             outbound_ip = f"ERROR ({e})"
 
-        def is_valid_cred(val: Optional[str]) -> bool:
+        def is_valid_cred(val) -> bool:
             if not val:
                 return False
             v = str(val).strip()
