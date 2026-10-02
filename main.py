@@ -912,29 +912,27 @@ async def test_mudrex_credentials():
             {"symbol": "BTCUSDT", "side": "BUY", "order_type": "LIMIT", "price": "7500000", "quantity": "0.001", "trade_currency": "INR", "TriggerType": "MARK_PRICE"}
         ]
 
-        candidate_trigger_types = [
-            "STOP_LOSS", "TAKE_PROFIT", "STOP_LOSS_MARKET", "TAKE_PROFIT_MARKET",
-            "MARK_PRICE", "LAST_PRICE", "INDEX_PRICE", "MARK", "LAST", "INDEX",
-            "SPOT", "FUTURES", "REGULAR", "SYSTEM", "DEFAULT", "NONE", "MARKET", "LIMIT",
-            "0", "1", "2", "3", 0, 1, 2, 3, None
+        endpoint_probes = [
+            ("POST_asset_order_1", f"{base_url}/futures/{btc_asset_id}/order?trade_currency=INR", {"symbol": "BTCUSDT", "side": "BUY", "quantity": "0.001"}),
+            ("POST_asset_order_2", f"{base_url}/futures/{btc_asset_id}/order?trade_currency=INR", {"symbol": "BTCUSDT", "side": "BUY", "type": "MARKET", "quantity": "0.001"}),
+            ("POST_asset_order_3", f"{base_url}/futures/{btc_asset_id}/order?trade_currency=INR", {"symbol": "BTCUSDT", "side": "BUY", "order_type": "MARKET", "quantity": 0.001, "trade_currency": "INR"}),
+            ("POST_asset_trade_1", f"{base_url}/futures/{btc_asset_id}/trade?trade_currency=INR", {"symbol": "BTCUSDT", "side": "BUY", "quantity": "0.001"}),
+            ("POST_asset_trade_2", f"{base_url}/futures/{btc_asset_id}/trade?trade_currency=INR", {"side": "BUY", "quantity": "0.001", "trade_currency": "INR"}),
+            ("POST_futures_order_1", f"{base_url}/futures/order?trade_currency=INR", {"asset_id": btc_asset_id, "symbol": "BTCUSDT", "side": "BUY", "quantity": "0.001"}),
+            ("POST_futures_orders_1", f"{base_url}/futures/orders?trade_currency=INR", {"asset_id": btc_asset_id, "symbol": "BTCUSDT", "side": "BUY", "quantity": "0.001"}),
+            ("POST_futures_order_2", f"{base_url}/futures/order?trade_currency=INR", {"symbol": "BTCUSDT", "side": "BUY", "order_type": "MARKET", "quantity": "0.001"}),
+            ("POST_futures_positions_1", f"{base_url}/futures/positions?trade_currency=INR", {"asset_id": btc_asset_id, "symbol": "BTCUSDT", "side": "BUY", "quantity": "0.001"}),
+            ("POST_futures_positions_2", f"{base_url}/futures/{btc_asset_id}/positions?trade_currency=INR", {"side": "BUY", "quantity": "0.001"})
         ]
 
-        for i, tt in enumerate(candidate_trigger_types):
-            p = {
-                "symbol": "BTCUSDT",
-                "side": "BUY",
-                "order_type": "MARKET",
-                "trigger_type": tt,
-                "quantity": "0.001",
-                "trade_currency": "INR"
-            }
+        for name, url, p in endpoint_probes:
             try:
-                r_probe = requests.post(order_url, headers=headers, json=p, timeout=5)
-                order_probe_results[f"trigger_type_{tt}"] = f"HTTP {r_probe.status_code}: {r_probe.text}"
+                r_probe = requests.post(url, headers=headers, json=p, timeout=5)
+                order_probe_results[name] = f"HTTP {r_probe.status_code}: {r_probe.text}"
                 if r_probe.status_code in (200, 201):
                     results["REAL_ORDERS_PLACED"] += 1
             except Exception as ex:
-                order_probe_results[f"trigger_type_{tt}_ex"] = str(ex)
+                order_probe_results[f"{name}_ex"] = str(ex)
 
         results["diagnostics"]["ORDER_PROBES"] = order_probe_results
 
