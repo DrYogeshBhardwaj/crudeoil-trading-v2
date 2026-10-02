@@ -626,19 +626,32 @@ async def test_mudrex_credentials():
                         return v
             return ""
 
+        mudrex_env_keys = [k for k in os.environ.keys() if "MUDREX" in k.upper()]
+
         api_key = get_valid_val([
             os.environ.get("MUDREX_API_KEY"),
             os.environ.get("MUDREX_KEY"),
             os.environ.get("BITCOIN_API_KEY"),
-            os.environ.get("MUDREX_KEY_ID")
+            os.environ.get("MUDREX_KEY_ID"),
+            os.environ.get("MUDREX_PUBLIC_KEY"),
+            os.environ.get("MUDREX_CLIENT_ID"),
+            *[os.environ.get(k) for k in mudrex_env_keys if "KEY" in k.upper() or "ID" in k.upper()]
         ])
 
         api_secret = get_valid_val([
             os.environ.get("MUDREX_API_SECRET"),
             os.environ.get("MUDREX_SECRET"),
             os.environ.get("BITCOIN_API_SECRET"),
-            os.environ.get("MUDREX_SECRET_KEY")
+            os.environ.get("MUDREX_SECRET_KEY"),
+            os.environ.get("MUDREX_CLIENT_SECRET"),
+            os.environ.get("MUDREX_TOKEN"),
+            os.environ.get("MUDREX_AUTHENTICATION"),
+            *[os.environ.get(k) for k in mudrex_env_keys if "SECRET" in k.upper() or "TOKEN" in k.upper() or "AUTH" in k.upper()]
         ])
+
+        # If no specific key/secret matched but mudrex_env_keys exist, take the first valid val
+        if not api_secret and mudrex_env_keys:
+            api_secret = get_valid_val([os.environ.get(k) for k in mudrex_env_keys])
 
         base_url = "https://trade.mudrex.com/fapi/v1"
         
@@ -651,6 +664,7 @@ async def test_mudrex_credentials():
             headers["X-Api-Key"] = api_key
 
         results = {
+            "MUDREX_env_keys_found": mudrex_env_keys,
             "MUDREX_API_KEY_present": "YES" if bool(api_key) else "NO",
             "MUDREX_API_SECRET_present": "YES" if bool(api_secret) else "NO",
             "API_AUTHENTICATION": "FAIL",
