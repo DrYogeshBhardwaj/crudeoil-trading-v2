@@ -872,6 +872,37 @@ async def test_mudrex_credentials():
         except Exception as e:
             results["diagnostics"]["OPEN_ORDERS_EX"] = str(e)
 
+        # 7. Order Placement Diagnostic Probe
+        order_url = f"{base_url}/futures/01903a7b-bf65-707d-a7dc-d7b84c3c756c/order?trade_currency=INR"
+        order_probe_results = {}
+        
+        # Test variations of payload fields
+        candidate_payloads = [
+            {"symbol": "BTCUSDT", "side": "BUY", "quantity": "0.001", "trade_currency": "INR"},
+            {"symbol": "BTCUSDT", "side": "BUY", "order_type": "MARKET", "quantity": "0.001", "trade_currency": "INR"},
+            {"symbol": "BTCUSDT", "side": "BUY", "orderType": "MARKET", "quantity": "0.001", "trade_currency": "INR"},
+            {"symbol": "BTCUSDT", "side": "BUY", "orderType": "MARKET", "triggerType": "MARKET", "quantity": "0.001", "trade_currency": "INR"},
+            {"symbol": "BTCUSDT", "side": "BUY", "orderType": "MARKET", "triggerType": "LIMIT", "quantity": "0.001", "trade_currency": "INR"},
+            {"symbol": "BTCUSDT", "side": "BUY", "orderType": "MARKET", "triggerType": "PRICE", "quantity": "0.001", "trade_currency": "INR"},
+            {"symbol": "BTCUSDT", "side": "BUY", "orderType": "MARKET", "triggerType": "MARK_PRICE", "quantity": "0.001", "trade_currency": "INR"},
+            {"symbol": "BTCUSDT", "side": "BUY", "orderType": "MARKET", "triggerType": "LAST_PRICE", "quantity": "0.001", "trade_currency": "INR"},
+            {"symbol": "BTCUSDT", "side": "BUY", "orderType": "MARKET", "triggerType": "INDEX_PRICE", "quantity": "0.001", "trade_currency": "INR"},
+            {"symbol": "BTCUSDT", "side": "BUY", "orderType": "MARKET", "triggerType": "NONE", "quantity": "0.001", "trade_currency": "INR"},
+            {"symbol": "BTCUSDT", "side": "BUY", "orderType": "MARKET", "triggerType": 1, "quantity": "0.001", "trade_currency": "INR"},
+            {"symbol": "BTCUSDT", "side": "BUY", "orderType": "MARKET", "triggerType": 2, "quantity": "0.001", "trade_currency": "INR"}
+        ]
+
+        for i, p in enumerate(candidate_payloads):
+            try:
+                r_probe = requests.post(order_url, headers=headers, json=p, timeout=5)
+                order_probe_results[f"probe_{i}_{list(p.keys())}"] = f"HTTP {r_probe.status_code}: {r_probe.text}"
+                if r_probe.status_code in (200, 201):
+                    results["REAL_ORDERS_PLACED"] += 1
+            except Exception as ex:
+                order_probe_results[f"probe_{i}_ex"] = str(ex)
+
+        results["diagnostics"]["ORDER_PROBES"] = order_probe_results
+
         return JSONResponse(results)
     except Exception as err:
         return JSONResponse({"error": str(err), "traceback": traceback.format_exc()}, status_code=500)
