@@ -211,6 +211,20 @@ async def reset_bitcoin_live_circuit_breaker():
         "message": "Bitcoin Live Engine Emergency Circuit Breaker reset successfully."
     })
 
+@app.post("/api/bitcoin/live/toggle-trading")
+async def toggle_bitcoin_live_trading(payload: dict):
+    """Toggles live trading execution on or off."""
+    enable = payload.get("enable")
+    if enable is not None:
+        BITCOIN_LIVE_ENGINE.set_live_trading_enabled(bool(enable))
+        status_str = "ENABLED (Live Trading Active)" if BITCOIN_LIVE_ENGINE.live_trading_enabled else "DISABLED (Pre-Flight / Read-Only Mode)"
+        return JSONResponse({
+            "status": "SUCCESS",
+            "message": f"Bitcoin Live Trading is now {status_str}.",
+            "live_trading_enabled": BITCOIN_LIVE_ENGINE.live_trading_enabled
+        })
+    return JSONResponse({"status": "ERROR", "message": "No valid enable boolean provided"}, status_code=400)
+
 @app.get("/api/live/state")
 async def get_live_state():
     """Returns real-time JSON state for the separate /live dashboard."""

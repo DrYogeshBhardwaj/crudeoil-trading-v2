@@ -225,11 +225,14 @@
         <!-- 1. BTC PRICE & API STATUS -->
         <div class="card">
             <div class="card-title">
-                <span>BTC Price (Mudrex / Live Feed)</span>
+                <span>BTC Price (Mudrex Live)</span>
                 <span id="api_status" class="badge-status badge-green">CONNECTING...</span>
             </div>
             <div class="card-val" id="btc_price">₹0.00</div>
             <div class="card-sub">Instrument: <strong>BTCUSDT (Mudrex Futures)</strong></div>
+            <div class="card-sub" style="margin-top:4px; font-size:0.75rem; color:#38bdf8;">
+                <span>Live Feed: <strong id="last_refresh_time">Refreshing every 3s...</strong></span>
+            </div>
         </div>
 
         <!-- 2. WALLET BALANCES -->
@@ -302,6 +305,7 @@
                 <input type="number" id="input_daily" class="input-field" value="1000" step="100">
                 <button onclick="updateRiskSettings()" class="btn-action">Save Risk Settings</button>
                 <button onclick="resetCircuitBreaker()" class="btn-action btn-danger">Reset Circuit Breaker</button>
+                <button id="toggle_live_btn" onclick="toggleLiveTrading()" class="btn-action" style="background:#f59e0b; color:#000;">Enable Live Trading</button>
                 <button onclick="runPreflight()" class="btn-action" style="background:#38bdf8;">Run Pre-Flight Audit</button>
             </div>
         </div>
@@ -316,10 +320,15 @@
 </div>
 
 <script>
+    let currentLiveTradingEnabled = false;
+
     async function updateDashboard() {
         try {
             const resp = await fetch('/api/bitcoin/live/state');
             const data = await resp.json();
+
+            const nowStr = new Date().toLocaleTimeString('en-IN');
+            document.getElementById('last_refresh_time').innerText = 'Live (' + nowStr + ')';
 
             document.getElementById('btc_price').innerText = '₹' + Number(data.btc_price || 0).toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2});
             document.getElementById('api_status').innerText = data.mudrex_api_status || 'UNKNOWN';
@@ -338,12 +347,45 @@
             document.getElementById('cb_reason').innerText = data.circuit_breaker_reason || 'No errors';
             document.getElementById('cb_badge').className = 'badge-status ' + (cbStatus === 'NORMAL' ? 'badge-green' : 'badge-red');
 
-            document.getElementById('disp_per_trade').innerText = '₹' + Number(data.per_trade_loss_limit_inr || 2500).toLocaleString('en-IN', {minimumFractionDigits: 2});
-            document.getElementById('disp_daily_limit').innerText = '₹' + Number(data.daily_loss_limit_inr || 3000).toLocaleString('en-IN', {minimumFractionDigits: 2});
+            document.getElementById('disp_per_trade').innerText = '₹' + Number(data.per_trade_loss_limit_inr || 500).toLocaleString('en-IN', {minimumFractionDigits: 2});
+            document.getElementById('disp_daily_limit').innerText = '₹' + Number(data.daily_loss_limit_inr || 1000).toLocaleString('en-IN', {minimumFractionDigits: 2});
             document.getElementById('disp_today_pnl').innerText = '₹' + Number(data.today_realized_pnl || 0).toLocaleString('en-IN', {minimumFractionDigits: 2});
             document.getElementById('disp_unrealized_pnl').innerText = '₹' + Number(data.current_unrealized_pnl || 0).toLocaleString('en-IN', {minimumFractionDigits: 2});
+
+            currentLiveTradingEnabled = !!data.live_trading_enabled;
+            const toggleBtn = document.getElementById('toggle_live_btn');
+            if (currentLiveTradingEnabled) {
+                toggleBtn.innerText = '🛑 DISABLE LIVE TRADING';
+                toggleBtn.style.background = '#ef4444';
+                toggleBtn.style.color = '#fff';
+            } else {
+                toggleBtn.innerText = '🚀 ENABLE LIVE TRADING';
+                toggleBtn.style.background = '#10b981';
+                toggleBtn.style.color = '#000';
+            }
         } catch(e) {
             console.error('Error fetching live state:', e);
+        }
+    }
+
+    async function toggleLiveTrading() {
+        const targetState = !currentLiveTradingEnabled;
+        const msg = targetState ? 
+            "Are you sure you want to ENABLE Live BTC Trading on Mudrex?" : 
+            "Disable Live BTC Trading?";
+        if (!confirm(msg)) return;
+
+        try {
+            const resp = await fetch('/api/bitcoin/live/toggle-trading', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ enable: targetState })
+            });
+            const res = await resp.json();
+            alert(res.message);
+            updateDashboard();
+        } catch(e) {
+            alert('Error toggling live trading: ' + e);
         }
     }
 
@@ -376,7 +418,6 @@
     }
 
     async function runPreflight() {
-        document.getElementById('preflight_output').innerText = 'Running 100% Read-Only Pre-Flight Audit...';
         try {
             const resp = await fetch('/api/bitcoin/live/preflight');
             const data = await resp.json();
@@ -386,7 +427,8 @@
         }
     }
 
-    setInterval(updateDashboard, 4000);
+    setInterval(updateDashboard, 3000);
+    setInterval(runPreflight, 8000);
     updateDashboard();
     runPreflight();
 </script>

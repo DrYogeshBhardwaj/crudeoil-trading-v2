@@ -222,8 +222,12 @@ class BitcoinLiveEngine:
         self.ALLOW_MARTINGALE = False
         self.HARD_STOP_LOSS_REQUIRED = True
 
-        # Trading Enable Safety Lock
-        self.live_trading_enabled = os.environ.get("BITCOIN_LIVE_TRADING_ENABLE", "FALSE").upper() == "TRUE"
+        # Trading Enable Safety Lock (Persisted in DB or fallback to ENV)
+        saved_enable = DB.load_bitcoin_live_setting("live_trading_enabled", None)
+        if saved_enable is not None:
+            self.live_trading_enabled = (saved_enable.upper() == "TRUE")
+        else:
+            self.live_trading_enabled = (os.environ.get("BITCOIN_LIVE_TRADING_ENABLE", "FALSE").upper() == "TRUE")
 
         # Load Persistent Settings from SQLite DB
         self.today_date = datetime.now().strftime("%Y-%m-%d")
@@ -254,6 +258,12 @@ class BitcoinLiveEngine:
         DB.save_bitcoin_live_setting("daily_loss_limit_hit", "TRUE" if self.daily_loss_limit_hit else "FALSE")
         DB.save_bitcoin_live_setting("today_realized_pnl", str(self.today_realized_pnl))
         DB.save_bitcoin_live_setting("today_date", self.today_date)
+        DB.save_bitcoin_live_setting("live_trading_enabled", "TRUE" if self.live_trading_enabled else "FALSE")
+
+    def set_live_trading_enabled(self, enabled: bool):
+        """Enables or disables live trading execution."""
+        self.live_trading_enabled = enabled
+        self.save_settings()
 
     def update_risk_settings(self, per_trade_limit: float, daily_limit: float):
         """Updates configurable loss limits."""
