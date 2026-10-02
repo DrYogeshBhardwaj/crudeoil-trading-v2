@@ -177,7 +177,14 @@ async def serve_bitcoin_live_dashboard():
 @app.get("/api/bitcoin/live/state")
 async def get_bitcoin_live_state():
     """Returns real-time JSON state for the Bitcoin Live Trading Engine."""
-    return JSONResponse(BITCOIN_LIVE_ENGINE.get_dashboard_state())
+    return JSONResponse(
+        content=BITCOIN_LIVE_ENGINE.get_dashboard_state(),
+        headers={
+            "Cache-Control": "no-cache, no-store, must-revalidate",
+            "Pragma": "no-cache",
+            "Expires": "0"
+        }
+    )
 
 @app.get("/api/bitcoin/live/preflight")
 async def run_bitcoin_live_preflight():

@@ -3,6 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
     <title>Bitcoin (BTC-INR) Live Engine — Mudrex API & Risk Protection</title>
     <link rel="stylesheet" href="/static/css/style.css">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;600;700&display=swap" rel="stylesheet">
@@ -18,6 +21,20 @@
             --accent-amber: #f59e0b;
             --text-main: #f8fafc;
             --text-muted: #94a3b8;
+        }
+
+        @keyframes pulse-dot {
+            0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.8); }
+            70% { transform: scale(1.1); box-shadow: 0 0 0 8px rgba(16, 185, 129, 0); }
+            100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
+        }
+        .live-pulse {
+            width: 10px;
+            height: 10px;
+            background-color: #10b981;
+            border-radius: 50%;
+            display: inline-block;
+            animation: pulse-dot 1.5s infinite;
         }
 
         body {
@@ -208,7 +225,13 @@
         <div class="header-title">
             <span class="badge-status badge-amber" style="font-size:0.8rem;">LIVE ENGINE</span>
             <div>
-                <h1>BITCOIN (BTCUSDT) — MUDREX LIVE ENGINE & RISK PROTECTION</h1>
+                <div style="display:flex; align-items:center; gap:12px;">
+                    <h1 style="margin:0;">BITCOIN (BTCUSDT) — MUDREX LIVE ENGINE & RISK PROTECTION</h1>
+                    <div style="display:inline-flex; align-items:center; gap:6px; background:rgba(16, 185, 129, 0.15); border:1px solid #10b981; padding:4px 12px; border-radius:20px; font-size:0.75rem; color:#10b981; font-weight:700;">
+                        <span class="live-pulse"></span>
+                        LIVE REFRESH: <span id="hdr_refresh_time">AUTO 2s</span>
+                    </div>
+                </div>
                 <div style="font-size:0.8rem; color:#cbd5e1; margin-top:2px;">Hard Risk Protection | Official Mudrex REST API Integration</div>
             </div>
         </div>
@@ -391,70 +414,98 @@
 <script>
     let currentLiveTradingEnabled = false;
 
+    function setTxt(id, val) {
+        const el = document.getElementById(id);
+        if (el) el.innerText = val;
+    }
+
+    function setHtml(id, val) {
+        const el = document.getElementById(id);
+        if (el) el.innerHTML = val;
+    }
+
     async function updateDashboard() {
         try {
-            const resp = await fetch('/api/bitcoin/live/state');
+            const resp = await fetch('/api/bitcoin/live/state?t=' + Date.now(), { cache: 'no-store' });
+            if (!resp.ok) return;
             const data = await resp.json();
 
+            currentLiveTradingEnabled = !!data.live_trading_enabled;
+
             const nowStr = new Date().toLocaleTimeString('en-IN');
-            document.getElementById('last_refresh_time').innerText = 'Live (' + nowStr + ')';
+            setTxt('last_refresh_time', 'Live (' + nowStr + ')');
+            setTxt('hdr_refresh_time', 'LIVE (' + nowStr + ')');
 
-            document.getElementById('btc_price').innerText = '₹' + Number(data.btc_price || 0).toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2});
-            document.getElementById('api_status').innerText = data.mudrex_api_status || 'UNKNOWN';
-            document.getElementById('api_status').className = 'badge-status ' + (data.mudrex_api_status === 'AUTHENTICATED' ? 'badge-green' : 'badge-red');
+            setTxt('btc_price', '₹' + Number(data.btc_price || 0).toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2}));
+            
+            const apiStat = document.getElementById('api_status');
+            if (apiStat) {
+                apiStat.innerText = data.mudrex_api_status || 'UNKNOWN';
+                apiStat.className = 'badge-status ' + (data.mudrex_api_status === 'AUTHENTICATED' ? 'badge-green' : 'badge-red');
+            }
 
-            document.getElementById('fut_bal').innerText = '₹' + Number(data.futures_inr_balance || 0).toLocaleString('en-IN', {minimumFractionDigits: 2});
-            document.getElementById('spot_bal').innerText = '₹' + Number(data.spot_inr_balance || 0).toLocaleString('en-IN', {minimumFractionDigits: 2});
+            setTxt('fut_bal', '₹' + Number(data.futures_inr_balance || 0).toLocaleString('en-IN', {minimumFractionDigits: 2}));
+            setTxt('spot_bal', '₹' + Number(data.spot_inr_balance || 0).toLocaleString('en-IN', {minimumFractionDigits: 2}));
 
             const entryStatus = data.new_entries_allowed ? 'ALLOWED' : 'BLOCKED';
-            document.getElementById('entry_status').innerText = entryStatus;
-            document.getElementById('entry_reason').innerText = data.new_entries_reason || '';
-            document.getElementById('entry_badge').className = 'badge-status ' + (data.new_entries_allowed ? 'badge-green' : 'badge-red');
+            setTxt('entry_status', entryStatus);
+            setTxt('entry_reason', data.new_entries_reason || '');
+            const entryBadge = document.getElementById('entry_badge');
+            if (entryBadge) entryBadge.className = 'badge-status ' + (data.new_entries_allowed ? 'badge-green' : 'badge-red');
 
             const cbStatus = data.circuit_breaker || 'NORMAL';
-            document.getElementById('cb_status').innerText = cbStatus;
-            document.getElementById('cb_reason').innerText = data.circuit_breaker_reason || 'No errors';
-            document.getElementById('cb_badge').className = 'badge-status ' + (cbStatus === 'NORMAL' ? 'badge-green' : 'badge-red');
+            setTxt('cb_status', cbStatus);
+            setTxt('cb_reason', data.circuit_breaker_reason || 'No errors');
+            const cbBadge = document.getElementById('cb_badge');
+            if (cbBadge) cbBadge.className = 'badge-status ' + (cbStatus === 'NORMAL' ? 'badge-green' : 'badge-red');
 
-            document.getElementById('disp_per_trade').innerText = '₹' + Number(data.per_trade_loss_limit_inr || 500).toLocaleString('en-IN', {minimumFractionDigits: 2});
-            document.getElementById('disp_daily_limit').innerText = '₹' + Number(data.daily_loss_limit_inr || 1000).toLocaleString('en-IN', {minimumFractionDigits: 2});
-            document.getElementById('disp_today_pnl').innerText = '₹' + Number(data.today_realized_pnl || 0).toLocaleString('en-IN', {minimumFractionDigits: 2});
-            document.getElementById('disp_unrealized_pnl').innerText = '₹' + Number(data.current_unrealized_pnl || 0).toLocaleString('en-IN', {minimumFractionDigits: 2});
+            setTxt('disp_per_trade', '₹' + Number(data.per_trade_loss_limit_inr || 500).toLocaleString('en-IN', {minimumFractionDigits: 2}));
+            setTxt('disp_daily_limit', '₹' + Number(data.daily_loss_limit_inr || 1000).toLocaleString('en-IN', {minimumFractionDigits: 2}));
+            setTxt('disp_today_pnl', '₹' + Number(data.today_realized_pnl || 0).toLocaleString('en-IN', {minimumFractionDigits: 2}));
+            setTxt('disp_unrealized_pnl', '₹' + Number(data.current_unrealized_pnl || 0).toLocaleString('en-IN', {minimumFractionDigits: 2}));
 
             const mb = document.getElementById('master_status_badge');
-            if (data.live_trading_enabled) {
-                mb.innerText = '⚡ AUTOMATED LIVE TRADING ACTIVE';
-                mb.className = 'badge-status badge-green';
-            } else {
-                mb.innerText = '⏸️ TRADING PAUSED';
-                mb.className = 'badge-status badge-amber';
+            if (mb) {
+                if (data.live_trading_enabled) {
+                    mb.innerText = '⚡ AUTOMATED LIVE TRADING ACTIVE';
+                    mb.className = 'badge-status badge-green';
+                } else {
+                    mb.innerText = '⏸️ TRADING PAUSED';
+                    mb.className = 'badge-status badge-amber';
+                }
             }
 
             // Render Active Open Position Display Card
             const posCard = document.getElementById('active_pos_card');
-            if (data.active_position) {
-                const pos = data.active_position;
-                posCard.style.display = 'block';
+            if (posCard) {
+                if (data.active_position) {
+                    const pos = data.active_position;
+                    posCard.style.display = 'block';
 
-                const dir = (pos.direction || 'BUY').toUpperCase();
-                const dirBadge = document.getElementById('pos_dir_badge');
-                dirBadge.innerText = dir === 'BUY' ? '🟢 BUY LONG' : '🔴 SELL SHORT';
-                dirBadge.className = 'badge-status ' + (dir === 'BUY' ? 'badge-green' : 'badge-red');
+                    const dir = (pos.direction || 'BUY').toUpperCase();
+                    const dirBadge = document.getElementById('pos_dir_badge');
+                    if (dirBadge) {
+                        dirBadge.innerText = dir === 'BUY' ? '🟢 BUY LONG' : '🔴 SELL SHORT';
+                        dirBadge.className = 'badge-status ' + (dir === 'BUY' ? 'badge-green' : 'badge-red');
+                    }
 
-                document.getElementById('pos_title').innerText = `BTCUSDT (${pos.quantity || 0.001} BTC Lot)`;
-                document.getElementById('pos_id_text').innerText = pos.trade_id || pos.mudrex_position_id || '-';
-                document.getElementById('pos_time_text').innerText = pos.entry_timestamp || '-';
+                    setTxt('pos_title', `BTCUSDT (${pos.quantity || 0.001} BTC Lot)`);
+                    setTxt('pos_id_text', pos.trade_id || pos.mudrex_position_id || '-');
+                    setTxt('pos_time_text', pos.entry_timestamp || '-');
 
-                const unPnL = Number(data.current_unrealized_pnl || 0);
-                const pnlEl = document.getElementById('pos_live_pnl');
-                pnlEl.innerText = (unPnL >= 0 ? '₹+' : '₹') + unPnL.toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2});
-                pnlEl.style.color = unPnL >= 0 ? '#10b981' : '#ef4444';
+                    const unPnL = Number(data.current_unrealized_pnl || 0);
+                    const pnlEl = document.getElementById('pos_live_pnl');
+                    if (pnlEl) {
+                        pnlEl.innerText = (unPnL >= 0 ? '₹+' : '₹') + unPnL.toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+                        pnlEl.style.color = unPnL >= 0 ? '#10b981' : '#ef4444';
+                    }
 
-                document.getElementById('pos_entry_price').innerText = '₹' + Number(pos.entry_price || 0).toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2});
-                document.getElementById('pos_stop_loss').innerText = '₹' + Number(pos.stop_loss || 0).toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2});
-                document.getElementById('pos_target_price').innerText = '₹' + Number(pos.target || 0).toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2});
-            } else {
-                posCard.style.display = 'none';
+                    setTxt('pos_entry_price', '₹' + Number(pos.entry_price || 0).toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2}));
+                    setTxt('pos_stop_loss', '₹' + Number(pos.stop_loss || 0).toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2}));
+                    setTxt('pos_target_price', '₹' + Number(pos.target || 0).toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2}));
+                } else {
+                    posCard.style.display = 'none';
+                }
             }
 
             // Render Evaluation Stream Logs
@@ -474,7 +525,7 @@
                         <td style="padding: 8px 10px; color:#cbd5e1;">${ev.reason || ''}</td>
                     </tr>`;
                 });
-                document.getElementById('eval_stream_tbody').innerHTML = html;
+                setHtml('eval_stream_tbody', html);
             }
         } catch(e) {
             console.error('Error fetching live state:', e);
@@ -546,23 +597,6 @@
         }
     }
 
-    async function updateRiskSettings() {
-        const perTrade = document.getElementById('input_per_trade').value;
-        const daily = document.getElementById('input_daily').value;
-        try {
-            const resp = await fetch('/api/bitcoin/live/risk-settings', {
-                method: 'POST',
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({ per_trade_loss_limit_inr: parseFloat(perTrade), daily_loss_limit_inr: parseFloat(daily) })
-            });
-            const res = await resp.json();
-            alert(res.message);
-            updateDashboard();
-        } catch(e) {
-            alert('Error updating risk settings: ' + e);
-        }
-    }
-
     async function resetCircuitBreaker() {
         try {
             const resp = await fetch('/api/bitcoin/live/reset-circuit-breaker', { method: 'POST' });
@@ -585,7 +619,8 @@
         }
     }
 
-    setInterval(updateDashboard, 3000);
+    // Auto-refresh every 2 seconds without fail
+    setInterval(updateDashboard, 2000);
     updateDashboard();
 </script>
 </body>
