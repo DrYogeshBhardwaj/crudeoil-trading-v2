@@ -271,30 +271,35 @@ class MudrexLiveAdapter:
             f"{self.BASE_URL}/futures/trade"
         ]
 
-        payload = {
-            "symbol": symbol,
-            "side": side.upper(),
-            "order_type": order_type.upper(),
-            "quantity": str(quantity),
-            "trade_currency": "INR"
-        }
-        if price:
-            payload["price"] = str(price)
-        if stoploss_price:
-            payload["stoploss_price"] = str(stoploss_price)
-
+        trigger_types = ["MARK_PRICE", "LAST_PRICE", "INDEX_PRICE", "PRICE"]
         errors = []
-        for url in candidate_urls:
-            try:
-                resp = requests.post(url, headers=headers, json=payload, timeout=8)
-                if resp.status_code in (200, 201):
-                    data = resp.json()
-                    print(f"[{datetime.now()}] [MUDREX ORDER SUCCESS] Endpoint {url} succeeded! Data: {data}")
-                    return {"success": True, "data": data, "endpoint": url}
-                else:
-                    errors.append(f"[{resp.status_code}] {resp.text[:120]}")
-            except Exception as ex:
-                errors.append(f"Ex: {ex}")
+
+        for url in candidate_urls[:4]:
+            for tt in trigger_types:
+                payload = {
+                    "symbol": symbol,
+                    "side": side.upper(),
+                    "order_type": order_type.upper(),
+                    "quantity": str(quantity),
+                    "trade_currency": "INR",
+                    "trigger_type": tt,
+                    "triggerType": tt
+                }
+                if price:
+                    payload["price"] = str(price)
+                if stoploss_price:
+                    payload["stoploss_price"] = str(stoploss_price)
+
+                try:
+                    resp = requests.post(url, headers=headers, json=payload, timeout=8)
+                    if resp.status_code in (200, 201):
+                        data = resp.json()
+                        print(f"[{datetime.now()}] [MUDREX ORDER SUCCESS] Endpoint {url} with triggerType={tt} succeeded! Data: {data}")
+                        return {"success": True, "data": data, "endpoint": url}
+                    else:
+                        errors.append(f"[{resp.status_code}] {resp.text[:120]}")
+                except Exception as ex:
+                    errors.append(f"Ex: {ex}")
 
         return {"success": False, "error": " | ".join(errors[:3])}
 
