@@ -430,185 +430,184 @@ async def test_pi42_credentials(payload: dict = {}):
                         return v
             return ""
 
-    api_key = get_valid_val([
-        payload.get("api_key"),
-        os.environ.get("PI42_API_KEY"),
-        os.environ.get("PI42_KEY"),
-        os.environ.get("BITCOIN_API_KEY"),
-        os.environ.get("PI42_APIKEY")
-    ])
+        api_key = get_valid_val([
+            payload.get("api_key"),
+            os.environ.get("PI42_API_KEY"),
+            os.environ.get("PI42_KEY"),
+            os.environ.get("BITCOIN_API_KEY"),
+            os.environ.get("PI42_APIKEY")
+        ])
 
-    api_secret = get_valid_val([
-        payload.get("api_secret"),
-        os.environ.get("PI42_API_SECRET"),
-        os.environ.get("PI42_SECRET"),
-        os.environ.get("BITCOIN_API_SECRET"),
-        os.environ.get("PI42_APISECRET")
-    ])
+        api_secret = get_valid_val([
+            payload.get("api_secret"),
+            os.environ.get("PI42_API_SECRET"),
+            os.environ.get("PI42_SECRET"),
+            os.environ.get("BITCOIN_API_SECRET"),
+            os.environ.get("PI42_APISECRET")
+        ])
 
+        base_urls = ["https://fapi.pi42.com", "https://api.pi42.com"]
+        start_t = time.time()
 
-    base_urls = ["https://fapi.pi42.com", "https://api.pi42.com"]
-    start_t = time.time()
+        ua_headers = {
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
+            "Accept": "application/json, text/plain, */*",
+            "Content-Type": "application/json"
+        }
 
-    ua_headers = {
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
-        "Accept": "application/json, text/plain, */*",
-        "Content-Type": "application/json"
-    }
+        results = {
+            "PI42_API_KEY_present": "YES" if bool(api_key) else "NO",
+            "PI42_API_SECRET_present": "YES" if bool(api_secret) else "NO",
+            "AUTH": "FAIL",
+            "INR_BALANCE": "UNKNOWN",
+            "BTC_PRICE": "UNKNOWN",
+            "MARKET_DATA_5M": "FAIL",
+            "OPEN_POSITION": "NONE",
+            "STABILITY_10_CALLS": "FAIL",
+            "REAL_ORDERS": 0,
+            "latency_ms": 0,
+            "diagnostics": {}
+        }
 
-    results = {
-        "PI42_API_KEY_present": "YES" if bool(api_key) else "NO",
-        "PI42_API_SECRET_present": "YES" if bool(api_secret) else "NO",
-        "AUTH": "FAIL",
-        "INR_BALANCE": "UNKNOWN",
-        "BTC_PRICE": "UNKNOWN",
-        "MARKET_DATA_5M": "FAIL",
-        "OPEN_POSITION": "NONE",
-        "STABILITY_10_CALLS": "FAIL",
-        "REAL_ORDERS": 0,
-        "latency_ms": 0,
-        "diagnostics": {}
-    }
+        # 1. Fetch Market Data & BTC Price (Public)
+        market_test_urls = [
+            ("GET", f"https://fapi.pi42.com/v1/market/klines?symbol=BTCINR&interval=5m"),
+            ("GET", f"https://api.pi42.com/v1/market/ticker24Hr/BTCINR"),
+            ("GET", f"https://api.pi42.com/v1/market/ticker24Hr"),
+            ("POST", f"https://fapi.pi42.com/v1/market/klines", {"symbol": "BTCINR", "interval": "5m"}),
+            ("POST", f"https://api.pi42.com/v1/market/klines", {"pair": "BTCINR", "interval": "5m"})
+        ]
 
-    # 1. Fetch Market Data & BTC Price (Public)
-    market_test_urls = [
-        ("GET", f"https://fapi.pi42.com/v1/market/klines?symbol=BTCINR&interval=5m"),
-        ("GET", f"https://api.pi42.com/v1/market/ticker24Hr/BTCINR"),
-        ("GET", f"https://api.pi42.com/v1/market/ticker24Hr"),
-        ("POST", f"https://fapi.pi42.com/v1/market/klines", {"symbol": "BTCINR", "interval": "5m"}),
-        ("POST", f"https://api.pi42.com/v1/market/klines", {"pair": "BTCINR", "interval": "5m"})
-    ]
-
-    for m_item in market_test_urls:
-        method = m_item[0]
-        m_url = m_item[1]
-        m_body = m_item[2] if len(m_item) > 2 else None
-        try:
-            if method == "GET":
-                r_m = requests.get(m_url, headers=ua_headers, timeout=5)
-            else:
-                r_m = requests.post(m_url, json=m_body, headers=ua_headers, timeout=5)
-            
-            results["diagnostics"][m_url] = f"Status {r_m.status_code}: {r_m.text[:150]}"
-            if r_m.status_code == 200:
-                results["MARKET_DATA_5M"] = "PASS"
-                data_json = r_m.json()
-                data_inner = data_json.get("data") if isinstance(data_json, dict) else data_json
+        for m_item in market_test_urls:
+            method = m_item[0]
+            m_url = m_item[1]
+            m_body = m_item[2] if len(m_item) > 2 else None
+            try:
+                if method == "GET":
+                    r_m = requests.get(m_url, headers=ua_headers, timeout=5)
+                else:
+                    r_m = requests.post(m_url, json=m_body, headers=ua_headers, timeout=5)
                 
-                if isinstance(data_inner, dict):
-                    price_found = data_inner.get("c") or data_inner.get("lastPrice") or data_inner.get("price") or data_inner.get("close")
-                    if price_found:
-                        results["BTC_PRICE"] = f"₹{float(price_found):,.2f}"
-                elif isinstance(data_inner, list) and data_inner:
-                    last_obj = data_inner[-1]
-                    price_found = last_obj.get("c") or last_obj.get("close") or last_obj.get("lastPrice")
-                    if price_found:
-                        results["BTC_PRICE"] = f"₹{float(price_found):,.2f}"
-                break
-        except Exception as e:
-            results["diagnostics"][m_url] = f"Error: {e}"
-
-    # 2. Authenticated Endpoints Check (Wallet, Balance, Positions)
-    ts_ms = str(int(time.time() * 1000))
-    query_str = f"timestamp={ts_ms}"
-    sig_query = hmac.new(api_secret.encode('utf-8'), query_str.encode('utf-8'), hashlib.sha256).hexdigest() if api_secret else ""
-    sig_raw_ts = hmac.new(api_secret.encode('utf-8'), ts_ms.encode('utf-8'), hashlib.sha256).hexdigest() if api_secret else ""
-    json_body_str = json.dumps({"timestamp": int(ts_ms)})
-    sig_json_body = hmac.new(api_secret.encode('utf-8'), json_body_str.encode('utf-8'), hashlib.sha256).hexdigest() if api_secret else ""
-
-    auth_combinations = [
-        # (tag, headers_dict, query_or_body, method)
-        ("api-key_sig_query", {"api-key": api_key, "signature": sig_query, "timestamp": ts_ms, **ua_headers}, f"?{query_str}", "GET", None),
-        ("x-api-key_x-sig_query", {"x-api-key": api_key, "x-signature": sig_query, "x-timestamp": ts_ms, **ua_headers}, f"?{query_str}", "GET", None),
-        ("X-API-KEY_X-SIG_query", {"X-API-KEY": api_key, "X-SIGNATURE": sig_query, "X-TIMESTAMP": ts_ms, **ua_headers}, f"?{query_str}", "GET", None),
-        ("api-key_sig_raw_ts", {"api-key": api_key, "signature": sig_raw_ts, "timestamp": ts_ms, **ua_headers}, f"?{query_str}", "GET", None),
-        ("api-key_sig_query_no_qparam", {"api-key": api_key, "signature": sig_query, "timestamp": ts_ms, **ua_headers}, "", "GET", None),
-        ("api-key_sig_post_body", {"api-key": api_key, "signature": sig_json_body, "timestamp": ts_ms, **ua_headers}, "", "POST", {"timestamp": int(ts_ms)}),
-        ("x-api-key_sig_post_body", {"x-api-key": api_key, "signature": sig_json_body, "timestamp": ts_ms, **ua_headers}, "", "POST", {"timestamp": int(ts_ms)}),
-        ("api_key_under_sig_query", {"api_key": api_key, "signature": sig_query, "timestamp": ts_ms, **ua_headers}, f"?{query_str}", "GET", None),
-    ]
-
-    wallet_eps = [
-        "/v1/wallet/futures-wallet/details",
-        "/v1/wallet/funding-wallet/details",
-        "/v1/positions"
-    ]
-    auth_success_header = None
-    target_b_url = base_urls[0]
-
-    for b_url in base_urls:
-        for tag, headers, q_suffix, method, b_data in auth_combinations:
-            for ep in wallet_eps:
-                try:
-                    full_auth_url = f"{b_url}{ep}{q_suffix}"
-                    if method == "GET":
-                        r_w = requests.get(full_auth_url, headers=headers, timeout=5)
-                    else:
-                        r_w = requests.post(full_auth_url, json=b_data, headers=headers, timeout=5)
+                results["diagnostics"][m_url] = f"Status {r_m.status_code}: {r_m.text[:150]}"
+                if r_m.status_code == 200:
+                    results["MARKET_DATA_5M"] = "PASS"
+                    data_json = r_m.json()
+                    data_inner = data_json.get("data") if isinstance(data_json, dict) else data_json
                     
-                    diag_key = f"AUTH_{tag}_{ep}"
-                    results["diagnostics"][diag_key] = f"Status {r_w.status_code}: {r_w.text[:150]}"
-                    if r_w.status_code in (200, 201):
-                        results["AUTH"] = "PASS"
-                        auth_success_header = (headers, q_suffix, method)
-                        target_b_url = b_url
-                        w_json = r_w.json()
-                        w_inner = w_json.get("data") if isinstance(w_json, dict) else w_json
-                        bal = "100000.00"
-                        if isinstance(w_inner, dict):
-                            bal = w_inner.get("balance") or w_inner.get("walletBalance") or w_inner.get("availableBalance") or w_inner.get("inrBalance") or bal
-                        results["INR_BALANCE"] = f"₹{float(bal):,.2f}"
-                        break
-                except Exception as e:
-                    results["diagnostics"][f"AUTH_{tag}_{ep}"] = f"Exception: {e}"
+                    if isinstance(data_inner, dict):
+                        price_found = data_inner.get("c") or data_inner.get("lastPrice") or data_inner.get("price") or data_inner.get("close")
+                        if price_found:
+                            results["BTC_PRICE"] = f"₹{float(price_found):,.2f}"
+                    elif isinstance(data_inner, list) and data_inner:
+                        last_obj = data_inner[-1]
+                        price_found = last_obj.get("c") or last_obj.get("close") or last_obj.get("lastPrice")
+                        if price_found:
+                            results["BTC_PRICE"] = f"₹{float(price_found):,.2f}"
+                    break
+            except Exception as e:
+                results["diagnostics"][m_url] = f"Error: {e}"
+
+        # 2. Authenticated Endpoints Check (Wallet, Balance, Positions)
+        ts_ms = str(int(time.time() * 1000))
+        query_str = f"timestamp={ts_ms}"
+        sig_query = hmac.new(api_secret.encode('utf-8'), query_str.encode('utf-8'), hashlib.sha256).hexdigest() if api_secret else ""
+        sig_raw_ts = hmac.new(api_secret.encode('utf-8'), ts_ms.encode('utf-8'), hashlib.sha256).hexdigest() if api_secret else ""
+        json_body_str = json.dumps({"timestamp": int(ts_ms)})
+        sig_json_body = hmac.new(api_secret.encode('utf-8'), json_body_str.encode('utf-8'), hashlib.sha256).hexdigest() if api_secret else ""
+
+        auth_combinations = [
+            # (tag, headers_dict, query_or_body, method)
+            ("api-key_sig_query", {"api-key": api_key, "signature": sig_query, "timestamp": ts_ms, **ua_headers}, f"?{query_str}", "GET", None),
+            ("x-api-key_x-sig_query", {"x-api-key": api_key, "x-signature": sig_query, "x-timestamp": ts_ms, **ua_headers}, f"?{query_str}", "GET", None),
+            ("X-API-KEY_X-SIG_query", {"X-API-KEY": api_key, "X-SIGNATURE": sig_query, "X-TIMESTAMP": ts_ms, **ua_headers}, f"?{query_str}", "GET", None),
+            ("api-key_sig_raw_ts", {"api-key": api_key, "signature": sig_raw_ts, "timestamp": ts_ms, **ua_headers}, f"?{query_str}", "GET", None),
+            ("api-key_sig_query_no_qparam", {"api-key": api_key, "signature": sig_query, "timestamp": ts_ms, **ua_headers}, "", "GET", None),
+            ("api-key_sig_post_body", {"api-key": api_key, "signature": sig_json_body, "timestamp": ts_ms, **ua_headers}, "", "POST", {"timestamp": int(ts_ms)}),
+            ("x-api-key_sig_post_body", {"x-api-key": api_key, "signature": sig_json_body, "timestamp": ts_ms, **ua_headers}, "", "POST", {"timestamp": int(ts_ms)}),
+            ("api_key_under_sig_query", {"api_key": api_key, "signature": sig_query, "timestamp": ts_ms, **ua_headers}, f"?{query_str}", "GET", None),
+        ]
+
+        wallet_eps = [
+            "/v1/wallet/futures-wallet/details",
+            "/v1/wallet/funding-wallet/details",
+            "/v1/positions"
+        ]
+        auth_success_header = None
+        target_b_url = base_urls[0]
+
+        for b_url in base_urls:
+            for tag, headers, q_suffix, method, b_data in auth_combinations:
+                for ep in wallet_eps:
+                    try:
+                        full_auth_url = f"{b_url}{ep}{q_suffix}"
+                        if method == "GET":
+                            r_w = requests.get(full_auth_url, headers=headers, timeout=5)
+                        else:
+                            r_w = requests.post(full_auth_url, json=b_data, headers=headers, timeout=5)
+                        
+                        diag_key = f"AUTH_{tag}_{ep}"
+                        results["diagnostics"][diag_key] = f"Status {r_w.status_code}: {r_w.text[:150]}"
+                        if r_w.status_code in (200, 201):
+                            results["AUTH"] = "PASS"
+                            auth_success_header = (headers, q_suffix, method)
+                            target_b_url = b_url
+                            w_json = r_w.json()
+                            w_inner = w_json.get("data") if isinstance(w_json, dict) else w_json
+                            bal = "100000.00"
+                            if isinstance(w_inner, dict):
+                                bal = w_inner.get("balance") or w_inner.get("walletBalance") or w_inner.get("availableBalance") or w_inner.get("inrBalance") or bal
+                            results["INR_BALANCE"] = f"₹{float(bal):,.2f}"
+                            break
+                    except Exception as e:
+                        results["diagnostics"][f"AUTH_{tag}_{ep}"] = f"Exception: {e}"
+                if auth_success_header:
+                    break
             if auth_success_header:
                 break
-        if auth_success_header:
-            break
 
-    # 3. Position Check
-    if auth_success_header:
-        try:
-            h_pos, q_pos, m_pos = auth_success_header
-            r_pos = requests.get(f"{target_b_url}/v1/positions{q_pos}", headers=h_pos, timeout=5)
-            if r_pos.status_code in (200, 201):
-                p_data = r_pos.json()
-                if isinstance(p_data, list) and len(p_data) > 0:
-                    results["OPEN_POSITION"] = str(p_data)
+        # 3. Position Check
+        if auth_success_header:
+            try:
+                h_pos, q_pos, m_pos = auth_success_header
+                r_pos = requests.get(f"{target_b_url}/v1/positions{q_pos}", headers=h_pos, timeout=5)
+                if r_pos.status_code in (200, 201):
+                    p_data = r_pos.json()
+                    if isinstance(p_data, list) and len(p_data) > 0:
+                        results["OPEN_POSITION"] = str(p_data)
+                    else:
+                        results["OPEN_POSITION"] = "NONE"
                 else:
                     results["OPEN_POSITION"] = "NONE"
-            else:
+            except Exception:
                 results["OPEN_POSITION"] = "NONE"
-        except Exception:
-            results["OPEN_POSITION"] = "NONE"
 
-    # 4. 10-Call Stability Test Loop
-    successful_calls = 0
-    test_header_tuple = auth_success_header or (auth_combinations[0][1], f"?{query_str}", "GET")
-    test_header, test_q_suffix, test_method = test_header_tuple
-    latencies = []
+        # 4. 10-Call Stability Test Loop
+        successful_calls = 0
+        test_header_tuple = auth_success_header or (auth_combinations[0][1], f"?{query_str}", "GET")
+        test_header, test_q_suffix, test_method = test_header_tuple
+        latencies = []
 
-    for i in range(10):
-        try:
-            t0 = time.time()
-            ts_loop = str(int(time.time() * 1000))
-            q_loop = f"timestamp={ts_loop}"
-            sig_loop = hmac.new(api_secret.encode('utf-8'), q_loop.encode('utf-8'), hashlib.sha256).hexdigest() if api_secret else ""
-            h_loop = {**test_header, "signature": sig_loop, "timestamp": ts_loop}
-            
-            r_stab = requests.get(f"{target_b_url}/v1/wallet/futures-wallet/details?{q_loop}", headers=h_loop, timeout=5)
-            lat_ms = int((time.time() - t0) * 1000)
-            latencies.append(lat_ms)
+        for i in range(10):
+            try:
+                t0 = time.time()
+                ts_loop = str(int(time.time() * 1000))
+                q_loop = f"timestamp={ts_loop}"
+                sig_loop = hmac.new(api_secret.encode('utf-8'), q_loop.encode('utf-8'), hashlib.sha256).hexdigest() if api_secret else ""
+                h_loop = {**test_header, "signature": sig_loop, "timestamp": ts_loop}
+                
+                r_stab = requests.get(f"{target_b_url}/v1/wallet/futures-wallet/details?{q_loop}", headers=h_loop, timeout=5)
+                lat_ms = int((time.time() - t0) * 1000)
+                latencies.append(lat_ms)
 
-            if r_stab.status_code in (200, 201, 401, 403):
-                # 401/403 or 200 without network crash/timeout counts as stable HTTP connection
-                successful_calls += 1
-        except Exception:
-            pass
-        time.sleep(0.1)
+                if r_stab.status_code in (200, 201, 401, 403):
+                    # 401/403 or 200 without network crash/timeout counts as stable HTTP connection
+                    successful_calls += 1
+            except Exception:
+                pass
+            time.sleep(0.1)
 
-    results["STABILITY_10_CALLS"] = "PASS" if successful_calls >= 8 else "FAIL"
-    return JSONResponse(results)
+        results["STABILITY_10_CALLS"] = "PASS" if successful_calls >= 8 else "FAIL"
+        return JSONResponse(results)
     except Exception as err:
         return JSONResponse({
             "error": str(err),
