@@ -562,40 +562,38 @@ class BitcoinLiveEngine:
             if len(self.evaluation_stream) > 100:
                 self.evaluation_stream = self.evaluation_stream[:100]
 
-            # Check open position state on Mudrex
+            # Check open position state
             active_pos = DB.load_active_bitcoin_live_position()
             
             if active_pos and active_pos.get("status") == "OPEN":
-                # Verify active position on Mudrex API
-                mudrex_positions = self.adapter.fetch_open_positions()
-                matching_pos = None
-                if isinstance(mudrex_positions, list):
-                    for p in mudrex_positions:
-                        if p.get("symbol") == "BTCUSDT" or str(p.get("id")) == str(active_pos.get("mudrex_position_id")):
-                            matching_pos = p
-                            break
-                
-                # If position closed on Mudrex, update DB record
-                if not matching_pos and active_pos.get("mudrex_position_id"):
+                entry_p = float(active_pos["entry_price"])
+                qty = float(active_pos["quantity"])
+                direction = active_pos["direction"]
+                sl_p = float(active_pos.get("stop_loss") or (entry_p - 30000.0 if direction == "BUY" else entry_p + 30000.0))
+                tp_p = float(active_pos.get("target") or (entry_p + 60000.0 if direction == "BUY" else entry_p - 60000.0))
+
+                # Check if Stop Loss or Take Profit hit
+                sl_hit = (curr_price <= sl_p) if direction == "BUY" else (curr_price >= sl_p)
+                tp_hit = (curr_price >= tp_p) if direction == "BUY" else (curr_price <= tp_p)
+
+                if sl_hit or tp_hit:
+                    exit_reason = "STOP_LOSS_EXECUTED" if sl_hit else "TARGET_PROFIT_REACHED"
                     now_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-                    entry_p = float(active_pos["entry_price"])
-                    qty = float(active_pos["quantity"])
-                    direction = active_pos["direction"]
                     gross_pnl = (curr_price - entry_p) * qty if direction == "BUY" else (entry_p - curr_price) * qty
-                    net_pnl = gross_pnl - 100.0 # estimated charges
+                    net_pnl = gross_pnl - 50.0 # estimated charges
 
                     active_pos["status"] = "CLOSED"
                     active_pos["exit_timestamp"] = now_str
                     active_pos["exit_price"] = curr_price
-                    active_pos["exit_reason"] = "SL_TP_EXECUTED_ON_MUDREX"
+                    active_pos["exit_reason"] = exit_reason
                     active_pos["gross_pnl"] = round(gross_pnl, 2)
-                    active_pos["charges"] = 100.0
+                    active_pos["charges"] = 50.0
                     active_pos["net_pnl"] = round(net_pnl, 2)
 
                     DB.save_bitcoin_live_trade(active_pos)
                     self.today_realized_pnl += net_pnl
                     self.save_settings()
-                    print(f"[{datetime.now()}] [BITCOIN LIVE ENGINE] Active position closed on Mudrex! P&L: ₹{net_pnl:,.2f}")
+                    print(f"[{datetime.now()}] [BITCOIN LIVE ENGINE] Active position {active_pos['trade_id']} CLOSED ({exit_reason})! P&L: ₹{net_pnl:,.2f}")
                 return
 
             # If no open position, check entry permission and signal
