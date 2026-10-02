@@ -358,57 +358,60 @@ async def db_diagnostic():
 @app.get("/api/debug/outbound-ip")
 async def get_outbound_ip():
     """Returns current public outbound IP address of the production server (static IP verification)."""
-    import requests
-    outbound_ip = "UNKNOWN"
-    ipify_ip = "UNKNOWN"
     try:
-        r = requests.get("https://api.ipify.org?format=json", timeout=5)
-        if r.status_code == 200:
-            ipify_ip = r.json().get("ip", "UNKNOWN")
-    except Exception as e:
-        ipify_ip = f"ERROR ({e})"
-    
-    try:
-        r2 = requests.get("https://ifconfig.me/ip", timeout=5)
-        if r2.status_code == 200:
-            outbound_ip = r2.text.strip()
-    except Exception as e:
-        outbound_ip = f"ERROR ({e})"
+        import requests
+        outbound_ip = "UNKNOWN"
+        ipify_ip = "UNKNOWN"
+        try:
+            r = requests.get("https://api.ipify.org?format=json", timeout=5)
+            if r.status_code == 200:
+                ipify_ip = r.json().get("ip", "UNKNOWN")
+        except Exception as e:
+            ipify_ip = f"ERROR ({e})"
+        
+        try:
+            r2 = requests.get("https://ifconfig.me/ip", timeout=5)
+            if r2.status_code == 200:
+                outbound_ip = r2.text.strip()
+        except Exception as e:
+            outbound_ip = f"ERROR ({e})"
 
-    def is_valid_cred(val: Optional[str]) -> bool:
-        if not val:
-            return False
-        v = val.strip()
-        if not v or v.startswith("${{") or "VALUE or" in v or "REF" in v:
-            return False
-        return True
+        def is_valid_cred(val: Optional[str]) -> bool:
+            if not val:
+                return False
+            v = str(val).strip()
+            if not v or v.startswith("${{") or "VALUE or" in v or "REF" in v:
+                return False
+            return True
 
-    key_candidates = [
-        os.environ.get("PI42_API_KEY"),
-        os.environ.get("PI42_KEY"),
-        os.environ.get("BITCOIN_API_KEY"),
-        os.environ.get("PI42_APIKEY")
-    ]
-    secret_candidates = [
-        os.environ.get("PI42_API_SECRET"),
-        os.environ.get("PI42_SECRET"),
-        os.environ.get("BITCOIN_API_SECRET"),
-        os.environ.get("PI42_APISECRET")
-    ]
+        key_candidates = [
+            os.environ.get("PI42_API_KEY"),
+            os.environ.get("PI42_KEY"),
+            os.environ.get("BITCOIN_API_KEY"),
+            os.environ.get("PI42_APIKEY")
+        ]
+        secret_candidates = [
+            os.environ.get("PI42_API_SECRET"),
+            os.environ.get("PI42_SECRET"),
+            os.environ.get("BITCOIN_API_SECRET"),
+            os.environ.get("PI42_APISECRET")
+        ]
 
-    has_key = any(is_valid_cred(k) for k in key_candidates)
-    has_secret = any(is_valid_cred(s) for s in secret_candidates)
+        has_key = any(is_valid_cred(k) for k in key_candidates)
+        has_secret = any(is_valid_cred(s) for s in secret_candidates)
 
-    return JSONResponse({
-        "timestamp_ist": datetime.now().strftime("%Y-%m-%d %H:%M:%S IST"),
-        "outbound_ip_ifconfig": outbound_ip,
-        "outbound_ip_ipify": ipify_ip,
-        "railway_environment": os.environ.get("RAILWAY_ENVIRONMENT", "production"),
-        "railway_service_id": os.environ.get("RAILWAY_SERVICE_ID", "UNKNOWN"),
-        "railway_deployment_id": os.environ.get("RAILWAY_DEPLOYMENT_ID", "UNKNOWN"),
-        "pi42_api_key_detected": has_key,
-        "pi42_api_secret_detected": has_secret
-    })
+        return JSONResponse({
+            "timestamp_ist": datetime.now().strftime("%Y-%m-%d %H:%M:%S IST"),
+            "outbound_ip_ifconfig": outbound_ip,
+            "outbound_ip_ipify": ipify_ip,
+            "railway_environment": os.environ.get("RAILWAY_ENVIRONMENT", "production"),
+            "railway_service_id": os.environ.get("RAILWAY_SERVICE_ID", "UNKNOWN"),
+            "railway_deployment_id": os.environ.get("RAILWAY_DEPLOYMENT_ID", "UNKNOWN"),
+            "pi42_api_key_detected": has_key,
+            "pi42_api_secret_detected": has_secret
+        })
+    except Exception as err:
+        return JSONResponse({"error": str(err)}, status_code=500)
 
 @app.post("/api/debug/test-pi42")
 async def test_pi42_credentials(payload: dict):
