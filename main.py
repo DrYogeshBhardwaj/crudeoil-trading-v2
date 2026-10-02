@@ -599,15 +599,6 @@ async def test_pi42_credentials(payload: dict = {}):
             except Exception:
                 pass
             time.sleep(0.1)
-                lat_ms = int((time.time() - t0) * 1000)
-                latencies.append(lat_ms)
-
-                if r_stab.status_code in (200, 201, 401, 403):
-                    # 401/403 or 200 without network crash/timeout counts as stable HTTP connection
-                    successful_calls += 1
-            except Exception:
-                pass
-            time.sleep(0.1)
 
         results["STABILITY_10_CALLS"] = "PASS" if successful_calls >= 8 else "FAIL"
         return JSONResponse(results)
