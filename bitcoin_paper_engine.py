@@ -43,11 +43,11 @@ class BitcoinPaperEngine:
         self.is_running = False
         self.loop_task: Optional[asyncio.Task] = None
 
-        # Pre-populate tick on engine startup
+        # Pre-populate last tick on engine startup
         try:
-            self.process_tick()
+            self.last_tick = BITCOIN_FEED.fetch_latest_tick()
         except Exception as err:
-            print(f"[BITCOIN ENGINE INIT NOTICE] Could not pre-populate tick on init: {err}")
+            print(f"[BITCOIN ENGINE INIT NOTICE] Could not fetch initial tick on init: {err}")
 
     def calculate_pnl_tallies(self) -> Dict[str, Any]:
         """Calculates total realized P&L, trade count, win/loss count, and net equity in INR."""

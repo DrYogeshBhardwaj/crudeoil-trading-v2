@@ -146,14 +146,20 @@ class BitcoinDataFeed:
         """
         Fetches OHLCV candle historical series for BTC-INR.
         Supports interval: '1m', '5m', '15m', '60m'.
+        Ensures candles are sorted ascending by timestamp, deduplicated, and non-zero.
         """
         if tf:
             interval = tf
         if period:
             range_str = period
 
-        if interval in ("5m", "15m") and range_str == "1d":
+        if interval == "1m":
+            range_str = "1d"
+        elif interval in ("5m", "15m") and range_str == "1d":
             range_str = "5d"
+        elif interval in ("60m", "1h"):
+            interval = "60m"
+            range_str = "1mo"
 
         url = f"https://query1.finance.yahoo.com/v8/finance/chart/{self.symbol}?interval={interval}&range={range_str}"
         headers = {"User-Agent": self.user_agent}
@@ -174,6 +180,7 @@ class BitcoinDataFeed:
                     volumes = quote.get("volume", [])
 
                     candles = []
+                    seen_t = set()
                     ist_tz = timezone(timedelta(hours=5, minutes=30))
 
                     for i in range(len(timestamps)):
@@ -187,17 +194,34 @@ class BitcoinDataFeed:
                         if None in (t, o, h, l, c):
                             continue
 
-                        dt_ist = datetime.fromtimestamp(t, tz=timezone.utc).astimezone(ist_tz)
+                        try:
+                            t_int = int(t)
+                            o_val = float(o)
+                            h_val = float(h)
+                            l_val = float(l)
+                            c_val = float(c)
+                        except (ValueError, TypeError):
+                            continue
+
+                        if o_val <= 0 or h_val <= 0 or l_val <= 0 or c_val <= 0:
+                            continue
+
+                        if t_int in seen_t:
+                            continue
+                        seen_t.add(t_int)
+
+                        dt_ist = datetime.fromtimestamp(t_int, tz=timezone.utc).astimezone(ist_tz)
                         candles.append({
-                            "timestamp": t,
+                            "timestamp": t_int,
                             "time_str": dt_ist.strftime("%Y-%m-%d %H:%M"),
-                            "open": round(float(o), 2),
-                            "high": round(float(h), 2),
-                            "low": round(float(l), 2),
-                            "close": round(float(c), 2),
+                            "open": round(o_val, 2),
+                            "high": round(h_val, 2),
+                            "low": round(l_val, 2),
+                            "close": round(c_val, 2),
                             "volume": int(v or 0)
                         })
 
+                    candles.sort(key=lambda x: x["timestamp"])
                     return candles
         except Exception as e:
             print(f"[BITCOIN FEED ERROR] Failed fetching candles ({interval}): {e}")

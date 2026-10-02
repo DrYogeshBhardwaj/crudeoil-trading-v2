@@ -163,6 +163,7 @@
             display: flex;
             flex-direction: column;
             height: 480px;
+            position: relative;
         }
 
         .chart-header {
@@ -199,9 +200,29 @@
         #tv_chart_container {
             flex-grow: 1;
             width: 100%;
-            height: 100%;
+            height: 400px;
+            min-height: 380px;
             border-radius: 8px;
             overflow: hidden;
+        }
+
+        .chart-overlay-msg {
+            position: absolute;
+            top: 50px;
+            left: 16px;
+            right: 16px;
+            bottom: 16px;
+            background: rgba(8, 12, 20, 0.92);
+            backdrop-filter: blur(4px);
+            border-radius: 8px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            color: #ef4444;
+            font-size: 1.1rem;
+            font-weight: 800;
+            letter-spacing: 1px;
+            z-index: 10;
         }
 
         .controls-box {
@@ -414,13 +435,16 @@
                     Bitcoin Perpetual (BTC-INR) — Live 24x7 Candlestick Chart
                 </div>
                 <div class="tf-buttons">
-                    <button class="tf-btn" onclick="setChartTF('1m')">1M</button>
-                    <button class="tf-btn active" onclick="setChartTF('5m')">5M</button>
-                    <button class="tf-btn" onclick="setChartTF('15m')">15M</button>
-                    <button class="tf-btn" onclick="setChartTF('60m')">1H</button>
+                    <button class="tf-btn" onclick="setChartTF('1m', this)">1M</button>
+                    <button class="tf-btn active" onclick="setChartTF('5m', this)">5M</button>
+                    <button class="tf-btn" onclick="setChartTF('15m', this)">15M</button>
+                    <button class="tf-btn" onclick="setChartTF('60m', this)">1H</button>
                 </div>
             </div>
             <div id="tv_chart_container"></div>
+            <div id="chart_overlay_msg" class="chart-overlay-msg" style="display: none;">
+                ⚠️ DATA UNAVAILABLE
+            </div>
         </div>
 
         <!-- CONTROLS & INDICATORS BOX -->
@@ -531,11 +555,15 @@
 
     function initChart() {
         const container = document.getElementById('tv_chart_container');
+        if (!container) return;
         container.innerHTML = '';
+
+        const containerWidth = container.clientWidth || 800;
+        const containerHeight = container.clientHeight || 400;
         
         chart = LightweightCharts.createChart(container, {
-            width: container.clientWidth,
-            height: container.clientHeight,
+            width: containerWidth,
+            height: containerHeight,
             layout: {
                 backgroundColor: '#0a0f1d',
                 textColor: '#94a3b8',
@@ -549,6 +577,10 @@
             },
             rightPriceScale: {
                 borderColor: 'rgba(255, 255, 255, 0.1)',
+                scaleMargins: {
+                    top: 0.1,
+                    bottom: 0.1,
+                },
             },
             timeScale: {
                 borderColor: 'rgba(255, 255, 255, 0.1)',
@@ -566,47 +598,95 @@
             wickUpColor: '#10b981',
         });
 
-        window.addEventListener('resize', () => {
-            chart.applyOptions({ width: container.clientWidth, height: container.clientHeight });
+        const resizeObserver = new ResizeObserver(entries => {
+            if (!entries || !entries.length) return;
+            const entry = entries[0];
+            if (entry.contentRect.width > 0 && entry.contentRect.height > 0) {
+                chart.applyOptions({
+                    width: entry.contentRect.width,
+                    height: entry.contentRect.height
+                });
+            }
         });
+        resizeObserver.observe(container);
 
         loadCandles(currentTF);
     }
 
     async function loadCandles(tf) {
+        const overlay = document.getElementById('chart_overlay_msg');
         try {
-            const resp = await fetch(`/api/bitcoin/candles?tf=${tf}`);
+            const resp = await fetch(`/api/bitcoin/candles?tf=${tf}&range_str=5d`);
             if (resp.ok) {
                 const candles = await resp.json();
+                if (!Array.isArray(candles) || candles.length === 0) {
+                    if (overlay) {
+                        overlay.style.display = 'flex';
+                        overlay.textContent = '⚠️ DATA UNAVAILABLE';
+                    }
+                    return;
+                }
+
                 const seen = new Set();
                 const formattedData = [];
+
                 for (const c of candles) {
-                    if (c.timestamp && !seen.has(c.timestamp)) {
-                        seen.add(c.timestamp);
-                        formattedData.push({
-                            time: c.timestamp,
-                            open: c.open,
-                            high: c.high,
-                            low: c.low,
-                            close: c.close
-                        });
+                    if (c && c.timestamp) {
+                        const t = Math.floor(Number(c.timestamp));
+                        if (!seen.has(t)) {
+                            seen.add(t);
+                            const open = Number(c.open);
+                            const high = Number(c.high);
+                            const low = Number(c.low);
+                            const close = Number(c.close);
+
+                            if (open > 0 && high > 0 && low > 0 && close > 0) {
+                                formattedData.push({
+                                    time: t,
+                                    open: open,
+                                    high: high,
+                                    low: low,
+                                    close: close
+                                });
+                            }
+                        }
                     }
                 }
+
                 formattedData.sort((a, b) => a.time - b.time);
-                if (candleSeries) {
-                    candleSeries.setData(formattedData);
+
+                if (formattedData.length > 0) {
+                    if (overlay) overlay.style.display = 'none';
+                    if (candleSeries) {
+                        candleSeries.setData(formattedData);
+                        chart.timeScale().fitContent();
+                    }
+                } else {
+                    if (overlay) {
+                        overlay.style.display = 'flex';
+                        overlay.textContent = '⚠️ DATA UNAVAILABLE';
+                    }
+                }
+            } else {
+                if (overlay) {
+                    overlay.style.display = 'flex';
+                    overlay.textContent = '⚠️ DATA UNAVAILABLE';
                 }
             }
         } catch (e) {
             console.error("Failed loading candles:", e);
+            if (overlay) {
+                overlay.style.display = 'flex';
+                overlay.textContent = '⚠️ DATA UNAVAILABLE';
+            }
         }
     }
 
-    function setChartTF(tf) {
+    function setChartTF(tf, btnElem) {
         currentTF = tf;
         document.querySelectorAll('.tf-btn').forEach(btn => btn.classList.remove('active'));
-        if (event && event.target) {
-            event.target.classList.add('active');
+        if (btnElem) {
+            btnElem.classList.add('active');
         }
         loadCandles(tf);
     }
@@ -637,6 +717,19 @@
 
             document.getElementById('btc_tick_time').textContent = `Time: ${tick.last_tick_timestamp_ist ? tick.last_tick_timestamp_ist.split(' ')[1] : '--:--:--'}`;
             document.getElementById('data_source').textContent = tick.data_source || 'Yahoo Finance / Binance (BTC-INR)';
+
+            if (candleSeries && tick.price && tick.price > 0 && tick.connection_status === 'CONNECTED') {
+                const epochTime = tick.last_tick_epoch ? Math.floor(tick.last_tick_epoch) : Math.floor(Date.now() / 1000);
+                try {
+                    candleSeries.update({
+                        time: epochTime,
+                        open: tick.prev_close || tick.price,
+                        high: Math.max(tick.high || tick.price, tick.price),
+                        low: Math.min(tick.low || tick.price, tick.price),
+                        close: tick.price
+                    });
+                } catch (e) {}
+            }
 
             const connBadge = document.getElementById('conn_badge');
             const unavailBanner = document.getElementById('unavail_banner');
