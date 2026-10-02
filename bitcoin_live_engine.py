@@ -246,11 +246,11 @@ class MudrexLiveAdapter:
     def place_futures_order(self, symbol: str, side: str, quantity: float, order_type: str = "MARKET", price: Optional[float] = None, stoploss_price: Optional[float] = None) -> Dict[str, Any]:
         """
         Places a live futures order on Mudrex.
-        Endpoint: POST /futures/orders
+        Endpoint: POST /futures/order
         """
         try:
             headers = self._get_headers()
-            url = f"{self.BASE_URL}/futures/orders"
+            url = f"{self.BASE_URL}/futures/order"
             payload = {
                 "symbol": symbol,
                 "side": side.upper(),
