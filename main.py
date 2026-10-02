@@ -420,6 +420,7 @@ async def test_pi42_credentials(payload: dict = {}):
     import hashlib
     import requests
     import traceback
+    import json
 
     try:
         def get_valid_val(val_list: list) -> str:
