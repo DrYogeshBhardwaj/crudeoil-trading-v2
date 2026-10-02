@@ -375,7 +375,19 @@ async def get_outbound_ip():
     except Exception as e:
         outbound_ip = f"ERROR ({e})"
 
-    env_keys = [k for k in os.environ.keys() if "PI42" in k.upper() or "BITCOIN" in k.upper() or "KEY" in k.upper() or "SECRET" in k.upper()]
+    has_key = bool(
+        os.environ.get("PI42_API_KEY")
+        or os.environ.get("PI42_KEY")
+        or os.environ.get("BITCOIN_API_KEY")
+        or os.environ.get("PI42_APIKEY")
+    )
+    has_secret = bool(
+        os.environ.get("PI42_API_SECRET")
+        or os.environ.get("PI42_SECRET")
+        or os.environ.get("BITCOIN_API_SECRET")
+        or os.environ.get("PI42_APISECRET")
+    )
+
     return JSONResponse({
         "timestamp_ist": datetime.now().strftime("%Y-%m-%d %H:%M:%S IST"),
         "outbound_ip_ifconfig": outbound_ip,
@@ -383,7 +395,8 @@ async def get_outbound_ip():
         "railway_environment": os.environ.get("RAILWAY_ENVIRONMENT", "production"),
         "railway_service_id": os.environ.get("RAILWAY_SERVICE_ID", "UNKNOWN"),
         "railway_deployment_id": os.environ.get("RAILWAY_DEPLOYMENT_ID", "UNKNOWN"),
-        "pi42_env_keys_detected": env_keys
+        "pi42_api_key_detected": has_key,
+        "pi42_api_secret_detected": has_secret
     })
 
 @app.post("/api/debug/test-pi42")
@@ -410,26 +423,6 @@ async def test_pi42_credentials(payload: dict):
         or os.environ.get("PI42_APISECRET")
         or ""
     ).strip()
-
-    creds_file = os.path.join(os.path.dirname(__file__), "pi42_credentials.json")
-
-    # Save provided credentials if valid
-    if payload.get("api_key") and payload.get("api_secret"):
-        try:
-            with open(creds_file, "w", encoding="utf-8") as f:
-                json.dump({"PI42_API_KEY": api_key, "PI42_API_SECRET": api_secret}, f)
-        except Exception:
-            pass
-
-    # Read from file fallback if env vars missing
-    if (not api_key or not api_secret) and os.path.exists(creds_file):
-        try:
-            with open(creds_file, "r", encoding="utf-8") as f:
-                cdata = json.load(f)
-                api_key = api_key or cdata.get("PI42_API_KEY", "")
-                api_secret = api_secret or cdata.get("PI42_API_SECRET", "")
-        except Exception:
-            pass
 
     base_urls = ["https://fapi.pi42.com", "https://api.pi42.com"]
     start_t = time.time()
@@ -568,26 +561,6 @@ async def test_pi42_credentials(payload: dict):
 
     results["STABILITY_10_CALLS"] = "PASS" if successful_calls >= 8 else "FAIL"
     return JSONResponse(results)
-
-@app.post("/api/bitcoin/update_credentials")
-async def update_bitcoin_credentials(payload: dict):
-    """Updates and persists active Pi42 API credentials on running server instance."""
-    api_key = str(payload.get("api_key", "")).strip()
-    api_secret = str(payload.get("api_secret", "")).strip()
-
-    if not api_key or not api_secret:
-        raise HTTPException(status_code=400, detail="api_key and api_secret are required.")
-
-    creds_file = os.path.join(os.path.dirname(__file__), "pi42_credentials.json")
-    try:
-        with open(creds_file, "w", encoding="utf-8") as f:
-            json.dump({"PI42_API_KEY": api_key, "PI42_API_SECRET": api_secret}, f)
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to persist credentials: {e}")
-
-    # Immediately run server-side test
-    res = await test_pi42_credentials({"api_key": api_key, "api_secret": api_secret})
-    return res
 
 
 
