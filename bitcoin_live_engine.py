@@ -313,7 +313,7 @@ class BitcoinLiveEngine:
         open_ord = self.adapter.fetch_open_orders()
 
         tick = BITCOIN_FEED.fetch_latest_tick()
-        btc_price = tick.price if tick else 0.0
+        btc_price = float(tick.get("price", 0.0)) if isinstance(tick, dict) else (float(tick.price) if hasattr(tick, "price") else 0.0)
 
         allowed, reason = self.are_new_entries_allowed()
 
@@ -343,7 +343,7 @@ class BitcoinLiveEngine:
     def get_dashboard_state(self) -> Dict[str, Any]:
         """Returns JSON state payload for the Bitcoin Live Engine dashboard."""
         tick = BITCOIN_FEED.fetch_latest_tick()
-        btc_price = tick.price if tick else 0.0
+        btc_price = float(tick.get("price", 0.0)) if isinstance(tick, dict) else (float(tick.price) if hasattr(tick, "price") else 0.0)
 
         active_pos = DB.load_active_bitcoin_live_position()
         spot_bal = self.adapter.fetch_spot_balance()
