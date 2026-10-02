@@ -19,6 +19,8 @@ from live_trading_engine import LIVE_TEST_ENGINE
 from database import DB
 from wti_paper_engine import WTI_ENGINE
 from wti_feed import WTI_FEED
+from bitcoin_paper_engine import BITCOIN_ENGINE
+from bitcoin_feed import BITCOIN_FEED
 
 app = FastAPI(
     title="AI Trend Detector & Paper Trading Engine V1",
@@ -111,6 +113,53 @@ async def wti_update_config(payload: dict):
 
     if updated:
         return JSONResponse({"status": "SUCCESS", "message": f"Updated: {', '.join(updated)}"})
+    return JSONResponse({"status": "ERROR", "message": "No valid config fields provided"}, status_code=400)
+
+@app.get("/bitcoin", response_class=HTMLResponse)
+async def serve_bitcoin_dashboard():
+    """Serves the separate Bitcoin Paper Trading Dashboard."""
+    btc_path = os.path.join(os.path.dirname(__file__), "templates", "bitcoin.html")
+    if os.path.exists(btc_path):
+        with open(btc_path, "r", encoding="utf-8") as f:
+            return HTMLResponse(content=f.read())
+    return HTMLResponse("<h2>Bitcoin Paper Trading Dashboard</h2>")
+
+@app.get("/api/bitcoin/state")
+async def get_bitcoin_state():
+    """Returns real-time JSON state for the separate /bitcoin paper trading dashboard."""
+    return JSONResponse(BITCOIN_ENGINE.get_dashboard_state())
+
+@app.get("/api/bitcoin/candles")
+async def get_bitcoin_candles(tf: str = "5m", range_str: str = "1d"):
+    """Returns historical OHLCV candles for Bitcoin chart."""
+    candles = BITCOIN_FEED.fetch_historical_candles(tf, range_str)
+    return JSONResponse(candles)
+
+@app.post("/api/bitcoin/emergency_exit")
+async def bitcoin_emergency_exit():
+    """Triggers manual emergency exit for Bitcoin active paper position."""
+    pos = BITCOIN_ENGINE.emergency_exit_position()
+    return JSONResponse({
+        "status": "EMERGENCY_EXIT_EXECUTED" if pos else "NO_ACTIVE_POSITION",
+        "message": "Emergency exit executed for active Bitcoin position." if pos else "No active Bitcoin position to exit."
+    })
+
+@app.post("/api/bitcoin/reset")
+async def bitcoin_reset_account():
+    """Resets Bitcoin paper account balance to INR 200,000 and clears trade history."""
+    BITCOIN_ENGINE.reset_paper_account()
+    return JSONResponse({
+        "status": "ACCOUNT_RESET",
+        "message": "Bitcoin Paper account reset successfully. Capital restored to INR 200,000."
+    })
+
+@app.post("/api/bitcoin/config")
+async def bitcoin_update_config(payload: dict):
+    """Updates Bitcoin virtual capital configuration."""
+    capital = payload.get("virtual_capital")
+    if capital is not None and float(capital) > 0:
+        BITCOIN_ENGINE.set_virtual_capital(float(capital))
+        return JSONResponse({"status": "SUCCESS", "message": f"Updated virtual capital: INR {capital}"})
     return JSONResponse({"status": "ERROR", "message": "No valid config fields provided"}, status_code=400)
 
 @app.get("/api/live/state")
@@ -314,6 +363,9 @@ async def startup_event():
 
     print(f"[{datetime.now()}] [STARTUP] Spawning WTI_ENGINE.start_feed_loop background task...")
     asyncio.create_task(WTI_ENGINE.start_feed_loop())
+
+    print(f"[{datetime.now()}] [STARTUP] Spawning BITCOIN_ENGINE.start_feed_loop background task...")
+    asyncio.create_task(BITCOIN_ENGINE.start_feed_loop())
 
 if __name__ == "__main__":
     import uvicorn

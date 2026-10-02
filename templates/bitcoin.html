@@ -1,0 +1,798 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bitcoin (BTC-INR) Paper Trading — AI Strategy & Live Feed Engine</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;600;700&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/lightweight-charts/dist/lightweight-charts.standalone.production.js"></script>
+    <style>
+        :root {
+            --bg-dark: #080c14;
+            --card-bg: rgba(15, 23, 42, 0.85);
+            --card-border: rgba(255, 255, 255, 0.08);
+            --accent-btc: #f7931a;
+            --accent-green: #10b981;
+            --accent-red: #ef4444;
+            --accent-blue: #38bdf8;
+            --accent-amber: #f59e0b;
+            --text-main: #f8fafc;
+            --text-muted: #94a3b8;
+        }
+
+        body {
+            background-color: var(--bg-dark);
+            color: var(--text-main);
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            margin: 0;
+            padding: 16px;
+        }
+
+        .btc-container {
+            max-width: 1600px;
+            margin: 0 auto;
+        }
+
+        .safety-banner {
+            background: linear-gradient(90deg, #451a03, #78350f, #451a03);
+            border: 1px solid rgba(247, 147, 26, 0.3);
+            color: #fef3c7;
+            padding: 10px 20px;
+            border-radius: 10px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 16px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+        }
+
+        .safety-tag {
+            background: #f7931a;
+            color: #000000;
+            font-weight: 800;
+            font-size: 0.75rem;
+            padding: 4px 10px;
+            border-radius: 4px;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+        }
+
+        .header-title {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .header-title h1 {
+            font-size: 1.4rem;
+            font-weight: 800;
+            margin: 0;
+            background: linear-gradient(90deg, #fbbf24, #f7931a);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .metrics-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+            gap: 14px;
+            margin-bottom: 16px;
+        }
+
+        .metric-card {
+            background: var(--card-bg);
+            border: 1px solid var(--card-border);
+            border-radius: 12px;
+            padding: 16px;
+            backdrop-filter: blur(10px);
+            transition: transform 0.2s ease, border-color 0.2s ease;
+        }
+
+        .metric-card:hover {
+            border-color: rgba(255, 255, 255, 0.18);
+            transform: translateY(-2px);
+        }
+
+        .metric-label {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 6px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .metric-value {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 1.5rem;
+            font-weight: 700;
+        }
+
+        .metric-sub {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            margin-top: 6px;
+            display: flex;
+            justify-content: space-between;
+        }
+
+        .badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 3px 8px;
+            border-radius: 6px;
+            font-size: 0.72rem;
+            font-weight: 700;
+        }
+
+        .badge-green { background: rgba(16, 185, 129, 0.15); color: #34d399; border: 1px solid rgba(16, 185, 129, 0.3); }
+        .badge-red { background: rgba(239, 68, 68, 0.15); color: #f87171; border: 1px solid rgba(239, 68, 68, 0.3); }
+        .badge-amber { background: rgba(245, 158, 11, 0.15); color: #fbbf24; border: 1px solid rgba(245, 158, 11, 0.3); }
+        .badge-blue { background: rgba(56, 189, 248, 0.15); color: #38bdf8; border: 1px solid rgba(56, 189, 248, 0.3); }
+        .badge-btc { background: rgba(247, 147, 26, 0.15); color: #f7931a; border: 1px solid rgba(247, 147, 26, 0.3); }
+
+        .dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            display: inline-block;
+        }
+        .dot-green { background: #10b981; box-shadow: 0 0 8px #10b981; }
+        .dot-red { background: #ef4444; box-shadow: 0 0 8px #ef4444; }
+
+        .main-layout {
+            display: grid;
+            grid-template-columns: 2.2fr 1fr;
+            gap: 16px;
+            margin-bottom: 16px;
+        }
+
+        @media (max-width: 1024px) {
+            .main-layout { grid-template-columns: 1fr; }
+        }
+
+        .chart-box {
+            background: var(--card-bg);
+            border: 1px solid var(--card-border);
+            border-radius: 12px;
+            padding: 16px;
+            display: flex;
+            flex-direction: column;
+            height: 480px;
+        }
+
+        .chart-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+        }
+
+        .tf-buttons {
+            display: flex;
+            gap: 6px;
+        }
+
+        .tf-btn {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            color: var(--text-muted);
+            padding: 4px 10px;
+            border-radius: 6px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .tf-btn:hover, .tf-btn.active {
+            background: var(--accent-btc);
+            color: black;
+            border-color: var(--accent-btc);
+            font-weight: 700;
+        }
+
+        #tv_chart_container {
+            flex-grow: 1;
+            width: 100%;
+            height: 100%;
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        .controls-box {
+            background: var(--card-bg);
+            border: 1px solid var(--card-border);
+            border-radius: 12px;
+            padding: 16px;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        .section-title {
+            font-size: 0.9rem;
+            font-weight: 700;
+            color: #e2e8f0;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+            padding-bottom: 8px;
+            margin-bottom: 8px;
+        }
+
+        .btn-action {
+            width: 100%;
+            padding: 10px;
+            border-radius: 8px;
+            font-weight: 700;
+            font-size: 0.85rem;
+            cursor: pointer;
+            border: none;
+            transition: all 0.2s ease;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .btn-danger { background: #dc2626; color: white; }
+        .btn-danger:hover { background: #b91c1c; }
+        .btn-secondary { background: rgba(255, 255, 255, 0.08); color: #d1d5db; border: 1px solid rgba(255, 255, 255, 0.15); }
+        .btn-secondary:hover { background: rgba(255, 255, 255, 0.14); }
+
+        .indicator-row {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.8rem;
+            padding: 6px 0;
+            border-bottom: 1px dashed rgba(255, 255, 255, 0.05);
+        }
+
+        .indicator-val {
+            font-family: 'JetBrains Mono', monospace;
+            font-weight: 600;
+        }
+
+        .table-card {
+            background: var(--card-bg);
+            border: 1px solid var(--card-border);
+            border-radius: 12px;
+            padding: 16px;
+            margin-bottom: 16px;
+        }
+
+        .table-wrapper {
+            overflow-x: auto;
+            max-height: 320px;
+            overflow-y: auto;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.78rem;
+            text-align: left;
+        }
+
+        th {
+            background: rgba(0, 0, 0, 0.4);
+            color: var(--text-muted);
+            padding: 10px 12px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            position: sticky;
+            top: 0;
+            z-index: 2;
+        }
+
+        td {
+            padding: 10px 12px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        tr:hover td {
+            background: rgba(255, 255, 255, 0.02);
+        }
+
+        .pnl-positive { color: #34d399; font-weight: 700; }
+        .pnl-negative { color: #f87171; font-weight: 700; }
+
+        .unavail-overlay {
+            display: none;
+            background: rgba(239, 68, 68, 0.15);
+            border: 1px solid rgba(239, 68, 68, 0.3);
+            color: #f87171;
+            padding: 12px;
+            border-radius: 8px;
+            font-weight: 700;
+            text-align: center;
+            margin-bottom: 12px;
+        }
+    </style>
+</head>
+<body>
+
+<div class="btc-container">
+
+    <!-- SAFETY & STATUS BANNER -->
+    <div class="safety-banner">
+        <div class="header-title">
+            <span class="safety-tag">BITCOIN PAPER TRADING</span>
+            <h1>BITCOIN (BTC-INR) — PAPER TRADING ENGINE</h1>
+        </div>
+        <div style="display:flex; gap:8px; align-items:center;">
+            <span class="badge badge-btc" style="font-size:0.78rem; font-weight:800;">DATA: REAL-TIME 24x7 CRYPTO FEED</span>
+            <span class="badge badge-red" style="font-size:0.78rem; font-weight:800;">NO REAL MONEY</span>
+        </div>
+    </div>
+
+    <!-- FEED DISCONNECTED OVERLAY WARNING -->
+    <div id="unavail_banner" class="unavail-overlay">
+        ⚠️ LIVE FEED NOT CONNECTED / DATA UNAVAILABLE. CHECK CONNECTION STATUS BELOW.
+    </div>
+
+    <!-- TOP METRICS GRID -->
+    <div class="metrics-grid">
+
+        <!-- 1. BTC PRICE CARD -->
+        <div class="metric-card">
+            <div class="metric-label">
+                <span>Bitcoin Price (BTC-INR)</span>
+                <div style="display:flex; gap:4px;">
+                    <span class="badge badge-btc" style="font-size:0.68rem;">24x7 LIVE</span>
+                    <span id="conn_badge" class="badge badge-green"><span class="dot dot-green"></span> CONNECTED</span>
+                </div>
+            </div>
+            <div class="metric-value" id="btc_price">₹0.00</div>
+            <div class="metric-sub">
+                <span id="btc_change">+0.00 (0.00%)</span>
+                <span id="btc_tick_time">Time: --:--:--</span>
+            </div>
+            <div class="metric-sub" style="margin-top:4px; font-size:0.7rem; color:#6b7280;">
+                <span>Source: <strong id="data_source">Yahoo Finance / Binance (BTC-INR)</strong></span>
+                <span id="market_status_badge" class="badge badge-green">24x7 OPEN</span>
+            </div>
+        </div>
+
+        <!-- 2. STRATEGY SIGNAL & TREND -->
+        <div class="metric-card">
+            <div class="metric-label">
+                <span>Strategy Evaluation</span>
+                <span id="signal_badge" class="badge badge-amber">WAIT</span>
+            </div>
+            <div class="metric-value" id="trend_val" style="color: #38bdf8;">NEUTRAL</div>
+            <div class="metric-sub">
+                <span>Confidence: <strong id="confidence_val">0%</strong></span>
+                <span>ATR (14): <strong id="atr_val">₹0.00</strong></span>
+            </div>
+            <div class="metric-sub" style="margin-top:4px; font-size:0.7rem; color:#94a3b8;" id="signal_reason">
+                Analyzing 24x7 crypto market structure...
+            </div>
+        </div>
+
+        <!-- 3. ACTIVE PAPER POSITION -->
+        <div class="metric-card">
+            <div class="metric-label">
+                <span>Active Position (1 BTC Contract)</span>
+                <span id="pos_badge" class="badge badge-secondary">FLAT</span>
+            </div>
+            <div class="metric-value" id="unrealized_pnl">₹0.00</div>
+            <div class="metric-sub">
+                <span>Entry: <strong id="pos_entry">₹0.00</strong></span>
+                <span>SL: <strong id="pos_sl">₹0.00</strong></span>
+                <span>Tgt: <strong id="pos_target">₹0.00</strong></span>
+            </div>
+        </div>
+
+        <!-- 4. PAPER ACCOUNT CAPITAL & P&L -->
+        <div class="metric-card">
+            <div class="metric-label">
+                <span>Paper Capital & Performance</span>
+                <span class="badge badge-green">EQUITY</span>
+            </div>
+            <div class="metric-value" id="current_equity">₹2,00,000.00</div>
+            <div class="metric-sub">
+                <span>Realized P&L: <strong id="realized_pnl">₹0.00</strong></span>
+                <span>Win Rate: <strong id="win_rate">0.0%</strong> (<span id="win_loss_count">0W/0L</span>)</span>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- MAIN CHART & CONTROLS LAYOUT -->
+    <div class="main-layout">
+
+        <!-- CHART BOX -->
+        <div class="chart-box">
+            <div class="chart-header">
+                <div style="font-weight: 700; font-size: 0.9rem;">
+                    Bitcoin Perpetual (BTC-INR) — Live 24x7 Candlestick Chart
+                </div>
+                <div class="tf-buttons">
+                    <button class="tf-btn" onclick="setChartTF('1m')">1M</button>
+                    <button class="tf-btn active" onclick="setChartTF('5m')">5M</button>
+                    <button class="tf-btn" onclick="setChartTF('15m')">15M</button>
+                    <button class="tf-btn" onclick="setChartTF('60m')">1H</button>
+                </div>
+            </div>
+            <div id="tv_chart_container"></div>
+        </div>
+
+        <!-- CONTROLS & INDICATORS BOX -->
+        <div class="controls-box">
+            <div>
+                <div class="section-title">Emergency Risk Controls</div>
+                <button class="btn-action btn-danger" onclick="emergencyExit()">
+                    🚨 Square-Off Active Position
+                </button>
+            </div>
+
+            <div>
+                <div class="section-title">Paper Account Management</div>
+                <button class="btn-action btn-secondary" onclick="resetAccount()">
+                    🔄 Reset Virtual Account (₹2,00,000)
+                </button>
+            </div>
+
+            <div>
+                <div class="section-title">Live Technical Indicators</div>
+                <div class="indicator-row">
+                    <span style="color:#94a3b8;">EMA (9):</span>
+                    <span id="ema9_val" class="indicator-val">₹0.00</span>
+                </div>
+                <div class="indicator-row">
+                    <span style="color:#94a3b8;">EMA (21):</span>
+                    <span id="ema21_val" class="indicator-val">₹0.00</span>
+                </div>
+                <div class="indicator-row">
+                    <span style="color:#94a3b8;">EMA (50):</span>
+                    <span id="ema50_val" class="indicator-val">₹0.00</span>
+                </div>
+                <div class="indicator-row">
+                    <span style="color:#94a3b8;">RSI (14):</span>
+                    <span id="rsi_val" class="indicator-val">50.0</span>
+                </div>
+                <div class="indicator-row">
+                    <span style="color:#94a3b8;">Instrument Code:</span>
+                    <span class="indicator-val" style="color:#f7931a;">BTC-INR (1 BTC)</span>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- REAL-TIME STRATEGY EVALUATION STREAM -->
+    <div class="table-card">
+        <div class="section-title" style="display:flex; justify-content:space-between; align-items:center;">
+            <span>⚡ Real-Time Strategy Evaluation Stream</span>
+            <span style="font-size:0.75rem; color:#94a3b8;">Updated on every tick evaluation</span>
+        </div>
+        <div class="table-wrapper">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Time (IST)</th>
+                        <th>BTC Price (₹)</th>
+                        <th>Action</th>
+                        <th>Trend State</th>
+                        <th>Confidence</th>
+                        <th>Strategy Reasoning</th>
+                    </tr>
+                </thead>
+                <tbody id="eval_stream_body">
+                    <tr><td colspan="6" style="text-align:center; color:#64748b;">Waiting for 24x7 strategy evaluations...</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- PAPER TRADE HISTORY LEDGER -->
+    <div class="table-card">
+        <div class="section-title" style="display:flex; justify-content:space-between; align-items:center;">
+            <span>📜 Executed Paper Trade History Ledger</span>
+            <span style="font-size:0.75rem; color:#94a3b8;">Persisted in SQLite database</span>
+        </div>
+        <div class="table-wrapper">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Trade ID</th>
+                        <th>Entry Time</th>
+                        <th>Exit Time</th>
+                        <th>Type</th>
+                        <th>Qty</th>
+                        <th>Entry (₹)</th>
+                        <th>Exit (₹)</th>
+                        <th>SL (₹)</th>
+                        <th>Target (₹)</th>
+                        <th>Gross P&L (₹)</th>
+                        <th>Net P&L (₹)</th>
+                        <th>Status</th>
+                        <th>Reason</th>
+                    </tr>
+                </thead>
+                <tbody id="trade_ledger_body">
+                    <tr><td colspan="13" style="text-align:center; color:#64748b;">No paper trades executed yet.</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+</div>
+
+<script>
+    let chart, candleSeries;
+    let currentTF = '5m';
+
+    function initChart() {
+        const container = document.getElementById('tv_chart_container');
+        container.innerHTML = '';
+        
+        chart = LightweightCharts.createChart(container, {
+            width: container.clientWidth,
+            height: container.clientHeight,
+            layout: {
+                backgroundColor: '#0a0f1d',
+                textColor: '#94a3b8',
+            },
+            grid: {
+                vertLines: { color: 'rgba(255, 255, 255, 0.05)' },
+                horzLines: { color: 'rgba(255, 255, 255, 0.05)' },
+            },
+            crosshair: {
+                mode: LightweightCharts.CrosshairMode.Normal,
+            },
+            rightPriceScale: {
+                borderColor: 'rgba(255, 255, 255, 0.1)',
+            },
+            timeScale: {
+                borderColor: 'rgba(255, 255, 255, 0.1)',
+                timeVisible: true,
+                secondsVisible: false,
+            },
+        });
+
+        candleSeries = chart.addCandlestickSeries({
+            upColor: '#10b981',
+            downColor: '#ef4444',
+            borderDownColor: '#ef4444',
+            borderUpColor: '#10b981',
+            wickDownColor: '#ef4444',
+            wickUpColor: '#10b981',
+        });
+
+        window.addEventListener('resize', () => {
+            chart.applyOptions({ width: container.clientWidth, height: container.clientHeight });
+        });
+
+        loadCandles(currentTF);
+    }
+
+    async function loadCandles(tf) {
+        try {
+            const resp = await fetch(`/api/bitcoin/candles?tf=${tf}`);
+            if (resp.ok) {
+                const candles = await resp.json();
+                const seen = new Set();
+                const formattedData = [];
+                for (const c of candles) {
+                    if (c.timestamp && !seen.has(c.timestamp)) {
+                        seen.add(c.timestamp);
+                        formattedData.push({
+                            time: c.timestamp,
+                            open: c.open,
+                            high: c.high,
+                            low: c.low,
+                            close: c.close
+                        });
+                    }
+                }
+                formattedData.sort((a, b) => a.time - b.time);
+                if (candleSeries) {
+                    candleSeries.setData(formattedData);
+                }
+            }
+        } catch (e) {
+            console.error("Failed loading candles:", e);
+        }
+    }
+
+    function setChartTF(tf) {
+        currentTF = tf;
+        document.querySelectorAll('.tf-btn').forEach(btn => btn.classList.remove('active'));
+        if (event && event.target) {
+            event.target.classList.add('active');
+        }
+        loadCandles(tf);
+    }
+
+    async function fetchState() {
+        try {
+            const resp = await fetch('/api/bitcoin/state');
+            if (!resp.ok) return;
+            const data = await resp.json();
+
+            const tick = data.last_tick || {};
+            const evalRes = data.last_evaluation || {};
+            const pos = data.active_position;
+            const summary = data.financial_summary || {};
+
+            // 1. Tick & Feed Status
+            if (tick.price && tick.price > 0) {
+                document.getElementById('btc_price').textContent = `₹${tick.price.toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
+            } else {
+                document.getElementById('btc_price').textContent = '₹--.--';
+            }
+            
+            const change = tick.change || 0;
+            const changePct = tick.change_pct || 0;
+            const changeElem = document.getElementById('btc_change');
+            changeElem.textContent = `${change >= 0 ? '+' : ''}₹${change.toLocaleString('en-IN', {minimumFractionDigits: 2})} (${changePct.toFixed(2)}%)`;
+            changeElem.style.color = change >= 0 ? '#34d399' : '#f87171';
+
+            document.getElementById('btc_tick_time').textContent = `Time: ${tick.last_tick_timestamp_ist ? tick.last_tick_timestamp_ist.split(' ')[1] : '--:--:--'}`;
+            document.getElementById('data_source').textContent = tick.data_source || 'Yahoo Finance / Binance (BTC-INR)';
+
+            const connBadge = document.getElementById('conn_badge');
+            const unavailBanner = document.getElementById('unavail_banner');
+            
+            if (tick.connection_status === 'CONNECTED' && tick.price > 0) {
+                connBadge.className = 'badge badge-green';
+                connBadge.innerHTML = '<span class="dot dot-green"></span> CONNECTED';
+                unavailBanner.style.display = 'none';
+            } else {
+                connBadge.className = 'badge badge-red';
+                connBadge.innerHTML = `<span class="dot dot-red"></span> ${tick.connection_status || 'DISCONNECTED'}`;
+                unavailBanner.style.display = 'block';
+                unavailBanner.textContent = `⚠️ DATA UNAVAILABLE / LIVE FEED NOT CONNECTED (${tick.error || 'Network Stale'})`;
+            }
+
+            const mktBadge = document.getElementById('market_status_badge');
+            mktBadge.textContent = tick.market_status || '24x7 OPEN';
+
+            // 2. Strategy Metrics
+            const sigBadge = document.getElementById('signal_badge');
+            const action = evalRes.action || 'WAIT';
+            sigBadge.textContent = action;
+            sigBadge.className = action === 'BUY' ? 'badge badge-green' : (action === 'SELL' ? 'badge badge-red' : 'badge badge-amber');
+
+            document.getElementById('trend_val').textContent = evalRes.trend || 'NEUTRAL';
+            document.getElementById('trend_val').style.color = evalRes.trend === 'BULLISH' ? '#34d399' : (evalRes.trend === 'BEARISH' ? '#f87171' : '#38bdf8');
+            document.getElementById('confidence_val').textContent = `${evalRes.confidence || 0}%`;
+            document.getElementById('atr_val').textContent = `₹${(evalRes.atr || 25000).toLocaleString('en-IN', {maximumFractionDigits: 0})}`;
+            document.getElementById('signal_reason').textContent = (evalRes.reasons || []).join(' | ') || 'Evaluating crypto market ticks...';
+
+            document.getElementById('ema9_val').textContent = `₹${(evalRes.ema9 || tick.price || 0).toLocaleString('en-IN', {minimumFractionDigits: 2})}`;
+            document.getElementById('ema21_val').textContent = `₹${(evalRes.ema21 || tick.price || 0).toLocaleString('en-IN', {minimumFractionDigits: 2})}`;
+            document.getElementById('ema50_val').textContent = `₹${(evalRes.ema50 || tick.price || 0).toLocaleString('en-IN', {minimumFractionDigits: 2})}`;
+            document.getElementById('rsi_val').textContent = (evalRes.rsi || 50).toFixed(1);
+
+            // 3. Active Position
+            const posBadge = document.getElementById('pos_badge');
+            if (pos && pos.status === 'OPEN') {
+                posBadge.textContent = `${pos.direction} (1 BTC)`;
+                posBadge.className = pos.direction === 'BUY' ? 'badge badge-green' : 'badge badge-red';
+                document.getElementById('pos_entry').textContent = `₹${pos.entry_price.toLocaleString('en-IN', {minimumFractionDigits: 2})}`;
+                document.getElementById('pos_sl').textContent = `₹${pos.stop_loss.toLocaleString('en-IN', {minimumFractionDigits: 2})}`;
+                document.getElementById('pos_target').textContent = `₹${pos.target.toLocaleString('en-IN', {minimumFractionDigits: 2})}`;
+                
+                const uPnl = pos.unrealized_pnl || 0;
+                const uElem = document.getElementById('unrealized_pnl');
+                uElem.textContent = `${uPnl >= 0 ? '+' : ''}₹${uPnl.toLocaleString('en-IN', {minimumFractionDigits: 2})}`;
+                uElem.className = `metric-value ${uPnl >= 0 ? 'pnl-positive' : 'pnl-negative'}`;
+            } else {
+                posBadge.textContent = 'FLAT';
+                posBadge.className = 'badge badge-secondary';
+                document.getElementById('pos_entry').textContent = '₹0.00';
+                document.getElementById('pos_sl').textContent = '₹0.00';
+                document.getElementById('pos_target').textContent = '₹0.00';
+                document.getElementById('unrealized_pnl').textContent = '₹0.00';
+                document.getElementById('unrealized_pnl').className = 'metric-value';
+            }
+
+            // 4. Financial Capital
+            document.getElementById('current_equity').textContent = `₹${(summary.current_equity || 200000).toLocaleString('en-IN', {minimumFractionDigits:2, maximumFractionDigits:2})}`;
+            
+            const rPnl = summary.realized_net_pnl || 0;
+            const rElem = document.getElementById('realized_pnl');
+            rElem.textContent = `${rPnl >= 0 ? '+' : ''}₹${rPnl.toLocaleString('en-IN', {minimumFractionDigits: 2})}`;
+            rElem.className = rPnl >= 0 ? 'pnl-positive' : 'pnl-negative';
+
+            document.getElementById('win_rate').textContent = `${(summary.win_rate || 0).toFixed(1)}%`;
+            document.getElementById('win_loss_count').textContent = `${summary.winning_trades || 0}W / ${summary.losing_trades || 0}L`;
+
+            // 5. Strategy Stream Table
+            renderStreamTable(data.evaluation_stream || []);
+
+            // 6. Trade Ledger Table
+            renderLedgerTable(data.trade_ledger || []);
+
+        } catch (e) {
+            console.error("Error fetching state:", e);
+        }
+    }
+
+    function renderStreamTable(stream) {
+        const tbody = document.getElementById('eval_stream_body');
+        if (!stream || stream.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; color:#64748b;">Waiting for evaluations...</td></tr>';
+            return;
+        }
+
+        tbody.innerHTML = stream.map(item => `
+            <tr>
+                <td>${item.timestamp}</td>
+                <td>₹${(item.price || 0).toLocaleString('en-IN', {minimumFractionDigits: 2})}</td>
+                <td><span class="badge ${item.action==='BUY'?'badge-green':(item.action==='SELL'?'badge-red':'badge-amber')}">${item.action}</span></td>
+                <td style="color:${item.trend_state==='BULLISH'?'#34d399':(item.trend_state==='BEARISH'?'#f87171':'#38bdf8')}">${item.trend_state}</td>
+                <td>${item.confidence}%</td>
+                <td style="color:#cbd5e1; font-family:sans-serif; font-size:0.75rem;">${item.reason}</td>
+            </tr>
+        `).join('');
+    }
+
+    function renderLedgerTable(ledger) {
+        const tbody = document.getElementById('trade_ledger_body');
+        if (!ledger || ledger.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="13" style="text-align:center; color:#64748b;">No paper trades recorded yet.</td></tr>';
+            return;
+        }
+
+        tbody.innerHTML = ledger.map(t => {
+            const net = t.net_pnl || 0;
+            const netClass = net >= 0 ? 'pnl-positive' : 'pnl-negative';
+            return `
+                <tr>
+                    <td>${t.trade_id}</td>
+                    <td>${t.entry_timestamp}</td>
+                    <td>${t.exit_timestamp || '--'}</td>
+                    <td><span class="badge ${t.direction==='BUY'?'badge-green':'badge-red'}">${t.direction}</span></td>
+                    <td>${t.quantity}</td>
+                    <td>₹${t.entry_price.toLocaleString('en-IN', {minimumFractionDigits: 2})}</td>
+                    <td>${t.exit_price ? '₹' + t.exit_price.toLocaleString('en-IN', {minimumFractionDigits: 2}) : '--'}</td>
+                    <td>₹${t.stop_loss.toLocaleString('en-IN', {minimumFractionDigits: 2})}</td>
+                    <td>₹${t.target.toLocaleString('en-IN', {minimumFractionDigits: 2})}</td>
+                    <td>₹${(t.gross_pnl || 0).toLocaleString('en-IN', {minimumFractionDigits: 2})}</td>
+                    <td class="${netClass}">${net >= 0 ? '+' : ''}₹${net.toLocaleString('en-IN', {minimumFractionDigits: 2})}</td>
+                    <td><span class="badge ${t.status==='OPEN'?'badge-blue':'badge-secondary'}">${t.status}</span></td>
+                    <td style="font-family:sans-serif; font-size:0.72rem; color:#94a3b8;">${t.exit_reason || t.status}</td>
+                </tr>
+            `;
+        }).join('');
+    }
+
+    async function emergencyExit() {
+        if (!confirm("Are you sure you want to square-off the active virtual Bitcoin position?")) return;
+        const resp = await fetch('/api/bitcoin/emergency_exit', { method: 'POST' });
+        const res = await resp.json();
+        alert(res.message);
+        fetchState();
+    }
+
+    async function resetAccount() {
+        if (!confirm("Are you sure you want to reset your Bitcoin paper account balance to ₹2,00,000 and clear trade history?")) return;
+        const resp = await fetch('/api/bitcoin/reset', { method: 'POST' });
+        const res = await resp.json();
+        alert(res.message);
+        fetchState();
+    }
+
+    // Initialize immediately on DOM load
+    document.addEventListener('DOMContentLoaded', async () => {
+        await fetchState();
+        try {
+            initChart();
+        } catch (err) {
+            console.error("Chart initialization notice:", err);
+        }
+        setInterval(fetchState, 3000);
+    });
+</script>
+
+</body>
+</html>

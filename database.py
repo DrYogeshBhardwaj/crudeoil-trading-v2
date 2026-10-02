@@ -266,6 +266,51 @@ class DatabaseEngine:
                 )
             """)
 
+            # Bitcoin Paper Trades Table (Dedicated Namespace for BTC-INR)
+            cursor.execute("""
+                CREATE TABLE IF NOT EXISTS bitcoin_paper_trades (
+                    trade_id TEXT PRIMARY KEY,
+                    entry_timestamp TEXT NOT NULL,
+                    symbol TEXT NOT NULL,
+                    direction TEXT NOT NULL,
+                    quantity REAL NOT NULL,
+                    entry_price REAL NOT NULL,
+                    stop_loss REAL NOT NULL,
+                    target REAL NOT NULL,
+                    trend_state TEXT NOT NULL,
+                    confidence INTEGER NOT NULL,
+                    reasons TEXT,
+                    status TEXT NOT NULL,
+                    exit_timestamp TEXT,
+                    exit_price REAL,
+                    exit_reason TEXT,
+                    gross_pnl REAL,
+                    charges REAL,
+                    net_pnl REAL
+                )
+            """)
+
+            # Bitcoin System Settings Table
+            cursor.execute("""
+                CREATE TABLE IF NOT EXISTS bitcoin_settings (
+                    key TEXT PRIMARY KEY,
+                    value TEXT NOT NULL
+                )
+            """)
+
+            # Bitcoin Evaluation Logs Stream Table
+            cursor.execute("""
+                CREATE TABLE IF NOT EXISTS bitcoin_evaluations (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    timestamp TEXT NOT NULL,
+                    price REAL NOT NULL,
+                    action TEXT NOT NULL,
+                    trend_state TEXT NOT NULL,
+                    confidence INTEGER NOT NULL,
+                    reason TEXT NOT NULL
+                )
+            """)
+
             conn.commit()
 
     def save_live_trade(self, pos_dict: Dict[str, Any]):
@@ -523,6 +568,102 @@ class DatabaseEngine:
             cursor.execute("DELETE FROM wti_paper_trades")
             cursor.execute("DELETE FROM wti_settings")
             cursor.execute("DELETE FROM wti_evaluations")
+            conn.commit()
+
+    # --- BITCOIN PAPER TRADING DATABASE METHODS ---
+
+    def save_bitcoin_trade(self, pos_dict: Dict[str, Any]):
+        with self._get_connection() as conn:
+            cursor = conn.cursor()
+            reasons_json = json.dumps(pos_dict.get("reasons", []))
+            cursor.execute("""
+                INSERT OR REPLACE INTO bitcoin_paper_trades (
+                    trade_id, entry_timestamp, symbol, direction, quantity,
+                    entry_price, stop_loss, target, trend_state, confidence,
+                    reasons, status, exit_timestamp, exit_price, exit_reason,
+                    gross_pnl, charges, net_pnl
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """, (
+                pos_dict["trade_id"],
+                pos_dict["entry_timestamp"],
+                pos_dict.get("symbol", "BTC-INR"),
+                pos_dict["direction"],
+                pos_dict["quantity"],
+                pos_dict["entry_price"],
+                pos_dict["stop_loss"],
+                pos_dict["target"],
+                pos_dict["trend_state"],
+                pos_dict["confidence"],
+                reasons_json,
+                pos_dict["status"],
+                pos_dict.get("exit_timestamp"),
+                pos_dict.get("exit_price"),
+                pos_dict.get("exit_reason"),
+                pos_dict.get("gross_pnl"),
+                pos_dict.get("charges"),
+                pos_dict.get("net_pnl")
+            ))
+            conn.commit()
+
+    def load_active_bitcoin_position(self) -> Optional[Dict[str, Any]]:
+        with self._get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute("SELECT * FROM bitcoin_paper_trades WHERE status = 'OPEN' LIMIT 1")
+            row = cursor.fetchone()
+            if row:
+                d = dict(row)
+                d["reasons"] = json.loads(d["reasons"]) if d["reasons"] else []
+                return d
+            return None
+
+    def load_all_bitcoin_trades(self) -> List[Dict[str, Any]]:
+        with self._get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute("SELECT * FROM bitcoin_paper_trades ORDER BY entry_timestamp DESC")
+            rows = cursor.fetchall()
+            trades = []
+            for r in rows:
+                t = dict(r)
+                t["reasons"] = json.loads(t["reasons"]) if t["reasons"] else []
+                trades.append(t)
+            return trades
+
+    def save_bitcoin_setting(self, key: str, value: str):
+        with self._get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute("INSERT OR REPLACE INTO bitcoin_settings (key, value) VALUES (?, ?)", (key, str(value)))
+            conn.commit()
+
+    def load_bitcoin_setting(self, key: str, default: Optional[str] = None) -> Optional[str]:
+        with self._get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute("SELECT value FROM bitcoin_settings WHERE key = ?", (key,))
+            row = cursor.fetchone()
+            return row["value"] if row else default
+
+    def save_bitcoin_evaluation(self, timestamp: str, price: float, action: str, trend_state: str, confidence: int, reason: str):
+        with self._get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute("""
+                INSERT INTO bitcoin_evaluations (timestamp, price, action, trend_state, confidence, reason)
+                VALUES (?, ?, ?, ?, ?, ?)
+            """, (timestamp, price, action, trend_state, confidence, reason))
+            cursor.execute("DELETE FROM bitcoin_evaluations WHERE id NOT IN (SELECT id FROM bitcoin_evaluations ORDER BY id DESC LIMIT 200)")
+            conn.commit()
+
+    def load_recent_bitcoin_evaluations(self, limit: int = 50) -> List[Dict[str, Any]]:
+        with self._get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute("SELECT * FROM bitcoin_evaluations ORDER BY id DESC LIMIT ?", (limit,))
+            rows = cursor.fetchall()
+            return [dict(r) for r in rows]
+
+    def reset_bitcoin_database(self):
+        with self._get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute("DELETE FROM bitcoin_paper_trades")
+            cursor.execute("DELETE FROM bitcoin_settings")
+            cursor.execute("DELETE FROM bitcoin_evaluations")
             conn.commit()
 
 DB = DatabaseEngine()
