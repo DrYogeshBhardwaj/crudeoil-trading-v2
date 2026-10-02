@@ -421,24 +421,33 @@ async def test_pi42_credentials(payload: dict):
     # 1. Fetch Market Data & BTC Price (Public)
     for b_url in base_urls:
         try:
-            r_mkt = requests.get(f"{b_url}/v1/market/klines?symbol=BTCINR&interval=5m", headers=ua_headers, timeout=5)
+            # Ticker (GET /v1/market/ticker24Hr/BTCINR)
+            r_t24 = requests.get(f"{b_url}/v1/market/ticker24Hr/BTCINR", headers=ua_headers, timeout=5)
+            if r_t24.status_code == 200:
+                t_data = r_t24.json()
+                price_val = t_data.get("lastPrice") or t_data.get("price") or t_data.get("close")
+                if price_val:
+                    results["BTC_PRICE"] = f"₹{price_val}"
+                    results["MARKET_DATA_5M"] = "PASS"
+
+            # Klines (POST /v1/market/klines)
+            k_payload = {"pair": "BTCINR", "interval": "5m"}
+            r_mkt = requests.post(f"{b_url}/v1/market/klines", json=k_payload, headers=ua_headers, timeout=5)
             if r_mkt.status_code == 200:
                 results["MARKET_DATA_5M"] = "PASS"
                 data_k = r_mkt.json()
-                if isinstance(data_k, list) and data_k:
-                    # Get last candle close price
+                if isinstance(data_k, list) and data_k and results["BTC_PRICE"] == "UNKNOWN":
                     results["BTC_PRICE"] = f"₹{data_k[-1].get('close', data_k[-1].get('c', 'N/A'))}"
                 break
-            
-            # Try ticker
-            r_t24 = requests.get(f"{b_url}/v1/market/ticker24Hr?symbol=BTCINR", headers=ua_headers, timeout=5)
-            if r_t24.status_code == 200:
-                results["MARKET_DATA_5M"] = "PASS"
-                t_data = r_t24.json()
-                results["BTC_PRICE"] = f"₹{t_data.get('lastPrice', t_data.get('price', 'N/A'))}"
-                break
+            else:
+                k_payload_2 = {"symbol": "BTCINR", "interval": "5m"}
+                r_mkt2 = requests.post(f"{b_url}/v1/market/klines", json=k_payload_2, headers=ua_headers, timeout=5)
+                if r_mkt2.status_code == 200:
+                    results["MARKET_DATA_5M"] = "PASS"
+                    break
         except Exception as e:
             results["diagnostics"]["market_error"] = str(e)
+
 
     # 2. Authenticated Endpoints Check (Wallet, Balance, Positions)
     ts_ms = str(int(time.time() * 1000))
