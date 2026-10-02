@@ -21,6 +21,7 @@ from wti_paper_engine import WTI_ENGINE
 from wti_feed import WTI_FEED
 from bitcoin_paper_engine import BITCOIN_ENGINE
 from bitcoin_feed import BITCOIN_FEED
+from bitcoin_live_engine import BITCOIN_LIVE_ENGINE
 
 app = FastAPI(
     title="AI Trend Detector & Paper Trading Engine V1",
@@ -161,6 +162,54 @@ async def bitcoin_update_config(payload: dict):
         BITCOIN_ENGINE.set_virtual_capital(float(capital))
         return JSONResponse({"status": "SUCCESS", "message": f"Updated virtual capital: INR {capital}"})
     return JSONResponse({"status": "ERROR", "message": "No valid config fields provided"}, status_code=400)
+
+# --- BITCOIN LIVE ENGINE (MUDREX API) ENDPOINTS ---
+
+@app.get("/bitcoin/live", response_class=HTMLResponse)
+async def serve_bitcoin_live_dashboard():
+    """Serves the separate Bitcoin Live Trading Dashboard (Mudrex API)."""
+    btc_live_path = os.path.join(os.path.dirname(__file__), "templates", "bitcoin_live.html")
+    if os.path.exists(btc_live_path):
+        with open(btc_live_path, "r", encoding="utf-8") as f:
+            return HTMLResponse(content=f.read())
+    return HTMLResponse("<h2>Bitcoin Live Trading Dashboard (Mudrex API)</h2>")
+
+@app.get("/api/bitcoin/live/state")
+async def get_bitcoin_live_state():
+    """Returns real-time JSON state for the Bitcoin Live Trading Engine."""
+    return JSONResponse(BITCOIN_LIVE_ENGINE.get_dashboard_state())
+
+@app.get("/api/bitcoin/live/preflight")
+async def run_bitcoin_live_preflight():
+    """Executes 100% READ-ONLY Pre-Flight Audit against Mudrex API."""
+    return JSONResponse(BITCOIN_LIVE_ENGINE.run_preflight_check())
+
+@app.post("/api/bitcoin/live/risk-settings")
+async def update_bitcoin_live_risk_settings(payload: dict):
+    """Updates per-trade loss limit and daily loss limit in INR."""
+    per_trade = payload.get("per_trade_loss_limit_inr")
+    daily = payload.get("daily_loss_limit_inr")
+    if per_trade is not None or daily is not None:
+        BITCOIN_LIVE_ENGINE.update_risk_settings(
+            float(per_trade) if per_trade is not None else 0.0,
+            float(daily) if daily is not None else 0.0
+        )
+        return JSONResponse({
+            "status": "SUCCESS",
+            "message": "Bitcoin Live risk settings updated and persisted successfully.",
+            "per_trade_loss_limit_inr": BITCOIN_LIVE_ENGINE.per_trade_loss_limit_inr,
+            "daily_loss_limit_inr": BITCOIN_LIVE_ENGINE.daily_loss_limit_inr
+        })
+    return JSONResponse({"status": "ERROR", "message": "No valid loss limit fields provided"}, status_code=400)
+
+@app.post("/api/bitcoin/live/reset-circuit-breaker")
+async def reset_bitcoin_live_circuit_breaker():
+    """Manually resets the emergency circuit breaker."""
+    BITCOIN_LIVE_ENGINE.reset_circuit_breaker()
+    return JSONResponse({
+        "status": "SUCCESS",
+        "message": "Bitcoin Live Engine Emergency Circuit Breaker reset successfully."
+    })
 
 @app.get("/api/live/state")
 async def get_live_state():

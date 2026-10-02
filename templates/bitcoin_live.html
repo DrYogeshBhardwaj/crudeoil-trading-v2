@@ -1,0 +1,394 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bitcoin (BTC-INR) Live Engine — Mudrex API & Risk Protection</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-dark: #080c14;
+            --card-bg: rgba(15, 23, 42, 0.85);
+            --card-border: rgba(255, 255, 255, 0.08);
+            --accent-btc: #f7931a;
+            --accent-green: #10b981;
+            --accent-red: #ef4444;
+            --accent-blue: #38bdf8;
+            --accent-amber: #f59e0b;
+            --text-main: #f8fafc;
+            --text-muted: #94a3b8;
+        }
+
+        body {
+            background-color: var(--bg-dark);
+            color: var(--text-main);
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            margin: 0;
+            padding: 16px;
+        }
+
+        .container {
+            max-width: 1600px;
+            margin: 0 auto;
+        }
+
+        .header-banner {
+            background: linear-gradient(90deg, #1e1b4b, #311b92, #0f172a);
+            border: 1px solid rgba(247, 147, 26, 0.4);
+            color: #fef3c7;
+            padding: 16px 24px;
+            border-radius: 12px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+        }
+
+        .header-title {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+        }
+
+        .header-title h1 {
+            font-size: 1.5rem;
+            font-weight: 800;
+            margin: 0;
+            background: linear-gradient(90deg, #fbbf24, #f7931a);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .nav-links {
+            display: flex;
+            gap: 10px;
+        }
+
+        .btn-nav {
+            background: rgba(255,255,255,0.06);
+            border: 1px solid rgba(255,255,255,0.15);
+            color: #fff;
+            padding: 8px 14px;
+            border-radius: 6px;
+            font-weight: 600;
+            font-size: 0.82rem;
+            text-decoration: none;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .btn-nav:hover {
+            background: rgba(255,255,255,0.15);
+            border-color: #f7931a;
+        }
+
+        .btn-nav.active {
+            background: #f7931a;
+            color: #000;
+            font-weight: 800;
+            border-color: #f7931a;
+        }
+
+        .grid-4 {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 16px;
+            margin-bottom: 20px;
+        }
+
+        .card {
+            background: var(--card-bg);
+            border: 1px solid var(--card-border);
+            border-radius: 12px;
+            padding: 18px;
+            backdrop-filter: blur(10px);
+        }
+
+        .card-title {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.8px;
+            font-weight: 600;
+            margin-bottom: 10px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .card-val {
+            font-size: 1.8rem;
+            font-weight: 800;
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        .card-sub {
+            font-size: 0.82rem;
+            color: var(--text-muted);
+            margin-top: 6px;
+        }
+
+        .badge-status {
+            padding: 4px 10px;
+            border-radius: 4px;
+            font-size: 0.75rem;
+            font-weight: 800;
+            text-transform: uppercase;
+        }
+
+        .badge-green { background: rgba(16, 185, 129, 0.2); color: #10b981; border: 1px solid rgba(16, 185, 129, 0.4); }
+        .badge-red { background: rgba(239, 68, 68, 0.2); color: #ef4444; border: 1px solid rgba(239, 68, 68, 0.4); }
+        .badge-amber { background: rgba(245, 158, 11, 0.2); color: #f59e0b; border: 1px solid rgba(245, 158, 11, 0.4); }
+
+        .control-panel {
+            background: rgba(15, 23, 42, 0.95);
+            border: 1px solid rgba(247, 147, 26, 0.3);
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+
+        .input-group {
+            display: flex;
+            gap: 12px;
+            align-items: center;
+            margin-top: 12px;
+            flex-wrap: wrap;
+        }
+
+        .input-field {
+            background: #090d16;
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            color: #fff;
+            padding: 8px 12px;
+            border-radius: 6px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.9rem;
+            width: 140px;
+        }
+
+        .btn-action {
+            background: #10b981;
+            color: #000;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 6px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .btn-action:hover { opacity: 0.9; transform: scale(1.02); }
+
+        .btn-danger {
+            background: #ef4444;
+            color: #fff;
+        }
+
+        pre {
+            background: #04070d;
+            padding: 14px;
+            border-radius: 8px;
+            border: 1px solid rgba(255,255,255,0.1);
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.82rem;
+            color: #38bdf8;
+            overflow-x: auto;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+
+    <!-- HEADER BANNER -->
+    <div class="header-banner">
+        <div class="header-title">
+            <span class="badge-status badge-amber" style="font-size:0.8rem;">LIVE ENGINE</span>
+            <div>
+                <h1>BITCOIN (BTCUSDT) — MUDREX LIVE ENGINE & RISK PROTECTION</h1>
+                <div style="font-size:0.8rem; color:#cbd5e1; margin-top:2px;">Hard Risk Protection | Official Mudrex REST API Integration</div>
+            </div>
+        </div>
+        <div class="nav-links">
+            <a href="/bitcoin" class="btn-nav">📄 Paper Trading Dashboard</a>
+            <a href="/bitcoin/live" class="btn-nav active">⚡ Live Engine Dashboard</a>
+            <a href="/" class="btn-nav">🏠 Main Portal</a>
+        </div>
+    </div>
+
+    <!-- METRICS GRID -->
+    <div class="grid-4">
+
+        <!-- 1. BTC PRICE & API STATUS -->
+        <div class="card">
+            <div class="card-title">
+                <span>BTC Price (Mudrex / Live Feed)</span>
+                <span id="api_status" class="badge-status badge-green">CONNECTING...</span>
+            </div>
+            <div class="card-val" id="btc_price">₹0.00</div>
+            <div class="card-sub">Instrument: <strong>BTCUSDT (Mudrex Futures)</strong></div>
+        </div>
+
+        <!-- 2. WALLET BALANCES -->
+        <div class="card">
+            <div class="card-title">
+                <span>Mudrex INR Wallet</span>
+                <span class="badge-status badge-amber">INR MARGIN</span>
+            </div>
+            <div style="font-size:1.1rem; font-weight:700; color:#10b981;">Futures Balance: <span id="fut_bal">₹0.00</span></div>
+            <div class="card-sub">Spot Balance: <strong id="spot_bal">₹0.00</strong></div>
+        </div>
+
+        <!-- 3. NEW ENTRIES STATUS -->
+        <div class="card">
+            <div class="card-title">
+                <span>New Trade Entry Status</span>
+                <span id="entry_badge" class="badge-status badge-green">CHECKING</span>
+            </div>
+            <div class="card-val" id="entry_status" style="font-size:1.4rem;">ALLOWED</div>
+            <div class="card-sub" id="entry_reason">Checking risk guardrails...</div>
+        </div>
+
+        <!-- 4. CIRCUIT BREAKER -->
+        <div class="card">
+            <div class="card-title">
+                <span>Emergency Circuit Breaker</span>
+                <span id="cb_badge" class="badge-status badge-green">NORMAL</span>
+            </div>
+            <div class="card-val" id="cb_status" style="font-size:1.4rem;">NORMAL</div>
+            <div class="card-sub" id="cb_reason">No active errors</div>
+        </div>
+
+    </div>
+
+    <!-- RISK MANAGEMENT & LOSS LIMITS PANEL -->
+    <div class="control-panel">
+        <h3 style="margin-top:0; color:#fbbf24; display:flex; align-items:center; gap:8px;">
+            🛡️ PERSISTENT RISK MANAGEMENT & SAFETY CONTROLS
+        </h3>
+        <div class="grid-4" style="margin-bottom:0;">
+            <div>
+                <div class="card-title">Per-Trade Loss Limit</div>
+                <div class="card-val" id="disp_per_trade" style="color:#ef4444;">₹2,500.00</div>
+                <div class="card-sub">Hard Stop Loss auto-enforced</div>
+            </div>
+            <div>
+                <div class="card-title">Daily Loss Limit</div>
+                <div class="card-val" id="disp_daily_limit" style="color:#ef4444;">₹3,000.00</div>
+                <div class="card-sub">Auto entry block at threshold</div>
+            </div>
+            <div>
+                <div class="card-title">Today's Realized P&L</div>
+                <div class="card-val" id="disp_today_pnl">₹0.00</div>
+                <div class="card-sub">Resets at midnight IST</div>
+            </div>
+            <div>
+                <div class="card-title">Current Unrealized P&L</div>
+                <div class="card-val" id="disp_unrealized_pnl">₹0.00</div>
+                <div class="card-sub">Active Position P&L</div>
+            </div>
+        </div>
+
+        <!-- UPDATE RISK SETTINGS FORM -->
+        <div style="margin-top:20px; border-top: 1px solid rgba(255,255,255,0.1); padding-top:16px;">
+            <h4 style="margin:0 0 10px 0; color:#cbd5e1;">Configure Risk Limits (Survives Container Restarts)</h4>
+            <div class="input-group">
+                <label style="font-size:0.85rem; color:#94a3b8;">Per-Trade Limit (₹):</label>
+                <input type="number" id="input_per_trade" class="input-field" value="2500" step="100">
+                <label style="font-size:0.85rem; color:#94a3b8;">Daily Loss Limit (₹):</label>
+                <input type="number" id="input_daily" class="input-field" value="3000" step="100">
+                <button onclick="updateRiskSettings()" class="btn-action">Save Risk Settings</button>
+                <button onclick="resetCircuitBreaker()" class="btn-action btn-danger">Reset Circuit Breaker</button>
+                <button onclick="runPreflight()" class="btn-action" style="background:#38bdf8;">Run Pre-Flight Audit</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- PRE-FLIGHT & AUDIT REPORT -->
+    <div class="card">
+        <h3 style="margin-top:0; color:#38bdf8;">📋 READ-ONLY PRE-FLIGHT AUDIT REPORT</h3>
+        <pre id="preflight_output">Click "Run Pre-Flight Audit" or waiting for auto-fetch...</pre>
+    </div>
+
+</div>
+
+<script>
+    async function updateDashboard() {
+        try {
+            const resp = await fetch('/api/bitcoin/live/state');
+            const data = await resp.json();
+
+            document.getElementById('btc_price').innerText = '₹' + Number(data.btc_price || 0).toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+            document.getElementById('api_status').innerText = data.mudrex_api_status || 'UNKNOWN';
+            document.getElementById('api_status').className = 'badge-status ' + (data.mudrex_api_status === 'AUTHENTICATED' ? 'badge-green' : 'badge-red');
+
+            document.getElementById('fut_bal').innerText = '₹' + Number(data.futures_inr_balance || 0).toLocaleString('en-IN', {minimumFractionDigits: 2});
+            document.getElementById('spot_bal').innerText = '₹' + Number(data.spot_inr_balance || 0).toLocaleString('en-IN', {minimumFractionDigits: 2});
+
+            const entryStatus = data.new_entries_allowed ? 'ALLOWED' : 'BLOCKED';
+            document.getElementById('entry_status').innerText = entryStatus;
+            document.getElementById('entry_reason').innerText = data.new_entries_reason || '';
+            document.getElementById('entry_badge').className = 'badge-status ' + (data.new_entries_allowed ? 'badge-green' : 'badge-red');
+
+            const cbStatus = data.circuit_breaker || 'NORMAL';
+            document.getElementById('cb_status').innerText = cbStatus;
+            document.getElementById('cb_reason').innerText = data.circuit_breaker_reason || 'No errors';
+            document.getElementById('cb_badge').className = 'badge-status ' + (cbStatus === 'NORMAL' ? 'badge-green' : 'badge-red');
+
+            document.getElementById('disp_per_trade').innerText = '₹' + Number(data.per_trade_loss_limit_inr || 2500).toLocaleString('en-IN', {minimumFractionDigits: 2});
+            document.getElementById('disp_daily_limit').innerText = '₹' + Number(data.daily_loss_limit_inr || 3000).toLocaleString('en-IN', {minimumFractionDigits: 2});
+            document.getElementById('disp_today_pnl').innerText = '₹' + Number(data.today_realized_pnl || 0).toLocaleString('en-IN', {minimumFractionDigits: 2});
+            document.getElementById('disp_unrealized_pnl').innerText = '₹' + Number(data.current_unrealized_pnl || 0).toLocaleString('en-IN', {minimumFractionDigits: 2});
+        } catch(e) {
+            console.error('Error fetching live state:', e);
+        }
+    }
+
+    async function updateRiskSettings() {
+        const perTrade = document.getElementById('input_per_trade').value;
+        const daily = document.getElementById('input_daily').value;
+        try {
+            const resp = await fetch('/api/bitcoin/live/risk-settings', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ per_trade_loss_limit_inr: parseFloat(perTrade), daily_loss_limit_inr: parseFloat(daily) })
+            });
+            const res = await resp.json();
+            alert(res.message);
+            updateDashboard();
+        } catch(e) {
+            alert('Error updating risk settings: ' + e);
+        }
+    }
+
+    async function resetCircuitBreaker() {
+        try {
+            const resp = await fetch('/api/bitcoin/live/reset-circuit-breaker', { method: 'POST' });
+            const res = await resp.json();
+            alert(res.message);
+            updateDashboard();
+        } catch(e) {
+            alert('Error resetting circuit breaker: ' + e);
+        }
+    }
+
+    async function runPreflight() {
+        document.getElementById('preflight_output').innerText = 'Running 100% Read-Only Pre-Flight Audit...';
+        try {
+            const resp = await fetch('/api/bitcoin/live/preflight');
+            const data = await resp.json();
+            document.getElementById('preflight_output').innerText = JSON.stringify(data, null, 2);
+        } catch(e) {
+            document.getElementById('preflight_output').innerText = 'Error running preflight audit: ' + e;
+        }
+    }
+
+    setInterval(updateDashboard, 4000);
+    updateDashboard();
+    runPreflight();
+</script>
+</body>
+</html>
