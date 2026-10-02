@@ -872,8 +872,28 @@ async def test_mudrex_credentials():
         except Exception as e:
             results["diagnostics"]["OPEN_ORDERS_EX"] = str(e)
 
-        # 7. Order Placement Diagnostic Probe
-        order_url = f"{base_url}/futures/01903a7b-bf65-707d-a7dc-d7b84c3c756c/order?trade_currency=INR"
+        # Find exact BTCUSDT asset ID
+        btc_asset_id = ""
+        try:
+            r_all_ast = requests.get(f"{base_url}/futures", headers=headers, timeout=5)
+            if r_all_ast.status_code in (200, 201):
+                all_ast_data = r_all_ast.json()
+                ast_list = all_ast_data.get("data") if isinstance(all_ast_data, dict) else all_ast_data
+                if isinstance(ast_list, list):
+                    for a in ast_list:
+                        sym = str(a.get("symbol", "")).upper()
+                        if sym in ("BTCUSDT", "BTC/USDT", "BTC-INR", "BTCINR"):
+                            btc_asset_id = a.get("id")
+                            results["btc_asset_found"] = a
+                            break
+        except Exception as ex_ast:
+            results["diagnostics"]["BTC_ASSET_LOOKUP_ERR"] = str(ex_ast)
+
+        if not btc_asset_id:
+            btc_asset_id = "01903a7b-bf65-707d-a7dc-d7b84c3c756c"
+
+        results["target_btc_asset_id"] = btc_asset_id
+        order_url = f"{base_url}/futures/{btc_asset_id}/order?trade_currency=INR"
         order_probe_results = {}
         
         # Test variations of payload fields with order_type: MARKET
