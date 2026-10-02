@@ -245,31 +245,49 @@ class MudrexLiveAdapter:
 
     def place_futures_order(self, symbol: str, side: str, quantity: float, order_type: str = "MARKET", price: Optional[float] = None, stoploss_price: Optional[float] = None) -> Dict[str, Any]:
         """
-        Places a live futures order on Mudrex.
-        Endpoint: POST /futures/order
+        Places a live futures order on Mudrex with robust endpoint discovery.
+        Candidate endpoints: /futures/order, /futures/orders, /futures/positions, /futures/trade, /order
         """
-        try:
-            headers = self._get_headers()
-            url = f"{self.BASE_URL}/futures/order"
-            payload = {
-                "symbol": symbol,
-                "side": side.upper(),
-                "order_type": order_type.upper(),
-                "quantity": str(quantity),
-                "trade_currency": "INR"
-            }
-            if price:
-                payload["price"] = str(price)
-            if stoploss_price:
-                payload["stoploss_price"] = str(stoploss_price)
+        headers = self._get_headers()
+        candidate_urls = [
+            f"{self.BASE_URL}/futures/order?trade_currency=INR",
+            f"{self.BASE_URL}/futures/order",
+            f"{self.BASE_URL}/futures/orders?trade_currency=INR",
+            f"{self.BASE_URL}/futures/orders",
+            f"{self.BASE_URL}/futures/positions?trade_currency=INR",
+            f"{self.BASE_URL}/futures/positions",
+            f"{self.BASE_URL}/futures/trade?trade_currency=INR",
+            f"{self.BASE_URL}/futures/trade",
+            f"{self.BASE_URL}/order?trade_currency=INR",
+            f"{self.BASE_URL}/order"
+        ]
 
-            resp = requests.post(url, headers=headers, json=payload, timeout=8)
-            if resp.status_code in (200, 201):
-                return {"success": True, "data": resp.json()}
-            else:
-                return {"success": False, "status_code": resp.status_code, "error": resp.text}
-        except Exception as e:
-            return {"success": False, "error": str(e)}
+        payload = {
+            "symbol": symbol,
+            "side": side.upper(),
+            "order_type": order_type.upper(),
+            "quantity": str(quantity),
+            "trade_currency": "INR"
+        }
+        if price:
+            payload["price"] = str(price)
+        if stoploss_price:
+            payload["stoploss_price"] = str(stoploss_price)
+
+        last_error = ""
+        for url in candidate_urls:
+            try:
+                resp = requests.post(url, headers=headers, json=payload, timeout=8)
+                if resp.status_code in (200, 201):
+                    data = resp.json()
+                    print(f"[{datetime.now()}] [MUDREX ORDER SUCCESS] Endpoint {url} succeeded! Data: {data}")
+                    return {"success": True, "data": data, "endpoint": url}
+                else:
+                    last_error = f"Endpoint {url} -> HTTP {resp.status_code}: {resp.text}"
+            except Exception as ex:
+                last_error = f"Endpoint {url} Exception: {ex}"
+
+        return {"success": False, "error": last_error}
 
 
 class BitcoinLiveEngine:
