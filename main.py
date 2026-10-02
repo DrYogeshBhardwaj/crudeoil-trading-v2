@@ -397,7 +397,7 @@ async def test_pi42_credentials(payload: dict):
     if not api_key:
         return JSONResponse({"status": "ERROR", "message": "api_key is required"}, status_code=400)
 
-    base_url = "https://fapi.pi42.com"
+    base_url = "https://api.pi42.com"
     start_t = time.time()
 
     ua_headers = {
