@@ -877,6 +877,9 @@ async def startup_event():
     print(f"[{datetime.now()}] [STARTUP] Spawning BITCOIN_ENGINE.start_feed_loop background task...")
     asyncio.create_task(BITCOIN_ENGINE.start_feed_loop())
 
+    print(f"[{datetime.now()}] [STARTUP] Spawning BITCOIN_LIVE_ENGINE.start_feed_loop background task...")
+    asyncio.create_task(BITCOIN_LIVE_ENGINE.start_feed_loop())
+
 if __name__ == "__main__":
     import uvicorn
     port = int(os.environ.get("PORT", 8080))

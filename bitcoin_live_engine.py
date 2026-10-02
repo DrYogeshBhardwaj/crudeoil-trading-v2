@@ -17,6 +17,7 @@ Implements Mandatory Risk Guardrails:
 import os
 import time
 import json
+import asyncio
 import requests
 import traceback
 from datetime import datetime
@@ -24,6 +25,7 @@ from typing import Dict, Any, Optional, List, Tuple
 
 from database import DB
 from bitcoin_feed import BITCOIN_FEED
+from bitcoin_strategy import BITCOIN_STRATEGY
 
 class MudrexLiveAdapter:
     """Handles REST interactions with Mudrex API for funds, positions, risk orders, and leverage."""
@@ -220,6 +222,34 @@ class MudrexLiveAdapter:
             headers = self._get_headers()
             url = f"{self.BASE_URL}/futures/positions/{position_id}?trade_currency=INR"
             resp = requests.delete(url, headers=headers, timeout=5)
+            if resp.status_code in (200, 201):
+                return {"success": True, "data": resp.json()}
+            else:
+                return {"success": False, "status_code": resp.status_code, "error": resp.text}
+        except Exception as e:
+            return {"success": False, "error": str(e)}
+
+    def place_futures_order(self, symbol: str, side: str, quantity: float, order_type: str = "MARKET", price: Optional[float] = None, stoploss_price: Optional[float] = None) -> Dict[str, Any]:
+        """
+        Places a live futures order on Mudrex.
+        Endpoint: POST /futures/orders
+        """
+        try:
+            headers = self._get_headers()
+            url = f"{self.BASE_URL}/futures/orders"
+            payload = {
+                "symbol": symbol,
+                "side": side.upper(),
+                "order_type": order_type.upper(),
+                "quantity": str(quantity),
+                "trade_currency": "INR"
+            }
+            if price:
+                payload["price"] = str(price)
+            if stoploss_price:
+                payload["stoploss_price"] = str(stoploss_price)
+
+            resp = requests.post(url, headers=headers, json=payload, timeout=8)
             if resp.status_code in (200, 201):
                 return {"success": True, "data": resp.json()}
             else:
@@ -437,5 +467,128 @@ class BitcoinLiveEngine:
             "disclaimer": "BITCOIN LIVE ENGINE — MUDREX API INTEGRATED — ZERO ORDERS PLACED IN PRE-FLIGHT"
         }
 
+    def process_tick(self):
+        """Processes live market ticks and evaluates automated strategy for Mudrex execution."""
+        try:
+            tick = BITCOIN_FEED.fetch_latest_tick()
+            self.last_tick = tick
+            curr_price = float(tick.get("price", 0.0)) if isinstance(tick, dict) else (float(tick.price) if hasattr(tick, "price") else 0.0)
+
+            if curr_price <= 0:
+                return
+
+            candles = BITCOIN_FEED.fetch_historical_candles("5m", "5d")
+            eval_res = BITCOIN_STRATEGY.evaluate_market(candles, curr_price)
+            self.last_evaluation = eval_res
+
+            # Check open position state on Mudrex
+            active_pos = DB.load_active_bitcoin_live_position()
+            
+            if active_pos and active_pos.get("status") == "OPEN":
+                # Verify active position on Mudrex API
+                mudrex_positions = self.adapter.fetch_open_positions()
+                matching_pos = None
+                if isinstance(mudrex_positions, list):
+                    for p in mudrex_positions:
+                        if p.get("symbol") == "BTCUSDT" or str(p.get("id")) == str(active_pos.get("mudrex_position_id")):
+                            matching_pos = p
+                            break
+                
+                # If position closed on Mudrex, update DB record
+                if not matching_pos and active_pos.get("mudrex_position_id"):
+                    now_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                    entry_p = float(active_pos["entry_price"])
+                    qty = float(active_pos["quantity"])
+                    direction = active_pos["direction"]
+                    gross_pnl = (curr_price - entry_p) * qty if direction == "BUY" else (entry_p - curr_price) * qty
+                    net_pnl = gross_pnl - 100.0 # estimated charges
+
+                    active_pos["status"] = "CLOSED"
+                    active_pos["exit_timestamp"] = now_str
+                    active_pos["exit_price"] = curr_price
+                    active_pos["exit_reason"] = "SL_TP_EXECUTED_ON_MUDREX"
+                    active_pos["gross_pnl"] = round(gross_pnl, 2)
+                    active_pos["charges"] = 100.0
+                    active_pos["net_pnl"] = round(net_pnl, 2)
+
+                    DB.save_bitcoin_live_trade(active_pos)
+                    self.today_realized_pnl += net_pnl
+                    self.save_settings()
+                    print(f"[{datetime.now()}] [BITCOIN LIVE ENGINE] Active position closed on Mudrex! P&L: ₹{net_pnl:,.2f}")
+                return
+
+            # If no open position, check entry permission and signal
+            allowed, reason = self.are_new_entries_allowed()
+            if not allowed:
+                return
+
+            action = eval_res.get("action", "WAIT")
+            if action in ("BUY", "SELL"):
+                # Execute live order on Mudrex
+                qty = 0.001 # Min lot size for BTCUSDT
+                print(f"[{datetime.now()}] [BITCOIN LIVE ENGINE] Strategy Signal {action} @ ₹{curr_price:,.2f}! Sending order to Mudrex...")
+                
+                order_res = self.adapter.place_futures_order(
+                    symbol="BTCUSDT",
+                    side=action,
+                    quantity=qty,
+                    order_type="MARKET",
+                    stoploss_price=eval_res.get("stop_loss")
+                )
+
+                if order_res.get("success"):
+                    mudrex_data = order_res.get("data", {})
+                    pos_id = str(mudrex_data.get("position_id") or mudrex_data.get("id") or f"MUDREX_{int(time.time())}")
+                    now_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                    trade_id = f"BTC_LIVE_{int(time.time())}"
+
+                    pos_dict = {
+                        "trade_id": trade_id,
+                        "mudrex_position_id": pos_id,
+                        "entry_timestamp": now_str,
+                        "symbol": "BTCUSDT",
+                        "direction": action,
+                        "quantity": qty,
+                        "entry_price": curr_price,
+                        "stop_loss": eval_res.get("stop_loss"),
+                        "stoploss_order_id": None,
+                        "target": eval_res.get("target"),
+                        "trend_state": eval_res.get("trend", "NEUTRAL"),
+                        "confidence": eval_res.get("confidence", 50),
+                        "reasons": eval_res.get("reasons", []),
+                        "status": "OPEN",
+                        "exit_timestamp": None,
+                        "exit_price": None,
+                        "exit_reason": None,
+                        "gross_pnl": 0.0,
+                        "charges": 0.0,
+                        "net_pnl": 0.0
+                    }
+
+                    DB.save_bitcoin_live_trade(pos_dict)
+
+                    # Attach SL risk order if not automatically set
+                    if pos_id and eval_res.get("stop_loss"):
+                        sl_res = self.adapter.attach_stop_loss(pos_id, eval_res["stop_loss"], eval_res.get("target"))
+                        if not sl_res.get("success"):
+                            print(f"[{datetime.now()}] [WARNING] Failed to attach SL on Mudrex: {sl_res}")
+                else:
+                    err_msg = order_res.get("error", "Unknown Mudrex Order Error")
+                    print(f"[{datetime.now()}] [BITCOIN LIVE ORDER FAILED] {err_msg}")
+        except Exception as err:
+            print(f"[{datetime.now()}] [BITCOIN LIVE TICK ERROR] {err}")
+
+    async def start_feed_loop(self):
+        """Continuous background loop for Bitcoin Live Engine."""
+        self.is_running = True
+        print(f"[{datetime.now()}] [BITCOIN LIVE ENGINE] Background feed & evaluation loop started.")
+        while self.is_running:
+            try:
+                self.process_tick()
+            except Exception as e:
+                print(f"[{datetime.now()}] [BITCOIN LIVE ENGINE LOOP ERROR] {e}")
+            await asyncio.sleep(5)
+
 # Global Instance
 BITCOIN_LIVE_ENGINE = BitcoinLiveEngine()
+
