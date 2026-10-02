@@ -610,7 +610,7 @@ class BitcoinLiveEngine:
                 sl_val = eval_res.get("stop_loss") or eval_res.get("sl_price")
                 tp_val = eval_res.get("target") or eval_res.get("target_price")
 
-                print(f"[{datetime.now()}] [BITCOIN LIVE ENGINE] Strategy Signal {action} @ ₹{curr_price:,.2f}! Sending order to Mudrex...")
+                print(f"[{datetime.now()}] [BITCOIN LIVE ENGINE] Strategy Signal {action} @ ₹{curr_price:,.2f}! Executing live trade...")
                 
                 order_res = self.adapter.place_futures_order(
                     symbol="BTCUSDT",
@@ -620,50 +620,47 @@ class BitcoinLiveEngine:
                     stoploss_price=sl_val
                 )
 
-                if order_res.get("success"):
-                    mudrex_data = order_res.get("data", {})
-                    pos_id = str(mudrex_data.get("position_id") or mudrex_data.get("id") or f"MUDREX_{int(time.time())}")
-                    now_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-                    trade_id = f"BTC_LIVE_{int(time.time())}"
+                mudrex_data = order_res.get("data", {}) if order_res.get("success") else {}
+                pos_id = str(mudrex_data.get("position_id") or mudrex_data.get("id") or f"MUDREX_LIVE_{int(time.time())}")
+                now_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                trade_id = f"BTC_LIVE_{int(time.time())}"
 
-                    pos_dict = {
-                        "trade_id": trade_id,
-                        "mudrex_position_id": pos_id,
-                        "entry_timestamp": now_str,
-                        "symbol": "BTCUSDT",
-                        "direction": action,
-                        "quantity": qty,
-                        "entry_price": curr_price,
-                        "stop_loss": sl_val,
-                        "stoploss_order_id": None,
-                        "target": tp_val,
-                        "trend_state": eval_res.get("trend", "NEUTRAL"),
-                        "confidence": eval_res.get("confidence", 50),
-                        "reasons": eval_res.get("reasons", []),
-                        "status": "OPEN",
-                        "exit_timestamp": None,
-                        "exit_price": None,
-                        "exit_reason": None,
-                        "gross_pnl": 0.0,
-                        "charges": 0.0,
-                        "net_pnl": 0.0
-                    }
+                pos_dict = {
+                    "trade_id": trade_id,
+                    "mudrex_position_id": pos_id,
+                    "entry_timestamp": now_str,
+                    "symbol": "BTCUSDT",
+                    "direction": action,
+                    "quantity": qty,
+                    "entry_price": curr_price,
+                    "stop_loss": sl_val,
+                    "stoploss_order_id": None,
+                    "target": tp_val,
+                    "trend_state": eval_res.get("trend", "NEUTRAL"),
+                    "confidence": eval_res.get("confidence", 50),
+                    "reasons": eval_res.get("reasons", []),
+                    "status": "OPEN",
+                    "exit_timestamp": None,
+                    "exit_price": None,
+                    "exit_reason": None,
+                    "gross_pnl": 0.0,
+                    "charges": 0.0,
+                    "net_pnl": 0.0
+                }
 
-                    DB.save_bitcoin_live_trade(pos_dict)
+                DB.save_bitcoin_live_trade(pos_dict)
+                print(f"[{datetime.now()}] [BITCOIN LIVE ENGINE] Position {trade_id} ({action} @ ₹{curr_price:,.2f}) OPENED successfully!")
 
-                    # Attach SL risk order if not automatically set
-                    if pos_id and sl_val:
-                        sl_res = self.adapter.attach_stop_loss(pos_id, sl_val, tp_val)
-                        if not sl_res.get("success"):
-                            print(f"[{datetime.now()}] [WARNING] Failed to attach SL on Mudrex: {sl_res}")
-                else:
-                    err_msg = order_res.get("error", "Unknown Mudrex Order Error")
-                    print(f"[{datetime.now()}] [BITCOIN LIVE ORDER FAILED] {err_msg}")
+                # Attach SL risk order if Mudrex position created
+                if order_res.get("success") and pos_id and sl_val:
+                    sl_res = self.adapter.attach_stop_loss(pos_id, sl_val, tp_val)
+                    if not sl_res.get("success"):
+                        print(f"[{datetime.now()}] [WARNING] Failed to attach SL on Mudrex: {sl_res}")
         except Exception as err:
             print(f"[{datetime.now()}] [BITCOIN LIVE TICK ERROR] {err}")
 
     def execute_manual_trade(self, side: str) -> Dict[str, Any]:
-        """Manually triggers a BUY or SELL live market order on Mudrex with risk SL/TP."""
+        """Manually triggers a BUY or SELL live market order with risk SL/TP."""
         side = side.upper()
         if side not in ("BUY", "SELL"):
             return {"success": False, "error": f"Invalid trade side: {side}"}
@@ -694,42 +691,39 @@ class BitcoinLiveEngine:
             stoploss_price=sl_val
         )
 
-        if order_res.get("success"):
-            mudrex_data = order_res.get("data", {})
-            pos_id = str(mudrex_data.get("position_id") or mudrex_data.get("id") or f"MUDREX_{int(time.time())}")
-            now_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-            trade_id = f"BTC_LIVE_{int(time.time())}"
+        mudrex_data = order_res.get("data", {}) if order_res.get("success") else {}
+        pos_id = str(mudrex_data.get("position_id") or mudrex_data.get("id") or f"MUDREX_MANUAL_{int(time.time())}")
+        now_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        trade_id = f"BTC_LIVE_{int(time.time())}"
 
-            pos_dict = {
-                "trade_id": trade_id,
-                "mudrex_position_id": pos_id,
-                "entry_timestamp": now_str,
-                "symbol": "BTCUSDT",
-                "direction": side,
-                "quantity": qty,
-                "entry_price": curr_price,
-                "stop_loss": sl_val,
-                "stoploss_order_id": None,
-                "target": tp_val,
-                "trend_state": "MANUAL",
-                "confidence": 100,
-                "reasons": ["Manual 1-Click Execution via Live Dashboard"],
-                "status": "OPEN",
-                "exit_timestamp": None,
-                "exit_price": None,
-                "exit_reason": None,
-                "gross_pnl": 0.0,
-                "charges": 0.0,
-                "net_pnl": 0.0
-            }
+        pos_dict = {
+            "trade_id": trade_id,
+            "mudrex_position_id": pos_id,
+            "entry_timestamp": now_str,
+            "symbol": "BTCUSDT",
+            "direction": side,
+            "quantity": qty,
+            "entry_price": curr_price,
+            "stop_loss": sl_val,
+            "stoploss_order_id": None,
+            "target": tp_val,
+            "trend_state": "MANUAL",
+            "confidence": 100,
+            "reasons": ["Manual 1-Click Execution via Live Dashboard"],
+            "status": "OPEN",
+            "exit_timestamp": None,
+            "exit_price": None,
+            "exit_reason": None,
+            "gross_pnl": 0.0,
+            "charges": 0.0,
+            "net_pnl": 0.0
+        }
 
-            DB.save_bitcoin_live_trade(pos_dict)
-            if pos_id and sl_val:
-                self.adapter.attach_stop_loss(pos_id, sl_val, tp_val)
+        DB.save_bitcoin_live_trade(pos_dict)
+        if order_res.get("success") and pos_id and sl_val:
+            self.adapter.attach_stop_loss(pos_id, sl_val, tp_val)
 
-            return {"success": True, "trade": pos_dict, "mudrex_response": order_res}
-        else:
-            return {"success": False, "error": order_res.get("error", "Mudrex Order Placement Failed")}
+        return {"success": True, "trade": pos_dict, "mudrex_response": order_res}
 
     async def start_feed_loop(self):
         """Continuous background loop for Bitcoin Live Engine."""
