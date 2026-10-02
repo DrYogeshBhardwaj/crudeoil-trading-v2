@@ -20,7 +20,7 @@ import json
 import requests
 import traceback
 from datetime import datetime
-from typing import Dict, Any, Optional, List
+from typing import Dict, Any, Optional, List, Tuple
 
 from database import DB
 from bitcoin_feed import BITCOIN_FEED
