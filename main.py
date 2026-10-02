@@ -695,7 +695,7 @@ async def test_mudrex_credentials():
             results["diagnostics"]["BTC_PRICE_DATA"] = f"Exception: {e}"
 
         # 2. Futures Asset Discovery
-        for asset_ep in ["/futures/assets?trade_currency=INR", "/futures/assets", "/futures/symbols?trade_currency=INR"]:
+        for asset_ep in ["/assets?market=FUTURES", "/futures/assets?trade_currency=INR", "/assets"]:
             try:
                 r_ast = requests.get(f"{base_url}{asset_ep}", headers=headers, timeout=5)
                 results["diagnostics"][f"ASSET_DISCOVERY_{asset_ep}"] = f"Status {r_ast.status_code}: {r_ast.text[:150]}"
