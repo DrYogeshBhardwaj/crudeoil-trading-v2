@@ -732,6 +732,44 @@ class BitcoinLiveEngine:
 
         return {"success": True, "trade": pos_dict, "mudrex_response": order_res}
 
+    def close_active_position(self) -> Dict[str, Any]:
+        """Manually closes active live position and updates database status."""
+        active_pos = DB.load_active_bitcoin_live_position()
+        if not active_pos or active_pos.get("status") != "OPEN":
+            return {"success": False, "error": "No active position is currently open"}
+
+        tick = BITCOIN_FEED.fetch_latest_tick()
+        curr_price = float(tick.get("price", 0.0)) if isinstance(tick, dict) else (float(tick.price) if hasattr(tick, "price") else 0.0)
+        
+        m_pos_id = active_pos.get("mudrex_position_id")
+        if m_pos_id and self.adapter:
+            try:
+                self.adapter.close_position_safely(m_pos_id)
+            except Exception as e:
+                print(f"[{datetime.now()}] [WARNING] Error closing Mudrex position {m_pos_id}: {e}")
+
+        now_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        entry_p = float(active_pos["entry_price"])
+        qty = float(active_pos["quantity"])
+        direction = active_pos["direction"]
+
+        gross_pnl = (curr_price - entry_p) * qty if direction == "BUY" else (entry_p - curr_price) * qty
+        net_pnl = gross_pnl - 50.0
+
+        active_pos["status"] = "CLOSED"
+        active_pos["exit_timestamp"] = now_str
+        active_pos["exit_price"] = curr_price
+        active_pos["exit_reason"] = "MANUAL_EMERGENCY_EXIT"
+        active_pos["gross_pnl"] = round(gross_pnl, 2)
+        active_pos["charges"] = 50.0
+        active_pos["net_pnl"] = round(net_pnl, 2)
+
+        DB.save_bitcoin_live_trade(active_pos)
+        self.today_realized_pnl += net_pnl
+        self.save_settings()
+
+        return {"success": True, "message": f"Active position {active_pos['trade_id']} closed manually. P&L: ₹{net_pnl:,.2f}", "trade": active_pos}
+
     async def start_feed_loop(self):
         """Continuous background loop for Bitcoin Live Engine."""
         self.is_running = True

@@ -220,6 +220,14 @@ async def reset_bitcoin_live_pnl():
         "message": "Bitcoin Live Engine Daily Realized P&L reset to ₹0.00."
     })
 
+@app.post("/api/bitcoin/live/close-position")
+async def close_bitcoin_live_position():
+    """Manually closes active live position for Bitcoin Live Engine."""
+    res = BITCOIN_LIVE_ENGINE.close_active_position()
+    if res.get("success"):
+        return JSONResponse({"status": "SUCCESS", "message": res.get("message")})
+    return JSONResponse({"status": "ERROR", "message": res.get("error")}, status_code=400)
+
 @app.post("/api/bitcoin/live/toggle-trading")
 async def toggle_bitcoin_live_trading(payload: dict):
     """Toggles live trading execution on or off."""

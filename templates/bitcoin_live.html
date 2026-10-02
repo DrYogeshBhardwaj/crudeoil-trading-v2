@@ -268,6 +268,41 @@
 
     </div>
 
+    <!-- ACTIVE OPEN POSITION DISPLAY CARD -->
+    <div id="active_pos_card" class="control-panel" style="border: 2px solid #10b981; background: rgba(16, 185, 129, 0.08); margin-bottom:20px; display:none;">
+        <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px;">
+            <div>
+                <div style="display:flex; align-items:center; gap:10px;">
+                    <span id="pos_dir_badge" class="badge-status badge-green" style="font-size:0.9rem; padding:6px 14px;">BUY LONG</span>
+                    <h2 style="margin:0; font-size:1.4rem; color:#fff; font-family:'JetBrains Mono', monospace;" id="pos_title">BTCUSDT (0.001 BTC Lot)</h2>
+                </div>
+                <div style="font-size:0.85rem; color:#cbd5e1; margin-top:6px;">Trade ID: <span id="pos_id_text" style="color:#f7931a; font-weight:700;">-</span> | Opened: <span id="pos_time_text">-</span></div>
+            </div>
+            <div style="text-align:right;">
+                <div style="font-size:0.8rem; color:#94a3b8; text-transform:uppercase;">Active Unrealized P&L</div>
+                <div id="pos_live_pnl" style="font-size:1.8rem; font-weight:800; font-family:'JetBrains Mono', monospace; color:#10b981;">₹0.00</div>
+            </div>
+        </div>
+
+        <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap:16px; margin-top:16px; padding-top:16px; border-top:1px solid rgba(255,255,255,0.1);">
+            <div style="background:rgba(0,0,0,0.3); padding:12px; border-radius:8px; border:1px solid rgba(255,255,255,0.08);">
+                <div style="font-size:0.75rem; color:#94a3b8; font-weight:600;">ENTRY BUY PRICE</div>
+                <div id="pos_entry_price" style="font-size:1.3rem; font-weight:800; color:#fbbf24; font-family:'JetBrains Mono', monospace;">₹8,127,563.00</div>
+            </div>
+            <div style="background:rgba(239,68,68,0.1); padding:12px; border-radius:8px; border:1px solid rgba(239,68,68,0.3);">
+                <div style="font-size:0.75rem; color:#ef4444; font-weight:700;">STOP LOSS (MAX RISK ₹500)</div>
+                <div id="pos_stop_loss" style="font-size:1.3rem; font-weight:800; color:#ef4444; font-family:'JetBrains Mono', monospace;">₹8,105,063.00</div>
+            </div>
+            <div style="background:rgba(16,185,129,0.1); padding:12px; border-radius:8px; border:1px solid rgba(16,185,129,0.3);">
+                <div style="font-size:0.75rem; color:#10b981; font-weight:700;">TARGET PROFIT (TP)</div>
+                <div id="pos_target_price" style="font-size:1.3rem; font-weight:800; color:#10b981; font-family:'JetBrains Mono', monospace;">₹8,172,563.00</div>
+            </div>
+            <div style="background:rgba(0,0,0,0.3); padding:12px; border-radius:8px; border:1px solid rgba(255,255,255,0.08); display:flex; align-items:center; justify-content:center;">
+                <button onclick="emergencySquareoffLivePosition()" style="background:#ef4444; color:#fff; border:none; padding:10px 18px; border-radius:6px; font-weight:800; font-size:0.85rem; cursor:pointer; width:100%;">🚨 CLOSE POSITION NOW</button>
+            </div>
+        </div>
+    </div>
+
     <!-- 1-CLICK MANUAL ORDER EXECUTION PANEL -->
     <div class="control-panel" style="border: 1px solid rgba(16, 185, 129, 0.4); margin-bottom:20px;">
         <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px;">
@@ -395,6 +430,33 @@
                 mb.className = 'badge-status badge-amber';
             }
 
+            // Render Active Open Position Display Card
+            const posCard = document.getElementById('active_pos_card');
+            if (data.active_position) {
+                const pos = data.active_position;
+                posCard.style.display = 'block';
+
+                const dir = (pos.direction || 'BUY').toUpperCase();
+                const dirBadge = document.getElementById('pos_dir_badge');
+                dirBadge.innerText = dir === 'BUY' ? '🟢 BUY LONG' : '🔴 SELL SHORT';
+                dirBadge.className = 'badge-status ' + (dir === 'BUY' ? 'badge-green' : 'badge-red');
+
+                document.getElementById('pos_title').innerText = `BTCUSDT (${pos.quantity || 0.001} BTC Lot)`;
+                document.getElementById('pos_id_text').innerText = pos.trade_id || pos.mudrex_position_id || '-';
+                document.getElementById('pos_time_text').innerText = pos.entry_timestamp || '-';
+
+                const unPnL = Number(data.current_unrealized_pnl || 0);
+                const pnlEl = document.getElementById('pos_live_pnl');
+                pnlEl.innerText = (unPnL >= 0 ? '₹+' : '₹') + unPnL.toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+                pnlEl.style.color = unPnL >= 0 ? '#10b981' : '#ef4444';
+
+                document.getElementById('pos_entry_price').innerText = '₹' + Number(pos.entry_price || 0).toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+                document.getElementById('pos_stop_loss').innerText = '₹' + Number(pos.stop_loss || 0).toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+                document.getElementById('pos_target_price').innerText = '₹' + Number(pos.target || 0).toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+            } else {
+                posCard.style.display = 'none';
+            }
+
             // Render Evaluation Stream Logs
             if (data.evaluation_stream && data.evaluation_stream.length > 0) {
                 let html = '';
@@ -416,6 +478,18 @@
             }
         } catch(e) {
             console.error('Error fetching live state:', e);
+        }
+    }
+
+    async function emergencySquareoffLivePosition() {
+        if (!confirm("Are you sure you want to CLOSE the active live position immediately on Mudrex?")) return;
+        try {
+            const resp = await fetch('/api/bitcoin/live/close-position', { method: 'POST' });
+            const res = await resp.json();
+            alert(res.message);
+            updateDashboard();
+        } catch(e) {
+            alert('Error closing live position: ' + e);
         }
     }
 
