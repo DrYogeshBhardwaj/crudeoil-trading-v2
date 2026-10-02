@@ -447,7 +447,7 @@ async def test_pi42_credentials(payload: dict = {}):
             os.environ.get("PI42_APISECRET")
         ])
 
-        base_urls = ["https://fapi.pi42.com", "https://api.pi42.com"]
+        base_urls = ["https://fapi.pi42.com"]
         start_t = time.time()
 
         ua_headers = {
@@ -472,23 +472,15 @@ async def test_pi42_credentials(payload: dict = {}):
 
         # 1. Fetch Market Data & BTC Price (Public)
         market_test_urls = [
-            ("GET", f"https://fapi.pi42.com/v1/market/klines?symbol=BTCINR&interval=5m"),
             ("GET", f"https://api.pi42.com/v1/market/ticker24Hr/BTCINR"),
-            ("GET", f"https://api.pi42.com/v1/market/ticker24Hr"),
-            ("POST", f"https://fapi.pi42.com/v1/market/klines", {"symbol": "BTCINR", "interval": "5m"}),
-            ("POST", f"https://api.pi42.com/v1/market/klines", {"pair": "BTCINR", "interval": "5m"})
+            ("GET", f"https://fapi.pi42.com/v1/market/klines?symbol=BTCINR&interval=5m")
         ]
 
         for m_item in market_test_urls:
             method = m_item[0]
             m_url = m_item[1]
-            m_body = m_item[2] if len(m_item) > 2 else None
             try:
-                if method == "GET":
-                    r_m = requests.get(m_url, headers=ua_headers, timeout=5)
-                else:
-                    r_m = requests.post(m_url, json=m_body, headers=ua_headers, timeout=5)
-                
+                r_m = requests.get(m_url, headers=ua_headers, timeout=2)
                 results["diagnostics"][m_url] = f"Status {r_m.status_code}: {r_m.text[:150]}"
                 if r_m.status_code == 200:
                     results["MARKET_DATA_5M"] = "PASS"
@@ -513,24 +505,16 @@ async def test_pi42_credentials(payload: dict = {}):
         query_str = f"timestamp={ts_ms}"
         sig_query = hmac.new(api_secret.encode('utf-8'), query_str.encode('utf-8'), hashlib.sha256).hexdigest() if api_secret else ""
         sig_raw_ts = hmac.new(api_secret.encode('utf-8'), ts_ms.encode('utf-8'), hashlib.sha256).hexdigest() if api_secret else ""
-        json_body_str = json.dumps({"timestamp": int(ts_ms)})
-        sig_json_body = hmac.new(api_secret.encode('utf-8'), json_body_str.encode('utf-8'), hashlib.sha256).hexdigest() if api_secret else ""
 
         auth_combinations = [
-            # (tag, headers_dict, query_or_body, method)
             ("api-key_sig_query", {"api-key": api_key, "signature": sig_query, "timestamp": ts_ms, **ua_headers}, f"?{query_str}", "GET", None),
             ("x-api-key_x-sig_query", {"x-api-key": api_key, "x-signature": sig_query, "x-timestamp": ts_ms, **ua_headers}, f"?{query_str}", "GET", None),
             ("X-API-KEY_X-SIG_query", {"X-API-KEY": api_key, "X-SIGNATURE": sig_query, "X-TIMESTAMP": ts_ms, **ua_headers}, f"?{query_str}", "GET", None),
             ("api-key_sig_raw_ts", {"api-key": api_key, "signature": sig_raw_ts, "timestamp": ts_ms, **ua_headers}, f"?{query_str}", "GET", None),
-            ("api-key_sig_query_no_qparam", {"api-key": api_key, "signature": sig_query, "timestamp": ts_ms, **ua_headers}, "", "GET", None),
-            ("api-key_sig_post_body", {"api-key": api_key, "signature": sig_json_body, "timestamp": ts_ms, **ua_headers}, "", "POST", {"timestamp": int(ts_ms)}),
-            ("x-api-key_sig_post_body", {"x-api-key": api_key, "signature": sig_json_body, "timestamp": ts_ms, **ua_headers}, "", "POST", {"timestamp": int(ts_ms)}),
-            ("api_key_under_sig_query", {"api_key": api_key, "signature": sig_query, "timestamp": ts_ms, **ua_headers}, f"?{query_str}", "GET", None),
         ]
 
         wallet_eps = [
             "/v1/wallet/futures-wallet/details",
-            "/v1/wallet/funding-wallet/details",
             "/v1/positions"
         ]
         auth_success_header = None
@@ -541,10 +525,7 @@ async def test_pi42_credentials(payload: dict = {}):
                 for ep in wallet_eps:
                     try:
                         full_auth_url = f"{b_url}{ep}{q_suffix}"
-                        if method == "GET":
-                            r_w = requests.get(full_auth_url, headers=headers, timeout=5)
-                        else:
-                            r_w = requests.post(full_auth_url, json=b_data, headers=headers, timeout=5)
+                        r_w = requests.get(full_auth_url, headers=headers, timeout=2)
                         
                         diag_key = f"AUTH_{tag}_{ep}"
                         results["diagnostics"][diag_key] = f"Status {r_w.status_code}: {r_w.text[:150]}"
