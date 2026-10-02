@@ -6,7 +6,7 @@
     <title>Bitcoin (BTC-INR) Paper Trading — AI Strategy & Live Feed Engine</title>
     <link rel="stylesheet" href="/static/css/style.css">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;600;700&display=swap" rel="stylesheet">
-    <script src="https://unpkg.com/lightweight-charts/dist/lightweight-charts.standalone.production.js"></script>
+    <script src="https://unpkg.com/lightweight-charts@3.8.0/dist/lightweight-charts.standalone.production.js"></script>
     <style>
         :root {
             --bg-dark: #080c14;
@@ -589,14 +589,22 @@
             },
         });
 
-        candleSeries = chart.addCandlestickSeries({
+        const candleOptions = {
             upColor: '#10b981',
             downColor: '#ef4444',
             borderDownColor: '#ef4444',
             borderUpColor: '#10b981',
             wickDownColor: '#ef4444',
             wickUpColor: '#10b981',
-        });
+        };
+
+        if (typeof chart.addCandlestickSeries === 'function') {
+            candleSeries = chart.addCandlestickSeries(candleOptions);
+        } else if (typeof LightweightCharts !== 'undefined' && LightweightCharts.CandlestickSeries && typeof chart.addSeries === 'function') {
+            candleSeries = chart.addSeries(LightweightCharts.CandlestickSeries, candleOptions);
+        } else if (typeof chart.addSeries === 'function') {
+            candleSeries = chart.addSeries(candleOptions);
+        }
 
         const resizeObserver = new ResizeObserver(entries => {
             if (!entries || !entries.length) return;
