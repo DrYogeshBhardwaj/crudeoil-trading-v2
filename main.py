@@ -355,6 +355,36 @@ async def db_diagnostic():
         }
     })
 
+@app.get("/api/debug/outbound-ip")
+async def get_outbound_ip():
+    """Returns current public outbound IP address of the production server."""
+    import requests
+    outbound_ip = "UNKNOWN"
+    ipify_ip = "UNKNOWN"
+    try:
+        r = requests.get("https://api.ipify.org?format=json", timeout=5)
+        if r.status_code == 200:
+            ipify_ip = r.json().get("ip", "UNKNOWN")
+    except Exception as e:
+        ipify_ip = f"ERROR ({e})"
+    
+    try:
+        r2 = requests.get("https://ifconfig.me/ip", timeout=5)
+        if r2.status_code == 200:
+            outbound_ip = r2.text.strip()
+    except Exception as e:
+        outbound_ip = f"ERROR ({e})"
+
+    return JSONResponse({
+        "timestamp_ist": datetime.now().strftime("%Y-%m-%d %H:%M:%S IST"),
+        "outbound_ip_ifconfig": outbound_ip,
+        "outbound_ip_ipify": ipify_ip,
+        "railway_environment": os.environ.get("RAILWAY_ENVIRONMENT", "production"),
+        "railway_service_id": os.environ.get("RAILWAY_SERVICE_ID", "UNKNOWN"),
+        "railway_deployment_id": os.environ.get("RAILWAY_DEPLOYMENT_ID", "UNKNOWN")
+    })
+
+
 @app.on_event("startup")
 async def startup_event():
     """Starts background Dhan WebSocket listener loop and WTI Paper feed loop on app startup."""
