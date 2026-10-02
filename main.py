@@ -492,7 +492,6 @@ async def test_pi42_credentials(payload: dict):
                 break
         if auth_success_header:
             break
- break
 
     # 3. Position Check
     if auth_success_header:
