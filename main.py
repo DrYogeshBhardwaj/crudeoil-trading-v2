@@ -403,6 +403,13 @@ async def test_pi42_credentials(payload: dict):
     ua_headers = {
         "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
         "Accept": "application/json, text/plain, */*",
+        "Accept-Language": "en-US,en;q=0.9",
+        "Sec-Ch-Ua": '"Chromium";v="122", "Not(A:Brand";v="24", "Google Chrome";v="122"',
+        "Sec-Ch-Ua-Mobile": "?0",
+        "Sec-Ch-Ua-Platform": '"Windows"',
+        "Sec-Fetch-Dest": "empty",
+        "Sec-Fetch-Mode": "cors",
+        "Sec-Fetch-Site": "cross-site",
         "Content-Type": "application/json"
     }
 
@@ -433,17 +440,17 @@ async def test_pi42_credentials(payload: dict):
     except Exception as e:
         results["raw_responses"]["market_err"] = str(e)
 
-    # 2. Authentication & Wallet Check
+    # 2. Authentication & Wallet Check (testing variants)
     ts_ms = str(int(time.time() * 1000))
     query_str = f"timestamp={ts_ms}"
     sig = hmac.new(api_secret.encode('utf-8'), query_str.encode('utf-8'), hashlib.sha256).hexdigest() if api_secret else ""
 
-    auth_headers = {
-        **ua_headers,
-        "api-key": api_key,
-        "signature": sig,
-        "timestamp": ts_ms
-    }
+    header_variants = [
+        {"api-key": api_key, "signature": sig, "timestamp": ts_ms},
+        {"x-api-key": api_key, "x-signature": sig, "x-timestamp": ts_ms},
+        {"X-API-KEY": api_key, "X-SIGNATURE": sig, "X-TIMESTAMP": ts_ms},
+        {"apiKey": api_key, "signature": sig, "timestamp": ts_ms}
+    ]
 
     wallet_eps = [
         "/v1/wallet/futures-wallet/details",
@@ -452,29 +459,36 @@ async def test_pi42_credentials(payload: dict):
         "/v1/retail/all-api-keys"
     ]
 
-    for ep in wallet_eps:
-        try:
-            req_start = time.time()
-            r = requests.get(f"{base_url}{ep}?{query_str}", headers=auth_headers, timeout=6)
-            lat = int((time.time() - req_start) * 1000)
-            results["latency_ms"] = lat
-            results["http_statuses"][ep] = r.status_code
+    auth_passed = False
+    for variant in header_variants:
+        if auth_passed:
+            break
+        auth_headers = {**ua_headers, **variant}
+        for ep in wallet_eps:
+            try:
+                req_start = time.time()
+                r = requests.get(f"{base_url}{ep}?{query_str}", headers=auth_headers, timeout=6)
+                lat = int((time.time() - req_start) * 1000)
+                results["latency_ms"] = lat
+                results["http_statuses"][f"{ep}_{list(variant.keys())[0]}"] = r.status_code
 
-            if r.status_code in (200, 201):
-                results["AUTH"] = "PASS"
-                results["BALANCE"] = "PASS"
-                results["raw_responses"][ep] = r.json()
-                break
-            else:
-                results["raw_responses"][ep] = r.text[:200]
-        except Exception as e:
-            results["raw_responses"][ep] = str(e)
+                if r.status_code in (200, 201):
+                    results["AUTH"] = "PASS"
+                    results["BALANCE"] = "PASS"
+                    results["raw_responses"][ep] = r.json()
+                    auth_passed = True
+                    break
+                else:
+                    results["raw_responses"][f"{ep}_{list(variant.keys())[0]}"] = r.text[:200]
+            except Exception as e:
+                results["raw_responses"][ep] = str(e)
 
     # 3. Position / Open Orders Check
     pos_eps = ["/v1/positions", "/v1/user/positions", "/v1/order/open-orders"]
+    auth_headers_final = {**ua_headers, **header_variants[0]}
     for ep in pos_eps:
         try:
-            r_p = requests.get(f"{base_url}{ep}?{query_str}", headers=auth_headers, timeout=6)
+            r_p = requests.get(f"{base_url}{ep}?{query_str}", headers=auth_headers_final, timeout=6)
             results["http_statuses"][ep] = r_p.status_code
             if r_p.status_code in (200, 201):
                 results["POSITION"] = "PASS"
@@ -488,6 +502,7 @@ async def test_pi42_credentials(payload: dict):
 
     results["total_latency_ms"] = int((time.time() - start_t) * 1000)
     return JSONResponse(results)
+
 
 
 
