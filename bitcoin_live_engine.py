@@ -271,7 +271,7 @@ class MudrexLiveAdapter:
             f"{self.BASE_URL}/futures/trade"
         ]
 
-        candidate_trigger_types = [1, 2, 3, "MARKET_PRICE", "LAST_PRICE", "INDEX_PRICE", "STOP_MARKET", "STOP_LOSS", "TAKE_PROFIT_MARKET"]
+        candidate_trigger_types = ["markPrice", "lastPrice", "indexPrice", "mark_price", "last_price", "index_price", "MARK_PRICE", "LAST_PRICE"]
         errors = []
 
         url = f"{self.BASE_URL}/futures/{asset_id}/order?trade_currency=INR"
@@ -284,7 +284,9 @@ class MudrexLiveAdapter:
                 "quantity": str(quantity),
                 "trade_currency": "INR",
                 "trigger_type": tt,
-                "triggerType": tt
+                "triggerType": tt,
+                "trigger_price": str(price or 8120000.0),
+                "triggerPrice": str(price or 8120000.0)
             }
             if price:
                 payload["price"] = str(price)
