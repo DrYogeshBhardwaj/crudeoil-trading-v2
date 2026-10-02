@@ -272,12 +272,12 @@
         <div class="grid-4" style="margin-bottom:0;">
             <div>
                 <div class="card-title">Per-Trade Loss Limit</div>
-                <div class="card-val" id="disp_per_trade" style="color:#ef4444;">₹2,500.00</div>
+                <div class="card-val" id="disp_per_trade" style="color:#ef4444;">₹500.00</div>
                 <div class="card-sub">Hard Stop Loss auto-enforced</div>
             </div>
             <div>
                 <div class="card-title">Daily Loss Limit</div>
-                <div class="card-val" id="disp_daily_limit" style="color:#ef4444;">₹3,000.00</div>
+                <div class="card-val" id="disp_daily_limit" style="color:#ef4444;">₹1,000.00</div>
                 <div class="card-sub">Auto entry block at threshold</div>
             </div>
             <div>
@@ -297,9 +297,9 @@
             <h4 style="margin:0 0 10px 0; color:#cbd5e1;">Configure Risk Limits (Survives Container Restarts)</h4>
             <div class="input-group">
                 <label style="font-size:0.85rem; color:#94a3b8;">Per-Trade Limit (₹):</label>
-                <input type="number" id="input_per_trade" class="input-field" value="2500" step="100">
+                <input type="number" id="input_per_trade" class="input-field" value="500" step="50">
                 <label style="font-size:0.85rem; color:#94a3b8;">Daily Loss Limit (₹):</label>
-                <input type="number" id="input_daily" class="input-field" value="3000" step="100">
+                <input type="number" id="input_daily" class="input-field" value="1000" step="100">
                 <button onclick="updateRiskSettings()" class="btn-action">Save Risk Settings</button>
                 <button onclick="resetCircuitBreaker()" class="btn-action btn-danger">Reset Circuit Breaker</button>
                 <button onclick="runPreflight()" class="btn-action" style="background:#38bdf8;">Run Pre-Flight Audit</button>

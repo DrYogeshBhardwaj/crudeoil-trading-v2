@@ -235,8 +235,8 @@ class BitcoinLiveEngine:
             DB.save_bitcoin_live_setting("daily_loss_limit_hit", "FALSE")
             DB.save_bitcoin_live_setting("today_realized_pnl", "0.0")
 
-        self.per_trade_loss_limit_inr = float(DB.load_bitcoin_live_setting("per_trade_loss_limit_inr", "2500.0"))
-        self.daily_loss_limit_inr = float(DB.load_bitcoin_live_setting("daily_loss_limit_inr", "3000.0"))
+        self.per_trade_loss_limit_inr = float(DB.load_bitcoin_live_setting("per_trade_loss_limit_inr", "500.0"))
+        self.daily_loss_limit_inr = float(DB.load_bitcoin_live_setting("daily_loss_limit_inr", "1000.0"))
         self.circuit_breaker_tripped = DB.load_bitcoin_live_setting("circuit_breaker_tripped", "FALSE").upper() == "TRUE"
         self.circuit_breaker_reason = DB.load_bitcoin_live_setting("circuit_breaker_reason", "")
         self.daily_loss_limit_hit = DB.load_bitcoin_live_setting("daily_loss_limit_hit", "FALSE").upper() == "TRUE"
