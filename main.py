@@ -414,19 +414,21 @@ async def get_outbound_ip():
         return JSONResponse({"error": str(err)}, status_code=500)
 
 @app.post("/api/debug/test-pi42")
-async def test_pi42_credentials(payload: dict):
+async def test_pi42_credentials(payload: dict = {}):
     """Executes comprehensive server-side Read-Only tests & 10-call stability test against Pi42 API."""
     import hmac
     import hashlib
     import requests
+    import traceback
 
-    def get_valid_val(val_list: list) -> str:
-        for val in val_list:
-            if val:
-                v = str(val).strip()
-                if v and not v.startswith("${{") and "VALUE or" not in v and "REF" not in v:
-                    return v
-        return ""
+    try:
+        def get_valid_val(val_list: list) -> str:
+            for val in val_list:
+                if val:
+                    v = str(val).strip()
+                    if v and not v.startswith("${{") and "VALUE or" not in v and "REF" not in v:
+                        return v
+            return ""
 
     api_key = get_valid_val([
         payload.get("api_key"),
@@ -607,6 +609,11 @@ async def test_pi42_credentials(payload: dict):
 
     results["STABILITY_10_CALLS"] = "PASS" if successful_calls >= 8 else "FAIL"
     return JSONResponse(results)
+    except Exception as err:
+        return JSONResponse({
+            "error": str(err),
+            "traceback": traceback.format_exc()
+        }, status_code=500)
 
 
 
