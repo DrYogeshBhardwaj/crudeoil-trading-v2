@@ -687,12 +687,24 @@ class BitcoinLiveEngine:
                 entry_fee, exit_fee, total_charges = self.calculate_trade_charges(entry_p, curr_price, qty)
                 net_pnl = gross_pnl - total_charges
 
-                # Active position exit checks (NET +₹200 Target or NET -₹100 Loss Limit)
+                # Active position exit checks (NET Target, NET Loss Limit, or Strong Trend Reversal)
                 tp_hit = (net_pnl >= self.per_trade_profit_target_inr) or ((curr_price >= tp_p) if direction == "BUY" else (curr_price <= tp_p))
                 sl_hit = (net_pnl <= -self.per_trade_loss_limit_inr) or ((curr_price <= sl_p) if direction == "BUY" else (curr_price >= sl_p))
 
-                if tp_hit or sl_hit:
-                    exit_reason = f"PROFIT TARGET +₹{int(self.per_trade_profit_target_inr)} NET" if tp_hit else f"LOSS LIMIT -₹{int(self.per_trade_loss_limit_inr)} NET"
+                # Trend Reversal Check: Close early if market trend strongly flips against open position
+                sig_act = eval_res.get("action", "WAIT")
+                sig_conf = eval_res.get("confidence", 50)
+                reversal_hit = (direction == "BUY" and sig_act == "SELL" and sig_conf >= 70) or \
+                               (direction == "SELL" and sig_act == "BUY" and sig_conf >= 70)
+
+                if tp_hit or sl_hit or reversal_hit:
+                    if tp_hit:
+                        exit_reason = f"PROFIT TARGET +₹{int(self.per_trade_profit_target_inr)} NET"
+                    elif sl_hit:
+                        exit_reason = f"LOSS LIMIT -₹{int(self.per_trade_loss_limit_inr)} NET"
+                    else:
+                        exit_reason = f"TREND REVERSAL EXIT ({sig_act} Signal {sig_conf}%)"
+
                     now_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
                     # Attempt Mudrex API close safely
