@@ -297,27 +297,28 @@
             <div>
                 <div style="display:flex; align-items:center; gap:10px;">
                     <span id="pos_dir_badge" class="badge-status badge-green" style="font-size:0.9rem; padding:6px 14px;">BUY LONG</span>
-                    <h2 style="margin:0; font-size:1.4rem; color:#fff; font-family:'JetBrains Mono', monospace;" id="pos_title">BTCUSDT (0.001 BTC Lot)</h2>
+                    <h2 style="margin:0; font-size:1.4rem; color:#fff; font-family:'JetBrains Mono', monospace;" id="pos_title">BTCUSDT (0.01 BTC Lot)</h2>
                 </div>
                 <div style="font-size:0.85rem; color:#cbd5e1; margin-top:6px;">Trade ID: <span id="pos_id_text" style="color:#f7931a; font-weight:700;">-</span> | Opened: <span id="pos_time_text">-</span></div>
             </div>
             <div style="text-align:right;">
-                <div style="font-size:0.8rem; color:#94a3b8; text-transform:uppercase;">Active Unrealized P&L</div>
+                <div style="font-size:0.8rem; color:#94a3b8; text-transform:uppercase;">Current NET P&L (After Fees)</div>
                 <div id="pos_live_pnl" style="font-size:1.8rem; font-weight:800; font-family:'JetBrains Mono', monospace; color:#10b981;">₹0.00</div>
+                <div style="font-size:0.75rem; color:#cbd5e1; margin-top:2px;">Gross: <span id="pos_gross_pnl">₹0.00</span> | Fees: <span id="pos_fees">₹0.00</span></div>
             </div>
         </div>
 
-        <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap:16px; margin-top:16px; padding-top:16px; border-top:1px solid rgba(255,255,255,0.1);">
+        <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap:16px; margin-top:16px; padding-top:16px; border-top:1px solid rgba(255,255,255,0.1);">
             <div style="background:rgba(0,0,0,0.3); padding:12px; border-radius:8px; border:1px solid rgba(255,255,255,0.08);">
-                <div style="font-size:0.75rem; color:#94a3b8; font-weight:600;">ENTRY BUY PRICE</div>
+                <div style="font-size:0.75rem; color:#94a3b8; font-weight:600;">ENTRY PRICE</div>
                 <div id="pos_entry_price" style="font-size:1.3rem; font-weight:800; color:#fbbf24; font-family:'JetBrains Mono', monospace;">₹8,127,563.00</div>
             </div>
             <div style="background:rgba(239,68,68,0.1); padding:12px; border-radius:8px; border:1px solid rgba(239,68,68,0.3);">
-                <div style="font-size:0.75rem; color:#ef4444; font-weight:700;">STOP LOSS (MAX RISK ₹500)</div>
+                <div style="font-size:0.75rem; color:#ef4444; font-weight:700;">STOP LOSS (-₹500 NET)</div>
                 <div id="pos_stop_loss" style="font-size:1.3rem; font-weight:800; color:#ef4444; font-family:'JetBrains Mono', monospace;">₹8,105,063.00</div>
             </div>
             <div style="background:rgba(16,185,129,0.1); padding:12px; border-radius:8px; border:1px solid rgba(16,185,129,0.3);">
-                <div style="font-size:0.75rem; color:#10b981; font-weight:700;">TARGET PROFIT (TP)</div>
+                <div style="font-size:0.75rem; color:#10b981; font-weight:700;">TARGET PROFIT (+₹600 NET)</div>
                 <div id="pos_target_price" style="font-size:1.3rem; font-weight:800; color:#10b981; font-family:'JetBrains Mono', monospace;">₹8,172,563.00</div>
             </div>
             <div style="background:rgba(0,0,0,0.3); padding:12px; border-radius:8px; border:1px solid rgba(255,255,255,0.08); display:flex; align-items:center; justify-content:center;">
@@ -333,7 +334,7 @@
                 <h3 style="margin:0; color:#10b981; display:flex; align-items:center; gap:8px;">
                     ⚡ 1-CLICK MANUAL LIVE ORDER EXECUTION (MUDREX API)
                 </h3>
-                <div style="font-size:0.8rem; color:#94a3b8; margin-top:4px;">Instantly send real market order with automated Stop-Loss (₹500 limit) to Mudrex</div>
+                <div style="font-size:0.8rem; color:#94a3b8; margin-top:4px;">Instantly send real market order with automated Stop-Loss (-₹500 NET) to Mudrex</div>
             </div>
             <div style="display:flex; gap:12px;">
                 <button onclick="executeManualLiveOrder('BUY')" style="background: linear-gradient(135deg, #10b981, #059669); color: #000; border: none; padding: 12px 24px; border-radius: 8px; font-weight: 800; font-size: 0.95rem; cursor: pointer; box-shadow: 0 4px 14px rgba(16, 185, 129, 0.4);">🟢 INSTANT LIVE BUY</button>
@@ -349,27 +350,27 @@
         </h3>
         <div class="grid-4" style="margin-bottom:0;">
             <div>
-                <div class="card-title">Per-Trade Loss Limit</div>
-                <div class="card-val" id="disp_per_trade" style="color:#ef4444;">₹500.00</div>
-                <div class="card-sub">Hard Stop Loss auto-enforced</div>
+                <div class="card-title">NET Profit Target</div>
+                <div class="card-val" id="disp_per_trade_target" style="color:#10b981;">+₹600.00</div>
+                <div class="card-sub">Target Auto Exit (+₹600 NET)</div>
             </div>
             <div>
-                <div class="card-title">Daily Loss Limit</div>
-                <div class="card-val" id="disp_daily_limit" style="color:#ef4444;">₹1,000.00</div>
+                <div class="card-title">NET Loss Limit</div>
+                <div class="card-val" id="disp_per_trade" style="color:#ef4444;">-₹500.00</div>
+                <div class="card-sub">Hard Stop Loss (-₹500 NET)</div>
+            </div>
+            <div>
+                <div class="card-title">Daily NET Loss Limit</div>
+                <div class="card-val" id="disp_daily_limit" style="color:#ef4444;">-₹1,000.00</div>
                 <div class="card-sub">Auto entry block at threshold</div>
             </div>
             <div>
                 <div class="card-title">
-                    <span>Today's Realized P&L</span>
+                    <span>Today's Realized NET P&L</span>
                     <button onclick="resetDailyPnL()" style="background:rgba(255,255,255,0.08); color:#fbbf24; border:1px solid rgba(251,191,36,0.3); padding:2px 6px; border-radius:4px; font-size:0.7rem; font-weight:700; cursor:pointer;">🔄 Reset P&L</button>
                 </div>
                 <div class="card-val" id="disp_today_pnl">₹0.00</div>
                 <div class="card-sub">Resets at midnight IST</div>
-            </div>
-            <div>
-                <div class="card-title">Current Unrealized P&L</div>
-                <div class="card-val" id="disp_unrealized_pnl">₹0.00</div>
-                <div class="card-sub">Active Position P&L</div>
             </div>
         </div>
 
@@ -378,6 +379,41 @@
                 Engine Mode: <strong style="color:#10b981;">100% FULLY AUTOMATED (MUDREX API)</strong>
             </div>
             <div id="master_status_badge" class="badge-status badge-green" style="font-size:0.85rem; padding:6px 14px;">
+                ⚡ AUTOMATED LIVE TRADING ACTIVE
+            </div>
+        </div>
+    </div>
+
+    <!-- COMPLETED LIVE TRADES HISTORY -->
+    <div class="control-panel" style="margin-bottom:20px;">
+        <h3 style="margin-top:0; color:#fbbf24; display:flex; align-items:center; gap:8px;">
+            📜 COMPLETED LIVE TRADE HISTORY
+        </h3>
+        <div style="max-height: 280px; overflow-y: auto; border: 1px solid rgba(255,255,255,0.08); border-radius: 8px;">
+            <table style="width: 100%; border-collapse: collapse; font-size: 0.82rem; text-align: left;">
+                <thead style="background: rgba(15, 23, 42, 0.95); position: sticky; top: 0; color: #94a3b8;">
+                    <tr style="border-bottom: 1px solid rgba(255,255,255,0.1);">
+                        <th style="padding: 10px;">#</th>
+                        <th style="padding: 10px;">TYPE</th>
+                        <th style="padding: 10px;">ENTRY TIME</th>
+                        <th style="padding: 10px;">ENTRY PRICE</th>
+                        <th style="padding: 10px;">QTY (BTC)</th>
+                        <th style="padding: 10px;">EXIT TIME</th>
+                        <th style="padding: 10px;">EXIT PRICE</th>
+                        <th style="padding: 10px;">GROSS P&L</th>
+                        <th style="padding: 10px;">FEES</th>
+                        <th style="padding: 10px;">FINAL NET P&L</th>
+                        <th style="padding: 10px;">EXIT REASON</th>
+                    </tr>
+                </thead>
+                <tbody id="trade_history_tbody">
+                    <tr>
+                        <td colspan="11" style="padding: 16px; text-align: center; color: #94a3b8;">No completed live trades recorded yet today.</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
                 ⚡ AUTOMATED LIVE TRADING ACTIVE
             </div>
         </div>
@@ -459,14 +495,23 @@
             const cbBadge = document.getElementById('cb_badge');
             if (cbBadge) cbBadge.className = 'badge-status ' + (cbStatus === 'NORMAL' ? 'badge-green' : 'badge-red');
 
-            setTxt('disp_per_trade', '₹' + Number(data.per_trade_loss_limit_inr || 500).toLocaleString('en-IN', {minimumFractionDigits: 2}));
-            setTxt('disp_daily_limit', '₹' + Number(data.daily_loss_limit_inr || 1000).toLocaleString('en-IN', {minimumFractionDigits: 2}));
-            setTxt('disp_today_pnl', '₹' + Number(data.today_realized_pnl || 0).toLocaleString('en-IN', {minimumFractionDigits: 2}));
-            setTxt('disp_unrealized_pnl', '₹' + Number(data.current_unrealized_pnl || 0).toLocaleString('en-IN', {minimumFractionDigits: 2}));
+            setTxt('disp_per_trade_target', '+₹' + Number(data.per_trade_profit_target_inr || 600).toLocaleString('en-IN', {minimumFractionDigits: 2}));
+            setTxt('disp_per_trade', '-₹' + Number(data.per_trade_loss_limit_inr || 500).toLocaleString('en-IN', {minimumFractionDigits: 2}));
+            setTxt('disp_daily_limit', '-₹' + Number(data.daily_loss_limit_inr || 1000).toLocaleString('en-IN', {minimumFractionDigits: 2}));
+            
+            const todayNet = Number(data.today_realized_pnl || 0);
+            const todayEl = document.getElementById('disp_today_pnl');
+            if (todayEl) {
+                todayEl.innerText = (todayNet >= 0 ? '₹+' : '₹') + todayNet.toLocaleString('en-IN', {minimumFractionDigits: 2});
+                todayEl.style.color = todayNet >= 0 ? '#10b981' : '#ef4444';
+            }
 
             const mb = document.getElementById('master_status_badge');
             if (mb) {
-                if (data.live_trading_enabled) {
+                if (data.scanner_status) {
+                    mb.innerText = '⚡ SCANNER: ' + data.scanner_status;
+                    mb.className = 'badge-status ' + (data.scanner_status.includes('SCANNING') ? 'badge-green' : (data.scanner_status.includes('POSITION') ? 'badge-blue' : 'badge-amber'));
+                } else if (data.live_trading_enabled) {
                     mb.innerText = '⚡ AUTOMATED LIVE TRADING ACTIVE';
                     mb.className = 'badge-status badge-green';
                 } else {
@@ -489,22 +534,58 @@
                         dirBadge.className = 'badge-status ' + (dir === 'BUY' ? 'badge-green' : 'badge-red');
                     }
 
-                    setTxt('pos_title', `BTCUSDT (${pos.quantity || 0.001} BTC Lot)`);
+                    setTxt('pos_title', `BTCUSDT (${pos.quantity || 0.01} BTC Lot)`);
                     setTxt('pos_id_text', pos.trade_id || pos.mudrex_position_id || '-');
                     setTxt('pos_time_text', pos.entry_timestamp || '-');
 
-                    const unPnL = Number(data.current_unrealized_pnl || 0);
+                    const grossPnL = Number(data.current_unrealized_gross_pnl || 0);
+                    const fees = Number(data.current_estimated_charges || 0);
+                    const netPnL = Number(data.current_unrealized_net_pnl || 0);
+
                     const pnlEl = document.getElementById('pos_live_pnl');
                     if (pnlEl) {
-                        pnlEl.innerText = (unPnL >= 0 ? '₹+' : '₹') + unPnL.toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2});
-                        pnlEl.style.color = unPnL >= 0 ? '#10b981' : '#ef4444';
+                        pnlEl.innerText = (netPnL >= 0 ? '₹+' : '₹') + netPnL.toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+                        pnlEl.style.color = netPnL >= 0 ? '#10b981' : '#ef4444';
                     }
+
+                    setTxt('pos_gross_pnl', (grossPnL >= 0 ? '₹+' : '₹') + grossPnL.toFixed(2));
+                    setTxt('pos_fees', '₹' + fees.toFixed(2));
 
                     setTxt('pos_entry_price', '₹' + Number(pos.entry_price || 0).toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2}));
                     setTxt('pos_stop_loss', '₹' + Number(pos.stop_loss || 0).toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2}));
                     setTxt('pos_target_price', '₹' + Number(pos.target || 0).toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2}));
                 } else {
                     posCard.style.display = 'none';
+                }
+            }
+
+            // Render Completed Trade History Table
+            if (data.trade_history && data.trade_history.length > 0) {
+                const closedTrades = data.trade_history.filter(t => t.status === 'CLOSED');
+                if (closedTrades.length > 0) {
+                    let thHtml = '';
+                    closedTrades.forEach((t, idx) => {
+                        const dirBadge = t.direction === 'BUY' ? `<span class="badge-status badge-green">BUY LONG</span>` : `<span class="badge-status badge-red">SELL SHORT</span>`;
+                        const gross = Number(t.gross_pnl || 0);
+                        const net = Number(t.net_pnl || 0);
+                        const fee = Number(t.charges || 0);
+                        const netColor = net >= 0 ? '#10b981' : '#ef4444';
+
+                        thHtml += `<tr style="border-bottom: 1px solid rgba(255,255,255,0.05);">
+                            <td style="padding: 8px 10px; font-family:'JetBrains Mono', monospace;">#${closedTrades.length - idx}</td>
+                            <td style="padding: 8px 10px;">${dirBadge}</td>
+                            <td style="padding: 8px 10px; color:#94a3b8; font-size:0.75rem;">${t.entry_timestamp || '-'}</td>
+                            <td style="padding: 8px 10px; font-weight:700; font-family:'JetBrains Mono', monospace;">₹${Number(t.entry_price || 0).toLocaleString('en-IN')}</td>
+                            <td style="padding: 8px 10px; font-family:'JetBrains Mono', monospace;">${t.quantity || 0.01}</td>
+                            <td style="padding: 8px 10px; color:#94a3b8; font-size:0.75rem;">${t.exit_timestamp || '-'}</td>
+                            <td style="padding: 8px 10px; font-weight:700; font-family:'JetBrains Mono', monospace;">₹${Number(t.exit_price || 0).toLocaleString('en-IN')}</td>
+                            <td style="padding: 8px 10px; color:${gross >= 0 ? '#10b981' : '#ef4444'};">₹${gross.toFixed(2)}</td>
+                            <td style="padding: 8px 10px; color:#cbd5e1;">₹${fee.toFixed(2)}</td>
+                            <td style="padding: 8px 10px; font-weight:800; color:${netColor}; font-family:'JetBrains Mono', monospace;">₹${net >= 0 ? '+' : ''}${net.toFixed(2)}</td>
+                            <td style="padding: 8px 10px; color:#cbd5e1; font-weight:600;">${t.exit_reason || '-'}</td>
+                        </tr>`;
+                    });
+                    setHtml('trade_history_tbody', thHtml);
                 }
             }
 

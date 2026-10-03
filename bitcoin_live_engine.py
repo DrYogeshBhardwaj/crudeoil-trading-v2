@@ -317,15 +317,16 @@ class MudrexLiveAdapter:
 
 class BitcoinLiveEngine:
     """
-    Production-ready Bitcoin Live Trading & Risk Management Engine.
-    STRICT SAFETY CONTRACT:
-    - Real trading is HARD-LOCKED (LIVE_TRADING_ENABLED = False) until user explicitly enables it.
-    - Zero real orders placed during pre-flight / setup.
-    - Mandatory Hard Stop Loss on every real position.
-    - Automatic Daily Loss Limit circuit breaker.
-    - Emergency Circuit Breaker on API / feed / SL failure.
-    - Max 1 open BTC position.
-    - No averaging down, no martingale.
+    Production-ready Bitcoin Live Trading & Risk Management Engine (Mudrex API).
+    LOGIC & RISK CONTRACT:
+    - Capital: ₹5,000 live capital.
+    - Max 1 open BTCUSDT position at a time.
+    - Daily NET loss limit: -₹1,000 NET.
+    - Per-trade profit target: +₹600 NET.
+    - Per-trade loss limit: -₹500 NET.
+    - Exit thresholds are based on ACTUAL NET P&L after Mudrex trading charges.
+    - Automatic re-entry cycle: SCAN -> ENTRY -> MONITOR NET P&L -> EXIT -> SCAN AGAIN -> NEXT ENTRY.
+    - Position sizing dynamically determines BTC quantity (e.g. ~0.01 BTC for ₹5k capital) so +₹600 / -₹500 NET targets are realistic.
     """
 
     def __init__(self):
@@ -337,7 +338,10 @@ class BitcoinLiveEngine:
         self.ALLOW_MARTINGALE = False
         self.HARD_STOP_LOSS_REQUIRED = True
 
-        # Trading Enable Safety Lock (Defaults to TRUE for full automated execution)
+        # Fee rate for Mudrex Futures (0.05% per side = 0.10% roundtrip)
+        self.TAKER_FEE_RATE = 0.0005
+
+        # Trading Enable Safety Lock
         saved_enable = DB.load_bitcoin_live_setting("live_trading_enabled", "TRUE")
         self.live_trading_enabled = (saved_enable.upper() == "TRUE")
 
@@ -351,8 +355,10 @@ class BitcoinLiveEngine:
             DB.save_bitcoin_live_setting("daily_loss_limit_hit", "FALSE")
             DB.save_bitcoin_live_setting("today_realized_pnl", "0.0")
 
-        self.per_trade_loss_limit_inr = float(DB.load_bitcoin_live_setting("per_trade_loss_limit_inr", "500.0"))
-        self.daily_loss_limit_inr = float(DB.load_bitcoin_live_setting("daily_loss_limit_inr", "1000.0"))
+        self.per_trade_loss_limit_inr = 500.0   # -₹500 NET
+        self.per_trade_profit_target_inr = 600.0 # +₹600 NET
+        self.daily_loss_limit_inr = 1000.0      # -₹1,000 NET
+
         self.circuit_breaker_tripped = DB.load_bitcoin_live_setting("circuit_breaker_tripped", "FALSE").upper() == "TRUE"
         self.circuit_breaker_reason = DB.load_bitcoin_live_setting("circuit_breaker_reason", "")
         self.daily_loss_limit_hit = DB.load_bitcoin_live_setting("daily_loss_limit_hit", "FALSE").upper() == "TRUE"
@@ -362,6 +368,58 @@ class BitcoinLiveEngine:
         self.last_api_status = "UNKNOWN"
         self.evaluation_stream = []
         self.last_evaluation = {}
+
+    def calculate_trade_charges(self, entry_price: float, exit_price: float, quantity: float) -> Tuple[float, float, float]:
+        """
+        Calculates entry charges, exit charges, and total roundtrip charges in INR.
+        Uses Mudrex Taker Fee Rate (0.05% per side).
+        """
+        entry_val = entry_price * quantity
+        exit_val = exit_price * quantity
+        entry_fee = round(entry_val * self.TAKER_FEE_RATE, 2)
+        exit_fee = round(exit_val * self.TAKER_FEE_RATE, 2)
+        total_fee = max(20.0, round(entry_fee + exit_fee, 2))
+        return entry_fee, exit_fee, total_fee
+
+    def calculate_position_quantity(self, entry_price: float, available_balance: float = 5000.0) -> float:
+        """
+        Calculates optimal quantity Q (in BTC) so +₹600 NET target and -₹500 NET risk
+        are achievable within realistic BTC price moves (~0.5% - 0.8% of price),
+        without exceeding capital/leverage constraints on ₹5,000 INR account.
+        """
+        if entry_price <= 0:
+            return 0.001
+        effective_cap = max(available_balance, 5000.0)
+        # ~15x leverage sizing on ₹5,000 capital gives ~₹75,000 notional turnover
+        notional = effective_cap * 15.0
+        calc_qty = notional / entry_price
+        qty = round(calc_qty, 3)
+        # Clamp quantity between 0.001 BTC and 0.02 BTC
+        return max(0.001, min(0.02, qty))
+
+    def calculate_sl_and_target_prices(self, direction: str, entry_price: float, quantity: float) -> Tuple[float, float, float]:
+        """
+        Calculates exact Target Price (+₹600 NET) and Stop Loss Price (-₹500 NET)
+        taking into account actual Mudrex trading charges.
+        
+        Returns: (target_price, stop_loss_price, estimated_charges)
+        """
+        # Estimated roundtrip charges at entry (0.10% total turnover)
+        est_charges = max(20.0, round(entry_price * quantity * 0.0010, 2))
+        
+        # Target requires Gross P&L = +600 + est_charges
+        # SL requires Gross P&L = -500 + est_charges
+        target_gross = 600.0 + est_charges
+        sl_gross_diff = 500.0 - est_charges
+        
+        if direction == "BUY":
+            target_price = round(entry_price + (target_gross / quantity), 2)
+            stop_loss_price = round(entry_price - (sl_gross_diff / quantity), 2)
+        else: # SELL / SHORT
+            target_price = round(entry_price - (target_gross / quantity), 2)
+            stop_loss_price = round(entry_price + (sl_gross_diff / quantity), 2)
+            
+        return target_price, stop_loss_price, est_charges
 
     def save_settings(self):
         """Persists risk configuration & state flags to SQLite DB."""
@@ -416,15 +474,16 @@ class BitcoinLiveEngine:
             return False, "LIVE TRADING DISABLED (Pre-Flight / Read-Only Mode)"
         if self.circuit_breaker_tripped:
             return False, f"CIRCUIT BREAKER TRIPPED: {self.circuit_breaker_reason}"
-        if self.daily_loss_limit_hit:
+        if self.today_realized_pnl <= -self.daily_loss_limit_inr or self.daily_loss_limit_hit:
+            self.daily_loss_limit_hit = True
             return False, f"DAILY LOSS LIMIT REACHED (₹{abs(self.today_realized_pnl):,.2f} >= ₹{self.daily_loss_limit_inr:,.2f})"
         
-        # Check active position
+        # Check active position in DB
         active_pos = DB.load_active_bitcoin_live_position()
-        if active_pos:
+        if active_pos and active_pos.get("status") == "OPEN":
             return False, "MAXIMUM POSITIONS REACHED (1 open BTC position active)"
 
-        return True, "ALLOWED"
+        return True, "ALLOWED (SCANNING FOR SIGNALS)"
 
     def run_preflight_check(self) -> Dict[str, Any]:
         """
@@ -463,8 +522,9 @@ class BitcoinLiveEngine:
             "OPEN_ORDERS": "NONE" if len(open_ord) == 0 else open_ord,
             "REAL_ORDERS_PLACED": 0,
             "BTC_INR_CURRENT_PRICE": f"₹{btc_price:,.2f}" if btc_price else "FEED_OFFLINE",
-            "PER_TRADE_LOSS_LIMIT": f"₹{self.per_trade_loss_limit_inr:,.2f}",
-            "DAILY_LOSS_LIMIT": f"₹{self.daily_loss_limit_inr:,.2f}",
+            "PER_TRADE_LOSS_LIMIT": f"₹{self.per_trade_loss_limit_inr:,.2f} NET",
+            "PER_TRADE_PROFIT_TARGET": f"₹{self.per_trade_profit_target_inr:,.2f} NET",
+            "DAILY_LOSS_LIMIT": f"₹{self.daily_loss_limit_inr:,.2f} NET",
             "TODAY_REALIZED_PNL": f"₹{self.today_realized_pnl:,.2f}",
             "CIRCUIT_BREAKER": "TRIPPED" if self.circuit_breaker_tripped else "NORMAL",
             "NEW_ENTRIES_STATUS": "ALLOWED" if allowed else f"BLOCKED ({reason})",
@@ -490,39 +550,53 @@ class BitcoinLiveEngine:
                 fut_bal += spot_bal
                 spot_bal = 0.0
 
-        unrealized_pnl = 0.0
+        unrealized_gross = 0.0
+        entry_fee = 0.0
+        exit_fee = 0.0
+        total_charges = 0.0
+        unrealized_net = 0.0
+
         if active_pos and btc_price > 0:
             entry = float(active_pos["entry_price"])
             qty = float(active_pos["quantity"])
             direction = active_pos["direction"]
             if direction == "BUY":
-                unrealized_pnl = (btc_price - entry) * qty
+                unrealized_gross = (btc_price - entry) * qty
             else:
-                unrealized_pnl = (entry - btc_price) * qty
+                unrealized_gross = (entry - btc_price) * qty
+            
+            entry_fee, exit_fee, total_charges = self.calculate_trade_charges(entry, btc_price, qty)
+            unrealized_net = unrealized_gross - total_charges
 
-        # Check daily loss limit against total P&L
-        total_pnl = self.today_realized_pnl + unrealized_pnl
-        if total_pnl <= -self.daily_loss_limit_inr and not self.daily_loss_limit_hit:
-            self.daily_loss_limit_hit = True
-            self.save_settings()
-            # If position active when daily loss limit hit, handle emergency squareoff
-            if active_pos and self.live_trading_enabled:
-                m_pos_id = active_pos.get("mudrex_position_id")
-                if m_pos_id:
-                    self.adapter.close_position_safely(m_pos_id)
+        # Determine Scanner status
+        if self.today_realized_pnl <= -self.daily_loss_limit_inr or self.daily_loss_limit_hit:
+            scanner_status = "DAILY LOSS LOCK (-₹1,000)"
+        elif self.circuit_breaker_tripped:
+            scanner_status = "CIRCUIT BREAKER"
+        elif active_pos and active_pos.get("status") == "OPEN":
+            scanner_status = "POSITION OPEN"
+        elif not self.live_trading_enabled:
+            scanner_status = "TRADING PAUSED"
+        else:
+            scanner_status = "SCANNING FOR SIGNALS"
 
         allowed, allowed_reason = self.are_new_entries_allowed()
+        all_trades = DB.load_all_bitcoin_live_trades()
 
         return {
             "btc_price": btc_price,
             "position": "OPEN" if active_pos else "NONE",
+            "scanner_status": scanner_status,
             "active_position": active_pos,
             "entry_price": active_pos.get("entry_price") if active_pos else None,
             "stop_loss": active_pos.get("stop_loss") if active_pos else None,
             "target": active_pos.get("target") if active_pos else None,
-            "current_unrealized_pnl": round(unrealized_pnl, 2),
+            "current_unrealized_gross_pnl": round(unrealized_gross, 2),
+            "current_estimated_charges": round(total_charges, 2),
+            "current_unrealized_net_pnl": round(unrealized_net, 2),
             "today_realized_pnl": round(self.today_realized_pnl, 2),
             "per_trade_loss_limit_inr": self.per_trade_loss_limit_inr,
+            "per_trade_profit_target_inr": self.per_trade_profit_target_inr,
             "daily_loss_limit_inr": self.daily_loss_limit_inr,
             "circuit_breaker": "TRIPPED" if self.circuit_breaker_tripped else "NORMAL",
             "circuit_breaker_reason": self.circuit_breaker_reason if self.circuit_breaker_tripped else None,
@@ -532,9 +606,10 @@ class BitcoinLiveEngine:
             "futures_inr_balance": fut_bal,
             "mudrex_api_status": "AUTHENTICATED" if self.adapter.test_authentication().get("success") else "DISCONNECTED",
             "live_trading_enabled": self.live_trading_enabled,
+            "trade_history": all_trades,
             "evaluation_stream": self.evaluation_stream[:25],
             "latest_evaluation": self.last_evaluation,
-            "disclaimer": "BITCOIN LIVE ENGINE — MUDREX API INTEGRATED — ZERO ORDERS PLACED IN PRE-FLIGHT"
+            "disclaimer": "BITCOIN LIVE ENGINE — MUDREX API INTEGRATED — ZERO TEST ORDERS"
         }
 
     def process_tick(self):
@@ -571,53 +646,71 @@ class BitcoinLiveEngine:
             if len(self.evaluation_stream) > 100:
                 self.evaluation_stream = self.evaluation_stream[:100]
 
-            # Check open position state
+            # 1. CHECK ACTIVE OPEN POSITION
             active_pos = DB.load_active_bitcoin_live_position()
             
             if active_pos and active_pos.get("status") == "OPEN":
                 entry_p = float(active_pos["entry_price"])
                 qty = float(active_pos["quantity"])
                 direction = active_pos["direction"]
-                sl_p = float(active_pos.get("stop_loss") or (entry_p - 30000.0 if direction == "BUY" else entry_p + 30000.0))
-                tp_p = float(active_pos.get("target") or (entry_p + 60000.0 if direction == "BUY" else entry_p - 60000.0))
+                
+                # Recalculate target & SL if missing
+                tp_p = float(active_pos.get("target") or 0.0)
+                sl_p = float(active_pos.get("stop_loss") or 0.0)
+                if tp_p <= 0 or sl_p <= 0:
+                    tp_p, sl_p, _ = self.calculate_sl_and_target_prices(direction, entry_p, qty)
+                    active_pos["target"] = tp_p
+                    active_pos["stop_loss"] = sl_p
 
-                # Check if Stop Loss or Take Profit hit
-                sl_hit = (curr_price <= sl_p) if direction == "BUY" else (curr_price >= sl_p)
-                tp_hit = (curr_price >= tp_p) if direction == "BUY" else (curr_price <= tp_p)
+                # Live P&L calculations
+                gross_pnl = (curr_price - entry_p) * qty if direction == "BUY" else (entry_p - curr_price) * qty
+                entry_fee, exit_fee, total_charges = self.calculate_trade_charges(entry_p, curr_price, qty)
+                net_pnl = gross_pnl - total_charges
 
-                if sl_hit or tp_hit:
-                    exit_reason = "STOP_LOSS_EXECUTED" if sl_hit else "TARGET_PROFIT_REACHED"
+                # Active position exit checks (NET +₹600 Target or NET -₹500 Loss Limit)
+                tp_hit = (net_pnl >= self.per_trade_profit_target_inr) or ((curr_price >= tp_p) if direction == "BUY" else (curr_price <= tp_p))
+                sl_hit = (net_pnl <= -self.per_trade_loss_limit_inr) or ((curr_price <= sl_p) if direction == "BUY" else (curr_price >= sl_p))
+
+                if tp_hit or sl_hit:
+                    exit_reason = "PROFIT TARGET +₹600 NET" if tp_hit else "LOSS LIMIT -₹500 NET"
                     now_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-                    gross_pnl = (curr_price - entry_p) * qty if direction == "BUY" else (entry_p - curr_price) * qty
-                    net_pnl = gross_pnl - 50.0 # estimated charges
+
+                    # Attempt Mudrex API close safely
+                    m_pos_id = active_pos.get("mudrex_position_id")
+                    if m_pos_id and self.live_trading_enabled:
+                        self.adapter.close_position_safely(m_pos_id)
 
                     active_pos["status"] = "CLOSED"
                     active_pos["exit_timestamp"] = now_str
                     active_pos["exit_price"] = curr_price
                     active_pos["exit_reason"] = exit_reason
                     active_pos["gross_pnl"] = round(gross_pnl, 2)
-                    active_pos["charges"] = 50.0
+                    active_pos["entry_charges"] = round(entry_fee, 2)
+                    active_pos["exit_charges"] = round(exit_fee, 2)
+                    active_pos["charges"] = round(total_charges, 2)
                     active_pos["net_pnl"] = round(net_pnl, 2)
 
                     DB.save_bitcoin_live_trade(active_pos)
                     self.today_realized_pnl += net_pnl
                     self.save_settings()
-                    print(f"[{datetime.now()}] [BITCOIN LIVE ENGINE] Active position {active_pos['trade_id']} CLOSED ({exit_reason})! P&L: ₹{net_pnl:,.2f}")
+                    print(f"[{datetime.now()}] [BITCOIN LIVE ENGINE] Active position {active_pos['trade_id']} CLOSED ({exit_reason})! NET P&L: ₹{net_pnl:,.2f}. Returning to MARKET SCANNING mode.")
+                
+                # While position is open, return without checking new entries
                 return
 
-            # If no open position, check entry permission and signal
+            # 2. NO OPEN POSITION -> SCANNING FOR NEW ENTRIES
             allowed, reason = self.are_new_entries_allowed()
             if not allowed:
                 return
 
             action = eval_res.get("action", "WAIT")
             if action in ("BUY", "SELL"):
-                # Execute live order on Mudrex
-                qty = 0.001 # Min lot size for BTCUSDT
-                sl_val = eval_res.get("stop_loss") or eval_res.get("sl_price")
-                tp_val = eval_res.get("target") or eval_res.get("target_price")
+                # Dynamically calculate quantity & exact SL/TP taking charges into account
+                fut_bal = self.adapter.fetch_futures_balance()
+                qty = self.calculate_position_quantity(curr_price, fut_bal if fut_bal > 0 else 5000.0)
+                tp_val, sl_val, est_chg = self.calculate_sl_and_target_prices(action, curr_price, qty)
 
-                print(f"[{datetime.now()}] [BITCOIN LIVE ENGINE] Strategy Signal {action} @ ₹{curr_price:,.2f}! Executing live trade...")
+                print(f"[{datetime.now()}] [BITCOIN LIVE ENGINE] Valid {action} Signal @ ₹{curr_price:,.2f}! Qty: {qty} BTC | Target (+₹600 NET): ₹{tp_val:,.2f} | SL (-₹500 NET): ₹{sl_val:,.2f} | Est. Charges: ₹{est_chg:,.2f}")
                 
                 order_res = self.adapter.place_futures_order(
                     symbol="BTCUSDT",
@@ -651,12 +744,14 @@ class BitcoinLiveEngine:
                     "exit_price": None,
                     "exit_reason": None,
                     "gross_pnl": 0.0,
-                    "charges": 0.0,
+                    "entry_charges": round(curr_price * qty * self.TAKER_FEE_RATE, 2),
+                    "exit_charges": 0.0,
+                    "charges": round(est_chg, 2),
                     "net_pnl": 0.0
                 }
 
                 DB.save_bitcoin_live_trade(pos_dict)
-                print(f"[{datetime.now()}] [BITCOIN LIVE ENGINE] Position {trade_id} ({action} @ ₹{curr_price:,.2f}) OPENED successfully!")
+                print(f"[{datetime.now()}] [BITCOIN LIVE ENGINE] Position {trade_id} ({action} {qty} BTC @ ₹{curr_price:,.2f}) OPENED! Transitioning to MONITORING NET P&L.")
 
                 # Attach SL risk order if Mudrex position created
                 if order_res.get("success") and pos_id and sl_val:
@@ -667,7 +762,7 @@ class BitcoinLiveEngine:
             print(f"[{datetime.now()}] [BITCOIN LIVE TICK ERROR] {err}")
 
     def execute_manual_trade(self, side: str) -> Dict[str, Any]:
-        """Manually triggers a BUY or SELL live market order with risk SL/TP."""
+        """Manually triggers a BUY or SELL live market order with +₹600 NET Target and -₹500 NET SL."""
         side = side.upper()
         if side not in ("BUY", "SELL"):
             return {"success": False, "error": f"Invalid trade side: {side}"}
@@ -682,13 +777,9 @@ class BitcoinLiveEngine:
         if curr_price <= 0:
             return {"success": False, "error": "Live BTC market price unavailable"}
 
-        candles = BITCOIN_FEED.fetch_historical_candles("5m", "5d")
-        eval_res = BITCOIN_STRATEGY.evaluate_market(candles, curr_price)
-
-        qty = 0.001 # Min lot size for BTCUSDT
-        atr = eval_res.get("atr", 20000.0)
-        sl_val = round(curr_price - (1.5 * atr), 2) if side == "BUY" else round(curr_price + (1.5 * atr), 2)
-        tp_val = round(curr_price + (3.0 * atr), 2) if side == "BUY" else round(curr_price - (3.0 * atr), 2)
+        fut_bal = self.adapter.fetch_futures_balance()
+        qty = self.calculate_position_quantity(curr_price, fut_bal if fut_bal > 0 else 5000.0)
+        tp_val, sl_val, est_chg = self.calculate_sl_and_target_prices(side, curr_price, qty)
 
         order_res = self.adapter.place_futures_order(
             symbol="BTCUSDT",
@@ -722,7 +813,9 @@ class BitcoinLiveEngine:
             "exit_price": None,
             "exit_reason": None,
             "gross_pnl": 0.0,
-            "charges": 0.0,
+            "entry_charges": round(curr_price * qty * self.TAKER_FEE_RATE, 2),
+            "exit_charges": 0.0,
+            "charges": round(est_chg, 2),
             "net_pnl": 0.0
         }
 
@@ -754,14 +847,17 @@ class BitcoinLiveEngine:
         direction = active_pos["direction"]
 
         gross_pnl = (curr_price - entry_p) * qty if direction == "BUY" else (entry_p - curr_price) * qty
-        net_pnl = gross_pnl - 50.0
+        entry_fee, exit_fee, total_charges = self.calculate_trade_charges(entry_p, curr_price, qty)
+        net_pnl = gross_pnl - total_charges
 
         active_pos["status"] = "CLOSED"
         active_pos["exit_timestamp"] = now_str
         active_pos["exit_price"] = curr_price
         active_pos["exit_reason"] = "MANUAL_EMERGENCY_EXIT"
         active_pos["gross_pnl"] = round(gross_pnl, 2)
-        active_pos["charges"] = 50.0
+        active_pos["entry_charges"] = round(entry_fee, 2)
+        active_pos["exit_charges"] = round(exit_fee, 2)
+        active_pos["charges"] = round(total_charges, 2)
         active_pos["net_pnl"] = round(net_pnl, 2)
 
         DB.save_bitcoin_live_trade(active_pos)

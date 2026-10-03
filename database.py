@@ -332,10 +332,19 @@ class DatabaseEngine:
                     exit_price REAL,
                     exit_reason TEXT,
                     gross_pnl REAL,
+                    entry_charges REAL,
+                    exit_charges REAL,
                     charges REAL,
                     net_pnl REAL
                 )
             """)
+
+            # Migration for existing bitcoin_live_trades tables
+            for col in ["entry_charges", "exit_charges"]:
+                try:
+                    cursor.execute(f"ALTER TABLE bitcoin_live_trades ADD COLUMN {col} REAL")
+                except Exception:
+                    pass
 
             # Bitcoin Live System Settings Table (Survives Restarts)
             cursor.execute("""
@@ -724,8 +733,8 @@ class DatabaseEngine:
                     trade_id, mudrex_position_id, entry_timestamp, symbol, direction, quantity,
                     entry_price, stop_loss, stoploss_order_id, target, trend_state, confidence,
                     reasons, status, exit_timestamp, exit_price, exit_reason,
-                    gross_pnl, charges, net_pnl
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    gross_pnl, entry_charges, exit_charges, charges, net_pnl
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """, (
                 pos_dict["trade_id"],
                 pos_dict.get("mudrex_position_id"),
@@ -745,6 +754,8 @@ class DatabaseEngine:
                 pos_dict.get("exit_price"),
                 pos_dict.get("exit_reason"),
                 pos_dict.get("gross_pnl"),
+                pos_dict.get("entry_charges"),
+                pos_dict.get("exit_charges"),
                 pos_dict.get("charges"),
                 pos_dict.get("net_pnl")
             ))

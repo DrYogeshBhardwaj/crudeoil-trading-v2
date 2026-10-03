@@ -1,4 +1,5 @@
 trading.db
+test_*.db
 logs/
 __pycache__/
 *.pyc
