@@ -355,9 +355,17 @@ class BitcoinLiveEngine:
             DB.save_bitcoin_live_setting("daily_loss_limit_hit", "FALSE")
             DB.save_bitcoin_live_setting("today_realized_pnl", "0.0")
 
-        self.per_trade_loss_limit_inr = 100.0   # -₹100 NET
-        self.per_trade_profit_target_inr = 200.0 # +₹200 NET
-        self.daily_loss_limit_inr = 1000.0      # -₹1,000 NET
+        self.per_trade_loss_limit_inr = float(DB.load_bitcoin_live_setting("per_trade_loss_limit_inr", "100.0"))
+        self.per_trade_profit_target_inr = float(DB.load_bitcoin_live_setting("per_trade_profit_target_inr", "200.0"))
+        self.daily_loss_limit_inr = float(DB.load_bitcoin_live_setting("daily_loss_limit_inr", "1000.0"))
+
+        # Overwrite legacy default DB settings (500/600) with new (100/200) thresholds
+        if self.per_trade_loss_limit_inr == 500.0:
+            self.per_trade_loss_limit_inr = 100.0
+        if self.per_trade_profit_target_inr == 600.0:
+            self.per_trade_profit_target_inr = 200.0
+        DB.save_bitcoin_live_setting("per_trade_loss_limit_inr", str(self.per_trade_loss_limit_inr))
+        DB.save_bitcoin_live_setting("per_trade_profit_target_inr", str(self.per_trade_profit_target_inr))
 
         self.circuit_breaker_tripped = DB.load_bitcoin_live_setting("circuit_breaker_tripped", "FALSE").upper() == "TRUE"
         self.circuit_breaker_reason = DB.load_bitcoin_live_setting("circuit_breaker_reason", "")
