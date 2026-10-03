@@ -355,8 +355,8 @@ class BitcoinLiveEngine:
             DB.save_bitcoin_live_setting("daily_loss_limit_hit", "FALSE")
             DB.save_bitcoin_live_setting("today_realized_pnl", "0.0")
 
-        self.per_trade_loss_limit_inr = float(DB.load_bitcoin_live_setting("per_trade_loss_limit_inr", "300.0"))
-        self.per_trade_profit_target_inr = float(DB.load_bitcoin_live_setting("per_trade_profit_target_inr", "500.0"))
+        self.per_trade_loss_limit_inr = float(DB.load_bitcoin_live_setting("per_trade_loss_limit_inr", "400.0"))
+        self.per_trade_profit_target_inr = float(DB.load_bitcoin_live_setting("per_trade_profit_target_inr", "600.0"))
         self.daily_loss_limit_inr = float(DB.load_bitcoin_live_setting("daily_loss_limit_inr", "1000.0"))
 
         DB.save_bitcoin_live_setting("per_trade_loss_limit_inr", str(self.per_trade_loss_limit_inr))
@@ -387,19 +387,21 @@ class BitcoinLiveEngine:
 
     def calculate_position_quantity(self, entry_price: float, available_balance: float = 5000.0) -> float:
         """
-        Calculates optimal quantity Q (in BTC) so +₹200 NET target and -₹100 NET risk
-        are achievable within realistic BTC price moves,
-        without exceeding capital/leverage constraints on ₹5,000 INR account.
+        Calculates optimal position size Q (in BTC) using ~25x leverage on ₹5,000 INR margin capital.
+        With Q ~0.030 BTC (Turnover ~2.45 Lakhs):
+        - 1,000 INR BTC move = ₹30.00 Gross PnL
+        - Break-even fee recovery happens within ~₹4,000 INR move ($48 USD move).
+        - Profit Target (+₹300 NET) happens within ~₹18,000 INR move ($215 USD move).
         """
         if entry_price <= 0:
-            return 0.001
+            return 0.030
         effective_cap = max(available_balance, 5000.0)
-        # ~15x leverage sizing on ₹5,000 capital gives ~₹75,000 notional turnover
-        notional = effective_cap * 15.0
+        # 25x leverage on ₹5,000 margin gives ~₹125,000 to ₹250,000 notional turnover
+        notional = effective_cap * 25.0
         calc_qty = notional / entry_price
         qty = round(calc_qty, 3)
-        # Clamp quantity between 0.001 BTC and 0.02 BTC
-        return max(0.001, min(0.02, qty))
+        # Clamp quantity between 0.015 BTC and 0.05 BTC for fast fee recovery and high profit sensitivity
+        return max(0.015, min(0.05, qty))
 
     def calculate_sl_and_target_prices(self, direction: str, entry_price: float, quantity: float) -> Tuple[float, float, float]:
         """
