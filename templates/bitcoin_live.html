@@ -375,11 +375,11 @@
                         <div class="pos-cell-val" id="pos_entry_price" style="color:#fbbf24;">₹0.00</div>
                     </div>
                     <div class="pos-cell" style="background:rgba(239,68,68,0.1); border-color:rgba(239,68,68,0.3);">
-                        <div class="pos-cell-lbl" style="color:#ef4444;">STOP LOSS (-₹500 NET)</div>
+                        <div class="pos-cell-lbl" style="color:#ef4444;">STOP LOSS (-₹100 NET)</div>
                         <div class="pos-cell-val" id="pos_stop_loss" style="color:#ef4444;">₹0.00</div>
                     </div>
                     <div class="pos-cell" style="background:rgba(16,185,129,0.1); border-color:rgba(16,185,129,0.3);">
-                        <div class="pos-cell-lbl" style="color:#10b981;">TARGET PROFIT (+₹600 NET)</div>
+                        <div class="pos-cell-lbl" style="color:#10b981;">TARGET PROFIT (+₹200 NET)</div>
                         <div class="pos-cell-val" id="pos_target_price" style="color:#10b981;">₹0.00</div>
                     </div>
                     <div class="pos-cell" style="display:flex; align-items:center; justify-content:center;">
@@ -400,11 +400,11 @@
                     <div style="display:flex; align-items:center; gap:12px;">
                         <div>
                             <span style="font-size:0.68rem; color:#94a3b8; text-transform:uppercase; font-weight:700;">Target Net</span>
-                            <div id="disp_per_trade_target" style="font-size:0.95rem; font-weight:800; color:#10b981; font-family:'JetBrains Mono', monospace;">+₹600.00</div>
+                            <div id="disp_per_trade_target" style="font-size:0.95rem; font-weight:800; color:#10b981; font-family:'JetBrains Mono', monospace;">+₹200.00</div>
                         </div>
                         <div>
                             <span style="font-size:0.68rem; color:#94a3b8; text-transform:uppercase; font-weight:700;">Loss Limit Net</span>
-                            <div id="disp_per_trade" style="font-size:0.95rem; font-weight:800; color:#ef4444; font-family:'JetBrains Mono', monospace;">-₹500.00</div>
+                            <div id="disp_per_trade" style="font-size:0.95rem; font-weight:800; color:#ef4444; font-family:'JetBrains Mono', monospace;">-₹100.00</div>
                         </div>
                         <div>
                             <span style="font-size:0.68rem; color:#94a3b8; text-transform:uppercase; font-weight:700;">Daily Loss Lock</span>
@@ -555,8 +555,8 @@
             const cbBadge = document.getElementById('cb_badge');
             if (cbBadge) cbBadge.className = 'badge-status ' + (cbStatus === 'NORMAL' ? 'badge-green' : 'badge-red');
 
-            setTxt('disp_per_trade_target', '+₹' + Number(data.per_trade_profit_target_inr || 600).toLocaleString('en-IN', {minimumFractionDigits: 2}));
-            setTxt('disp_per_trade', '-₹' + Number(data.per_trade_loss_limit_inr || 500).toLocaleString('en-IN', {minimumFractionDigits: 2}));
+            setTxt('disp_per_trade_target', '+₹' + Number(data.per_trade_profit_target_inr || 200).toLocaleString('en-IN', {minimumFractionDigits: 2}));
+            setTxt('disp_per_trade', '-₹' + Number(data.per_trade_loss_limit_inr || 100).toLocaleString('en-IN', {minimumFractionDigits: 2}));
             setTxt('disp_daily_limit', '-₹' + Number(data.daily_loss_limit_inr || 1000).toLocaleString('en-IN', {minimumFractionDigits: 2}));
             
             const todayNet = Number(data.today_realized_pnl || 0);

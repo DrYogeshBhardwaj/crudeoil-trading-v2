@@ -355,8 +355,8 @@ class BitcoinLiveEngine:
             DB.save_bitcoin_live_setting("daily_loss_limit_hit", "FALSE")
             DB.save_bitcoin_live_setting("today_realized_pnl", "0.0")
 
-        self.per_trade_loss_limit_inr = 500.0   # -₹500 NET
-        self.per_trade_profit_target_inr = 600.0 # +₹600 NET
+        self.per_trade_loss_limit_inr = 100.0   # -₹100 NET
+        self.per_trade_profit_target_inr = 200.0 # +₹200 NET
         self.daily_loss_limit_inr = 1000.0      # -₹1,000 NET
 
         self.circuit_breaker_tripped = DB.load_bitcoin_live_setting("circuit_breaker_tripped", "FALSE").upper() == "TRUE"
@@ -383,8 +383,8 @@ class BitcoinLiveEngine:
 
     def calculate_position_quantity(self, entry_price: float, available_balance: float = 5000.0) -> float:
         """
-        Calculates optimal quantity Q (in BTC) so +₹600 NET target and -₹500 NET risk
-        are achievable within realistic BTC price moves (~0.5% - 0.8% of price),
+        Calculates optimal quantity Q (in BTC) so +₹200 NET target and -₹100 NET risk
+        are achievable within realistic BTC price moves,
         without exceeding capital/leverage constraints on ₹5,000 INR account.
         """
         if entry_price <= 0:
@@ -399,7 +399,7 @@ class BitcoinLiveEngine:
 
     def calculate_sl_and_target_prices(self, direction: str, entry_price: float, quantity: float) -> Tuple[float, float, float]:
         """
-        Calculates exact Target Price (+₹600 NET) and Stop Loss Price (-₹500 NET)
+        Calculates exact Target Price (+₹200 NET) and Stop Loss Price (-₹100 NET)
         taking into account actual Mudrex trading charges.
         
         Returns: (target_price, stop_loss_price, estimated_charges)
@@ -407,10 +407,10 @@ class BitcoinLiveEngine:
         # Estimated roundtrip charges at entry (0.10% total turnover)
         est_charges = max(20.0, round(entry_price * quantity * 0.0010, 2))
         
-        # Target requires Gross P&L = +600 + est_charges
-        # SL requires Gross P&L = -500 + est_charges
-        target_gross = 600.0 + est_charges
-        sl_gross_diff = 500.0 - est_charges
+        # Target requires Gross P&L = +200 + est_charges
+        # SL requires Gross P&L = -100 + est_charges
+        target_gross = self.per_trade_profit_target_inr + est_charges
+        sl_gross_diff = self.per_trade_loss_limit_inr - est_charges
         
         if direction == "BUY":
             target_price = round(entry_price + (target_gross / quantity), 2)
@@ -667,12 +667,12 @@ class BitcoinLiveEngine:
                 entry_fee, exit_fee, total_charges = self.calculate_trade_charges(entry_p, curr_price, qty)
                 net_pnl = gross_pnl - total_charges
 
-                # Active position exit checks (NET +₹600 Target or NET -₹500 Loss Limit)
+                # Active position exit checks (NET +₹200 Target or NET -₹100 Loss Limit)
                 tp_hit = (net_pnl >= self.per_trade_profit_target_inr) or ((curr_price >= tp_p) if direction == "BUY" else (curr_price <= tp_p))
                 sl_hit = (net_pnl <= -self.per_trade_loss_limit_inr) or ((curr_price <= sl_p) if direction == "BUY" else (curr_price >= sl_p))
 
                 if tp_hit or sl_hit:
-                    exit_reason = "PROFIT TARGET +₹600 NET" if tp_hit else "LOSS LIMIT -₹500 NET"
+                    exit_reason = f"PROFIT TARGET +₹{int(self.per_trade_profit_target_inr)} NET" if tp_hit else f"LOSS LIMIT -₹{int(self.per_trade_loss_limit_inr)} NET"
                     now_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
                     # Attempt Mudrex API close safely
@@ -710,7 +710,7 @@ class BitcoinLiveEngine:
                 qty = self.calculate_position_quantity(curr_price, fut_bal if fut_bal > 0 else 5000.0)
                 tp_val, sl_val, est_chg = self.calculate_sl_and_target_prices(action, curr_price, qty)
 
-                print(f"[{datetime.now()}] [BITCOIN LIVE ENGINE] Valid {action} Signal @ ₹{curr_price:,.2f}! Qty: {qty} BTC | Target (+₹600 NET): ₹{tp_val:,.2f} | SL (-₹500 NET): ₹{sl_val:,.2f} | Est. Charges: ₹{est_chg:,.2f}")
+                print(f"[{datetime.now()}] [BITCOIN LIVE ENGINE] Valid {action} Signal @ ₹{curr_price:,.2f}! Qty: {qty} BTC | Target (+₹{int(self.per_trade_profit_target_inr)} NET): ₹{tp_val:,.2f} | SL (-₹{int(self.per_trade_loss_limit_inr)} NET): ₹{sl_val:,.2f} | Est. Charges: ₹{est_chg:,.2f}")
                 
                 order_res = self.adapter.place_futures_order(
                     symbol="BTCUSDT",

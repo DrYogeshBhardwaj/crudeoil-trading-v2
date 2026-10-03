@@ -764,7 +764,7 @@ class DatabaseEngine:
     def load_active_bitcoin_live_position(self) -> Optional[Dict[str, Any]]:
         with self._get_connection() as conn:
             cursor = conn.cursor()
-            cursor.execute("SELECT * FROM bitcoin_live_trades WHERE status = 'OPEN' LIMIT 1")
+            cursor.execute("SELECT * FROM bitcoin_live_trades WHERE status = 'OPEN' ORDER BY entry_timestamp DESC LIMIT 1")
             row = cursor.fetchone()
             if row:
                 d = dict(row)

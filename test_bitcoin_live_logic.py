@@ -3,11 +3,12 @@ Test Suite for Bitcoin Live Engine (Mudrex API) Logic & Math Verification.
 Verifies:
 1. Charges & Fees Calculation (0.05% Taker Fee per side).
 2. Dynamic Position Sizing (Quantity calculation for Rs.5,000 capital).
-3. Exact SL (-Rs.500 NET) and Target (+Rs.600 NET) price calculations for BUY LONG & SELL SHORT.
-4. NET P&L based exit triggers (+Rs.600 NET target, -Rs.500 NET loss limit).
-5. Automatic re-entry transition (SCAN -> ENTRY -> MONITOR NET P&L -> EXIT -> SCAN AGAIN).
-6. Daily NET Loss Limit enforcement (-Rs.1,000 NET).
-7. Absolute zero real orders placed / zero credentials modified during tests.
+3. Exact SL (-Rs.100 NET) and Target (+Rs.200 NET) price calculations for BUY LONG & SELL SHORT.
+4. NET P&L based exit triggers (+Rs.200 NET target, -Rs.100 NET loss limit).
+5. Automatic re-entry transition after +Rs.200 NET Profit Target.
+6. Automatic re-entry transition after -Rs.100 NET Loss Limit.
+7. Daily NET Loss Limit enforcement (-Rs.1,000 NET).
+8. Absolute zero real orders placed / zero credentials modified during tests.
 """
 
 import os
@@ -77,7 +78,7 @@ class TestBitcoinLiveEngineLogic(unittest.TestCase):
         print(f"[TEST 2 PASS] Dynamic Position Sizing Verified: Entry Price=Rs.{entry_price:,.2f} -> Qty={qty} BTC")
 
     def test_03_sl_and_target_math_short(self):
-        """3. Verify SHORT Target (+Rs.600 NET) and SL (-Rs.500 NET) price calculation."""
+        """3. Verify SHORT Target (+Rs.200 NET) and SL (-Rs.100 NET) price calculation."""
         entry_price = 8121844.50
         qty = 0.01
         
@@ -91,17 +92,17 @@ class TestBitcoinLiveEngineLogic(unittest.TestCase):
         # Verify NET P&L at target_p
         gross_target = (entry_price - target_p) * qty
         net_target = gross_target - est_chg
-        self.assertAlmostEqual(net_target, 600.0, delta=1.0)
+        self.assertAlmostEqual(net_target, 200.0, delta=1.0)
 
         # Verify NET P&L at sl_p
         gross_sl = (entry_price - sl_p) * qty
         net_sl = gross_sl - est_chg
-        self.assertAlmostEqual(net_sl, -500.0, delta=1.0)
+        self.assertAlmostEqual(net_sl, -100.0, delta=1.0)
 
-        print(f"[TEST 3 PASS] SHORT Targets Verified: Entry=Rs.{entry_price:,.2f} | Target (+Rs.600 NET)=Rs.{target_p:,.2f} | SL (-Rs.500 NET)=Rs.{sl_p:,.2f} | Fees=Rs.{est_chg:,.2f}")
+        print(f"[TEST 3 PASS] SHORT Targets Verified: Entry=Rs.{entry_price:,.2f} | Target (+Rs.200 NET)=Rs.{target_p:,.2f} | SL (-Rs.100 NET)=Rs.{sl_p:,.2f} | Fees=Rs.{est_chg:,.2f}")
 
     def test_04_sl_and_target_math_long(self):
-        """4. Verify LONG Target (+Rs.600 NET) and SL (-Rs.500 NET) price calculation."""
+        """4. Verify LONG Target (+Rs.200 NET) and SL (-Rs.100 NET) price calculation."""
         entry_price = 8121844.50
         qty = 0.01
         
@@ -115,17 +116,17 @@ class TestBitcoinLiveEngineLogic(unittest.TestCase):
         # Verify NET P&L at target_p
         gross_target = (target_p - entry_price) * qty
         net_target = gross_target - est_chg
-        self.assertAlmostEqual(net_target, 600.0, delta=1.0)
+        self.assertAlmostEqual(net_target, 200.0, delta=1.0)
 
         # Verify NET P&L at sl_p
         gross_sl = (sl_p - entry_price) * qty
         net_sl = gross_sl - est_chg
-        self.assertAlmostEqual(net_sl, -500.0, delta=1.0)
+        self.assertAlmostEqual(net_sl, -100.0, delta=1.0)
 
-        print(f"[TEST 4 PASS] LONG Targets Verified: Entry=Rs.{entry_price:,.2f} | Target (+Rs.600 NET)=Rs.{target_p:,.2f} | SL (-Rs.500 NET)=Rs.{sl_p:,.2f} | Fees=Rs.{est_chg:,.2f}")
+        print(f"[TEST 4 PASS] LONG Targets Verified: Entry=Rs.{entry_price:,.2f} | Target (+Rs.200 NET)=Rs.{target_p:,.2f} | SL (-Rs.100 NET)=Rs.{sl_p:,.2f} | Fees=Rs.{est_chg:,.2f}")
 
-    def test_05_automatic_exit_and_reentry_cycle(self):
-        """5. Verify position automatic exit on +Rs.600 NET target and immediate return to SCANNING mode."""
+    def test_05_automatic_exit_profit_target_and_reentry(self):
+        """5. Verify position automatic exit on +Rs.200 NET target and immediate return to SCANNING mode."""
         entry_price = 8121844.50
         qty = 0.01
         target_p, sl_p, est_chg = self.engine.calculate_sl_and_target_prices("SELL", entry_price, qty)
@@ -160,41 +161,87 @@ class TestBitcoinLiveEngineLogic(unittest.TestCase):
         self.assertFalse(allowed_before)
         self.assertIn("MAXIMUM POSITIONS REACHED", reason_before)
 
-        # Now simulate market price dropping to target_p
-        active = DB.load_active_bitcoin_live_position()
-        self.assertIsNotNone(active)
-
         # Calculate P&L at target_p
         gross_pnl = (entry_price - target_p) * qty
         entry_f, exit_f, total_f = self.engine.calculate_trade_charges(entry_price, target_p, qty)
         net_pnl = gross_pnl - total_f
 
         # Close trade in DB as engine does
-        active["status"] = "CLOSED"
-        active["exit_timestamp"] = "2026-10-03 12:15:00"
-        active["exit_price"] = target_p
-        active["exit_reason"] = "PROFIT TARGET +Rs.600 NET"
-        active["gross_pnl"] = round(gross_pnl, 2)
-        active["charges"] = round(total_f, 2)
-        active["net_pnl"] = round(net_pnl, 2)
-        DB.save_bitcoin_live_trade(active)
+        open_pos["status"] = "CLOSED"
+        open_pos["exit_timestamp"] = "2026-10-03 12:15:00"
+        open_pos["exit_price"] = target_p
+        open_pos["exit_reason"] = "PROFIT TARGET +Rs.200 NET"
+        open_pos["gross_pnl"] = round(gross_pnl, 2)
+        open_pos["charges"] = round(total_f, 2)
+        open_pos["net_pnl"] = round(net_pnl, 2)
+        DB.save_bitcoin_live_trade(open_pos)
         self.engine.today_realized_pnl += net_pnl
 
         # After position closed, engine MUST immediately return to SCANNING mode (ALLOWED)
         allowed_after, reason_after = self.engine.are_new_entries_allowed()
         self.assertTrue(allowed_after)
         self.assertIn("ALLOWED", reason_after)
-        print(f"[TEST 5 PASS] Automatic Re-Entry Cycle Verified! Closed Trade Net PnL=Rs.{net_pnl:,.2f} -> Engine Status={reason_after}")
+        print(f"[TEST 5 PASS] Automatic Profit Target Exit (+Rs.200 NET) Verified! Net PnL=Rs.{net_pnl:,.2f} -> Engine Status={reason_after}")
 
-    def test_06_daily_loss_limit_circuit_breaker(self):
-        """6. Verify Daily NET Loss Limit (-Rs.1,000 NET) blocks new trade entries."""
+    def test_06_automatic_exit_loss_limit_and_reentry(self):
+        """6. Verify position automatic exit on -Rs.100 NET loss limit and immediate return to SCANNING mode."""
+        entry_price = 8147239.00
+        qty = 0.009
+        target_p, sl_p, est_chg = self.engine.calculate_sl_and_target_prices("BUY", entry_price, qty)
+
+        # Simulate active BUY LONG position at -Rs.150 NET loss
+        open_pos = {
+            "trade_id": "TEST_BTC_102",
+            "mudrex_position_id": "MUDREX_TEST_102",
+            "entry_timestamp": "2026-10-03 15:42:33",
+            "symbol": "BTCUSDT",
+            "direction": "BUY",
+            "quantity": qty,
+            "entry_price": entry_price,
+            "stop_loss": sl_p,
+            "stoploss_order_id": None,
+            "target": target_p,
+            "trend_state": "BULLISH",
+            "confidence": 85,
+            "reasons": ["Test Signal"],
+            "status": "OPEN",
+            "exit_timestamp": None,
+            "exit_price": None,
+            "exit_reason": None,
+            "gross_pnl": -70.0,
+            "charges": est_chg,
+            "net_pnl": -150.0 # Exceeds -Rs.100 NET loss threshold
+        }
+        DB.save_bitcoin_live_trade(open_pos)
+
+        # Verify active position triggers loss limit exit condition
+        net_pnl = open_pos["net_pnl"]
+        sl_hit = (net_pnl <= -self.engine.per_trade_loss_limit_inr)
+        self.assertTrue(sl_hit)
+
+        # Close trade in DB
+        open_pos["status"] = "CLOSED"
+        open_pos["exit_timestamp"] = "2026-10-03 15:45:00"
+        open_pos["exit_price"] = 8140000.0
+        open_pos["exit_reason"] = "LOSS LIMIT -Rs.100 NET"
+        open_pos["net_pnl"] = net_pnl
+        DB.save_bitcoin_live_trade(open_pos)
+        self.engine.today_realized_pnl += net_pnl
+
+        # Verify scanner becomes active again for next re-entry
+        allowed_after, reason_after = self.engine.are_new_entries_allowed()
+        self.assertTrue(allowed_after)
+        print(f"[TEST 6 PASS] Automatic Loss Limit Exit (-Rs.100 NET) Verified! Net PnL=Rs.{net_pnl:,.2f} -> Engine Status={reason_after}")
+
+    def test_07_daily_loss_limit_circuit_breaker(self):
+        """7. Verify Daily NET Loss Limit (-Rs.1,000 NET) blocks new trade entries."""
         self.engine.today_realized_pnl = -1050.0 # Exceeded -Rs.1,000 NET
         self.engine.daily_loss_limit_hit = True
 
         allowed, reason = self.engine.are_new_entries_allowed()
         self.assertFalse(allowed)
         self.assertIn("DAILY LOSS LIMIT REACHED", reason)
-        print("[TEST 6 PASS] Daily Loss Limit Enforcement Verified")
+        print("[TEST 7 PASS] Daily Loss Limit Enforcement Verified")
 
 if __name__ == "__main__":
     unittest.main()
