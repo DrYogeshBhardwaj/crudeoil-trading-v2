@@ -520,6 +520,17 @@
         if (el) el.innerHTML = val;
     }
 
+    function formatDateDDMMYY(dateStr) {
+        if (!dateStr) return '-';
+        const m = String(dateStr).match(/^(\d{4})-(\d{2})-(\d{2})(.*)$/);
+        if (m) {
+            const [_, yyyy, mm, dd, rest] = m;
+            const yy = yyyy.slice(-2);
+            return `${dd}/${mm}/${yy}${rest}`;
+        }
+        return dateStr;
+    }
+
     async function updateDashboard() {
         try {
             const resp = await fetch('/api/bitcoin/live/state?t=' + Date.now(), { cache: 'no-store' });
@@ -598,7 +609,7 @@
 
                 setTxt('pos_title', `BTCUSDT (${pos.quantity || 0.009} BTC Lot)`);
                 setTxt('pos_id_text', pos.trade_id || pos.mudrex_position_id || '-');
-                setTxt('pos_time_text', pos.entry_timestamp || '-');
+                setTxt('pos_time_text', formatDateDDMMYY(pos.entry_timestamp));
 
                 const grossPnL = Number(data.current_unrealized_gross_pnl || 0);
                 const fees = Number(data.current_estimated_charges || 0);
@@ -658,7 +669,7 @@
                     if (ev.action === 'SELL') actionBadge = `<span class="badge-status badge-red">SELL</span>`;
 
                     html += `<tr>
-                        <td style="font-family:'JetBrains Mono', monospace; color:#94a3b8;">${ev.timestamp}</td>
+                        <td style="font-family:'JetBrains Mono', monospace; color:#94a3b8;">${formatDateDDMMYY(ev.timestamp)}</td>
                         <td style="font-weight:700;">₹${Number(ev.price || 0).toLocaleString('en-IN')}</td>
                         <td>${actionBadge}</td>
                         <td style="font-family:'JetBrains Mono', monospace; font-size:0.72rem;">₹${Math.round(ev.ema9 || 0)} / ₹${Math.round(ev.ema21 || 0)}</td>

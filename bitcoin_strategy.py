@@ -165,7 +165,7 @@ class BitcoinStrategyEvaluator:
         sl_price = 0.0
         target_price = 0.0
 
-        if score >= 2:
+        if score >= 4:
             trend = "BULLISH"
             action = "BUY"
             confidence = min(95, 65 + (score * 5))
@@ -173,7 +173,7 @@ class BitcoinStrategyEvaluator:
             target_distance = max(30000.0, round(3.0 * atr, 2))
             sl_price = round(current_price - sl_distance, 2)
             target_price = round(current_price + target_distance, 2)
-        elif score <= -2:
+        elif score <= -4:
             trend = "BEARISH"
             action = "SELL"
             confidence = min(95, 65 + (abs(score) * 5))

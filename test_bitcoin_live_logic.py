@@ -92,17 +92,17 @@ class TestBitcoinLiveEngineLogic(unittest.TestCase):
         # Verify NET P&L at target_p
         gross_target = (entry_price - target_p) * qty
         net_target = gross_target - est_chg
-        self.assertAlmostEqual(net_target, 200.0, delta=1.0)
+        self.assertAlmostEqual(net_target, 500.0, delta=1.0)
 
         # Verify NET P&L at sl_p
         gross_sl = (entry_price - sl_p) * qty
         net_sl = gross_sl - est_chg
-        self.assertAlmostEqual(net_sl, -100.0, delta=1.0)
+        self.assertAlmostEqual(net_sl, -300.0, delta=1.0)
 
-        print(f"[TEST 3 PASS] SHORT Targets Verified: Entry=Rs.{entry_price:,.2f} | Target (+Rs.200 NET)=Rs.{target_p:,.2f} | SL (-Rs.100 NET)=Rs.{sl_p:,.2f} | Fees=Rs.{est_chg:,.2f}")
+        print(f"[TEST 3 PASS] SHORT Targets Verified: Entry=Rs.{entry_price:,.2f} | Target (+Rs.500 NET)=Rs.{target_p:,.2f} | SL (-Rs.300 NET)=Rs.{sl_p:,.2f} | Fees=Rs.{est_chg:,.2f}")
 
     def test_04_sl_and_target_math_long(self):
-        """4. Verify LONG Target (+Rs.200 NET) and SL (-Rs.100 NET) price calculation."""
+        """4. Verify LONG Target (+Rs.500 NET) and SL (-Rs.300 NET) price calculation."""
         entry_price = 8121844.50
         qty = 0.01
         
@@ -116,17 +116,17 @@ class TestBitcoinLiveEngineLogic(unittest.TestCase):
         # Verify NET P&L at target_p
         gross_target = (target_p - entry_price) * qty
         net_target = gross_target - est_chg
-        self.assertAlmostEqual(net_target, 200.0, delta=1.0)
+        self.assertAlmostEqual(net_target, 500.0, delta=1.0)
 
         # Verify NET P&L at sl_p
         gross_sl = (sl_p - entry_price) * qty
         net_sl = gross_sl - est_chg
-        self.assertAlmostEqual(net_sl, -100.0, delta=1.0)
+        self.assertAlmostEqual(net_sl, -300.0, delta=1.0)
 
-        print(f"[TEST 4 PASS] LONG Targets Verified: Entry=Rs.{entry_price:,.2f} | Target (+Rs.200 NET)=Rs.{target_p:,.2f} | SL (-Rs.100 NET)=Rs.{sl_p:,.2f} | Fees=Rs.{est_chg:,.2f}")
+        print(f"[TEST 4 PASS] LONG Targets Verified: Entry=Rs.{entry_price:,.2f} | Target (+Rs.500 NET)=Rs.{target_p:,.2f} | SL (-Rs.300 NET)=Rs.{sl_p:,.2f} | Fees=Rs.{est_chg:,.2f}")
 
     def test_05_automatic_exit_profit_target_and_reentry(self):
-        """5. Verify position automatic exit on +Rs.200 NET target and immediate return to SCANNING mode."""
+        """5. Verify position automatic exit on +Rs.500 NET target and immediate return to SCANNING mode."""
         entry_price = 8121844.50
         qty = 0.01
         target_p, sl_p, est_chg = self.engine.calculate_sl_and_target_prices("SELL", entry_price, qty)
@@ -170,7 +170,7 @@ class TestBitcoinLiveEngineLogic(unittest.TestCase):
         open_pos["status"] = "CLOSED"
         open_pos["exit_timestamp"] = "2026-10-03 12:15:00"
         open_pos["exit_price"] = target_p
-        open_pos["exit_reason"] = "PROFIT TARGET +Rs.200 NET"
+        open_pos["exit_reason"] = "PROFIT TARGET +Rs.500 NET"
         open_pos["gross_pnl"] = round(gross_pnl, 2)
         open_pos["charges"] = round(total_f, 2)
         open_pos["net_pnl"] = round(net_pnl, 2)
@@ -181,15 +181,15 @@ class TestBitcoinLiveEngineLogic(unittest.TestCase):
         allowed_after, reason_after = self.engine.are_new_entries_allowed()
         self.assertTrue(allowed_after)
         self.assertIn("ALLOWED", reason_after)
-        print(f"[TEST 5 PASS] Automatic Profit Target Exit (+Rs.200 NET) Verified! Net PnL=Rs.{net_pnl:,.2f} -> Engine Status={reason_after}")
+        print(f"[TEST 5 PASS] Automatic Profit Target Exit (+Rs.500 NET) Verified! Net PnL=Rs.{net_pnl:,.2f} -> Engine Status={reason_after}")
 
     def test_06_automatic_exit_loss_limit_and_reentry(self):
-        """6. Verify position automatic exit on -Rs.100 NET loss limit and immediate return to SCANNING mode."""
+        """6. Verify position automatic exit on -Rs.300 NET loss limit and immediate return to SCANNING mode."""
         entry_price = 8147239.00
         qty = 0.009
         target_p, sl_p, est_chg = self.engine.calculate_sl_and_target_prices("BUY", entry_price, qty)
 
-        # Simulate active BUY LONG position at -Rs.150 NET loss
+        # Simulate active BUY LONG position at -Rs.350 NET loss
         open_pos = {
             "trade_id": "TEST_BTC_102",
             "mudrex_position_id": "MUDREX_TEST_102",
@@ -208,9 +208,9 @@ class TestBitcoinLiveEngineLogic(unittest.TestCase):
             "exit_timestamp": None,
             "exit_price": None,
             "exit_reason": None,
-            "gross_pnl": -70.0,
+            "gross_pnl": -270.0,
             "charges": est_chg,
-            "net_pnl": -150.0 # Exceeds -Rs.100 NET loss threshold
+            "net_pnl": -350.0 # Exceeds -Rs.300 NET loss threshold
         }
         DB.save_bitcoin_live_trade(open_pos)
 

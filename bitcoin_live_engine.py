@@ -355,15 +355,10 @@ class BitcoinLiveEngine:
             DB.save_bitcoin_live_setting("daily_loss_limit_hit", "FALSE")
             DB.save_bitcoin_live_setting("today_realized_pnl", "0.0")
 
-        self.per_trade_loss_limit_inr = float(DB.load_bitcoin_live_setting("per_trade_loss_limit_inr", "100.0"))
-        self.per_trade_profit_target_inr = float(DB.load_bitcoin_live_setting("per_trade_profit_target_inr", "200.0"))
+        self.per_trade_loss_limit_inr = float(DB.load_bitcoin_live_setting("per_trade_loss_limit_inr", "300.0"))
+        self.per_trade_profit_target_inr = float(DB.load_bitcoin_live_setting("per_trade_profit_target_inr", "500.0"))
         self.daily_loss_limit_inr = float(DB.load_bitcoin_live_setting("daily_loss_limit_inr", "1000.0"))
 
-        # Overwrite legacy default DB settings (500/600) with new (100/200) thresholds
-        if self.per_trade_loss_limit_inr == 500.0:
-            self.per_trade_loss_limit_inr = 100.0
-        if self.per_trade_profit_target_inr == 600.0:
-            self.per_trade_profit_target_inr = 200.0
         DB.save_bitcoin_live_setting("per_trade_loss_limit_inr", str(self.per_trade_loss_limit_inr))
         DB.save_bitcoin_live_setting("per_trade_profit_target_inr", str(self.per_trade_profit_target_inr))
 
@@ -374,6 +369,7 @@ class BitcoinLiveEngine:
 
         self.consecutive_api_failures = 0
         self.last_api_status = "UNKNOWN"
+        self.last_sl_time = 0.0
         self.evaluation_stream = []
         self.last_evaluation = {}
 
@@ -478,6 +474,15 @@ class BitcoinLiveEngine:
 
     def are_new_entries_allowed(self) -> Tuple[bool, str]:
         """Checks whether new trade entries are allowed based on strict risk rules."""
+        # Auto-reset at midnight (IST date rollover)
+        curr_date = datetime.now().strftime("%Y-%m-%d")
+        if self.today_date != curr_date:
+            self.today_date = curr_date
+            self.today_realized_pnl = 0.0
+            self.daily_loss_limit_hit = False
+            self.save_settings()
+            print(f"[{datetime.now()}] [MIDNIGHT RESET] New day started ({curr_date}). Daily Loss Lock automatically reset!")
+
         if not self.live_trading_enabled:
             return False, "LIVE TRADING DISABLED (Pre-Flight / Read-Only Mode)"
         if self.circuit_breaker_tripped:
@@ -485,7 +490,14 @@ class BitcoinLiveEngine:
         if self.today_realized_pnl <= -self.daily_loss_limit_inr or self.daily_loss_limit_hit:
             self.daily_loss_limit_hit = True
             return False, f"DAILY LOSS LIMIT REACHED (₹{abs(self.today_realized_pnl):,.2f} >= ₹{self.daily_loss_limit_inr:,.2f})"
-        
+
+        # Check anti-whipsaw cooldown after Stop Loss exit (15 minutes = 900s)
+        if self.last_sl_time > 0:
+            elapsed = time.time() - self.last_sl_time
+            if elapsed < 900:
+                rem_mins = int((900 - elapsed) / 60) + 1
+                return False, f"COOLDOWN ACTIVE ({rem_mins}m wait after SL to prevent whipsaw)"
+
         # Check active position in DB
         active_pos = DB.load_active_bitcoin_live_position()
         if active_pos and active_pos.get("status") == "OPEN":
@@ -698,6 +710,8 @@ class BitcoinLiveEngine:
                     active_pos["charges"] = round(total_charges, 2)
                     active_pos["net_pnl"] = round(net_pnl, 2)
 
+                    if sl_hit:
+                        self.last_sl_time = time.time()
                     DB.save_bitcoin_live_trade(active_pos)
                     self.today_realized_pnl += net_pnl
                     self.save_settings()
