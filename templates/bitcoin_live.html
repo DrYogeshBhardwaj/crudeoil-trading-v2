@@ -8,6 +8,7 @@
     <meta http-equiv="Expires" content="0">
     <title>Bitcoin (BTCUSDT) Mudrex Live Engine & Risk Protection</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;700;800&display=swap" rel="stylesheet">
+    <script type="text/javascript" src="https://s3.tradingview.com/tv.js"></script>
     <style>
         :root {
             --bg-dark: #080c14;
@@ -269,6 +270,23 @@
             font-size: 0.82rem;
             cursor: pointer;
         }
+
+        .tf-btn {
+            background: rgba(255, 255, 255, 0.08);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            color: #cbd5e1;
+            padding: 3px 8px;
+            border-radius: 4px;
+            font-size: 0.72rem;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.15s ease;
+        }
+        .tf-btn:hover, .tf-btn.active {
+            background: #f7931a;
+            color: #000;
+            border-color: #f7931a;
+        }
     </style>
 </head>
 <body>
@@ -402,6 +420,24 @@
                         <button onclick="executeManualLiveOrder('SELL')" class="btn-sell-lg">🔴 SELL SHORT</button>
                     </div>
                 </div>
+            </div>
+
+            <!-- 4. LIVE TRADINGVIEW CANDLESTICK CHART PANEL WITH TIMEFRAME SELECTOR -->
+            <div class="panel" style="flex: 1; display: flex; flex-direction: column; min-height: 220px; padding: 8px; gap: 6px;">
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <div style="display: flex; align-items: center; gap: 8px;">
+                        <span class="badge-status badge-btc" style="background:rgba(247,147,26,0.2); color:#f7931a; border:1px solid rgba(247,147,26,0.4);">TRADINGVIEW</span>
+                        <h3 style="margin:0; font-size:0.82rem; color:#fff; font-weight:700;">BTCUSDT LIVE MARKET CHART</h3>
+                    </div>
+                    <div class="tf-buttons" style="display: flex; gap: 4px;">
+                        <button class="tf-btn active" onclick="switchTimeframe('15', this)">15m</button>
+                        <button class="tf-btn" onclick="switchTimeframe('60', this)">1H</button>
+                        <button class="tf-btn" onclick="switchTimeframe('240', this)">4H</button>
+                        <button class="tf-btn" onclick="switchTimeframe('D', this)">1D</button>
+                        <button class="tf-btn" onclick="switchTimeframe('W', this)">1W</button>
+                    </div>
+                </div>
+                <div id="tv_btcusdt_container" style="flex: 1; width: 100%; height: 100%; min-height: 180px; border-radius: 6px; overflow: hidden; background: #04070d;"></div>
             </div>
 
         </div>
@@ -665,9 +701,51 @@
         }
     }
 
+    // TradingView Live Chart initialization
+    let currentTvInterval = '15';
+
+    function initTradingViewWidget(interval) {
+        currentTvInterval = interval || '15';
+        if (typeof TradingView === 'undefined') {
+            setTimeout(() => initTradingViewWidget(currentTvInterval), 300);
+            return;
+        }
+        const container = document.getElementById('tv_btcusdt_container');
+        if (!container) return;
+        container.innerHTML = '';
+        new TradingView.widget({
+            "autosize": true,
+            "symbol": "BINANCE:BTCUSDT",
+            "interval": currentTvInterval,
+            "timezone": "Asia/Kolkata",
+            "theme": "dark",
+            "style": "1",
+            "locale": "en",
+            "toolbar_bg": "#0f172a",
+            "enable_publishing": false,
+            "allow_symbol_change": true,
+            "container_id": "tv_btcusdt_container",
+            "hide_side_toolbar": false,
+            "details": false,
+            "hotlist": false,
+            "calendar": false
+        });
+    }
+
+    function switchTimeframe(intervalStr, btnElem) {
+        document.querySelectorAll('.tf-btn').forEach(b => b.classList.remove('active'));
+        if (btnElem) btnElem.classList.add('active');
+        initTradingViewWidget(intervalStr);
+    }
+
     // Auto-refresh every 2 seconds
     setInterval(updateDashboard, 2000);
     updateDashboard();
+
+    // Load TradingView chart on start
+    window.addEventListener('DOMContentLoaded', () => {
+        initTradingViewWidget('15');
+    });
 </script>
 </body>
 </html>
