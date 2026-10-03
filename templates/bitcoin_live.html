@@ -2,11 +2,18 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
     <meta http-equiv="Pragma" content="no-cache">
     <meta http-equiv="Expires" content="0">
     <title>Bitcoin (BTCUSDT) Mudrex Live Engine & Risk Protection</title>
+    <link rel="manifest" href="/static/manifest.json">
+    <meta name="theme-color" content="#f7931a">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="BTC Trading">
+    <link rel="apple-touch-icon" href="https://cryptologos.cc/logos/bitcoin-btc-logo.png">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;700;800&display=swap" rel="stylesheet">
     <script type="text/javascript" src="https://s3.tradingview.com/tv.js"></script>
     <style>
@@ -282,65 +289,111 @@
             cursor: pointer;
             transition: all 0.15s ease;
         }
-    <link rel="manifest" href="/static/manifest.json">
-    <meta name="theme-color" content="#f7931a">
-    <meta name="mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <meta name="apple-mobile-web-app-title" content="BTC Trading">
-    <link rel="apple-touch-icon" href="https://cryptologos.cc/logos/bitcoin-btc-logo.png">
+        .tf-btn:hover, .tf-btn.active {
+            background: #f7931a;
+            color: #000;
+            border-color: #f7931a;
+        }
 
-        /* MOBILE APP RESPONSIVE VIEW (PWA & SMARTPHONE OPTIMIZATION) */
-        @media (max-width: 900px) {
+        /* DEDICATED NATIVE MOBILE APP STYLES (<768px SMARTPHONES) */
+        @media (max-width: 768px) {
             html, body {
                 height: auto !important;
                 overflow-y: auto !important;
+                background-color: #04070d;
             }
             .dashboard-container {
                 height: auto !important;
                 min-height: 100vh;
-                padding: 6px;
-                gap: 8px;
+                padding: 6px !important;
+                gap: 8px !important;
                 overflow-y: auto !important;
             }
             .header-bar {
-                height: auto;
-                padding: 8px 10px;
-                flex-direction: column;
-                gap: 6px;
-                align-items: flex-start;
+                height: 44px !important;
+                padding: 0 10px !important;
+                flex-direction: row !important;
+                justify-content: space-between !important;
+                align-items: center !important;
+                background: #0f172a !important;
             }
             .header-title h1 {
-                font-size: 0.9rem;
+                display: none !important;
+            }
+            .header-title::after {
+                content: "⚡ BTC Trading App";
+                font-size: 0.95rem;
+                font-weight: 800;
+                color: #f7931a;
+            }
+            .btn-download-apk {
+                display: none !important;
             }
             .main-grid {
                 display: flex !important;
                 flex-direction: column !important;
-                gap: 8px;
+                gap: 8px !important;
             }
             .grid-4 {
                 grid-template-columns: repeat(2, 1fr) !important;
-                gap: 6px;
+                gap: 6px !important;
+            }
+            .metric-card {
+                padding: 6px 8px !important;
+            }
+            .metric-lbl {
+                font-size: 0.62rem !important;
+            }
+            .metric-val {
+                font-size: 1.05rem !important;
             }
             .pos-grid {
                 grid-template-columns: repeat(2, 1fr) !important;
-                gap: 6px;
+                gap: 6px !important;
             }
-            .metric-val {
-                font-size: 1.05rem;
+            .pos-cell-val {
+                font-size: 0.92rem !important;
             }
-            .panel {
-                padding: 8px;
+            .pos-header {
+                flex-direction: column !important;
+                align-items: flex-start !important;
+                gap: 6px !important;
             }
-            .table-container {
-                max-height: 250px;
+            .pos-header > div:last-child {
+                text-align: left !important;
+            }
+            .risk-bar-container {
+                display: flex !important;
+                flex-direction: column !important;
+                gap: 10px !important;
+            }
+            .risk-bar-items {
+                display: grid !important;
+                grid-template-columns: repeat(2, 1fr) !important;
+                gap: 8px !important;
+                width: 100% !important;
+            }
+            .risk-bar-buttons {
+                display: flex !important;
+                width: 100% !important;
+                gap: 8px !important;
             }
             .btn-buy-lg, .btn-sell-lg {
-                flex: 1;
-                text-align: center;
-                padding: 10px;
-                font-size: 0.85rem;
+                flex: 1 !important;
+                text-align: center !important;
+                padding: 12px !important;
+                font-size: 0.9rem !important;
             }
+            .table-container {
+                max-height: 280px !important;
+                overflow-x: auto !important;
+            }
+            table {
+                font-size: 0.68rem !important;
+            }
+            th, td {
+                padding: 4px 6px !important;
+                white-space: normal !important;
         }
     </style>
 </head>
@@ -471,15 +524,15 @@
 
             <!-- 3. RISK MANAGEMENT & 1-CLICK ORDER BAR -->
             <div class="panel" style="padding:10px;">
-                <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px;">
-                    <div style="display:flex; align-items:center; gap:12px;">
+                <div class="risk-bar-container" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px;">
+                    <div class="risk-bar-items" style="display:flex; align-items:center; gap:12px;">
                         <div>
                             <span style="font-size:0.68rem; color:#94a3b8; text-transform:uppercase; font-weight:700;">Target Net</span>
-                            <div id="disp_per_trade_target" style="font-size:0.95rem; font-weight:800; color:#10b981; font-family:'JetBrains Mono', monospace;">+₹200.00</div>
+                            <div id="disp_per_trade_target" style="font-size:0.95rem; font-weight:800; color:#10b981; font-family:'JetBrains Mono', monospace;">+₹500.00</div>
                         </div>
                         <div>
                             <span style="font-size:0.68rem; color:#94a3b8; text-transform:uppercase; font-weight:700;">Loss Limit Net</span>
-                            <div id="disp_per_trade" style="font-size:0.95rem; font-weight:800; color:#ef4444; font-family:'JetBrains Mono', monospace;">-₹100.00</div>
+                            <div id="disp_per_trade" style="font-size:0.95rem; font-weight:800; color:#ef4444; font-family:'JetBrains Mono', monospace;">-₹300.00</div>
                         </div>
                         <div>
                             <span style="font-size:0.68rem; color:#94a3b8; text-transform:uppercase; font-weight:700;">Daily Loss Lock</span>
@@ -490,7 +543,7 @@
                             <div id="disp_today_pnl" style="font-size:0.95rem; font-weight:800; font-family:'JetBrains Mono', monospace;">₹0.00</div>
                         </div>
                     </div>
-                    <div style="display:flex; gap:8px;">
+                    <div class="risk-bar-buttons" style="display:flex; gap:8px;">
                         <button onclick="executeManualLiveOrder('BUY')" class="btn-buy-lg">🟢 BUY LONG</button>
                         <button onclick="executeManualLiveOrder('SELL')" class="btn-sell-lg">🔴 SELL SHORT</button>
                     </div>
