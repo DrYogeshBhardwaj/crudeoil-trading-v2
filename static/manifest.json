@@ -1,0 +1,22 @@
+{
+  "name": "BTC Live Engine",
+  "short_name": "BTC Trading",
+  "start_url": "/bitcoin/live",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#080c14",
+  "theme_color": "#f7931a",
+  "description": "Bitcoin Mudrex Live Engine & Risk Protection Dashboard",
+  "icons": [
+    {
+      "src": "https://cryptologos.cc/logos/bitcoin-btc-logo.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "https://cryptologos.cc/logos/bitcoin-btc-logo.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}

@@ -282,10 +282,65 @@
             cursor: pointer;
             transition: all 0.15s ease;
         }
-        .tf-btn:hover, .tf-btn.active {
-            background: #f7931a;
-            color: #000;
-            border-color: #f7931a;
+    <link rel="manifest" href="/static/manifest.json">
+    <meta name="theme-color" content="#f7931a">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="BTC Trading">
+    <link rel="apple-touch-icon" href="https://cryptologos.cc/logos/bitcoin-btc-logo.png">
+
+        /* MOBILE APP RESPONSIVE VIEW (PWA & SMARTPHONE OPTIMIZATION) */
+        @media (max-width: 900px) {
+            html, body {
+                height: auto !important;
+                overflow-y: auto !important;
+            }
+            .dashboard-container {
+                height: auto !important;
+                min-height: 100vh;
+                padding: 6px;
+                gap: 8px;
+                overflow-y: auto !important;
+            }
+            .header-bar {
+                height: auto;
+                padding: 8px 10px;
+                flex-direction: column;
+                gap: 6px;
+                align-items: flex-start;
+            }
+            .header-title h1 {
+                font-size: 0.9rem;
+            }
+            .main-grid {
+                display: flex !important;
+                flex-direction: column !important;
+                gap: 8px;
+            }
+            .grid-4 {
+                grid-template-columns: repeat(2, 1fr) !important;
+                gap: 6px;
+            }
+            .pos-grid {
+                grid-template-columns: repeat(2, 1fr) !important;
+                gap: 6px;
+            }
+            .metric-val {
+                font-size: 1.05rem;
+            }
+            .panel {
+                padding: 8px;
+            }
+            .table-container {
+                max-height: 250px;
+            }
+            .btn-buy-lg, .btn-sell-lg {
+                flex: 1;
+                text-align: center;
+                padding: 10px;
+                font-size: 0.85rem;
+            }
         }
     </style>
 </head>
@@ -351,6 +406,23 @@
                     </div>
                     <div class="metric-val" id="cb_status" style="font-size:1.05rem;">NORMAL</div>
                     <div class="metric-sub" id="cb_reason">No errors</div>
+                </div>
+            <!-- LIVE STRATEGY SCORE & SIGNAL CARD (MOBILE & DESKTOP HIGHLIGHT) -->
+            <div class="panel" style="padding: 10px; background: rgba(30, 41, 59, 0.95); border: 1px solid rgba(56, 189, 248, 0.4); border-radius: 8px;">
+                <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;">
+                    <div style="display: flex; align-items: center; gap: 10px;">
+                        <span class="badge-status badge-blue" style="font-size: 0.8rem; padding: 4px 10px;">🎯 LIVE STRATEGY SCORE</span>
+                        <div style="font-size: 0.95rem; font-weight: 800; color: #fff;">
+                            Signal: <span id="strat_action" class="badge-status badge-amber">WAIT</span>
+                            <span style="margin-left: 8px; color: #38bdf8;">Confidence: <span id="strat_confidence">50%</span></span>
+                        </div>
+                    </div>
+                    <div style="font-size: 0.75rem; color: #cbd5e1; font-family: 'JetBrains Mono', monospace;">
+                        EMA9: <span id="strat_ema9" style="color: #fbbf24;">-</span> | EMA21: <span id="strat_ema21" style="color: #38bdf8;">-</span> | RSI: <span id="strat_rsi" style="color: #10b981;">-</span>
+                    </div>
+                </div>
+                <div id="strat_reasons" style="font-size: 0.78rem; color: #f8fafc; margin-top: 6px; background: rgba(0,0,0,0.4); padding: 8px 10px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.08); font-weight: 600;">
+                    💡 Analysis: Scanning live indicators...
                 </div>
             </div>
 
@@ -575,6 +647,23 @@
             if (todayEl) {
                 todayEl.innerText = (todayNet >= 0 ? '₹+' : '₹') + todayNet.toLocaleString('en-IN', {minimumFractionDigits: 2});
                 todayEl.style.color = todayNet >= 0 ? '#10b981' : '#ef4444';
+            }
+
+            // Update Strategy Evaluation Score Card
+            if (data.latest_evaluation) {
+                const ev = data.latest_evaluation;
+                const act = ev.action || 'WAIT';
+                setTxt('strat_action', act);
+                const actBadge = document.getElementById('strat_action');
+                if (actBadge) {
+                    actBadge.className = 'badge-status ' + (act === 'BUY' ? 'badge-green' : (act === 'SELL' ? 'badge-red' : 'badge-amber'));
+                }
+                setTxt('strat_confidence', (ev.confidence || 50) + '%');
+                setTxt('strat_ema9', '₹' + Math.round(ev.ema9 || 0).toLocaleString('en-IN'));
+                setTxt('strat_ema21', '₹' + Math.round(ev.ema21 || 0).toLocaleString('en-IN'));
+                setTxt('strat_rsi', (ev.rsi || 50).toFixed(1));
+                const reasons = (ev.reasons && ev.reasons.length) ? ev.reasons.join(' | ') : 'Scanning indicators...';
+                setTxt('strat_reasons', '💡 Analysis: ' + reasons);
             }
 
             const mb = document.getElementById('master_status_badge');
