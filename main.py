@@ -22,6 +22,7 @@ from wti_feed import WTI_FEED
 from bitcoin_paper_engine import BITCOIN_ENGINE
 from bitcoin_feed import BITCOIN_FEED
 from bitcoin_live_engine import BITCOIN_LIVE_ENGINE
+from bitcoin_live5_engine import BITCOIN_LIVE5_ENGINE
 
 app = FastAPI(
     title="AI Trend Detector & Paper Trading Engine V1",
@@ -270,6 +271,80 @@ async def execute_bitcoin_live_manual_order(payload: dict):
         "status": "ERROR",
         "message": res.get("error", "Failed to execute manual live order on Mudrex")
     }, status_code=400)
+
+# ==============================================================================
+# BTC 5-LIVE MULTI-POSITION AUTO TRADING ROUTES (/bitcoin/live5)
+# ==============================================================================
+
+@app.get("/bitcoin/live5", response_class=HTMLResponse)
+async def get_bitcoin_live5_dashboard():
+    """Renders the BTC 5-LIVE Multi-Position Auto Trading Dashboard HTML interface."""
+    html_path = os.path.join(os.path.dirname(__file__), "templates", "bitcoin_live5.html")
+    with open(html_path, "r", encoding="utf-8") as f:
+        content = f.read()
+    return HTMLResponse(content=content)
+
+@app.get("/api/bitcoin/live5/state")
+async def get_bitcoin_live5_state():
+    """Returns JSON state payload for the BTC 5-LIVE Multi-Position Engine dashboard."""
+    return JSONResponse(
+        content=BITCOIN_LIVE5_ENGINE.get_dashboard_state(),
+        headers={
+            "Cache-Control": "no-cache, no-store, must-revalidate",
+            "Pragma": "no-cache",
+            "Expires": "0"
+        }
+    )
+
+@app.post("/api/bitcoin/live5/settings")
+async def update_bitcoin_live5_settings(payload: dict):
+    """Updates target profit net, max loss net, max positions, quantity, and leverage for 5-live engine."""
+    target_profit = payload.get("target_profit_net") or payload.get("per_trade_profit_target_inr")
+    max_loss = payload.get("max_loss_net") or payload.get("per_trade_loss_limit_inr")
+    max_pos = payload.get("max_positions")
+    qty = payload.get("quantity")
+    lev = payload.get("leverage")
+
+    BITCOIN_LIVE5_ENGINE.update_risk_settings(
+        per_trade_limit=float(max_loss) if max_loss is not None else None,
+        profit_target=float(target_profit) if target_profit is not None else None,
+        max_positions=int(max_pos) if max_pos is not None else None,
+        quantity=float(qty) if qty is not None else None,
+        leverage=float(lev) if lev is not None else None
+    )
+    return JSONResponse({
+        "success": True,
+        "status": "SUCCESS",
+        "message": "Bitcoin 5-Live risk settings updated and persisted successfully."
+    })
+
+@app.post("/api/bitcoin/live5/close_position")
+async def close_bitcoin_live5_position(payload: dict):
+    """Manually closes a specific 5-live position by trade_id or position_id."""
+    trade_id = payload.get("trade_id")
+    mudrex_pos_id = payload.get("mudrex_position_id")
+
+    active_positions = DB.load_active_bitcoin_live5_positions()
+    target_pos = None
+    for p in active_positions:
+        if trade_id and p.get("trade_id") == trade_id:
+            target_pos = p
+            break
+        elif mudrex_pos_id and p.get("mudrex_position_id") == mudrex_pos_id:
+            target_pos = p
+            break
+
+    if not target_pos:
+        return JSONResponse({"success": False, "error": "Position not found"}, status_code=404)
+
+    res = BITCOIN_LIVE5_ENGINE.close_single_position(target_pos, exit_reason="MANUAL SINGLE POSITION CLOSE")
+    return JSONResponse(res)
+
+@app.post("/api/bitcoin/live5/close_all")
+async def close_all_bitcoin_live5_positions():
+    """Master Emergency Control: Closes ALL active 5-live open positions on Mudrex."""
+    res = BITCOIN_LIVE5_ENGINE.emergency_close_all_positions()
+    return JSONResponse(res)
 
 @app.post("/api/bitcoin/live/transfer-spot-to-futures")
 async def transfer_spot_to_futures(payload: dict):
@@ -945,6 +1020,9 @@ async def startup_event():
 
     print(f"[{datetime.now()}] [STARTUP] Spawning BITCOIN_LIVE_ENGINE.start_feed_loop background task...")
     asyncio.create_task(BITCOIN_LIVE_ENGINE.start_feed_loop())
+
+    print(f"[{datetime.now()}] [STARTUP] Spawning BITCOIN_LIVE5_ENGINE.start_feed_loop background task...")
+    asyncio.create_task(BITCOIN_LIVE5_ENGINE.start_feed_loop())
 
 if __name__ == "__main__":
     import uvicorn

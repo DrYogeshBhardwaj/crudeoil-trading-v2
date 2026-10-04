@@ -354,6 +354,49 @@ class DatabaseEngine:
                 )
             """)
 
+            # Bitcoin Live 5 Engine Tables (Dedicated Namespace for 5-Position Live Execution)
+            cursor.execute("""
+                CREATE TABLE IF NOT EXISTS bitcoin_live5_trades (
+                    trade_id TEXT PRIMARY KEY,
+                    mudrex_position_id TEXT,
+                    slot_index INTEGER NOT NULL DEFAULT 1,
+                    entry_timestamp TEXT NOT NULL,
+                    symbol TEXT NOT NULL,
+                    direction TEXT NOT NULL,
+                    quantity REAL NOT NULL,
+                    entry_price REAL NOT NULL,
+                    stop_loss REAL NOT NULL,
+                    stoploss_order_id TEXT,
+                    target REAL NOT NULL,
+                    trend_state TEXT NOT NULL,
+                    confidence INTEGER NOT NULL,
+                    reasons TEXT,
+                    status TEXT NOT NULL,
+                    exit_timestamp TEXT,
+                    exit_price REAL,
+                    exit_reason TEXT,
+                    gross_pnl REAL,
+                    entry_charges REAL,
+                    exit_charges REAL,
+                    charges REAL,
+                    net_pnl REAL,
+                    entry_price_usd REAL,
+                    hedge_rate REAL,
+                    target_usd REAL,
+                    stop_loss_usd REAL,
+                    exit_price_usd REAL,
+                    leverage REAL DEFAULT 5.0,
+                    initial_margin REAL
+                )
+            """)
+
+            cursor.execute("""
+                CREATE TABLE IF NOT EXISTS bitcoin_live5_settings (
+                    key TEXT PRIMARY KEY,
+                    value TEXT NOT NULL
+                )
+            """)
+
             conn.commit()
 
         self.seed_historical_bitcoin_live_trades()
@@ -803,10 +846,82 @@ class DatabaseEngine:
                 return d
             return None
 
-    def load_all_bitcoin_live_trades(self) -> List[Dict[str, Any]]:
+    def save_bitcoin_live5_setting(self, key: str, value: str):
         with self._get_connection() as conn:
             cursor = conn.cursor()
-            cursor.execute("SELECT * FROM bitcoin_live_trades ORDER BY entry_timestamp DESC")
+            cursor.execute("INSERT OR REPLACE INTO bitcoin_live5_settings (key, value) VALUES (?, ?)", (key, str(value)))
+            conn.commit()
+
+    def load_bitcoin_live5_setting(self, key: str, default: str = "") -> str:
+        with self._get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute("SELECT value FROM bitcoin_live5_settings WHERE key = ?", (key,))
+            row = cursor.fetchone()
+            return row["value"] if row else default
+
+    def save_bitcoin_live5_trade(self, pos_dict: Dict[str, Any]):
+        with self._get_connection() as conn:
+            cursor = conn.cursor()
+            reasons_json = json.dumps(pos_dict.get("reasons", []))
+            cursor.execute("""
+                INSERT OR REPLACE INTO bitcoin_live5_trades (
+                    trade_id, mudrex_position_id, slot_index, entry_timestamp, symbol, direction, quantity,
+                    entry_price, stop_loss, stoploss_order_id, target, trend_state, confidence,
+                    reasons, status, exit_timestamp, exit_price, exit_reason,
+                    gross_pnl, entry_charges, exit_charges, charges, net_pnl,
+                    entry_price_usd, hedge_rate, target_usd, stop_loss_usd, exit_price_usd,
+                    leverage, initial_margin
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """, (
+                pos_dict["trade_id"],
+                pos_dict.get("mudrex_position_id"),
+                pos_dict.get("slot_index", 1),
+                pos_dict["entry_timestamp"],
+                pos_dict.get("symbol", "BTCUSDT"),
+                pos_dict["direction"],
+                pos_dict["quantity"],
+                pos_dict.get("entry_price", 0.0),
+                pos_dict.get("stop_loss", 0.0),
+                pos_dict.get("stoploss_order_id"),
+                pos_dict.get("target", 0.0),
+                pos_dict.get("trend_state", "NEUTRAL"),
+                pos_dict.get("confidence", 50),
+                reasons_json,
+                pos_dict["status"],
+                pos_dict.get("exit_timestamp"),
+                pos_dict.get("exit_price"),
+                pos_dict.get("exit_reason"),
+                pos_dict.get("gross_pnl"),
+                pos_dict.get("entry_charges"),
+                pos_dict.get("exit_charges"),
+                pos_dict.get("charges"),
+                pos_dict.get("net_pnl"),
+                pos_dict.get("entry_price_usd"),
+                pos_dict.get("hedge_rate"),
+                pos_dict.get("target_usd"),
+                pos_dict.get("stop_loss_usd"),
+                pos_dict.get("exit_price_usd"),
+                pos_dict.get("leverage", 5.0),
+                pos_dict.get("initial_margin")
+            ))
+            conn.commit()
+
+    def load_active_bitcoin_live5_positions(self) -> List[Dict[str, Any]]:
+        with self._get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute("SELECT * FROM bitcoin_live5_trades WHERE status = 'OPEN' ORDER BY slot_index ASC, entry_timestamp ASC")
+            rows = cursor.fetchall()
+            positions = []
+            for r in rows:
+                d = dict(r)
+                d["reasons"] = json.loads(d["reasons"]) if d["reasons"] else []
+                positions.append(d)
+            return positions
+
+    def load_all_bitcoin_live5_trades(self) -> List[Dict[str, Any]]:
+        with self._get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute("SELECT * FROM bitcoin_live5_trades ORDER BY entry_timestamp DESC")
             rows = cursor.fetchall()
             trades = []
             for r in rows:
