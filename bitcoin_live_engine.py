@@ -243,14 +243,46 @@ class MudrexLiveAdapter:
         except Exception as e:
             return {"success": False, "error": str(e)}
 
+    def set_leverage(self, asset_id: str, leverage: str = "5", margin_type: str = "ISOLATED") -> Dict[str, Any]:
+        """
+        Explicitly sets leverage for BTCUSDT INR futures trading.
+        Official Endpoint: POST /fapi/v1/futures/{asset_id}/leverage
+        Body:
+        {
+          "margin_type": "ISOLATED",
+          "leverage": "5",
+          "trade_currency": "INR"
+        }
+        """
+        try:
+            headers = self._get_headers()
+            url = f"{self.BASE_URL}/futures/{asset_id}/leverage"
+            payload = {
+                "margin_type": margin_type,
+                "leverage": str(leverage),
+                "trade_currency": "INR"
+            }
+            resp = requests.post(url, headers=headers, json=payload, timeout=8)
+            if resp.status_code in (200, 201):
+                data = resp.json()
+                return {"success": True, "data": data}
+            else:
+                return {"success": False, "status_code": resp.status_code, "error": resp.text}
+        except Exception as e:
+            return {"success": False, "error": str(e)}
+
     def place_futures_order(self, symbol: str, side: str, quantity: float, order_type: str = "MARKET", price: Optional[float] = None, stoploss_price: Optional[float] = None) -> Dict[str, Any]:
         """
-        Places a live futures order on Mudrex API.
-        Verified Mudrex API Endpoint: POST /futures/{asset_id}/order?trade_currency=INR
-        Field specs:
-        - order_type: 1 (MARKET) or 2 (LIMIT)
-        - trigger_type: 1 (MARK_PRICE)
-        - side: 'BUY' / 'SELL' or 1 / 2
+        Places a live futures order on Mudrex API per official documented schema.
+        1. Explicit leverage setup via POST /fapi/v1/futures/{asset_id}/leverage
+        2. Preferred Order API: POST /fapi/v2/futures/order?symbol=BTCUSDT (or route v1)
+        3. Body schema:
+           {
+             "trigger_type": "MARKET",
+             "order_type": "LONG" / "SHORT",
+             "quantity": "...",
+             "trade_currency": "INR"
+           }
         """
         headers = self._get_headers()
         
@@ -267,46 +299,57 @@ class MudrexLiveAdapter:
         if not asset_id:
             asset_id = "01903a7b-bf65-707d-a7dc-d7b84c3c756c" # Fallback BTCUSDT asset ID
 
-        url = f"{self.BASE_URL}/futures/{asset_id}/order?trade_currency=INR"
+        # STEP 1: EXPLICIT LEVERAGE SETUP FOR INR
+        lev_res = self.set_leverage(asset_id, leverage="5", margin_type="ISOLATED")
+        if not lev_res.get("success"):
+            print(f"[{datetime.now()}] [MUDREX LEVERAGE ERROR] Failed to set leverage: {lev_res.get('error')}")
+            return {"success": False, "error": f"Leverage setup failed: {lev_res.get('error')}"}
 
-        ot_val = 1 if str(order_type).upper() in ("MARKET", "1") else 2
-        side_str = side.upper()
+        # STEP 2: OFFICIAL CURRENT DOCUMENTED ORDER SCHEMA
+        # Direction mapping: BUY -> "LONG", SELL -> "SHORT"
+        dir_order_type = "LONG" if side.upper() in ("BUY", "LONG", "1") else "SHORT"
+        qty_str = str(quantity)
 
-        candidate_payloads = [
+        candidates = [
             {
-                "symbol": symbol,
-                "side": side_str,
-                "order_type": ot_val,
-                "trigger_type": 1,
-                "quantity": float(quantity),
-                "trade_currency": "INR"
+                "url": "https://trade.mudrex.com/fapi/v2/futures/order?symbol=BTCUSDT",
+                "payload": {
+                    "trigger_type": "MARKET",
+                    "order_type": dir_order_type,
+                    "quantity": qty_str,
+                    "trade_currency": "INR"
+                }
             },
             {
-                "symbol": symbol,
-                "side": side_str,
-                "order_type": ot_val,
-                "trigger_type": 1,
-                "quantity": str(quantity),
-                "trade_currency": "INR"
+                "url": f"{self.BASE_URL}/futures/{asset_id}/order?trade_currency=INR",
+                "payload": {
+                    "trigger_type": "MARKET",
+                    "order_type": dir_order_type,
+                    "quantity": qty_str,
+                    "trade_currency": "INR"
+                }
             },
             {
-                "symbol": symbol,
-                "side": 1 if side_str == "BUY" else 2,
-                "order_type": ot_val,
-                "trigger_type": 1,
-                "quantity": float(quantity),
-                "trade_currency": "INR"
+                "url": f"{self.BASE_URL}/futures/{asset_id}/order?trade_currency=INR",
+                "payload": {
+                    "trigger_type": "MARKET",
+                    "order_type": dir_order_type,
+                    "quantity": float(quantity),
+                    "trade_currency": "INR"
+                }
             }
         ]
 
         errors = []
-        for payload in candidate_payloads:
+        for cand in candidates:
+            url = cand["url"]
+            payload = cand["payload"]
             try:
                 resp = requests.post(url, headers=headers, json=payload, timeout=8)
                 if resp.status_code in (200, 201):
                     data = resp.json()
                     print(f"[{datetime.now()}] [MUDREX ORDER SUCCESS] Endpoint {url} succeeded! Data: {data}")
-                    return {"success": True, "data": data, "endpoint": url}
+                    return {"success": True, "data": data, "endpoint": url, "payload": payload}
                 else:
                     errors.append(f"HTTP {resp.status_code}: {resp.text}")
             except Exception as ex:

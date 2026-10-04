@@ -352,7 +352,97 @@ class TestBitcoinLiveEngineLogic(unittest.TestCase):
 
         print("[TEST 13 PASS] Fallback Position ID Generation Completely Disabled!")
 
+    def test_14_inr_leverage_set_success(self):
+        """14. Verify explicit leverage setup (POST /futures/{asset_id}/leverage) succeeds for INR."""
+        import requests
+        orig_post = requests.post
+        try:
+            def mock_post(url, headers=None, json=None, timeout=8):
+                class Resp:
+                    status_code = 200
+                    def json(self):
+                        return {"success": True, "data": {"leverage": "5", "margin_type": "ISOLATED"}}
+                return Resp()
+
+            requests.post = mock_post
+            res = self.engine.adapter.set_leverage("01903a7b-bf65-707d-a7dc-d7b84c3c756c", leverage="5", margin_type="ISOLATED")
+            self.assertTrue(res.get("success"))
+            self.assertEqual(res["data"]["data"]["leverage"], "5")
+            print("[TEST 14 PASS] Explicit INR Leverage Setup (POST /leverage) Verified!")
+        finally:
+            requests.post = orig_post
+
+    def test_15_leverage_setup_failure_blocks_order(self):
+        """15. Verify order placement is BLOCKED if explicit leverage setup fails."""
+        self.engine.adapter.fetch_btcusdt_asset = lambda: {"success": True, "asset": {"id": "01903a7b-bf65-707d-a7dc-d7b84c3c756c"}}
+        self.engine.adapter.set_leverage = lambda asset_id, leverage="5", margin_type="ISOLATED": {
+            "success": False,
+            "error": "HTTP 400: Leverage out of allowed range"
+        }
+
+        res = self.engine.adapter.place_futures_order("BTCUSDT", "BUY", 0.015)
+        self.assertFalse(res.get("success"))
+        self.assertIn("Leverage setup failed", res.get("error"))
+        print("[TEST 15 PASS] Leverage Setup Failure Successfully Blocks Order Placement!")
+
+    def test_16_long_order_payload_valid_schema(self):
+        """16. Verify LONG order uses official documented schema (order_type='LONG', trigger_type='MARKET')."""
+        self.engine.adapter.fetch_btcusdt_asset = lambda: {"success": True, "asset": {"id": "01903a7b-bf65-707d-a7dc-d7b84c3c756c"}}
+        self.engine.adapter.set_leverage = lambda asset_id, leverage="5", margin_type="ISOLATED": {"success": True}
+        
+        captured_payloads = []
+        import requests
+        orig_post = requests.post
+        try:
+            def mock_post(url, headers=None, json=None, timeout=8):
+                captured_payloads.append({"url": url, "payload": json})
+                class Resp:
+                    status_code = 200
+                    def json(self):
+                        return {"success": True, "data": {"position_id": "MUDREX_LONG_12345"}}
+                return Resp()
+
+            requests.post = mock_post
+
+            res = self.engine.adapter.place_futures_order("BTCUSDT", "BUY", 0.015)
+            self.assertTrue(res.get("success"))
+            sent_payload = res.get("payload", {})
+            self.assertEqual(sent_payload.get("order_type"), "LONG")
+            self.assertEqual(sent_payload.get("trigger_type"), "MARKET")
+            self.assertEqual(sent_payload.get("trade_currency"), "INR")
+            print(f"[TEST 16 PASS] Valid LONG Order Payload Verified: {sent_payload}")
+        finally:
+            requests.post = orig_post
+
+    def test_17_short_order_payload_valid_schema(self):
+        """17. Verify SHORT order uses official documented schema (order_type='SHORT', trigger_type='MARKET')."""
+        self.engine.adapter.fetch_btcusdt_asset = lambda: {"success": True, "asset": {"id": "01903a7b-bf65-707d-a7dc-d7b84c3c756c"}}
+        self.engine.adapter.set_leverage = lambda asset_id, leverage="5", margin_type="ISOLATED": {"success": True}
+        
+        import requests
+        orig_post = requests.post
+        try:
+            def mock_post(url, headers=None, json=None, timeout=8):
+                class Resp:
+                    status_code = 200
+                    def json(self):
+                        return {"success": True, "data": {"position_id": "MUDREX_SHORT_54321"}}
+                return Resp()
+
+            requests.post = mock_post
+
+            res = self.engine.adapter.place_futures_order("BTCUSDT", "SELL", 0.015)
+            self.assertTrue(res.get("success"))
+            sent_payload = res.get("payload", {})
+            self.assertEqual(sent_payload.get("order_type"), "SHORT")
+            self.assertEqual(sent_payload.get("trigger_type"), "MARKET")
+            self.assertEqual(sent_payload.get("trade_currency"), "INR")
+            print(f"[TEST 17 PASS] Valid SHORT Order Payload Verified: {sent_payload}")
+        finally:
+            requests.post = orig_post
+
 if __name__ == "__main__":
     unittest.main()
+
 
 
