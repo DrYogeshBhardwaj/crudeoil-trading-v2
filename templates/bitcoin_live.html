@@ -899,7 +899,9 @@
                 headers: {'Content-Type': 'application/json'},
                 body: JSON.stringify({
                     target_profit_net: targetVal,
-                    max_loss_net: lossVal
+                    max_loss_net: lossVal,
+                    per_trade_profit_target_inr: targetVal,
+                    per_trade_loss_limit_inr: lossVal
                 })
             });
             const res = await resp.json();
