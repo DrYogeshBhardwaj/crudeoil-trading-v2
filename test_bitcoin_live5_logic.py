@@ -3,7 +3,7 @@ Comprehensive Unit Test Suite for BTC 5-Slot Rolling Test Engine (/bitcoin/live5
 Verifies all 17 Safety & Logic Checkpoints:
 1. Maximum 5 positions limit enforced.
 2. Sixth position cannot open.
-3. New-entry interval is 2 minutes (120 seconds).
+3. New-entry interval is 1 minute (60 seconds).
 4. Every position gets its own 10-minute timer.
 5. Position 1 closes at 10 minutes even if Position 5 is only 2 minutes old.
 6. +Rs.100 NET profit target closes ONLY that affected position.
@@ -107,10 +107,10 @@ class TestBitcoinLive5EngineLogic(unittest.TestCase):
         self.assertEqual(len(active_after), 5)
         print("[TEST 2 PASS] 6th position safely rejected when 5 slots are full!")
 
-    def test_03_new_entry_interval_2_minutes(self):
-        """3. Verify new-entry interval is 2 minutes (120 seconds)."""
-        self.assertEqual(self.engine.entry_interval_seconds, 120)
-        print("[TEST 3 PASS] New-entry interval set to 2 minutes!")
+    def test_03_new_entry_interval_1_minute(self):
+        """3. Verify new-entry interval is 1 minute (60 seconds)."""
+        self.assertEqual(self.engine.entry_interval_seconds, 60)
+        print("[TEST 3 PASS] New-entry interval set to 1 minute!")
 
     def test_04_position_timer_10_minutes(self):
         """4. Verify every position gets its own 10-minute timer."""

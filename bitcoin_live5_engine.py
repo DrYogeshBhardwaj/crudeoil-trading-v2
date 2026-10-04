@@ -38,7 +38,7 @@ class BitcoinLive5Engine:
         self.adapter = MudrexLiveAdapter()
         self.test_capital_reference = 20000.0 # Rs. 20,000 test capital
         self.max_holding_time_seconds = 600 # 10 minutes maximum holding time
-        self.entry_interval_seconds = 120 # 2 minutes rolling entry interval
+        self.entry_interval_seconds = 60 # 1 minute rolling entry interval
         self.load_settings()
         self.active_positions: List[Dict[str, Any]] = []
         self.is_running = False
@@ -292,7 +292,7 @@ class BitcoinLive5Engine:
             "test_mode": True,
             "real_orders": "DISABLED",
             "test_status": self.test_status,
-            "scanner_status": "ROLLING 2-MIN TEST SCANNER ACTIVE" if self.test_status == "RUNNING" else "TEST PAUSED",
+            "scanner_status": "ROLLING 1-MIN TEST SCANNER ACTIVE" if self.test_status == "RUNNING" else "TEST PAUSED",
             "test_capital": self.test_capital_reference,
             "used_margin": test_used_margin,
             "free_margin": test_free_buffer,

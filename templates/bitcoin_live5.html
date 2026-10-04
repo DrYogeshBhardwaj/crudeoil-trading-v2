@@ -446,7 +446,7 @@
         <div class="banner-title">
             <h1>BTC 5-LIVE ROLLING TEST</h1>
             <span class="badge-status badge-amber">PAPER / TEST MODE — REAL ORDERS: OFF</span>
-            <span class="badge-status badge-green">ROLLING 2-MIN TEST SCANNER ACTIVE</span>
+            <span class="badge-status badge-green">ROLLING 1-MIN TEST SCANNER ACTIVE</span>
         </div>
         <div class="price-strip">
             <div class="price-box">
@@ -655,13 +655,14 @@
             const remMm = String(Math.floor(remSec / 60)).padStart(2, '0');
             const remSs = String(remSec % 60).padStart(2, '0');
 
-            elVal.innerText = `⏱️ ${ageMm}:${ageSs}`;
-            elSub.innerText = `Rem: ${remMm}:${remSs} / 10:00`;
+            // Downward Countdown Stopwatch (Top to Bottom: 10:00 -> 00:00)
+            elVal.innerText = `⏳ ${remMm}:${remSs}`;
+            elSub.innerText = `Elapsed: ${ageMm}:${ageSs} / 10:00`;
 
             if (remSec <= 120) { // Under 2 minutes remaining
                 elVal.className = 'timer-val expiring';
                 elBox.className = 'pos-timer-box expiring';
-                elSub.innerText = `⚠️ ${remMm}:${remSs} (EXPIRING)`;
+                elSub.innerText = `⚠️ ${remMm}:${remSs} (EXPIRING) • Elapsed: ${ageMm}:${ageSs}`;
             } else {
                 elVal.className = 'timer-val';
                 elBox.className = 'pos-timer-box';
