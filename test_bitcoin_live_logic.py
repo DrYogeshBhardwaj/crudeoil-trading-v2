@@ -79,7 +79,7 @@ class TestBitcoinLiveEngineLogic(unittest.TestCase):
         entry_price = 8121844.50
         qty = 0.03
         
-        target_p, sl_p, est_chg = self.engine.calculate_sl_and_target_prices("SELL", entry_price, qty)
+        tp_usd, sl_usd, target_p, sl_p, est_chg = self.engine.calculate_sl_and_target_prices("SELL", entry_price, qty)
         
         # Target must be BELOW entry for SHORT
         self.assertLess(target_p, entry_price)
@@ -103,7 +103,7 @@ class TestBitcoinLiveEngineLogic(unittest.TestCase):
         entry_price = 8121844.50
         qty = 0.03
         
-        target_p, sl_p, est_chg = self.engine.calculate_sl_and_target_prices("BUY", entry_price, qty)
+        tp_usd, sl_usd, target_p, sl_p, est_chg = self.engine.calculate_sl_and_target_prices("BUY", entry_price, qty)
         
         # Target must be ABOVE entry for LONG
         self.assertGreater(target_p, entry_price)
@@ -126,7 +126,7 @@ class TestBitcoinLiveEngineLogic(unittest.TestCase):
         """5. Verify position automatic exit on +Rs.500 NET target and immediate return to SCANNING mode."""
         entry_price = 8121844.50
         qty = 0.01
-        target_p, sl_p, est_chg = self.engine.calculate_sl_and_target_prices("SELL", entry_price, qty)
+        tp_usd, sl_usd, target_p, sl_p, est_chg = self.engine.calculate_sl_and_target_prices("SELL", entry_price, qty)
 
         # Simulate creating an open SHORT position
         open_pos = {
@@ -184,7 +184,7 @@ class TestBitcoinLiveEngineLogic(unittest.TestCase):
         """6. Verify position automatic exit on -Rs.300 NET loss limit and immediate return to SCANNING mode."""
         entry_price = 8147239.00
         qty = 0.009
-        target_p, sl_p, est_chg = self.engine.calculate_sl_and_target_prices("BUY", entry_price, qty)
+        tp_usd, sl_usd, target_p, sl_p, est_chg = self.engine.calculate_sl_and_target_prices("BUY", entry_price, qty)
 
         # Simulate active BUY LONG position at -Rs.450 NET loss
         open_pos = {

@@ -604,6 +604,10 @@ class BitcoinLiveEngine:
         if hedge_rate <= 0:
             hedge_rate = 102.0
 
+        # Legacy INR input safety guard
+        if entry_price_usd > 100000.0:
+            entry_price_usd = entry_price_usd / hedge_rate
+
         # Estimated roundtrip charges in INR (0.10% total turnover in INR)
         turnover_inr = entry_price_usd * hedge_rate * quantity
         est_charges_inr = max(20.0, round(turnover_inr * 0.0010, 2))
@@ -672,7 +676,7 @@ class BitcoinLiveEngine:
         self.circuit_breaker_tripped = False
         self.circuit_breaker_reason = ""
         self.save_settings()
-        print(f"[{datetime.now()}] [RESET DAILY P&L] Reset today's P&L to ₹0.00.")
+        print(f"[{datetime.now()}] [RESET DAILY P&L] Reset today's P&L to Rs.0.00.")
 
     def are_new_entries_allowed(self) -> Tuple[bool, str]:
         """Checks whether new trade entries are allowed based on strict risk rules."""
@@ -691,7 +695,7 @@ class BitcoinLiveEngine:
             return False, f"CIRCUIT BREAKER TRIPPED: {self.circuit_breaker_reason}"
         if self.today_realized_pnl <= -self.daily_loss_limit_inr or self.daily_loss_limit_hit:
             self.daily_loss_limit_hit = True
-            return False, f"DAILY LOSS LIMIT REACHED (₹{abs(self.today_realized_pnl):,.2f} >= ₹{self.daily_loss_limit_inr:,.2f})"
+            return False, f"DAILY LOSS LIMIT REACHED (Rs.{abs(self.today_realized_pnl):,.2f} >= Rs.{self.daily_loss_limit_inr:,.2f})"
 
         # Check anti-whipsaw cooldown after Stop Loss exit (15 minutes = 900s)
         if self.last_sl_time > 0:
@@ -768,7 +772,7 @@ class BitcoinLiveEngine:
         if spot_bal >= 100.0 and fut_bal < 100.0:
             tr_res = self.adapter.transfer_inr_spot_to_futures(spot_bal)
             if tr_res.get("success"):
-                print(f"[{datetime.now()}] [AUTO TRANSFER] Transferred ₹{spot_bal:,.2f} Spot -> Futures Wallet.")
+                print(f"[{datetime.now()}] [AUTO TRANSFER] Transferred Rs.{spot_bal:,.2f} Spot -> Futures Wallet.")
                 fut_bal += spot_bal
                 spot_bal = 0.0
 
@@ -792,7 +796,7 @@ class BitcoinLiveEngine:
 
         # Determine Scanner status
         if self.today_realized_pnl <= -self.daily_loss_limit_inr or self.daily_loss_limit_hit:
-            scanner_status = "DAILY LOSS LOCK (-₹1,000)"
+            scanner_status = "DAILY LOSS LOCK (-Rs.1,000)"
         elif self.circuit_breaker_tripped:
             scanner_status = "CIRCUIT BREAKER"
         elif active_pos and active_pos.get("status") == "OPEN":
@@ -934,9 +938,9 @@ class BitcoinLiveEngine:
 
                 if tp_hit or sl_hit or reversal_hit:
                     if tp_hit:
-                        exit_reason = f"PROFIT TARGET +₹{int(self.per_trade_profit_target_inr)} NET"
+                        exit_reason = f"PROFIT TARGET +Rs.{int(self.per_trade_profit_target_inr)} NET"
                     elif sl_hit:
-                        exit_reason = f"LOSS LIMIT -₹{int(self.per_trade_loss_limit_inr)} NET"
+                        exit_reason = f"LOSS LIMIT -Rs.{int(self.per_trade_loss_limit_inr)} NET"
                     else:
                         exit_reason = "TREND REVERSAL EXIT"
 
@@ -971,7 +975,7 @@ class BitcoinLiveEngine:
                     DB.save_bitcoin_live_trade(active_pos)
                     self.today_realized_pnl += net_pnl
                     self.save_settings()
-                    print(f"[{datetime.now()}] [BITCOIN LIVE ENGINE] Active position {active_pos['trade_id']} CLOSED ({exit_reason})! NET P&L: ₹{net_pnl:,.2f}. Returning to MARKET SCANNING mode.")
+                    print(f"[{datetime.now()}] [BITCOIN LIVE ENGINE] Active position {active_pos['trade_id']} CLOSED ({exit_reason})! NET P&L: Rs.{net_pnl:,.2f}. Returning to MARKET SCANNING mode.")
                 
                 # While position is open, return without checking new entries
                 return
@@ -989,12 +993,12 @@ class BitcoinLiveEngine:
                 qty = self.calculate_position_quantity(curr_price, effective_bal)
 
                 if qty < 0.001:
-                    err_msg = f"INSUFFICIENT MARGIN / ORDER NOT EXECUTED: Balance ₹{fut_bal:,.2f} insufficient for min quantity 0.001 BTC at 5x leverage"
+                    err_msg = f"INSUFFICIENT MARGIN / ORDER NOT EXECUTED: Balance Rs.{fut_bal:,.2f} insufficient for min quantity 0.001 BTC at 5x leverage"
                     print(f"[{datetime.now()}] [MUDREX ORDER ABORTED] {err_msg}")
                     self.last_api_status = err_msg
                     return
 
-                tp_val, sl_val, est_chg = self.calculate_sl_and_target_prices(action, curr_price, qty)
+                tp_usd, sl_usd, tp_val, sl_val, est_chg = self.calculate_sl_and_target_prices(action, curr_price_usd, qty, hedge_rate)
                 est_margin = (qty * curr_price) / 5.0
                 utilization_pct = (est_margin / effective_bal * 100.0) if effective_bal > 0 else 0.0
 
@@ -1074,11 +1078,11 @@ class BitcoinLiveEngine:
                 print(f"Mudrex Position ID: {pos_id}")
                 print(f"Direction:          {action}")
                 print(f"Quantity:           {qty} BTC")
-                print(f"Entry/Fill Price:   ₹{curr_price:,.2f}")
+                print(f"Entry/Fill Price:   Rs.{curr_price:,.2f}")
                 print(f"Order Status:       {mudrex_data.get('order_status') or mudrex_data.get('status') or 'INITIATED'}")
                 print(f"Position Status:    {mudrex_data.get('position_status') or mudrex_data.get('status') or 'OPEN'}")
                 print(f"Execution Info:     {mudrex_data.get('execution_report') or mudrex_data.get('fills') or 'Submitted via Mudrex v2 Endpoint'}")
-                print(f"Actual/Est Fee:     ₹{mudrex_data.get('fee') or est_chg:,.2f}")
+                print(f"Actual/Est Fee:     Rs.{mudrex_data.get('fee') or est_chg:,.2f}")
                 print("=" * 65)
 
                 # Attach SL risk order if Mudrex position created
@@ -1110,7 +1114,7 @@ class BitcoinLiveEngine:
         qty = self.calculate_position_quantity(curr_price_inr, effective_bal)
 
         if qty < 0.001:
-            err_msg = f"INSUFFICIENT MARGIN / ORDER NOT EXECUTED: Balance ₹{fut_bal:,.2f} insufficient for min quantity 0.001 BTC at 5x leverage"
+            err_msg = f"INSUFFICIENT MARGIN / ORDER NOT EXECUTED: Balance Rs.{fut_bal:,.2f} insufficient for min quantity 0.001 BTC at 5x leverage"
             self.last_api_status = err_msg
             return {"success": False, "error": err_msg}
 
