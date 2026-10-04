@@ -600,6 +600,8 @@ class BitcoinLiveEngine:
             scanner_status = "POSITION OPEN"
         elif not self.live_trading_enabled:
             scanner_status = "TRADING PAUSED"
+        elif "ORDER REJECTED" in getattr(self, "last_api_status", ""):
+            scanner_status = "ORDER REJECTED / NOT EXECUTED"
         else:
             scanner_status = "SCANNING FOR SIGNALS"
 
@@ -755,8 +757,27 @@ class BitcoinLiveEngine:
                     stoploss_price=sl_val
                 )
 
-                mudrex_data = order_res.get("data", {}) if order_res.get("success") else {}
-                pos_id = str(mudrex_data.get("position_id") or mudrex_data.get("id") or f"MUDREX_LIVE_{int(time.time())}")
+                # STRICT FAIL-SAFE: Real position ONLY created if Mudrex order API succeeded AND returned a valid real ID from Mudrex
+                if not order_res.get("success"):
+                    err_msg = order_res.get("error", "Unknown API error")
+                    print(f"[{datetime.now()}] [MUDREX ORDER REJECTED] Order failed on Mudrex API! Reason: {err_msg}")
+                    self.last_api_status = f"ORDER REJECTED / NOT EXECUTED: {err_msg}"
+                    # NO position created, NO trade saved to DB, NO entry registered, NO P&L added
+                    return
+
+                mudrex_data = order_res.get("data", {})
+                if isinstance(mudrex_data, dict) and "data" in mudrex_data:
+                    mudrex_data = mudrex_data["data"]
+
+                pos_id = str(mudrex_data.get("position_id") or mudrex_data.get("id") or mudrex_data.get("order_id") or "").strip()
+
+                if not pos_id or pos_id.startswith("MUDREX_LIVE_"):
+                    err_msg = "Mudrex API response missing position/order ID"
+                    print(f"[{datetime.now()}] [MUDREX ORDER REJECTED] {err_msg}! Data: {mudrex_data}")
+                    self.last_api_status = f"ORDER REJECTED / NOT EXECUTED: {err_msg}"
+                    # NO position created, NO trade saved to DB
+                    return
+
                 now_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
                 trade_id = f"BTC_LIVE_{int(time.time())}"
 
@@ -786,10 +807,11 @@ class BitcoinLiveEngine:
                 }
 
                 DB.save_bitcoin_live_trade(pos_dict)
-                print(f"[{datetime.now()}] [BITCOIN LIVE ENGINE] Position {trade_id} ({action} {qty} BTC @ ₹{curr_price:,.2f}) OPENED! Transitioning to MONITORING NET P&L.")
+                self.last_api_status = "ORDER EXECUTED"
+                print(f"[{datetime.now()}] [BITCOIN LIVE ENGINE] Real Position {trade_id} (Mudrex ID: {pos_id}) OPENED! Transitioning to MONITORING NET P&L.")
 
                 # Attach SL risk order if Mudrex position created
-                if order_res.get("success") and pos_id and sl_val:
+                if pos_id and sl_val:
                     sl_res = self.adapter.attach_stop_loss(pos_id, sl_val, tp_val)
                     if not sl_res.get("success"):
                         print(f"[{datetime.now()}] [WARNING] Failed to attach SL on Mudrex: {sl_res}")
@@ -824,8 +846,22 @@ class BitcoinLiveEngine:
             stoploss_price=sl_val
         )
 
-        mudrex_data = order_res.get("data", {}) if order_res.get("success") else {}
-        pos_id = str(mudrex_data.get("position_id") or mudrex_data.get("id") or f"MUDREX_MANUAL_{int(time.time())}")
+        if not order_res.get("success"):
+            err_msg = order_res.get("error", "Unknown API error")
+            self.last_api_status = f"ORDER REJECTED / NOT EXECUTED: {err_msg}"
+            return {"success": False, "error": f"ORDER REJECTED / NOT EXECUTED: {err_msg}", "mudrex_response": order_res}
+
+        mudrex_data = order_res.get("data", {})
+        if isinstance(mudrex_data, dict) and "data" in mudrex_data:
+            mudrex_data = mudrex_data["data"]
+
+        pos_id = str(mudrex_data.get("position_id") or mudrex_data.get("id") or mudrex_data.get("order_id") or "").strip()
+
+        if not pos_id or pos_id.startswith("MUDREX_MANUAL_"):
+            err_msg = "Mudrex API response missing position/order ID"
+            self.last_api_status = f"ORDER REJECTED / NOT EXECUTED: {err_msg}"
+            return {"success": False, "error": f"ORDER REJECTED / NOT EXECUTED: {err_msg}", "mudrex_response": order_res}
+
         now_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         trade_id = f"BTC_LIVE_{int(time.time())}"
 
@@ -855,7 +891,8 @@ class BitcoinLiveEngine:
         }
 
         DB.save_bitcoin_live_trade(pos_dict)
-        if order_res.get("success") and pos_id and sl_val:
+        self.last_api_status = "ORDER EXECUTED"
+        if pos_id and sl_val:
             self.adapter.attach_stop_loss(pos_id, sl_val, tp_val)
 
         return {"success": True, "trade": pos_dict, "mudrex_response": order_res}

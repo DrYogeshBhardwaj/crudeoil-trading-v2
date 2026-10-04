@@ -278,6 +278,81 @@ class TestBitcoinLiveEngineLogic(unittest.TestCase):
         self.assertIn("ALLOWED", reason)
         print(f"[TEST 9 PASS] Cooldown Expiry Verification Passed! Status: {reason}")
 
+    def test_10_real_order_success_creates_position(self):
+        """10. Verify position is created ONLY when Mudrex API returns success and valid real order ID."""
+        # Mock Mudrex API order placement success
+        self.engine.adapter.place_futures_order = lambda symbol, side, quantity, order_type="MARKET", stoploss_price=None: {
+            "success": True,
+            "data": {"position_id": "MUDREX_REAL_POS_998877", "symbol": "BTCUSDT", "side": "BUY"}
+        }
+
+        res = self.engine.execute_manual_trade("BUY")
+        self.assertTrue(res.get("success"))
+        
+        active_pos = DB.load_active_bitcoin_live_position()
+        self.assertIsNotNone(active_pos)
+        self.assertEqual(active_pos["mudrex_position_id"], "MUDREX_REAL_POS_998877")
+        print("[TEST 10 PASS] Valid Real Mudrex Order ID Creates Position Successfully!")
+
+    def test_11_order_failure_prevents_position_creation(self):
+        """11. Verify order API failure (success=False) prevents position creation, leaves P&L=Rs.0, and does NOT trigger daily loss lock."""
+        # Mock Mudrex API order placement failure
+        self.engine.adapter.place_futures_order = lambda symbol, side, quantity, order_type="MARKET", stoploss_price=None: {
+            "success": False,
+            "error": "HTTP 400: Insufficient Balance or Margin Error"
+        }
+
+        res = self.engine.execute_manual_trade("BUY")
+        self.assertFalse(res.get("success"))
+        self.assertIn("ORDER REJECTED / NOT EXECUTED", res.get("error"))
+
+        # Verify NO position saved to DB
+        active_pos = DB.load_active_bitcoin_live_position()
+        self.assertIsNone(active_pos)
+
+        # Verify P&L remains Rs.0 and daily loss lock is NOT triggered
+        self.assertEqual(self.engine.today_realized_pnl, 0.0)
+        self.assertFalse(self.engine.daily_loss_limit_hit)
+        
+        all_trades = DB.load_all_bitcoin_live_trades()
+        self.assertEqual(len(all_trades), 0)
+        print("[TEST 11 PASS] Order Failure (success=False) Completely Blocks Trade & DB Creation!")
+
+    def test_12_empty_or_missing_id_prevents_position_creation(self):
+        """12. Verify empty response or missing position ID prevents position creation."""
+        # Mock Mudrex API returning success=True but missing position ID
+        self.engine.adapter.place_futures_order = lambda symbol, side, quantity, order_type="MARKET", stoploss_price=None: {
+            "success": True,
+            "data": {}
+        }
+
+        res = self.engine.execute_manual_trade("BUY")
+        self.assertFalse(res.get("success"))
+        self.assertIn("missing position/order ID", res.get("error"))
+
+        active_pos = DB.load_active_bitcoin_live_position()
+        self.assertIsNone(active_pos)
+        print("[TEST 12 PASS] Missing/Empty Position ID Aborts Position Creation!")
+
+    def test_13_no_fallback_id_generated_on_failure(self):
+        """13. Verify fallback ID (MUDREX_LIVE_ / MUDREX_MANUAL_) is NEVER used for position creation on failure."""
+        self.engine.adapter.place_futures_order = lambda symbol, side, quantity, order_type="MARKET", stoploss_price=None: {
+            "success": False,
+            "error": "API Connection Timeout"
+        }
+
+        res = self.engine.execute_manual_trade("SELL")
+        self.assertFalse(res.get("success"))
+
+        trades = DB.load_all_bitcoin_live_trades()
+        for t in trades:
+            pos_id = str(t.get("mudrex_position_id"))
+            self.assertFalse(pos_id.startswith("MUDREX_LIVE_"))
+            self.assertFalse(pos_id.startswith("MUDREX_MANUAL_"))
+
+        print("[TEST 13 PASS] Fallback Position ID Generation Completely Disabled!")
+
 if __name__ == "__main__":
     unittest.main()
+
 
