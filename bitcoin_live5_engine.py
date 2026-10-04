@@ -36,7 +36,7 @@ class BitcoinLive5Engine:
 
     def __init__(self):
         self.adapter = MudrexLiveAdapter()
-        self.test_capital_reference = 20000.0 # Rs. 20,000 test capital
+        self.test_capital_reference = 25000.0 # Rs. 25,000 test capital
         self.max_holding_time_seconds = 300 # 5 minutes maximum holding time
         self.entry_interval_seconds = 60 # 1 minute rolling entry interval
         self.load_settings()

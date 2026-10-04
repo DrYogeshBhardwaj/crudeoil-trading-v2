@@ -52,7 +52,7 @@ class TestBitcoinLive5EngineLogic(unittest.TestCase):
             conn.commit()
         DB._init_db()
         self.engine = BitcoinLive5Engine()
-        self.engine.test_capital_reference = 20000.0
+        self.engine.test_capital_reference = 25000.0
 
     def tearDown(self):
         pass
