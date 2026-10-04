@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>BTC 5-LIVE ROLLING TEST — POSITION P/L MONITOR</title>
+    <title>BTC 5-LIVE ROLLING TEST — POSITION P/L & LIVE STOPWATCH MONITOR</title>
     <!-- Google Fonts & Modern Styling -->
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;700;800&display=swap" rel="stylesheet">
     <style>
@@ -181,15 +181,15 @@
             border-radius: 8px;
             padding: 12px 16px;
             display: grid;
-            grid-template-columns: 120px 100px 1.4fr 1.4fr 120px 140px 1.3fr 100px;
+            grid-template-columns: 110px 100px 1.2fr 1.3fr 1.3fr 130px 1.5fr 160px;
             align-items: center;
             gap: 12px;
             transition: all 0.2s ease;
         }
 
-        @media (max-width: 1200px) {
+        @media (max-width: 1250px) {
             .pnl-row-card {
-                grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+                grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
             }
         }
 
@@ -236,6 +236,40 @@
 
         .pos-info-lbl { font-size: 0.65rem; color: var(--text-muted); font-weight: 700; text-transform: uppercase; }
         .pos-info-val { font-family: 'JetBrains Mono', monospace; font-size: 0.82rem; font-weight: 700; }
+
+        /* LIVE STOPWATCH TIMER BADGE */
+        .pos-timer-box {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            background: rgba(245, 158, 11, 0.1);
+            border: 1px solid rgba(245, 158, 11, 0.35);
+            padding: 6px 10px;
+            border-radius: 6px;
+            text-align: center;
+        }
+
+        .pos-timer-box.expiring {
+            background: rgba(239, 68, 68, 0.15);
+            border-color: rgba(239, 68, 68, 0.5);
+            animation: pulseTimer 1s infinite alternate;
+        }
+
+        @keyframes pulseTimer {
+            0% { opacity: 0.8; }
+            100% { opacity: 1; }
+        }
+
+        .timer-val {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.95rem;
+            font-weight: 800;
+            color: #f59e0b;
+        }
+
+        .timer-val.expiring { color: #ef4444; }
+        .timer-sub { font-size: 0.6rem; color: var(--text-muted); font-weight: 700; text-transform: uppercase; }
 
         /* PROMINENT NET PNL DISPLAY */
         .pos-pnl-display {
@@ -431,7 +465,7 @@
         <div class="pnl-master-header">
             <div class="pnl-master-title">
                 <span>🔥 POSITION P/L — 1 TO 5</span>
-                <span style="font-size: 0.72rem; color: #94a3b8; font-weight: 600;">(AUTHORITATIVE LIVE MUDREX NET P&L)</span>
+                <span style="font-size: 0.72rem; color: #94a3b8; font-weight: 600;">(AUTHORITATIVE LIVE MUDREX NET P&L & STOPWATCH TIMERS)</span>
             </div>
             <div class="pnl-summary-boxes">
                 <div class="pnl-sum-card primary-pnl">
@@ -593,7 +627,48 @@
             "container_id": "tradingview_chart"
         });
 
-        // Fetch Dashboard State Loop
+        // Client-side Live Ticking Stopwatch State
+        let slotHoldingSeconds = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 };
+        let slotIsActive = { 1: false, 2: false, 3: false, 4: false, 5: false };
+
+        // 1-Second Live Stopwatch Ticker Loop
+        setInterval(() => {
+            for (let i = 1; i <= 5; i++) {
+                if (slotIsActive[i]) {
+                    slotHoldingSeconds[i]++;
+                    updateStopwatchDisplay(i);
+                }
+            }
+        }, 1000);
+
+        function updateStopwatchDisplay(slotIdx) {
+            const elVal = document.getElementById(`timerValSlot${slotIdx}`);
+            const elSub = document.getElementById(`timerSubSlot${slotIdx}`);
+            const elBox = document.getElementById(`timerBoxSlot${slotIdx}`);
+            if (!elVal || !elSub || !elBox) return;
+
+            const totalSec = slotHoldingSeconds[slotIdx] || 0;
+            const remSec = Math.max(0, 600 - totalSec); // 10-minute max = 600s
+
+            const ageMm = String(Math.floor(totalSec / 60)).padStart(2, '0');
+            const ageSs = String(totalSec % 60).padStart(2, '0');
+            const remMm = String(Math.floor(remSec / 60)).padStart(2, '0');
+            const remSs = String(remSec % 60).padStart(2, '0');
+
+            elVal.innerText = `⏱️ ${ageMm}:${ageSs}`;
+            elSub.innerText = `Rem: ${remMm}:${remSs} / 10:00`;
+
+            if (remSec <= 120) { // Under 2 minutes remaining
+                elVal.className = 'timer-val expiring';
+                elBox.className = 'pos-timer-box expiring';
+                elSub.innerText = `⚠️ ${remMm}:${remSs} (EXPIRING)`;
+            } else {
+                elVal.className = 'timer-val';
+                elBox.className = 'pos-timer-box';
+            }
+        }
+
+        // Fetch Dashboard State Loop (2-second interval)
         async function fetchDashboardState() {
             try {
                 const resp = await fetch('/api/bitcoin/live5/state');
@@ -633,7 +708,7 @@
 
                 document.getElementById('lblTestStatusStr').innerText = `Status: ${data.test_status || 'RUNNING'}`;
 
-                // 3. Render 5 Position P/L Rows
+                // 3. Render 5 Position P/L Rows & Update Stopwatch Timers
                 renderPnlRows(data.slots || [], data.btc_price || 0, data.mudrex_btc_usd_price || 0);
 
                 // 4. Render History Table
@@ -654,11 +729,21 @@
                 const pos = slot.position;
 
                 if (isOpened) {
+                    slotIsActive[i] = true;
+                    slotHoldingSeconds[i] = slot.holding_seconds || 0;
+
                     const cardClass = pos.direction === 'BUY' ? 'open-long' : 'open-short';
                     const badgeClass = pos.direction === 'BUY' ? 'badge-long' : 'badge-short';
                     const sideText = pos.direction === 'BUY' ? 'BUY LONG' : 'SELL SHORT';
                     const netPnl = slot.net_pnl || 0.0;
                     const pnlColor = netPnl > 0 ? 'val-positive' : (netPnl < 0 ? 'val-negative' : 'val-neutral');
+
+                    const totalSec = slot.holding_seconds || 0;
+                    const remSec = Math.max(0, 600 - totalSec);
+                    const ageMm = String(Math.floor(totalSec / 60)).padStart(2, '0');
+                    const ageSs = String(totalSec % 60).padStart(2, '0');
+                    const remMm = String(Math.floor(remSec / 60)).padStart(2, '0');
+                    const remSs = String(remSec % 60).padStart(2, '0');
 
                     html += `
                         <div class="pnl-row-card ${cardClass}">
@@ -688,9 +773,10 @@
                                 <span class="pos-info-val" style="color:#38bdf8;">+₹100 NET | -₹200 NET</span>
                             </div>
 
-                            <div class="pos-info-col">
-                                <span class="pos-info-lbl">Holding / Remaining Time</span>
-                                <span class="pos-info-val val-amber">⏳ ${slot.holding_time_str || '00:00'} (Rem: ${slot.remaining_time_str || '10:00'})</span>
+                            <!-- LIVE STOPWATCH TIMER BADGE -->
+                            <div class="pos-timer-box ${remSec <= 120 ? 'expiring' : ''}" id="timerBoxSlot${i}">
+                                <span class="timer-val ${remSec <= 120 ? 'expiring' : ''}" id="timerValSlot${i}">⏱️ ${ageMm}:${ageSs}</span>
+                                <span class="timer-sub" id="timerSubSlot${i}">Rem: ${remMm}:${remSs} / 10:00</span>
                             </div>
 
                             <div class="pos-pnl-display">
@@ -700,19 +786,26 @@
                         </div>
                     `;
                 } else {
+                    slotIsActive[i] = false;
+                    slotHoldingSeconds[i] = 0;
+
                     html += `
                         <div class="pnl-row-card empty-row">
                             <div class="pos-slot-tag">POSITION ${i}</div>
                             <div>
                                 <span class="pos-badge badge-empty">READY / EMPTY</span>
                             </div>
-                            <div class="pos-info-col" style="grid-column: span 4;">
+                            <div class="pos-info-col" style="grid-column: span 3;">
                                 <span class="pos-info-lbl">Status</span>
                                 <span class="pos-info-val" style="color:#64748b;">Awaiting 2-Min Rolling Strategy Signal</span>
                             </div>
                             <div class="pos-info-col">
                                 <span class="pos-info-lbl">Target / SL</span>
                                 <span class="pos-info-val" style="color:#475569;">+₹100 NET | -₹200 NET</span>
+                            </div>
+                            <div class="pos-timer-box" style="background: rgba(148, 163, 184, 0.05); border-color: rgba(148, 163, 184, 0.2);">
+                                <span class="timer-val" style="color: #64748b;">⏱️ 00:00</span>
+                                <span class="timer-sub">10:00 TIMER READY</span>
                             </div>
                             <div class="pos-pnl-display">
                                 <span class="pos-info-lbl">NET P&L</span>
