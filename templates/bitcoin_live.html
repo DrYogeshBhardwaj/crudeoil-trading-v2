@@ -428,11 +428,11 @@
             <div class="grid-4">
                 <div class="metric-card">
                     <div class="metric-lbl">
-                        <span>BTC Price (Mudrex)</span>
+                        <span>Mudrex Futures BTC Price</span>
                         <span id="api_status" class="badge-status badge-green">OK</span>
                     </div>
-                    <div class="metric-val" id="btc_price" style="color:#fbbf24;">₹0.00</div>
-                    <div class="metric-sub" id="last_refresh_time">Refreshing every 2s...</div>
+                    <div class="metric-val" id="btc_price_usd" style="color:#fbbf24;">$0.00 USD</div>
+                    <div class="metric-sub" id="last_refresh_time">Hedge: <strong id="hedge_rate_text" style="color:#fff;">102.00 INR/USDT</strong> | <strong id="btc_price_inr" style="color:#10b981;">₹0.00 INR</strong></div>
                 </div>
 
                 <div class="metric-card">
@@ -503,11 +503,11 @@
                         <div class="pos-cell-val" id="pos_entry_price" style="color:#fbbf24;">₹0.00</div>
                     </div>
                     <div class="pos-cell" style="background:rgba(239,68,68,0.1); border-color:rgba(239,68,68,0.3);">
-                        <div class="pos-cell-lbl" style="color:#ef4444;">STOP LOSS (-₹300 NET)</div>
+                        <div class="pos-cell-lbl" id="pos_sl_lbl" style="color:#ef4444;">STOP LOSS (-₹400 NET)</div>
                         <div class="pos-cell-val" id="pos_stop_loss" style="color:#ef4444;">₹0.00</div>
                     </div>
                     <div class="pos-cell" style="background:rgba(16,185,129,0.1); border-color:rgba(16,185,129,0.3);">
-                        <div class="pos-cell-lbl" style="color:#10b981;">TARGET PROFIT (+₹500 NET)</div>
+                        <div class="pos-cell-lbl" id="pos_tp_lbl" style="color:#10b981;">TARGET PROFIT (+₹600 NET)</div>
                         <div class="pos-cell-val" id="pos_target_price" style="color:#10b981;">₹0.00</div>
                     </div>
                     <div class="pos-cell" style="display:flex; align-items:center; justify-content:center;">
@@ -667,11 +667,13 @@
 
             currentLiveTradingEnabled = !!data.live_trading_enabled;
 
-            const nowStr = new Date().toLocaleTimeString('en-IN');
-            setTxt('last_refresh_time', 'Live (' + nowStr + ')');
-            setTxt('hdr_refresh_time', 'LIVE (' + nowStr + ')');
+            const usdPrice = Number(data.mudrex_btc_usd_price || 0);
+            const hedgeRate = Number(data.mudrex_hedge_rate || 102.0);
+            const inrVal = Number(data.mudrex_btc_inr_price || (usdPrice * hedgeRate));
 
-            setTxt('btc_price', '₹' + Number(data.btc_price || 0).toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2}));
+            setTxt('btc_price_usd', '$' + usdPrice.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2}) + ' USD');
+            setTxt('hedge_rate_text', 'Hedge: ' + hedgeRate.toFixed(2) + ' INR/USDT');
+            setTxt('btc_price_inr', '₹' + inrVal.toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2}));
             
             const apiStat = document.getElementById('api_status');
             if (apiStat) {
@@ -694,9 +696,14 @@
             const cbBadge = document.getElementById('cb_badge');
             if (cbBadge) cbBadge.className = 'badge-status ' + (cbStatus === 'NORMAL' ? 'badge-green' : 'badge-red');
 
-            setTxt('disp_per_trade_target', '+₹' + Number(data.per_trade_profit_target_inr || 200).toLocaleString('en-IN', {minimumFractionDigits: 2}));
-            setTxt('disp_per_trade', '-₹' + Number(data.per_trade_loss_limit_inr || 100).toLocaleString('en-IN', {minimumFractionDigits: 2}));
+            setTxt('disp_per_trade_target', '+₹' + Number(data.per_trade_profit_target_inr || 600).toLocaleString('en-IN', {minimumFractionDigits: 2}));
+            setTxt('disp_per_trade', '-₹' + Number(data.per_trade_loss_limit_inr || 400).toLocaleString('en-IN', {minimumFractionDigits: 2}));
             setTxt('disp_daily_limit', '-₹' + Number(data.daily_loss_limit_inr || 1000).toLocaleString('en-IN', {minimumFractionDigits: 2}));
+            
+            const slLimitVal = Math.round(Number(data.per_trade_loss_limit_inr || 400));
+            const tpTargetVal = Math.round(Number(data.per_trade_profit_target_inr || 600));
+            setTxt('pos_sl_lbl', `STOP LOSS (-₹${slLimitVal} NET)`);
+            setTxt('pos_tp_lbl', `TARGET PROFIT (+₹${tpTargetVal} NET)`);
             
             const todayNet = Number(data.today_realized_pnl || 0);
             const todayEl = document.getElementById('disp_today_pnl');

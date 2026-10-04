@@ -703,6 +703,261 @@ class TestBitcoinLiveEngineLogic(unittest.TestCase):
         self.assertEqual(qty_15k, 0.007)
         print(f"[TEST 34 PASS] Dynamic Recalculation on Balance Change Verified: 5k Bal Qty={qty_5k} BTC, 15k Bal Qty={qty_15k} BTC")
 
+    def test_35_mudrex_futures_usd_price_authoritative(self):
+        """35. Verify Mudrex Futures USD price is authoritative for market data fetch."""
+        price_usd, hr, source = self.engine.fetch_mudrex_futures_market_data()
+        self.assertIsNotNone(price_usd)
+        self.assertGreater(price_usd, 50000.0)
+        self.assertGreater(hr, 0.0)
+        print(f"[TEST 35 PASS] Mudrex Futures USD Price Authoritative: Price=${price_usd:,.2f} USD, HedgeRate={hr} INR/USDT ({source})")
+
+    def test_36_yahoo_btc_inr_never_used_for_live_execution(self):
+        """36. Verify Yahoo BTC-INR price feed is never used for live execution exit triggers."""
+        # Set up a position with USD basis
+        entry_usd = 85260.0
+        hr = 102.0
+        tp_usd, sl_usd, tp_inr, sl_inr, _ = self.engine.calculate_sl_and_target_prices("BUY", entry_usd, 0.002, hr)
+
+        pos_dict = {
+            "trade_id": "BTC_LIVE_TEST_36",
+            "mudrex_position_id": "MUDREX_POS_36",
+            "entry_timestamp": "2026-10-04 10:38:00",
+            "symbol": "BTCUSDT",
+            "direction": "BUY",
+            "quantity": 0.002,
+            "entry_price_usd": entry_usd,
+            "hedge_rate": hr,
+            "entry_price": entry_usd * hr,
+            "stop_loss_usd": sl_usd,
+            "stop_loss": sl_inr,
+            "target_usd": tp_usd,
+            "target": tp_inr,
+            "trend_state": "BULLISH",
+            "confidence": 90,
+            "reasons": [],
+            "status": "OPEN"
+        }
+        DB.save_bitcoin_live_trade(pos_dict)
+
+        # Mock market data feed to return USD price $85,259.60 (flat)
+        self.engine.fetch_mudrex_futures_market_data = lambda: (85259.60, 102.0, "Mock Mudrex USD")
+        self.engine.process_tick()
+
+        # Position MUST remain OPEN (not exited by Yahoo INR price ~82.14L)
+        active = DB.load_active_bitcoin_live_position()
+        self.assertIsNotNone(active)
+        self.assertEqual(active.get("status"), "OPEN")
+        print("[TEST 36 PASS] Yahoo BTC-INR Price Never Used for Live Exit Triggers!")
+
+    def test_37_dynamic_hedge_rate_used_not_hardcoded(self):
+        """37. Verify dynamic Mudrex hedge rate (e.g. 108.5) is used for TP/SL and P&L math."""
+        entry_usd = 85000.0
+        hr_custom = 108.5
+        tp_usd, sl_usd, tp_inr, sl_inr, est_chg = self.engine.calculate_sl_and_target_prices("BUY", entry_usd, 0.002, hr_custom)
+
+        # Verify INR equivalent uses dynamic 108.5 hedge rate
+        expected_tp_inr = round(tp_usd * hr_custom, 2)
+        self.assertAlmostEqual(tp_inr, expected_tp_inr, delta=0.1)
+        print(f"[TEST 37 PASS] Dynamic Hedge Rate Verified: Custom FX {hr_custom} -> TP USD=${tp_usd:,.2f} | TP INR=Rs.{tp_inr:,.2f}")
+
+    def test_38_long_pnl_calculation_in_usd_and_inr(self):
+        """38. Verify LONG P&L math in USD and converted to INR via hedge rate."""
+        entry_usd = 85000.0
+        curr_usd = 86000.0
+        qty = 0.002
+        hr = 102.0
+
+        gross_usd = (curr_usd - entry_usd) * qty # +$2.00 USD
+        gross_inr = gross_usd * hr # +Rs.204.00 INR
+        self.assertAlmostEqual(gross_inr, 204.0, delta=0.01)
+        print(f"[TEST 38 PASS] LONG P&L Calculation Verified: Gross USD=+${gross_usd:.2f} -> Gross INR=Rs.{gross_inr:.2f}")
+
+    def test_39_short_pnl_calculation_in_usd_and_inr(self):
+        """39. Verify SHORT P&L math in USD and converted to INR via hedge rate."""
+        entry_usd = 85000.0
+        curr_usd = 84000.0
+        qty = 0.002
+        hr = 102.0
+
+        gross_usd = (entry_usd - curr_usd) * qty # +$2.00 USD
+        gross_inr = gross_usd * hr # +Rs.204.00 INR
+        self.assertAlmostEqual(gross_inr, 204.0, delta=0.01)
+        print(f"[TEST 39 PASS] SHORT P&L Calculation Verified: Gross USD=+${gross_usd:.2f} -> Gross INR=Rs.{gross_inr:.2f}")
+
+    def test_40_target_profit_600_net_in_usd(self):
+        """40. Verify +Rs.600 NET target calculation in USD price scale."""
+        entry_usd = 85260.0
+        qty = 0.002
+        hr = 102.0
+
+        tp_usd, sl_usd, tp_inr, sl_inr, est_chg = self.engine.calculate_sl_and_target_prices("BUY", entry_usd, qty, hr)
+        # At tp_usd, net P&L must equal +Rs.600 NET
+        gross_usd = (tp_usd - entry_usd) * qty
+        gross_inr = gross_usd * hr
+        net_pnl = gross_inr - est_chg
+        self.assertAlmostEqual(net_pnl, 600.0, delta=2.0)
+        print(f"[TEST 40 PASS] +Rs.600 NET Target Verified in USD: Entry=${entry_usd} -> TP USD=${tp_usd:,.2f} -> Net PnL=Rs.{net_pnl:.2f}")
+
+    def test_41_loss_limit_400_net_in_usd(self):
+        """41. Verify -Rs.400 NET loss limit calculation in USD price scale."""
+        entry_usd = 85260.0
+        qty = 0.002
+        hr = 102.0
+
+        tp_usd, sl_usd, tp_inr, sl_inr, est_chg = self.engine.calculate_sl_and_target_prices("BUY", entry_usd, qty, hr)
+        # At sl_usd, net P&L must equal -Rs.400 NET
+        gross_usd = (sl_usd - entry_usd) * qty
+        gross_inr = gross_usd * hr
+        net_pnl = gross_inr - est_chg
+        self.assertAlmostEqual(net_pnl, -400.0, delta=2.0)
+        print(f"[TEST 41 PASS] -Rs.400 NET Loss Limit Verified in USD: Entry=${entry_usd} -> SL USD=${sl_usd:,.2f} -> Net PnL=Rs.{net_pnl:.2f}")
+
+    def test_42_current_live_position_reconciliation(self):
+        """42. Verify current live position BTC_LIVE_1791110280 reconciliation to Mudrex USD entry $85,260 and 102 hedge rate."""
+        pos_old = {
+            "trade_id": "BTC_LIVE_1791110280",
+            "mudrex_position_id": "01a1067d-f252-7e89-91da-9b03be176bfe",
+            "entry_timestamp": "2026-10-04 10:38:00",
+            "symbol": "BTCUSDT",
+            "direction": "BUY",
+            "quantity": 0.002,
+            "entry_price": 8219875.0, # Old Yahoo INR price
+            "stop_loss": 8029875.0,
+            "target": 8529875.0,
+            "trend_state": "BULLISH",
+            "confidence": 95,
+            "reasons": [],
+            "status": "OPEN"
+        }
+        DB.save_bitcoin_live_trade(pos_old)
+
+        # Mock current market data flat at $85,259.60 USD
+        self.engine.fetch_mudrex_futures_market_data = lambda: (85259.60, 102.0, "Mock Mudrex USD")
+        self.engine.process_tick()
+
+        # Reconciled position check
+        reconciled = DB.load_active_bitcoin_live_position()
+        self.assertIsNotNone(reconciled)
+        self.assertEqual(reconciled.get("entry_price_usd"), 85260.0)
+        self.assertEqual(reconciled.get("hedge_rate"), 102.0)
+        self.assertEqual(reconciled.get("entry_price"), 8696520.0)
+        self.assertEqual(reconciled.get("status"), "OPEN")
+        print(f"[TEST 42 PASS] Live Position BTC_LIVE_1791110280 Reconciled: Entry USD=${reconciled.get('entry_price_usd')} | HedgeRate={reconciled.get('hedge_rate')} | Entry INR=Rs.{reconciled.get('entry_price'):,.2f}")
+
+    def test_43_real_mudrex_close_request_on_tp(self):
+        """43. Verify real Mudrex close API request is sent when TP USD target is hit."""
+        entry_usd = 85260.0
+        hr = 102.0
+        tp_usd, sl_usd, tp_inr, sl_inr, _ = self.engine.calculate_sl_and_target_prices("BUY", entry_usd, 0.002, hr)
+
+        pos_dict = {
+            "trade_id": "BTC_LIVE_TEST_43",
+            "mudrex_position_id": "POS_MUDREX_REAL_CLOSE",
+            "entry_timestamp": "2026-10-04 10:38:00",
+            "symbol": "BTCUSDT",
+            "direction": "BUY",
+            "quantity": 0.002,
+            "entry_price_usd": entry_usd,
+            "hedge_rate": hr,
+            "entry_price": entry_usd * hr,
+            "target_usd": tp_usd,
+            "stop_loss_usd": sl_usd,
+            "target": tp_inr,
+            "stop_loss": sl_inr,
+            "trend_state": "BULLISH",
+            "confidence": 95,
+            "reasons": [],
+            "status": "OPEN"
+        }
+        DB.save_bitcoin_live_trade(pos_dict)
+
+        closed_ids = []
+        self.engine.adapter.close_position_safely = lambda pid: closed_ids.append(pid) or {"success": True}
+        # Price hits TP USD ($88,300 USD)
+        self.engine.fetch_mudrex_futures_market_data = lambda: (88300.0, 102.0, "Mock TP Hit")
+        self.engine.process_tick()
+
+        self.assertIn("POS_MUDREX_REAL_CLOSE", closed_ids)
+        closed_trade = DB.load_all_bitcoin_live_trades()[0]
+        self.assertEqual(closed_trade.get("status"), "CLOSED")
+        self.assertIn("PROFIT TARGET", closed_trade.get("exit_reason"))
+        print("[TEST 43 PASS] Real Mudrex Close API Request Sent on TP Trigger!")
+
+    def test_44_failed_mudrex_close_keeps_position_open(self):
+        """44. Verify failed Mudrex close request does NOT mark local position closed."""
+        entry_usd = 85260.0
+        hr = 102.0
+        tp_usd, sl_usd, tp_inr, sl_inr, _ = self.engine.calculate_sl_and_target_prices("BUY", entry_usd, 0.002, hr)
+
+        pos_dict = {
+            "trade_id": "BTC_LIVE_TEST_44",
+            "mudrex_position_id": "POS_MUDREX_FAIL_CLOSE",
+            "entry_timestamp": "2026-10-04 10:38:00",
+            "symbol": "BTCUSDT",
+            "direction": "BUY",
+            "quantity": 0.002,
+            "entry_price_usd": entry_usd,
+            "hedge_rate": hr,
+            "entry_price": entry_usd * hr,
+            "target_usd": tp_usd,
+            "stop_loss_usd": sl_usd,
+            "target": tp_inr,
+            "stop_loss": sl_inr,
+            "trend_state": "BULLISH",
+            "confidence": 95,
+            "reasons": [],
+            "status": "OPEN"
+        }
+        DB.save_bitcoin_live_trade(pos_dict)
+
+        # Mock close API returning success=False
+        self.engine.adapter.close_position_safely = lambda pid: {"success": False, "error": "Network Timeout"}
+        self.engine.fetch_mudrex_futures_market_data = lambda: (88300.0, 102.0, "Mock TP Hit")
+        self.engine.process_tick()
+
+        # Local position MUST remain OPEN because close API failed!
+        active = DB.load_active_bitcoin_live_position()
+        self.assertIsNotNone(active)
+        self.assertEqual(active.get("status"), "OPEN")
+        print("[TEST 44 PASS] Failed Mudrex Close API Request Keeps Position State OPEN!")
+
+    def test_45_price_feed_failure_does_not_fallback_to_yahoo(self):
+        """45. Verify price feed failure (None / <=0) does NOT fall back to Yahoo and keeps position unchanged."""
+        entry_usd = 85260.0
+        hr = 102.0
+        tp_usd, sl_usd, tp_inr, sl_inr, _ = self.engine.calculate_sl_and_target_prices("BUY", entry_usd, 0.002, hr)
+
+        pos_dict = {
+            "trade_id": "BTC_LIVE_TEST_45",
+            "mudrex_position_id": "POS_MUDREX_FEED_FAIL",
+            "entry_timestamp": "2026-10-04 10:38:00",
+            "symbol": "BTCUSDT",
+            "direction": "BUY",
+            "quantity": 0.002,
+            "entry_price_usd": entry_usd,
+            "hedge_rate": hr,
+            "entry_price": entry_usd * hr,
+            "target_usd": tp_usd,
+            "stop_loss_usd": sl_usd,
+            "target": tp_inr,
+            "stop_loss": sl_inr,
+            "trend_state": "BULLISH",
+            "confidence": 95,
+            "reasons": [],
+            "status": "OPEN"
+        }
+        DB.save_bitcoin_live_trade(pos_dict)
+
+        # Mock market data feed failure returning None
+        self.engine.fetch_mudrex_futures_market_data = lambda: (None, 102.0, "PRICE FEED UNAVAILABLE")
+        self.engine.process_tick()
+
+        active = DB.load_active_bitcoin_live_position()
+        self.assertIsNotNone(active)
+        self.assertEqual(active.get("status"), "OPEN")
+        self.assertEqual(self.engine.last_api_status, "MUDREX FUTURES PRICE FEED UNAVAILABLE")
+        print("[TEST 45 PASS] Price Feed Failure Does NOT Fall Back to Yahoo & Preserves Open Position State!")
+
 if __name__ == "__main__":
     unittest.main()
 

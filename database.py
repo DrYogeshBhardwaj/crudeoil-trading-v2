@@ -340,7 +340,7 @@ class DatabaseEngine:
             """)
 
             # Migration for existing bitcoin_live_trades tables
-            for col in ["entry_charges", "exit_charges"]:
+            for col in ["entry_charges", "exit_charges", "entry_price_usd", "hedge_rate", "target_usd", "stop_loss_usd", "exit_price_usd"]:
                 try:
                     cursor.execute(f"ALTER TABLE bitcoin_live_trades ADD COLUMN {col} REAL")
                 except Exception:
@@ -733,8 +733,9 @@ class DatabaseEngine:
                     trade_id, mudrex_position_id, entry_timestamp, symbol, direction, quantity,
                     entry_price, stop_loss, stoploss_order_id, target, trend_state, confidence,
                     reasons, status, exit_timestamp, exit_price, exit_reason,
-                    gross_pnl, entry_charges, exit_charges, charges, net_pnl
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    gross_pnl, entry_charges, exit_charges, charges, net_pnl,
+                    entry_price_usd, hedge_rate, target_usd, stop_loss_usd, exit_price_usd
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """, (
                 pos_dict["trade_id"],
                 pos_dict.get("mudrex_position_id"),
@@ -757,7 +758,12 @@ class DatabaseEngine:
                 pos_dict.get("entry_charges"),
                 pos_dict.get("exit_charges"),
                 pos_dict.get("charges"),
-                pos_dict.get("net_pnl")
+                pos_dict.get("net_pnl"),
+                pos_dict.get("entry_price_usd"),
+                pos_dict.get("hedge_rate"),
+                pos_dict.get("target_usd"),
+                pos_dict.get("stop_loss_usd"),
+                pos_dict.get("exit_price_usd")
             ))
             conn.commit()
 
