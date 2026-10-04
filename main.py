@@ -193,21 +193,26 @@ async def run_bitcoin_live_preflight():
 
 @app.post("/api/bitcoin/live/risk-settings")
 async def update_bitcoin_live_risk_settings(payload: dict):
-    """Updates per-trade loss limit and daily loss limit in INR."""
-    per_trade = payload.get("per_trade_loss_limit_inr")
-    daily = payload.get("daily_loss_limit_inr")
-    if per_trade is not None or daily is not None:
+    """Updates target profit net, max loss net, per-trade loss limit and daily loss limit in INR."""
+    target_profit = payload.get("target_profit_net") or payload.get("per_trade_profit_target_inr")
+    max_loss = payload.get("max_loss_net") or payload.get("per_trade_loss_limit_inr")
+    daily_loss = payload.get("daily_loss_limit_inr")
+
+    if target_profit is not None or max_loss is not None or daily_loss is not None:
         BITCOIN_LIVE_ENGINE.update_risk_settings(
-            float(per_trade) if per_trade is not None else 0.0,
-            float(daily) if daily is not None else 0.0
+            per_trade_limit=float(max_loss) if max_loss is not None else None,
+            profit_target=float(target_profit) if target_profit is not None else None,
+            daily_limit=float(daily_loss) if daily_loss is not None else None
         )
         return JSONResponse({
+            "success": True,
             "status": "SUCCESS",
             "message": "Bitcoin Live risk settings updated and persisted successfully.",
+            "per_trade_profit_target_inr": BITCOIN_LIVE_ENGINE.per_trade_profit_target_inr,
             "per_trade_loss_limit_inr": BITCOIN_LIVE_ENGINE.per_trade_loss_limit_inr,
             "daily_loss_limit_inr": BITCOIN_LIVE_ENGINE.daily_loss_limit_inr
         })
-    return JSONResponse({"status": "ERROR", "message": "No valid loss limit fields provided"}, status_code=400)
+    return JSONResponse({"success": False, "status": "ERROR", "message": "No valid risk settings fields provided"}, status_code=400)
 
 @app.post("/api/bitcoin/live/reset-circuit-breaker")
 async def reset_bitcoin_live_circuit_breaker():

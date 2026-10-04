@@ -903,7 +903,7 @@
                 })
             });
             const res = await resp.json();
-            if (res.success) {
+            if (res.success || res.status === 'SUCCESS') {
                 if (statusEl) {
                     statusEl.innerText = '✅ SAVED SUCCESSFULLY';
                     statusEl.style.color = '#10b981';
@@ -916,7 +916,7 @@
                     statusEl.innerText = '❌ SAVE FAILED';
                     statusEl.style.color = '#ef4444';
                 }
-                alert('Failed to save settings: ' + (res.error || 'Unknown error'));
+                alert('Failed to save settings: ' + (res.message || res.error || 'Unknown error'));
             }
         } catch(e) {
             if (statusEl) {

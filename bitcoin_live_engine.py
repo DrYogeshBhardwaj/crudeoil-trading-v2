@@ -753,11 +753,13 @@ class BitcoinLiveEngine:
         self.live_trading_enabled = enabled
         self.save_settings()
 
-    def update_risk_settings(self, per_trade_limit: float, daily_limit: float):
-        """Updates configurable loss limits."""
-        if per_trade_limit > 0:
+    def update_risk_settings(self, per_trade_limit: Optional[float] = None, profit_target: Optional[float] = None, daily_limit: Optional[float] = None):
+        """Updates configurable target and loss limits."""
+        if per_trade_limit is not None and float(per_trade_limit) > 0:
             self.per_trade_loss_limit_inr = float(per_trade_limit)
-        if daily_limit > 0:
+        if profit_target is not None and float(profit_target) > 0:
+            self.per_trade_profit_target_inr = float(profit_target)
+        if daily_limit is not None and float(daily_limit) > 0:
             self.daily_loss_limit_inr = float(daily_limit)
         self.save_settings()
 
