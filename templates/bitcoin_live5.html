@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>BTC 5-LIVE AUTO TRADING — MUDREX MULTI-POSITION ENGINE</title>
+    <title>BTC 5-LIVE ROLLING TEST — PAPER TRADING ENGINE</title>
     <!-- Google Fonts & Modern Styling -->
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;700;800&display=swap" rel="stylesheet">
     <style>
@@ -98,24 +98,46 @@
         /* ACCOUNT OVERVIEW METRICS PANEL */
         .metrics-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
-            gap: 10px;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 8px;
         }
 
         .metric-card {
             background: var(--bg-card);
             border: 1px solid var(--border-color);
             border-radius: 8px;
-            padding: 10px 12px;
+            padding: 10px 14px;
             display: flex;
             flex-direction: column;
             gap: 4px;
         }
 
-        .metric-lbl { font-size: 0.68rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase; }
-        .metric-val { font-size: 1.05rem; font-weight: 800; font-family: 'JetBrains Mono', monospace; }
+        .metric-title {
+            font-size: 0.68rem;
+            font-weight: 700;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
 
-        /* 5 POSITION SLOTS GRID */
+        .metric-value {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 1.1rem;
+            font-weight: 800;
+        }
+
+        .metric-sub {
+            font-size: 0.65rem;
+            color: var(--text-muted);
+        }
+
+        .val-positive { color: var(--accent-green); }
+        .val-negative { color: var(--accent-red); }
+        .val-neutral { color: var(--text-main); }
+        .val-amber { color: var(--accent-amber); }
+        .val-blue { color: #38bdf8; }
+
+        /* 5 SLOTS GRID */
         .slots-header {
             display: flex;
             align-items: center;
@@ -127,7 +149,9 @@
         .slots-title {
             font-size: 0.9rem;
             font-weight: 800;
-            color: #38bdf8;
+            letter-spacing: 0.5px;
+            text-transform: uppercase;
+            color: #94a3b8;
             display: flex;
             align-items: center;
             gap: 8px;
@@ -135,8 +159,8 @@
 
         .slots-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-            gap: 12px;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 10px;
         }
 
         .slot-card {
@@ -146,86 +170,146 @@
             padding: 12px;
             display: flex;
             flex-direction: column;
-            gap: 10px;
+            gap: 8px;
             position: relative;
             transition: all 0.2s ease;
         }
 
-        .slot-card.open {
-            border-color: rgba(56, 189, 248, 0.4);
-            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
-        }
-
-        .slot-card.empty {
-            border-style: dashed;
-            opacity: 0.75;
-        }
+        .slot-card.open-long { border-color: rgba(16, 185, 129, 0.4); background: linear-gradient(180deg, rgba(16, 185, 129, 0.04) 0%, var(--bg-card) 100%); }
+        .slot-card.open-short { border-color: rgba(239, 68, 68, 0.4); background: linear-gradient(180deg, rgba(239, 68, 68, 0.04) 0%, var(--bg-card) 100%); }
+        .slot-card.empty { border-style: dashed; border-color: #334155; opacity: 0.85; }
 
         .slot-top {
             display: flex;
             align-items: center;
             justify-content: space-between;
-            border-bottom: 1px solid rgba(255,255,255,0.08);
+            border-bottom: 1px solid rgba(255,255,255,0.05);
+            padding-bottom: 6px;
+        }
+
+        .slot-num {
+            font-size: 0.75rem;
+            font-weight: 800;
+            color: var(--text-muted);
+            letter-spacing: 0.5px;
+        }
+
+        .slot-side {
+            padding: 3px 8px;
+            border-radius: 4px;
+            font-size: 0.7rem;
+            font-weight: 800;
+            letter-spacing: 0.5px;
+        }
+
+        .side-long { background: rgba(16, 185, 129, 0.2); color: #10b981; }
+        .side-short { background: rgba(239, 68, 68, 0.2); color: #ef4444; }
+        .side-empty { background: rgba(148, 163, 184, 0.1); color: #94a3b8; }
+
+        .slot-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            font-size: 0.78rem;
+        }
+
+        .slot-lbl { color: var(--text-muted); font-weight: 500; }
+        .slot-val { font-family: 'JetBrains Mono', monospace; font-weight: 700; }
+
+        .slot-pnl-box {
+            background: rgba(15, 23, 42, 0.9);
+            border: 1px solid #1e293b;
+            border-radius: 6px;
+            padding: 8px;
+            margin-top: 2px;
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        .slot-pnl-main {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            font-size: 0.95rem;
+            font-weight: 800;
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        .timer-badge {
+            background: rgba(245, 158, 11, 0.15);
+            color: #f59e0b;
+            border: 1px solid rgba(245, 158, 11, 0.3);
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-size: 0.68rem;
+            font-weight: 700;
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        .btn-close-slot {
+            width: 100%;
+            background: rgba(239, 68, 68, 0.15);
+            color: #ef4444;
+            border: 1px solid rgba(239, 68, 68, 0.4);
+            border-radius: 6px;
+            padding: 6px;
+            font-size: 0.75rem;
+            font-weight: 800;
+            cursor: pointer;
+            transition: all 0.2s;
+            margin-top: 4px;
+        }
+
+        .btn-close-slot:hover {
+            background: #ef4444;
+            color: #fff;
+        }
+
+        /* CONTROLS & RISK PANEL */
+        .controls-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+        }
+
+        @media (max-width: 900px) {
+            .controls-grid { grid-template-columns: 1fr; }
+        }
+
+        .section-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 14px;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .section-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            border-bottom: 1px solid rgba(255,255,255,0.05);
             padding-bottom: 8px;
         }
 
-        .slot-name {
-            font-size: 0.82rem;
+        .section-title {
+            font-size: 0.85rem;
             font-weight: 800;
-            color: #cbd5e1;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: #38bdf8;
             display: flex;
             align-items: center;
             gap: 6px;
         }
 
-        .slot-details-grid {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 8px;
-            font-size: 0.75rem;
-            font-family: 'JetBrains Mono', monospace;
-        }
-
-        .slot-cell {
-            display: flex;
-            flex-direction: column;
-            gap: 2px;
-        }
-
-        .slot-lbl { font-size: 0.65rem; color: var(--text-muted); font-weight: 600; text-transform: uppercase; }
-        .slot-val { font-weight: 700; color: #f8fafc; }
-
-        .btn-close-sm {
-            background: rgba(239, 68, 68, 0.15);
-            color: #ef4444;
-            border: 1px solid rgba(239, 68, 68, 0.4);
-            padding: 6px 12px;
-            border-radius: 4px;
-            font-size: 0.72rem;
-            font-weight: 800;
-            cursor: pointer;
-            transition: all 0.2s;
-            width: 100%;
-        }
-
-        .btn-close-sm:hover {
-            background: #ef4444;
-            color: #fff;
-        }
-
-        /* CONTROL PANEL & RISK SETTINGS */
-        .panel {
-            background: var(--bg-card);
-            border: 1px solid var(--border-color);
-            border-radius: 8px;
-            padding: 12px;
-        }
-
         .form-grid {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 14px;
-            align-items: flex-end;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+            gap: 8px;
         }
 
         .form-group {
@@ -234,536 +318,627 @@
             gap: 4px;
         }
 
-        .form-group label {
-            font-size: 0.7rem;
-            color: var(--text-muted);
+        .form-label {
+            font-size: 0.68rem;
             font-weight: 700;
+            color: var(--text-muted);
+            text-transform: uppercase;
         }
 
-        .form-group input {
+        .form-input {
             background: #090d16;
             border: 1px solid #334155;
             color: #fff;
             padding: 6px 10px;
-            border-radius: 4px;
-            font-weight: 700;
+            border-radius: 6px;
             font-family: 'JetBrains Mono', monospace;
-            width: 110px;
+            font-size: 0.82rem;
+            font-weight: 700;
+            width: 100%;
         }
 
-        .btn-primary {
-            background: #0284c7;
-            color: #fff;
+        .form-input:focus {
+            outline: none;
+            border-color: #38bdf8;
+        }
+
+        .btn-action {
+            padding: 8px 14px;
+            border-radius: 6px;
+            font-size: 0.75rem;
+            font-weight: 800;
+            cursor: pointer;
             border: none;
-            padding: 7px 16px;
-            font-weight: 800;
-            border-radius: 4px;
-            cursor: pointer;
-            font-size: 0.78rem;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
         }
 
-        .btn-danger-lg {
-            background: linear-gradient(90deg, #dc2626 0%, #991b1b 100%);
-            color: #fff;
-            border: 1px solid #ef4444;
-            padding: 8px 18px;
-            font-weight: 800;
-            border-radius: 4px;
-            cursor: pointer;
-            font-size: 0.8rem;
-            letter-spacing: 0.5px;
+        .btn-blue { background: #0284c7; color: #fff; }
+        .btn-blue:hover { background: #0369a1; }
+        .btn-amber { background: #d97706; color: #fff; }
+        .btn-amber:hover { background: #b45309; }
+        .btn-red { background: #dc2626; color: #fff; }
+        .btn-red:hover { background: #b91c1c; }
+        .btn-green { background: #059669; color: #fff; }
+        .btn-green:hover { background: #047857; }
+
+        /* TRADE HISTORY TABLE */
+        .table-container {
+            width: 100%;
+            overflow-x: auto;
         }
 
-        /* LAYOUT MAIN GRID */
-        .main-layout {
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.75rem;
+            text-align: left;
+        }
+
+        th {
+            background: #090d16;
+            color: var(--text-muted);
+            font-weight: 700;
+            text-transform: uppercase;
+            padding: 8px 10px;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        td {
+            padding: 8px 10px;
+            border-bottom: 1px solid rgba(255,255,255,0.03);
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        tr:hover td { background: rgba(255,255,255,0.02); }
+
+        /* CHART & LOGS */
+        .bottom-grid {
             display: grid;
             grid-template-columns: 2fr 1fr;
             gap: 12px;
         }
 
-        @media (max-width: 1100px) {
-            .main-layout {
-                grid-template-columns: 1fr;
-            }
+        @media (max-width: 1024px) {
+            .bottom-grid { grid-template-columns: 1fr; }
         }
 
-        /* TABLES */
-        table {
+        .chart-box {
+            height: 380px;
             width: 100%;
-            border-collapse: collapse;
-            font-size: 0.74rem;
+            border-radius: 8px;
+            overflow: hidden;
         }
 
-        th {
-            background: #1e293b;
-            color: var(--text-muted);
-            font-weight: 700;
-            text-align: left;
-            padding: 8px;
+        .stream-log {
+            font-family: 'JetBrains Mono', monospace;
             font-size: 0.68rem;
-            text-transform: uppercase;
+            height: 380px;
+            overflow-y: auto;
+            background: #090d16;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 10px;
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
         }
 
-        td {
-            padding: 8px;
-            border-bottom: 1px solid #1e293b;
+        .stream-item {
+            border-bottom: 1px solid rgba(255,255,255,0.03);
+            padding-bottom: 4px;
+            line-height: 1.3;
         }
     </style>
 </head>
 <body>
 
-    <!-- TOP HEADER & PRICE BANNER -->
+    <!-- TOP BANNER -->
     <div class="top-banner">
         <div class="banner-title">
-            <span class="badge-status badge-blue">BTC 5-LIVE ENGINE</span>
-            <h1>BTC 5-LIVE AUTO TRADING</h1>
-            <span id="safety_lock_badge" class="badge-status badge-amber">SAFETY LOCK ENABLED</span>
+            <h1>BTC 5-LIVE ROLLING TEST</h1>
+            <span class="badge-status badge-amber" id="badgeTestMode">PAPER / TEST MODE — REAL ORDERS: OFF</span>
+            <span class="badge-status badge-green" id="badgeEngineStatus">TEST SCANNER ACTIVE</span>
         </div>
         <div class="price-strip">
             <div class="price-box">
-                <div class="price-lbl">Mudrex BTC/USD Price</div>
-                <div class="price-val" id="mudrex_btc_usd">$0.00</div>
+                <div class="price-lbl">BTC/USD (Mudrex Feed)</div>
+                <div class="price-val" id="valBtcUsd">$0.00</div>
             </div>
             <div class="price-box">
-                <div class="price-lbl">Hedge FX Rate</div>
-                <div class="price-val" id="mudrex_fx_rate">₹102.00</div>
-            </div>
-            <div class="price-box">
-                <div class="price-lbl">Futures Balance</div>
-                <div class="price-val" id="fut_inr_bal" style="color:#10b981;">₹0.00</div>
+                <div class="price-lbl">BTC/INR (102.0 FX)</div>
+                <div class="price-val" id="valBtcInr">₹0.00</div>
             </div>
         </div>
     </div>
 
-    <!-- ACCOUNT CAPITAL OVERVIEW METRICS PANEL -->
+    <!-- ACCOUNT & TEST CAPITAL OVERVIEW METRICS -->
     <div class="metrics-grid">
         <div class="metric-card">
-            <div class="metric-lbl">Total Capital</div>
-            <div class="metric-val" id="acc_total_capital" style="color:#38bdf8;">₹0.00</div>
+            <div class="metric-title">Test Capital Reference</div>
+            <div class="metric-value val-blue" id="lblTestCapital">₹20,000.00</div>
+            <div class="metric-sub">Fixed Paper Reference</div>
         </div>
         <div class="metric-card">
-            <div class="metric-lbl">Used Margin</div>
-            <div class="metric-val" id="acc_used_margin" style="color:#fbbf24;">₹0.00</div>
+            <div class="metric-title">Used Margin</div>
+            <div class="metric-value val-amber" id="lblUsedMargin">₹0.00</div>
+            <div class="metric-sub" id="lblUsedMarginSub">5 Slots (5x Leverage)</div>
         </div>
         <div class="metric-card">
-            <div class="metric-lbl">Free Margin</div>
-            <div class="metric-val" id="acc_free_margin" style="color:#10b981;">₹0.00</div>
+            <div class="metric-title">Free Buffer</div>
+            <div class="metric-value val-positive" id="lblFreeBuffer">₹20,000.00</div>
+            <div class="metric-sub">Safety Margin Buffer</div>
         </div>
         <div class="metric-card">
-            <div class="metric-lbl">Active Positions</div>
-            <div class="metric-val" id="acc_active_positions" style="color:#a855f7;">0 / 5</div>
+            <div class="metric-title">Active Slots</div>
+            <div class="metric-value val-blue" id="lblActiveSlots">0 / 5</div>
+            <div class="metric-sub">2-Min Entry Cycle</div>
         </div>
         <div class="metric-card">
-            <div class="metric-lbl">Total Gross P&L</div>
-            <div class="metric-val" id="acc_gross_pnl">₹0.00</div>
+            <div class="metric-title">Open Net P&L</div>
+            <div class="metric-value val-neutral" id="lblOpenNetPnl">₹0.00</div>
+            <div class="metric-sub" id="lblGrossAndFees">Gross: ₹0 | Fees: ₹0</div>
         </div>
         <div class="metric-card">
-            <div class="metric-lbl">Total Est. Fees</div>
-            <div class="metric-val" id="acc_fees" style="color:#cbd5e1;">₹0.00</div>
-        </div>
-        <div class="metric-card" style="border-color:rgba(56,189,248,0.4);">
-            <div class="metric-lbl">Total Net P&L</div>
-            <div class="metric-val" id="acc_net_pnl" style="font-size:1.15rem;">₹0.00</div>
+            <div class="metric-title">Realized Test P&L</div>
+            <div class="metric-value val-neutral" id="lblRealizedTestPnl">₹0.00</div>
+            <div class="metric-sub">Closed Paper Trades</div>
         </div>
         <div class="metric-card">
-            <div class="metric-lbl">Today's Realized Net P&L</div>
-            <div class="metric-val" id="acc_today_realized">₹0.00</div>
+            <div class="metric-title">TOTAL TEST P&L</div>
+            <div class="metric-value val-neutral" id="lblTotalTestPnl">₹0.00</div>
+            <div class="metric-sub">Open + Realized</div>
         </div>
     </div>
 
-    <!-- MAIN DUAL COLUMN LAYOUT -->
-    <div class="main-layout">
-        
-        <!-- LEFT COLUMN: 5 POSITION SLOTS + RISK CONTROL -->
-        <div style="display:flex; flex-direction:column; gap:12px;">
-            
-            <!-- 5 POSITION SLOTS -->
-            <div class="slots-header">
-                <div class="slots-title">
-                    <span>⚡ INDEPENDENT POSITION SLOTS (MAX 5)</span>
-                </div>
-                <div style="font-size:0.75rem; color:#94a3b8;">
-                    Each position tracks its own Target (+₹100) and Stop Loss (-₹200) independently.
-                </div>
-            </div>
-
-            <div class="slots-grid" id="slots_container">
-                <!-- Slot cards 1 to 5 will be dynamically rendered here -->
-            </div>
-
-            <!-- RISK & POSITION CONFIGURATION PANEL -->
-            <div class="panel" style="border:1px solid rgba(56,189,248,0.3);">
-                <div style="font-size:0.82rem; font-weight:800; color:#38bdf8; margin-bottom:8px; display:flex; justify-content:space-between; align-items:center;">
-                    <span>⚙️ MULTI-POSITION RISK & CAPITAL CONTROLS</span>
-                    <span id="risk_save_msg" style="font-size:0.75rem; color:#10b981; font-weight:700;"></span>
-                </div>
-                <div class="form-grid">
-                    <div class="form-group">
-                        <label>Target Profit (NET ₹)</label>
-                        <input type="number" id="input_target_net" value="100" min="1" step="1" style="color:#10b981;">
-                    </div>
-                    <div class="form-group">
-                        <label>Max Loss (NET ₹)</label>
-                        <input type="number" id="input_loss_net" value="200" min="1" step="1" style="color:#ef4444;">
-                    </div>
-                    <div class="form-group">
-                        <label>Max Positions</label>
-                        <input type="number" id="input_max_pos" value="5" min="1" max="5" step="1">
-                    </div>
-                    <div class="form-group">
-                        <label>Quantity per Position (BTC)</label>
-                        <input type="number" id="input_qty" value="0.002" min="0.001" step="0.001">
-                    </div>
-                    <div class="form-group">
-                        <label>Leverage</label>
-                        <input type="number" id="input_leverage" value="5" min="1" max="20" step="1">
-                    </div>
-                    <div>
-                        <button onclick="save5LiveSettings()" class="btn-primary">💾 SAVE SETTINGS</button>
-                    </div>
-                    <div style="margin-left:auto;">
-                        <button onclick="confirmEmergencyCloseAll()" class="btn-danger-lg">🚨 EMERGENCY CLOSE ALL POSITIONS</button>
-                    </div>
-                </div>
-            </div>
-
-            <!-- TRADINGVIEW CANDLESTICK CHART -->
-            <div class="panel" style="min-height:350px; display:flex; flex-direction:column; padding:8px;">
-                <div style="font-size:0.82rem; font-weight:700; color:#fff; margin-bottom:6px;">BTCUSDT LIVE MARKET CHART</div>
-                <iframe id="tv_chart" src="https://s.tradingview.com/widgetembed/?frameElementId=tradingview_btc&symbol=BINANCE%3ABTCUSDT&interval=5&hidesidetoolbar=1&symboledit=1&saveimage=1&toolbarbg=0f172a&studies=%5B%5D&theme=dark&style=1&timezone=Asia%2FKolkata" style="width:100%; height:320px; border:none; border-radius:6px;"></iframe>
-            </div>
-
+    <!-- 5 POSITION SLOTS GRID -->
+    <div class="slots-header">
+        <div class="slots-title">
+            <span>⚡ INDEPENDENT POSITION SLOTS (MAX 5)</span>
         </div>
-
-        <!-- RIGHT COLUMN: EVALUATION LOGS & COMPLETED TRADE HISTORY -->
-        <div style="display:flex; flex-direction:column; gap:12px;">
-            
-            <!-- REAL-TIME STRATEGY EVALUATION STREAM -->
-            <div class="panel" style="flex:1; display:flex; flex-direction:column; max-height:420px; overflow:hidden;">
-                <div style="font-size:0.82rem; font-weight:800; color:#38bdf8; margin-bottom:6px; display:flex; justify-content:space-between; align-items:center;">
-                    <span>📡 STRATEGY EVALUATION STREAM</span>
-                    <span id="eval_signal_badge" class="badge-status badge-amber">WAIT</span>
-                </div>
-                <div style="flex:1; overflow-y:auto; background:#090d16; border:1px solid #1e293b; border-radius:6px; padding:6px; font-family:'JetBrains Mono', monospace; font-size:0.7rem;">
-                    <div id="eval_stream_body">Scanning market ticks...</div>
-                </div>
-            </div>
-
-            <!-- COMPLETED LIVE 5 TRADE HISTORY -->
-            <div class="panel">
-                <div style="font-size:0.82rem; font-weight:800; color:#38bdf8; margin-bottom:8px;">📜 COMPLETED 5-LIVE TRADE HISTORY</div>
-                <div style="max-height:260px; overflow-y:auto;">
-                    <table>
-                        <thead>
-                            <tr>
-                                <th>#</th>
-                                <th>SLOT</th>
-                                <th>TYPE</th>
-                                <th>ENTRY PRICE</th>
-                                <th>QTY</th>
-                                <th>EXIT PRICE</th>
-                                <th>GROSS P&L</th>
-                                <th>FEES</th>
-                                <th>NET P&L</th>
-                                <th>REASON</th>
-                            </tr>
-                        </thead>
-                        <tbody id="trade_history_tbody">
-                            <tr>
-                                <td colspan="10" style="text-align:center; color:#94a3b8; padding:12px;">No completed 5-live trades yet today.</td>
-                            </tr>
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-
-        </div>
-
+        <div class="metric-sub">Rolling Rules: 2-Min Entry Interval | 10-Min Max Holding Time</div>
     </div>
 
-    <!-- JAVASCRIPT DASHBOARD LOGIC -->
+    <div class="slots-grid" id="slotsContainer">
+        <!-- Rendered via JS -->
+    </div>
+
+    <!-- CONTROLS & RISK SETTINGS PANEL -->
+    <div class="controls-grid">
+        <!-- TEST CONTROLS & STATS -->
+        <div class="section-card">
+            <div class="section-header">
+                <div class="section-title">🧪 TEST CONTROLS & STATISTICS</div>
+                <div class="metric-sub" id="lblTestStatusStr">Status: RUNNING</div>
+            </div>
+
+            <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+                <button class="btn-action btn-green" onclick="handleControl('START')">▶ START TEST</button>
+                <button class="btn-action btn-amber" onclick="handleControl('PAUSE')">⏸ PAUSE TEST</button>
+                <button class="btn-action btn-blue" onclick="handleResetTest()">🔄 RESET TEST</button>
+                <button class="btn-action btn-red" onclick="handleEmergencyCloseAll()">⚠️ EMERGENCY CLOSE ALL</button>
+            </div>
+
+            <div class="form-grid" style="margin-top: 6px;">
+                <div class="form-group">
+                    <span class="form-label">Total Trades</span>
+                    <span class="form-input" id="statTotalTrades">0</span>
+                </div>
+                <div class="form-group">
+                    <span class="form-label">Win Rate</span>
+                    <span class="form-input" id="statWinRate">0.0%</span>
+                </div>
+                <div class="form-group">
+                    <span class="form-label">Winning / Losing</span>
+                    <span class="form-input" id="statWinLoss">0 / 0</span>
+                </div>
+                <div class="form-group">
+                    <span class="form-label">10-Min Time Exits</span>
+                    <span class="form-input" id="statTimeExits">0</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- RISK & POSITION CONFIGURATION -->
+        <div class="section-card">
+            <div class="section-header">
+                <div class="section-title">⚙️ RISK & POSITION CONFIGURATION</div>
+                <span class="badge-status badge-blue">PER POSITION PARAMETERS</span>
+            </div>
+
+            <div class="form-grid">
+                <div class="form-group">
+                    <label class="form-label">Target Profit (NET ₹)</label>
+                    <input type="number" id="inpProfitTarget" class="form-input" value="100" step="10">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Max Loss (NET ₹)</label>
+                    <input type="number" id="inpMaxLoss" class="form-input" value="200" step="10">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Max Positions</label>
+                    <input type="number" id="inpMaxPositions" class="form-input" value="5" min="1" max="5">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Quantity per Position</label>
+                    <input type="number" id="inpQuantity" class="form-input" value="0.002" step="0.001">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Leverage</label>
+                    <input type="number" id="inpLeverage" class="form-input" value="5" min="1" max="20">
+                </div>
+            </div>
+
+            <button class="btn-action btn-blue" onclick="saveRiskSettings()">💾 SAVE SETTINGS</button>
+        </div>
+    </div>
+
+    <!-- BOTTOM GRID: CHART & EVALUATION STREAM -->
+    <div class="bottom-grid">
+        <div class="section-card">
+            <div class="section-header">
+                <div class="section-title">📈 BTCUSDT REAL-TIME CHART (TradingView)</div>
+            </div>
+            <div class="chart-box" id="tradingview_chart"></div>
+        </div>
+
+        <div class="section-card">
+            <div class="section-header">
+                <div class="section-title">📡 STRATEGY EVALUATION STREAM</div>
+            </div>
+            <div class="stream-log" id="evaluationStream">
+                <div class="stream-item">Initializing strategy feed...</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- COMPLETED TEST TRADES HISTORY -->
+    <div class="section-card">
+        <div class="section-header">
+            <div class="section-title">📜 COMPLETED PAPER TEST TRADES HISTORY</div>
+            <div class="metric-sub" id="lblHistoryCount">0 Trades Closed</div>
+        </div>
+
+        <div class="table-container">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Trade ID</th>
+                        <th>Slot</th>
+                        <th>Side</th>
+                        <th>Qty</th>
+                        <th>Entry Price</th>
+                        <th>Exit Price</th>
+                        <th>Entry Time</th>
+                        <th>Exit Time</th>
+                        <th>Gross P&L</th>
+                        <th>Fees</th>
+                        <th>NET P&L</th>
+                        <th>Exit Reason</th>
+                    </tr>
+                </thead>
+                <tbody id="tradeHistoryBody">
+                    <tr>
+                        <td colspan="12" style="text-align: center; color: var(--text-muted);">No closed paper test trades recorded yet.</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- TradingView Widget Script -->
+    <script type="text/javascript" src="https://s3.tradingview.com/tv.js"></script>
     <script>
-        function setTxt(id, txt) {
-            const el = document.getElementById(id);
-            if (el) el.innerText = txt;
-        }
+        // Init TradingView Chart
+        new TradingView.widget({
+            "autosize": true,
+            "symbol": "BINANCE:BTCUSDT",
+            "interval": "5",
+            "timezone": "Asia/Kolkata",
+            "theme": "dark",
+            "style": "1",
+            "locale": "en",
+            "toolbar_bg": "#0f172a",
+            "enable_publishing": false,
+            "hide_side_toolbar": false,
+            "container_id": "tradingview_chart"
+        });
 
-        function formatINR(val) {
-            return '₹' + Number(val || 0).toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2});
-        }
-
-        async function fetchState() {
+        // Fetch Dashboard State Loop
+        async function fetchDashboardState() {
             try {
-                const res = await fetch('/api/bitcoin/live5/state');
-                const data = await res.json();
-                renderDashboard(data);
+                const resp = await fetch('/api/bitcoin/live5/state');
+                if (!resp.ok) return;
+                const data = await resp.json();
+
+                // 1. Top Bar & Prices
+                document.getElementById('valBtcUsd').innerText = `$${(data.mudrex_btc_usd_price || 0).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
+                document.getElementById('valBtcInr').innerText = `₹${(data.btc_price || 0).toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
+
+                // 2. Metrics Overview
+                document.getElementById('lblTestCapital').innerText = `₹${(data.test_capital || 20000).toLocaleString('en-IN', {minimumFractionDigits: 2})}`;
+                document.getElementById('lblUsedMargin').innerText = `₹${(data.used_margin || 0).toLocaleString('en-IN', {minimumFractionDigits: 2})}`;
+                document.getElementById('lblFreeBuffer').innerText = `₹${(data.free_margin || 20000).toLocaleString('en-IN', {minimumFractionDigits: 2})}`;
+                document.getElementById('lblActiveSlots').innerText = `${data.active_positions_count || 0} / ${data.max_positions || 5}`;
+
+                // Open P&L Styling
+                const openNet = data.total_unrealized_net_pnl || 0.0;
+                const elOpenPnl = document.getElementById('lblOpenNetPnl');
+                elOpenPnl.innerText = `₹${openNet >= 0 ? '+' : ''}${openNet.toFixed(2)}`;
+                elOpenPnl.className = `metric-value ${openNet > 0 ? 'val-positive' : (openNet < 0 ? 'val-negative' : 'val-neutral')}`;
+                document.getElementById('lblGrossAndFees').innerText = `Gross: ₹${(data.total_unrealized_gross_pnl || 0).toFixed(2)} | Fees: ₹${(data.total_estimated_fees || 0).toFixed(2)}`;
+
+                // Realized Test P&L Styling
+                const realizedPnl = data.realized_test_pnl || 0.0;
+                const elRealized = document.getElementById('lblRealizedTestPnl');
+                elRealized.innerText = `₹${realizedPnl >= 0 ? '+' : ''}${realizedPnl.toFixed(2)}`;
+                elRealized.className = `metric-value ${realizedPnl > 0 ? 'val-positive' : (realizedPnl < 0 ? 'val-negative' : 'val-neutral')}`;
+
+                // Total Test P&L Styling
+                const totalPnl = data.total_test_pnl || 0.0;
+                const elTotalPnl = document.getElementById('lblTotalTestPnl');
+                elTotalPnl.innerText = `₹${totalPnl >= 0 ? '+' : ''}${totalPnl.toFixed(2)}`;
+                elTotalPnl.className = `metric-value ${totalPnl > 0 ? 'val-positive' : (totalPnl < 0 ? 'val-negative' : 'val-neutral')}`;
+
+                // Statistics
+                if (data.statistics) {
+                    document.getElementById('statTotalTrades').innerText = data.statistics.total_trades || 0;
+                    document.getElementById('statWinRate').innerText = `${data.statistics.win_rate || 0}%`;
+                    document.getElementById('statWinLoss').innerText = `${data.statistics.winning_trades || 0} / ${data.statistics.losing_trades || 0}`;
+                    document.getElementById('statTimeExits').innerText = data.statistics.time_exits || 0;
+                }
+
+                document.getElementById('lblTestStatusStr').innerText = `Status: ${data.test_status || 'RUNNING'}`;
+
+                // 3. Render 5 Position Slots
+                renderSlots(data.slots || [], data.btc_price || 0, data.mudrex_btc_usd_price || 0);
+
+                // 4. Render Evaluation Stream
+                renderEvaluationStream(data.evaluation_stream || []);
+
+                // 5. Render History Table
+                renderTradeHistory(data.trade_history || []);
+
             } catch (err) {
-                console.error("Failed to fetch 5-live state:", err);
+                console.error("Error fetching 5-live state:", err);
             }
         }
 
-        function renderDashboard(data) {
-            // Header Strip
-            setTxt('mudrex_btc_usd', '$' + Number(data.mudrex_btc_usd_price || 0).toLocaleString('en-US', {minimumFractionDigits: 2}));
-            setTxt('mudrex_fx_rate', '₹' + Number(data.mudrex_hedge_rate || 102.0).toFixed(2));
-            setTxt('fut_inr_bal', formatINR(data.free_margin));
+        function renderSlots(slots, currInr, currUsd) {
+            const container = document.getElementById('slotsContainer');
+            let html = '';
 
-            const lockBadge = document.getElementById('safety_lock_badge');
-            if (lockBadge) {
-                if (data.live_trading_enabled) {
-                    lockBadge.className = 'badge-status badge-green';
-                    lockBadge.innerText = 'REAL TRADING ENABLED';
+            slots.forEach(slot => {
+                const isOpened = (slot.status === 'OPEN' && slot.position);
+                const pos = slot.position;
+
+                if (isOpened) {
+                    const sideClass = pos.direction === 'BUY' ? 'open-long' : 'open-short';
+                    const sideBadge = pos.direction === 'BUY' ? 'side-long' : 'side-short';
+                    const sideText = pos.direction === 'BUY' ? 'BUY LONG' : 'SELL SHORT';
+                    const netPnl = slot.net_pnl || 0.0;
+                    const pnlColor = netPnl > 0 ? 'val-positive' : (netPnl < 0 ? 'val-negative' : 'val-neutral');
+
+                    html += `
+                        <div class="slot-card ${sideClass}">
+                            <div class="slot-top">
+                                <span class="slot-num">POSITION ${slot.slot_index}</span>
+                                <span class="slot-side ${sideBadge}">${sideText}</span>
+                            </div>
+
+                            <div class="slot-row">
+                                <span class="slot-lbl">Trade ID</span>
+                                <span class="slot-val">${pos.trade_id || 'N/A'}</span>
+                            </div>
+                            <div class="slot-row">
+                                <span class="slot-lbl">Quantity</span>
+                                <span class="slot-val">${pos.quantity} BTC</span>
+                            </div>
+                            <div class="slot-row">
+                                <span class="slot-lbl">Entry USD / INR</span>
+                                <span class="slot-val">$${(pos.entry_price_usd || 0).toFixed(2)} | ₹${(pos.entry_price || 0).toLocaleString('en-IN')}</span>
+                            </div>
+                            <div class="slot-row">
+                                <span class="slot-lbl">Current USD / INR</span>
+                                <span class="slot-val">$${(currUsd || 0).toFixed(2)} | ₹${(currInr || 0).toLocaleString('en-IN')}</span>
+                            </div>
+                            <div class="slot-row">
+                                <span class="slot-lbl">Holding Age / Max</span>
+                                <span class="timer-badge">⏳ ${slot.holding_time_str || '00:00 / 10:00'}</span>
+                            </div>
+                            <div class="slot-row">
+                                <span class="slot-lbl">Remaining Time</span>
+                                <span class="slot-val val-amber">${slot.remaining_time_str || '10:00'}</span>
+                            </div>
+                            <div class="slot-row">
+                                <span class="slot-lbl">Initial Margin</span>
+                                <span class="slot-val">₹${(slot.initial_margin || 0).toFixed(2)}</span>
+                            </div>
+
+                            <div class="slot-pnl-box">
+                                <div class="slot-pnl-main">
+                                    <span>NET P&L</span>
+                                    <span class="${pnlColor}">₹${netPnl >= 0 ? '+' : ''}${netPnl.toFixed(2)}</span>
+                                </div>
+                                <div class="slot-row">
+                                    <span class="slot-lbl">Gross / Fees</span>
+                                    <span class="slot-val" style="font-size:0.7rem;">₹${(slot.gross_pnl || 0).toFixed(2)} | ₹${(slot.charges || 0).toFixed(2)}</span>
+                                </div>
+                                <div class="slot-row">
+                                    <span class="slot-lbl">Target / SL</span>
+                                    <span class="slot-val" style="font-size:0.7rem;">+₹100 NET | -₹200 NET</span>
+                                </div>
+                            </div>
+
+                            <button class="btn-close-slot" onclick="closeSingleSlot('${pos.trade_id}')">✖ CLOSE POSITION NOW</button>
+                        </div>
+                    `;
                 } else {
-                    lockBadge.className = 'badge-status badge-amber';
-                    lockBadge.innerText = 'SAFETY LOCK ENABLED — REAL TRADING DISABLED';
+                    html += `
+                        <div class="slot-card empty">
+                            <div class="slot-top">
+                                <span class="slot-num">POSITION ${slot.slot_index}</span>
+                                <span class="slot-side side-empty">READY / EMPTY</span>
+                            </div>
+                            <div style="padding: 24px 0; text-align: center; color: var(--text-muted); font-size: 0.8rem;">
+                                <span>Slot Available</span><br>
+                                <span style="font-size: 0.7rem; color: #475569;">Awaiting 2-Min Rolling Signal</span>
+                            </div>
+                        </div>
+                    `;
                 }
-            }
+            });
 
-            // Top Capital Metrics
-            setTxt('acc_total_capital', formatINR(data.total_capital));
-            setTxt('acc_used_margin', formatINR(data.used_margin));
-            setTxt('acc_free_margin', formatINR(data.free_margin));
-            setTxt('acc_active_positions', `${data.active_positions_count || 0} / ${data.max_positions || 5}`);
-
-            const grossVal = Number(data.total_unrealized_gross_pnl || 0);
-            const feesVal = Number(data.total_estimated_fees || 0);
-            const netVal = Number(data.total_unrealized_net_pnl || 0);
-            const todayRealized = Number(data.today_realized_pnl || 0);
-
-            const grossEl = document.getElementById('acc_gross_pnl');
-            if (grossEl) {
-                grossEl.innerText = (grossVal >= 0 ? '₹+' : '₹') + grossVal.toFixed(2);
-                grossEl.style.color = grossVal >= 0 ? '#10b981' : '#ef4444';
-            }
-
-            setTxt('acc_fees', formatINR(feesVal));
-
-            const netEl = document.getElementById('acc_net_pnl');
-            if (netEl) {
-                netEl.innerText = (netVal >= 0 ? '₹+' : '₹') + netVal.toFixed(2);
-                netEl.style.color = netVal >= 0 ? '#10b981' : '#ef4444';
-            }
-
-            const todayEl = document.getElementById('acc_today_realized');
-            if (todayEl) {
-                todayEl.innerText = (todayRealized >= 0 ? '₹+' : '₹') + todayRealized.toFixed(2);
-                todayEl.style.color = todayRealized >= 0 ? '#10b981' : '#ef4444';
-            }
-
-            // Render 5 Position Slots
-            renderSlots(data.slots || []);
-
-            // Input Form Defaults (if not being actively edited)
-            if (!window.userEditing) {
-                const targetInput = document.getElementById('input_target_net');
-                const lossInput = document.getElementById('input_loss_net');
-                const maxPosInput = document.getElementById('input_max_pos');
-                const qtyInput = document.getElementById('input_qty');
-                const levInput = document.getElementById('input_leverage');
-
-                if (targetInput && document.activeElement !== targetInput) targetInput.value = data.per_trade_profit_target_inr || 100;
-                if (lossInput && document.activeElement !== lossInput) lossInput.value = data.per_trade_loss_limit_inr || 200;
-                if (maxPosInput && document.activeElement !== maxPosInput) maxPosInput.value = data.max_positions || 5;
-                if (qtyInput && document.activeElement !== qtyInput) qtyInput.value = data.default_quantity || 0.002;
-                if (levInput && document.activeElement !== levInput) levInput.value = data.default_leverage || 5;
-            }
-
-            // Render Strategy Stream
-            if (data.evaluation_stream && data.evaluation_stream.length > 0) {
-                let html = '';
-                data.evaluation_stream.forEach(ev => {
-                    const actBadge = ev.action === 'BUY' ? `<span class="badge-status badge-green">BUY</span>` : (ev.action === 'SELL' ? `<span class="badge-status badge-red">SELL</span>` : `<span class="badge-status badge-amber">WAIT</span>`);
-                    html += `<div style="margin-bottom:6px; border-bottom:1px solid #1e293b; padding-bottom:4px;">
-                        <span style="color:#94a3b8;">[${ev.timestamp}]</span> ${actBadge} <span style="color:#38bdf8;">₹${Number(ev.price).toLocaleString('en-IN')}</span> | RSI: ${ev.rsi} | <span style="color:#cbd5e1;">${ev.reasons}</span>
-                    </div>`;
-                });
-                document.getElementById('eval_stream_body').innerHTML = html;
-            }
-
-            // Render Trade History Table
-            if (data.trade_history && data.trade_history.length > 0) {
-                const closedTrades = data.trade_history.filter(t => t.status === 'CLOSED');
-                if (closedTrades.length > 0) {
-                    let thHtml = '';
-                    closedTrades.forEach((t, idx) => {
-                        const dirBadge = t.direction === 'BUY' ? `<span class="badge-status badge-green">BUY LONG</span>` : `<span class="badge-status badge-red">SELL SHORT</span>`;
-                        const gross = Number(t.gross_pnl || 0);
-                        const net = Number(t.net_pnl || 0);
-                        const fee = Number(t.charges || 0);
-
-                        thHtml += `<tr>
-                            <td style="font-family:'JetBrains Mono', monospace;">#${closedTrades.length - idx}</td>
-                            <td style="font-weight:700;">SLOT ${t.slot_index || 1}</td>
-                            <td>${dirBadge}</td>
-                            <td style="font-weight:700; font-family:'JetBrains Mono', monospace;">₹${Number(t.entry_price || 0).toLocaleString('en-IN')}</td>
-                            <td style="font-family:'JetBrains Mono', monospace;">${t.quantity || 0.002}</td>
-                            <td style="font-weight:700; font-family:'JetBrains Mono', monospace;">₹${Number(t.exit_price || 0).toLocaleString('en-IN')}</td>
-                            <td style="color:${gross >= 0 ? '#10b981' : '#ef4444'};">₹${gross.toFixed(2)}</td>
-                            <td style="color:#cbd5e1;">₹${fee.toFixed(2)}</td>
-                            <td style="font-weight:800; color:${net >= 0 ? '#10b981' : '#ef4444'}; font-family:'JetBrains Mono', monospace;">₹${net >= 0 ? '+' : ''}${net.toFixed(2)}</td>
-                            <td style="color:#cbd5e1; font-weight:600;">${t.exit_reason || '-'}</td>
-                        </tr>`;
-                    });
-                    document.getElementById('trade_history_tbody').innerHTML = thHtml;
-                }
-            }
+            container.innerHTML = html;
         }
 
-        function renderSlots(slots) {
-            const container = document.getElementById('slots_container');
-            if (!container) return;
+        function renderEvaluationStream(stream) {
+            const container = document.getElementById('evaluationStream');
+            if (!stream || stream.length === 0) {
+                container.innerHTML = '<div class="stream-item">Scanning market...</div>';
+                return;
+            }
 
             let html = '';
-            slots.forEach(s => {
-                const idx = s.slot_index;
-                if (s.status === 'OPEN' && s.position) {
-                    const pos = s.position;
-                    const dir = pos.direction;
-                    const dirBadge = dir === 'BUY' ? `<span class="badge-status badge-green">BUY LONG</span>` : `<span class="badge-status badge-red">SELL SHORT</span>`;
-                    const gross = Number(s.gross_pnl || 0);
-                    const net = Number(s.net_pnl || 0);
-                    const fee = Number(s.charges || 0);
-                    const netColor = net >= 0 ? '#10b981' : '#ef4444';
-
-                    html += `<div class="slot-card open">
-                        <div class="slot-top">
-                            <div class="slot-name">
-                                <span style="color:#38bdf8;">POSITION ${idx}</span>
-                                ${dirBadge}
-                            </div>
-                            <div style="font-size:0.68rem; font-family:'JetBrains Mono', monospace; color:#94a3b8;">ID: ${pos.trade_id}</div>
-                        </div>
-                        <div class="slot-details-grid">
-                            <div class="slot-cell">
-                                <div class="slot-lbl">Quantity</div>
-                                <div class="slot-val">${pos.quantity} BTC (${pos.leverage || 5}x)</div>
-                            </div>
-                            <div class="slot-cell">
-                                <div class="slot-lbl">Initial Margin</div>
-                                <div class="slot-val" style="color:#fbbf24;">₹${Number(s.initial_margin || 0).toLocaleString('en-IN', {minimumFractionDigits: 2})}</div>
-                            </div>
-                            <div class="slot-cell">
-                                <div class="slot-lbl">Entry Price</div>
-                                <div class="slot-val">$${Number(pos.entry_price_usd || 0).toLocaleString('en-US', {minimumFractionDigits: 2})} <span style="font-size:0.65rem; color:#94a3b8;">(₹${Number(pos.entry_price || 0).toLocaleString('en-IN')})</span></div>
-                            </div>
-                            <div class="slot-cell">
-                                <div class="slot-lbl">Current Price</div>
-                                <div class="slot-val">$${Number(s.current_price_usd || 0).toLocaleString('en-US', {minimumFractionDigits: 2})}</div>
-                            </div>
-                            <div class="slot-cell">
-                                <div class="slot-lbl">Gross P&L</div>
-                                <div class="slot-val" style="color:${gross >= 0 ? '#10b981' : '#ef4444'};">₹${gross >= 0 ? '+' : ''}${gross.toFixed(2)}</div>
-                            </div>
-                            <div class="slot-cell">
-                                <div class="slot-lbl">Est. Fees</div>
-                                <div class="slot-val" style="color:#cbd5e1;">₹${fee.toFixed(2)}</div>
-                            </div>
-                            <div class="slot-cell" style="grid-column: span 2; background:rgba(15,23,42,0.8); border:1px solid #334155; padding:6px; border-radius:4px;">
-                                <div class="slot-lbl">Current NET P&L (After Fees)</div>
-                                <div class="slot-val" style="font-size:1.1rem; color:${netColor};">₹${net >= 0 ? '+' : ''}${net.toFixed(2)}</div>
-                            </div>
-                            <div class="slot-cell">
-                                <div class="slot-lbl" style="color:#10b981;">Target (+₹100 NET)</div>
-                                <div class="slot-val" style="color:#10b981;">$${Number(pos.target_usd || 0).toLocaleString('en-US')}</div>
-                            </div>
-                            <div class="slot-cell">
-                                <div class="slot-lbl" style="color:#ef4444;">Max Loss (-₹200 NET)</div>
-                                <div class="slot-val" style="color:#ef4444;">$${Number(pos.stop_loss_usd || 0).toLocaleString('en-US')}</div>
-                            </div>
-                        </div>
-                        <button onclick="closeSinglePosition('${pos.trade_id}')" class="btn-close-sm">🚨 CLOSE POSITION ${idx}</button>
-                    </div>`;
-                } else {
-                    html += `<div class="slot-card empty">
-                        <div class="slot-top">
-                            <div class="slot-name" style="color:#94a3b8;">
-                                POSITION ${idx}
-                            </div>
-                            <span class="badge-status badge-amber">READY / EMPTY</span>
-                        </div>
-                        <div style="padding:20px 0; text-align:center; color:#64748b; font-size:0.78rem;">
-                            Position slot available.<br>Waiting for strategy signal & available margin.
-                        </div>
-                    </div>`;
-                }
+            stream.slice(0, 20).forEach(item => {
+                const actionColor = item.action === 'BUY' ? 'color:#10b981;font-weight:bold;' : (item.action === 'SELL' ? 'color:#ef4444;font-weight:bold;' : 'color:#94a3b8;');
+                html += `
+                    <div class="stream-item">
+                        <span style="color:#64748b;">[${item.timestamp.split(' ')[1] || ''}]</span>
+                        <span style="${actionColor}">ACTION: ${item.action}</span> |
+                        <span>RSI: ${item.rsi.toFixed(1)}</span> |
+                        <span>Price: ₹${item.price.toLocaleString('en-IN')}</span><br>
+                        <span style="color:#64748b;">${item.reasons}</span>
+                    </div>
+                `;
             });
             container.innerHTML = html;
         }
 
-        async function save5LiveSettings() {
-            const targetVal = parseFloat(document.getElementById('input_target_net').value);
-            const lossVal = parseFloat(document.getElementById('input_loss_net').value);
-            const maxPosVal = parseInt(document.getElementById('input_max_pos').value);
-            const qtyVal = parseFloat(document.getElementById('input_qty').value);
-            const levVal = parseFloat(document.getElementById('input_leverage').value);
+        function renderTradeHistory(history) {
+            const body = document.getElementById('tradeHistoryBody');
+            document.getElementById('lblHistoryCount').innerText = `${history.length} Trades Recorded`;
 
-            try {
-                const res = await fetch('/api/bitcoin/live5/settings', {
-                    method: 'POST',
-                    headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({
-                        target_profit_net: targetVal,
-                        max_loss_net: lossVal,
-                        max_positions: maxPosVal,
-                        quantity: qtyVal,
-                        leverage: levVal
-                    })
-                });
-                const data = await res.json();
-                if (data.success) {
-                    setTxt('risk_save_msg', '✓ SETTINGS SAVED SUCCESSFULLY');
-                    setTimeout(() => setTxt('risk_save_msg', ''), 3000);
-                    fetchState();
-                } else {
-                    alert("Failed to save settings: " + (data.message || data.error));
-                }
-            } catch (err) {
-                alert("Network error saving settings: " + err);
+            if (!history || history.length === 0) {
+                body.innerHTML = '<tr><td colspan="12" style="text-align: center; color: var(--text-muted);">No closed paper test trades recorded yet.</td></tr>';
+                return;
             }
+
+            let html = '';
+            history.slice(0, 50).forEach(t => {
+                const isClosed = t.status === 'CLOSED';
+                const netPnl = t.net_pnl || 0.0;
+                const pnlColor = netPnl > 0 ? 'val-positive' : (netPnl < 0 ? 'val-negative' : 'val-neutral');
+                const sideText = t.direction === 'BUY' ? 'BUY LONG' : 'SELL SHORT';
+
+                html += `
+                    <tr>
+                        <td>${t.trade_id}</td>
+                        <td>Slot ${t.slot_index || 1}</td>
+                        <td style="${t.direction === 'BUY' ? 'color:#10b981;' : 'color:#ef4444;'} font-weight:bold;">${sideText}</td>
+                        <td>${t.quantity} BTC</td>
+                        <td>₹${(t.entry_price || 0).toLocaleString('en-IN')}</td>
+                        <td>${isClosed ? '₹' + (t.exit_price || 0).toLocaleString('en-IN') : '—'}</td>
+                        <td>${(t.entry_timestamp || '').split(' ')[1] || t.entry_timestamp}</td>
+                        <td>${isClosed ? ((t.exit_timestamp || '').split(' ')[1] || t.exit_timestamp) : 'OPEN'}</td>
+                        <td>₹${(t.gross_pnl || 0).toFixed(2)}</td>
+                        <td>₹${(t.charges || 0).toFixed(2)}</td>
+                        <td class="${pnlColor}">₹${netPnl >= 0 ? '+' : ''}${netPnl.toFixed(2)}</td>
+                        <td style="font-weight:700;">${t.exit_reason || 'IN PROGRESS'}</td>
+                    </tr>
+                `;
+            });
+            body.innerHTML = html;
         }
 
-        async function closeSinglePosition(tradeId) {
-            if (!confirm(`Are you sure you want to close position ${tradeId}?`)) return;
+        async function closeSingleSlot(tradeId) {
+            if (!confirm(`Confirm manual exit for trade ${tradeId}?`)) return;
             try {
-                const res = await fetch('/api/bitcoin/live5/close_position', {
+                const resp = await fetch('/api/bitcoin/live5/close_position', {
                     method: 'POST',
                     headers: {'Content-Type': 'application/json'},
                     body: JSON.stringify({trade_id: tradeId})
                 });
-                const data = await res.json();
-                if (data.success) {
-                    alert("Position closed successfully!");
-                    fetchState();
-                } else {
-                    alert("Close failed: " + (data.error || "Unknown error"));
-                }
+                const res = await resp.json();
+                alert(res.success ? "Position closed successfully!" : `Failed: ${res.error}`);
+                fetchDashboardState();
             } catch (err) {
-                alert("Network error closing position: " + err);
+                alert(`Error: ${err}`);
             }
         }
 
-        async function confirmEmergencyCloseAll() {
-            if (!confirm("🚨 EMERGENCY WARNING: Are you sure you want to CLOSE ALL ACTIVE 5-LIVE POSITIONS ON MUDREX NOW?")) return;
+        async function handleControl(action) {
             try {
-                const res = await fetch('/api/bitcoin/live5/close_all', {
+                const resp = await fetch('/api/bitcoin/live5/control', {
                     method: 'POST',
-                    headers: {'Content-Type': 'application/json'}
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({action: action})
                 });
-                const data = await res.json();
-                if (data.success) {
-                    alert(`Emergency close complete! ${data.closed_count} positions closed.`);
-                    fetchState();
-                } else {
-                    alert("Emergency close failed: " + (data.error || "Unknown error"));
-                }
+                const res = await resp.json();
+                alert(res.message);
+                fetchDashboardState();
             } catch (err) {
-                alert("Network error during emergency close: " + err);
+                alert(`Error: ${err}`);
             }
         }
 
-        // Auto refresh every 3 seconds
-        setInterval(fetchState, 3000);
-        fetchState();
+        async function handleResetTest() {
+            if (!confirm("Are you sure you want to RESET the paper test state and history?\n\nThis will NOT affect your real Mudrex account or the 1-position live engine.")) return;
+            try {
+                const resp = await fetch('/api/bitcoin/live5/reset', {method: 'POST'});
+                const res = await resp.json();
+                alert(res.message);
+                fetchDashboardState();
+            } catch (err) {
+                alert(`Error: ${err}`);
+            }
+        }
+
+        async function handleEmergencyCloseAll() {
+            if (!confirm("EMERGENCY CLOSE ALL: Are you sure you want to close ALL active 5-live paper test positions?")) return;
+            try {
+                const resp = await fetch('/api/bitcoin/live5/close_all', {method: 'POST'});
+                const res = await resp.json();
+                alert(`Closed ${res.closed_count || 0} paper positions.`);
+                fetchDashboardState();
+            } catch (err) {
+                alert(`Error: ${err}`);
+            }
+        }
+
+        async function saveRiskSettings() {
+            const tp = parseFloat(document.getElementById('inpProfitTarget').value);
+            const sl = parseFloat(document.getElementById('inpMaxLoss').value);
+            const mp = parseInt(document.getElementById('inpMaxPositions').value);
+            const qty = parseFloat(document.getElementById('inpQuantity').value);
+            const lev = parseFloat(document.getElementById('inpLeverage').value);
+
+            try {
+                const resp = await fetch('/api/bitcoin/live5/settings', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({
+                        target_profit_net: tp,
+                        max_loss_net: sl,
+                        max_positions: mp,
+                        quantity: qty,
+                        leverage: lev
+                    })
+                });
+                const res = await resp.json();
+                alert(res.message);
+                fetchDashboardState();
+            } catch (err) {
+                alert(`Error: ${err}`);
+            }
+        }
+
+        // Start Loop
+        fetchDashboardState();
+        setInterval(fetchDashboardState, 3000);
     </script>
 </body>
 </html>

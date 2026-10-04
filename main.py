@@ -342,9 +342,28 @@ async def close_bitcoin_live5_position(payload: dict):
 
 @app.post("/api/bitcoin/live5/close_all")
 async def close_all_bitcoin_live5_positions():
-    """Master Emergency Control: Closes ALL active 5-live open positions on Mudrex."""
+    """Master Emergency Control: Closes ALL active 5-live open paper test positions."""
     res = BITCOIN_LIVE5_ENGINE.emergency_close_all_positions()
     return JSONResponse(res)
+
+@app.post("/api/bitcoin/live5/reset")
+async def reset_bitcoin_live5_test():
+    """Resets paper test engine state and trades without affecting existing live engine."""
+    res = BITCOIN_LIVE5_ENGINE.reset_paper_test()
+    return JSONResponse(res)
+
+@app.post("/api/bitcoin/live5/control")
+async def control_bitcoin_live5_test(payload: dict):
+    """Controls paper test state (START / PAUSE)."""
+    action = payload.get("action", "").upper()
+    if action == "START":
+        BITCOIN_LIVE5_ENGINE.test_status = "RUNNING"
+        return JSONResponse({"success": True, "test_status": "RUNNING", "message": "Paper test started successfully"})
+    elif action == "PAUSE":
+        BITCOIN_LIVE5_ENGINE.test_status = "PAUSED"
+        return JSONResponse({"success": True, "test_status": "PAUSED", "message": "Paper test paused successfully"})
+    return JSONResponse({"success": False, "error": "Invalid action. Use START or PAUSE"}, status_code=400)
+
 
 @app.post("/api/bitcoin/live/transfer-spot-to-futures")
 async def transfer_spot_to_futures(payload: dict):

@@ -846,6 +846,18 @@ class DatabaseEngine:
                 return d
             return None
 
+    def load_all_bitcoin_live_trades(self) -> List[Dict[str, Any]]:
+        with self._get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute("SELECT * FROM bitcoin_live_trades ORDER BY entry_timestamp DESC")
+            rows = cursor.fetchall()
+            trades = []
+            for r in rows:
+                t = dict(r)
+                t["reasons"] = json.loads(t["reasons"]) if t["reasons"] else []
+                trades.append(t)
+            return trades
+
     def save_bitcoin_live5_setting(self, key: str, value: str):
         with self._get_connection() as conn:
             cursor = conn.cursor()

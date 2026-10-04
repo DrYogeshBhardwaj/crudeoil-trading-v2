@@ -1,11 +1,19 @@
 """
-BITCOIN 5-LIVE MULTI-POSITION AUTOMATED TRADING ENGINE
-======================================================
-Dedicated multi-position execution engine supporting up to 5 independent simultaneous BTCUSDT futures positions.
-Uses Mudrex REST API with 5x leverage, INR margin balance, dynamic taker fees, and authoritative position reconciliation.
+BITCOIN 5-LIVE ROLLING TEST ENGINE — PAPER/TEST MODE ONLY
+==========================================================
+Dedicated multi-position paper test engine supporting up to 5 simultaneous independent BTCUSDT paper positions.
+Features:
+- Reference Test Capital: Rs. 20,000
+- 2-Minute Entry Interval (earliest opportunity for new paper entry)
+- 10-Minute Maximum Holding Time per position (mandatory time exit)
+- Target Profit: +Rs. 100 NET per position
+- Max Loss: -Rs. 200 NET per position
+- Maximum simultaneous open positions: 5
+- Paper / Test execution: ZERO real Mudrex orders sent.
+- Reuses Mudrex/Binance live market data feed for P&L tracking.
 
 STRICT ISOLATION:
-Does NOT modify, share state with, or affect the single-position engine (/bitcoin/live).
+Does NOT modify, share state with, or affect the single-position live engine (/bitcoin/live).
 """
 
 import os
@@ -22,31 +30,35 @@ from bitcoin_feed import BITCOIN_FEED
 from bitcoin_live_engine import MudrexLiveAdapter
 
 class BitcoinLive5Engine:
-    """Dedicated engine managing up to 5 simultaneous independent BTC live trading positions."""
+    """Dedicated 5-slot rolling paper test engine for Bitcoin Futures."""
 
     TAKER_FEE_RATE = 0.0005 # 0.05% taker fee per side
 
     def __init__(self):
         self.adapter = MudrexLiveAdapter()
+        self.test_capital_reference = 20000.0 # Rs. 20,000 test capital
+        self.max_holding_time_seconds = 600 # 10 minutes maximum holding time
+        self.entry_interval_seconds = 120 # 2 minutes rolling entry interval
         self.load_settings()
         self.active_positions: List[Dict[str, Any]] = []
         self.is_running = False
-        self.last_api_status = "INITIALIZED"
-        self.last_signal_time = 0.0
+        self.last_api_status = "PAPER TEST INITIALIZED"
+        self.last_entry_time = 0.0
         self.last_signal_action = ""
+        self.test_mode_enabled = True # Test mode default
+        self.test_status = "RUNNING" # RUNNING, PAUSED
 
     def load_settings(self):
-        """Loads persistent 5-live risk, margin, and position limits from SQLite DB."""
-        saved_enable = DB.load_bitcoin_live5_setting("live_trading_enabled", "FALSE")
-        # SAFETY LOCK: Real 5-live execution disabled by default until user explicit approval
-        self.live_trading_enabled = (saved_enable.upper() == "TRUE")
+        """Loads persistent 5-live rolling test settings from SQLite DB."""
+        # STRICT LOCK: Real orders ALWAYS disabled in paper test engine
+        self.live_trading_enabled = False 
+        DB.save_bitcoin_live5_setting("live_trading_enabled", "FALSE")
 
         self.today_date = datetime.now().strftime("%Y-%m-%d")
         saved_date = DB.load_bitcoin_live5_setting("today_date", self.today_date)
         
         if saved_date != self.today_date:
             DB.save_bitcoin_live5_setting("today_date", self.today_date)
-            DB.save_bitcoin_live5_setting("daily_loss_limit_hit", "FALSE")
             DB.save_bitcoin_live5_setting("today_realized_pnl", "0.0")
 
         self.max_positions = int(DB.load_bitcoin_live5_setting("max_positions", "5"))
@@ -63,28 +75,20 @@ class BitcoinLive5Engine:
         DB.save_bitcoin_live5_setting("per_trade_profit_target_inr", str(self.per_trade_profit_target_inr))
         DB.save_bitcoin_live5_setting("per_trade_loss_limit_inr", str(self.per_trade_loss_limit_inr))
 
-        self.circuit_breaker_tripped = DB.load_bitcoin_live5_setting("circuit_breaker_tripped", "FALSE").upper() == "TRUE"
-        self.circuit_breaker_reason = DB.load_bitcoin_live5_setting("circuit_breaker_reason", "")
-        self.daily_loss_limit_hit = DB.load_bitcoin_live5_setting("daily_loss_limit_hit", "FALSE").upper() == "TRUE"
         self.today_realized_pnl = float(DB.load_bitcoin_live5_setting("today_realized_pnl", "0.0"))
-
         self.consecutive_api_failures = 0
         self.last_evaluation = {}
         self.evaluation_stream = []
 
     def save_settings(self):
         """Persists current 5-live settings to SQLite DB."""
-        DB.save_bitcoin_live5_setting("live_trading_enabled", "TRUE" if self.live_trading_enabled else "FALSE")
+        DB.save_bitcoin_live5_setting("live_trading_enabled", "FALSE")
         DB.save_bitcoin_live5_setting("max_positions", str(self.max_positions))
         DB.save_bitcoin_live5_setting("default_quantity", str(self.default_quantity))
         DB.save_bitcoin_live5_setting("default_leverage", str(self.default_leverage))
         DB.save_bitcoin_live5_setting("per_trade_profit_target_inr", str(self.per_trade_profit_target_inr))
         DB.save_bitcoin_live5_setting("per_trade_loss_limit_inr", str(self.per_trade_loss_limit_inr))
-        DB.save_bitcoin_live5_setting("daily_loss_limit_inr", str(self.daily_loss_limit_inr))
         DB.save_bitcoin_live5_setting("today_realized_pnl", str(round(self.today_realized_pnl, 2)))
-        DB.save_bitcoin_live5_setting("circuit_breaker_tripped", "TRUE" if self.circuit_breaker_tripped else "FALSE")
-        DB.save_bitcoin_live5_setting("circuit_breaker_reason", self.circuit_breaker_reason)
-        DB.save_bitcoin_live5_setting("daily_loss_limit_hit", "TRUE" if self.daily_loss_limit_hit else "FALSE")
 
     def fetch_mudrex_futures_market_data(self) -> Tuple[Optional[float], Optional[float], str]:
         """Fetches authoritative BTCUSDT price feed from Mudrex/Binance Futures."""
@@ -95,7 +99,7 @@ class BitcoinLive5Engine:
                 data = resp.json()
                 price_usd = float(data["price"])
                 self.consecutive_api_failures = 0
-                return price_usd, 102.0, "Binance Futures/Spot API (BTCUSDT USD)"
+                return price_usd, 102.0, "Binance Futures API (BTCUSDT USD)"
         except Exception:
             pass
 
@@ -129,10 +133,7 @@ class BitcoinLive5Engine:
         quantity: float,
         hedge_rate: float = 102.0
     ) -> Tuple[float, float, float, float, float]:
-        """
-        Calculates exact target_usd, stop_loss_usd, target_inr, stop_loss_inr for a 5-live position.
-        Uses per-position net profit target and loss limit.
-        """
+        """Calculates target_usd, stop_loss_usd, target_inr, stop_loss_inr for a 5-live position."""
         pos_hr = hedge_rate or 102.0
         entry_price_inr = entry_price_usd * pos_hr
         
@@ -192,101 +193,25 @@ class BitcoinLive5Engine:
         )
 
     def auto_reconcile_active_positions(self) -> List[Dict[str, Any]]:
-        """
-        Queries local DB and Mudrex open positions for 5-live.
-        Ensures all open positions have unique slot_index (1 to 5) and valid trade records.
-        """
+        """Queries local DB for active paper test positions."""
         db_positions = DB.load_active_bitcoin_live5_positions()
-        
-        # If DB already has active positions, map them
-        active_map = {p["mudrex_position_id"]: p for p in db_positions if p.get("mudrex_position_id")}
-        
-        # Fetch open positions from exchange
-        m_positions = self.adapter.fetch_open_positions()
-        if not isinstance(m_positions, list):
-            m_positions = []
-
-        reconciled_list = []
-        used_slots = set()
-
-        for p in db_positions:
-            used_slots.add(p.get("slot_index", 1))
-            reconciled_list.append(p)
-
-        for m_pos in m_positions:
-            pos_id = m_pos.get("position_id") or m_pos.get("id")
-            if not pos_id:
-                continue
-
-            if pos_id in active_map:
-                continue
-
-            # Assign first available slot_index (1 to 5)
-            avail_slot = 1
-            for s in range(1, self.max_positions + 1):
-                if s not in used_slots:
-                    avail_slot = s
-                    break
-
-            pos_id_clean = str(pos_id).replace("-", "")
-            trade_id = f"BTC_LIVE5_{pos_id_clean[:8]}"
-            entry_usd = float(m_pos.get("entry_price") or m_pos.get("avg_price") or 85866.40)
-            qty = float(m_pos.get("quantity") or m_pos.get("size") or self.default_quantity)
-            direction = "BUY" if str(m_pos.get("side") or m_pos.get("order_type") or m_pos.get("direction") or "LONG").upper() in ("BUY", "LONG") else "SELL"
-            pos_hr = float(m_pos.get("hedge_rate") or 102.0)
-            lev = float(m_pos.get("leverage") or self.default_leverage)
-
-            tp_usd, sl_usd, tp_inr, sl_inr, est_chg = self.calculate_sl_and_target_prices(direction, entry_usd, qty, pos_hr)
-            init_margin = round((entry_usd * pos_hr * qty) / lev, 2)
-
-            rec = {
-                "trade_id": trade_id,
-                "mudrex_position_id": pos_id,
-                "slot_index": avail_slot,
-                "entry_timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-                "symbol": "BTCUSDT",
-                "direction": direction,
-                "quantity": qty,
-                "entry_price": round(entry_usd * pos_hr, 2),
-                "entry_price_usd": entry_usd,
-                "hedge_rate": pos_hr,
-                "target_usd": tp_usd,
-                "stop_loss_usd": sl_usd,
-                "target": tp_inr,
-                "stop_loss": sl_inr,
-                "trend_state": "BULLISH" if direction == "BUY" else "BEARISH",
-                "confidence": 85,
-                "reasons": ["Reconciled Live Mudrex Position"],
-                "status": "OPEN",
-                "charges": est_chg,
-                "leverage": lev,
-                "initial_margin": init_margin
-            }
-            DB.save_bitcoin_live5_trade(rec)
-            used_slots.add(avail_slot)
-            reconciled_list.append(rec)
-
-        self.active_positions = sorted(reconciled_list, key=lambda x: x.get("slot_index", 1))
+        self.active_positions = sorted(db_positions, key=lambda x: x.get("slot_index", 1))
         return self.active_positions
 
     def get_dashboard_state(self) -> Dict[str, Any]:
-        """Prepares comprehensive JSON state payload for /bitcoin/live5 dashboard."""
+        """Prepares comprehensive JSON state payload for /bitcoin/live5 paper test dashboard."""
         curr_price_usd, hedge_rate, price_source = self.fetch_mudrex_futures_market_data()
-        
         active_pos_list = self.auto_reconcile_active_positions()
-        spot_bal = self.adapter.fetch_spot_balance()
-        fut_bal = self.adapter.fetch_futures_balance()
 
         total_gross_pnl = 0.0
         total_estimated_fees = 0.0
         total_net_pnl = 0.0
         total_used_margin = 0.0
 
-        # Map active positions to 5 slots
         slots = []
         pos_by_slot = {p.get("slot_index", i+1): p for i, p in enumerate(active_pos_list)}
-
         btc_inr_val = round((curr_price_usd * hedge_rate), 2) if (curr_price_usd and curr_price_usd > 0) else 0.0
+        now_ts = time.time()
 
         for slot_idx in range(1, self.max_positions + 1):
             pos = pos_by_slot.get(slot_idx)
@@ -300,6 +225,20 @@ class BitcoinLive5Engine:
                 total_net_pnl += net_inr
                 total_used_margin += margin_req
 
+                # Calculate holding age and remaining seconds
+                entry_dt_str = pos.get("entry_timestamp", "")
+                try:
+                    entry_dt = datetime.strptime(entry_dt_str, "%Y-%m-%d %H:%M:%S")
+                    holding_seconds = int((datetime.now() - entry_dt).total_seconds())
+                except Exception:
+                    holding_seconds = 0
+
+                remaining_seconds = max(0, self.max_holding_time_seconds - holding_seconds)
+                age_mm = holding_seconds // 60
+                age_ss = holding_seconds % 60
+                rem_mm = remaining_seconds // 60
+                rem_ss = remaining_seconds % 60
+
                 slots.append({
                     "slot_index": slot_idx,
                     "status": "OPEN",
@@ -311,7 +250,10 @@ class BitcoinLive5Engine:
                     "net_pnl": net_inr,
                     "initial_margin": margin_req,
                     "current_price_usd": curr_price_usd,
-                    "current_price_inr": btc_inr_val
+                    "current_price_inr": btc_inr_val,
+                    "holding_time_str": f"{age_mm:02d}:{age_ss:02d} / 10:00",
+                    "remaining_time_str": f"{rem_mm:02d}:{rem_ss:02d}",
+                    "holding_seconds": holding_seconds
                 })
             else:
                 slots.append({
@@ -321,66 +263,71 @@ class BitcoinLive5Engine:
                     "gross_pnl": 0.0,
                     "charges": 0.0,
                     "net_pnl": 0.0,
-                    "initial_margin": 0.0
+                    "initial_margin": 0.0,
+                    "holding_time_str": "00:00 / 10:00",
+                    "remaining_time_str": "10:00"
                 })
 
-        free_margin = round(fut_bal, 2)
-        total_capital = round(fut_bal + total_used_margin, 2)
-
+        test_used_margin = round(total_used_margin, 2)
+        test_free_buffer = round(self.test_capital_reference - test_used_margin, 2)
         all_trades = DB.load_all_bitcoin_live5_trades()
 
+        # Compute summary test statistics
+        closed_trades = [t for t in all_trades if t.get("status") == "CLOSED"]
+        total_test_trades = len(closed_trades)
+        winning_trades = len([t for t in closed_trades if float(t.get("net_pnl", 0.0)) > 0])
+        losing_trades = len([t for t in closed_trades if float(t.get("net_pnl", 0.0)) < 0])
+        time_exits = len([t for t in closed_trades if "10-MINUTE TIME EXIT" in str(t.get("exit_reason", ""))])
+        win_rate = round((winning_trades / total_test_trades * 100.0), 1) if total_test_trades > 0 else 0.0
+        
+        realized_pnl = sum([float(t.get("net_pnl", 0.0)) for t in closed_trades])
+        total_test_pnl = round(realized_pnl + total_net_pnl, 2)
+
         return {
+            "title": "BTC 5-LIVE ROLLING TEST",
             "btc_price": btc_inr_val,
             "mudrex_btc_usd_price": round(curr_price_usd, 2) if curr_price_usd else 0.0,
             "mudrex_hedge_rate": round(hedge_rate, 2) if hedge_rate else 102.0,
             "price_source": price_source,
-            "scanner_status": "SCANNING FOR SIGNALS" if self.live_trading_enabled else "SAFETY LOCK ENABLED — REAL TRADING DISABLED",
-            "total_capital": total_capital,
-            "used_margin": round(total_used_margin, 2),
-            "free_margin": free_margin,
+            "test_mode": True,
+            "real_orders": "DISABLED",
+            "test_status": self.test_status,
+            "scanner_status": "ROLLING 2-MIN TEST SCANNER ACTIVE" if self.test_status == "RUNNING" else "TEST PAUSED",
+            "test_capital": self.test_capital_reference,
+            "used_margin": test_used_margin,
+            "free_margin": test_free_buffer,
             "active_positions_count": len([s for s in slots if s["status"] == "OPEN"]),
             "max_positions": self.max_positions,
             "total_unrealized_gross_pnl": round(total_gross_pnl, 2),
             "total_estimated_fees": round(total_estimated_fees, 2),
             "total_unrealized_net_pnl": round(total_net_pnl, 2),
-            "today_realized_pnl": round(self.today_realized_pnl, 2),
+            "realized_test_pnl": round(realized_pnl, 2),
+            "total_test_pnl": total_test_pnl,
             "per_trade_profit_target_inr": self.per_trade_profit_target_inr,
             "per_trade_loss_limit_inr": self.per_trade_loss_limit_inr,
             "default_quantity": self.default_quantity,
             "default_leverage": self.default_leverage,
-            "live_trading_enabled": self.live_trading_enabled,
-            "circuit_breaker": "TRIPPED" if self.circuit_breaker_tripped else "NORMAL",
-            "circuit_breaker_reason": self.circuit_breaker_reason if self.circuit_breaker_tripped else None,
-            "mudrex_api_status": "AUTHENTICATED" if self.adapter.test_authentication().get("success") else "DISCONNECTED",
+            "live_trading_enabled": False, # ALWAYS FALSE IN PAPER TEST
             "slots": slots,
             "trade_history": all_trades,
+            "statistics": {
+                "total_trades": total_test_trades,
+                "winning_trades": winning_trades,
+                "losing_trades": losing_trades,
+                "time_exits": time_exits,
+                "win_rate": win_rate,
+                "realized_pnl": round(realized_pnl, 2),
+                "total_test_pnl": total_test_pnl
+            },
             "evaluation_stream": self.evaluation_stream[:25],
             "latest_evaluation": self.last_evaluation
         }
 
     def close_single_position(self, pos: Dict[str, Any], exit_reason: str = "MANUAL EXIT") -> Dict[str, Any]:
-        """
-        Safely closes a single open 5-live position on Mudrex and updates DB.
-        """
-        pos_id = pos.get("mudrex_position_id")
+        """Safely closes a single paper test position and updates DB."""
         trade_id = pos.get("trade_id")
-        direction = pos.get("direction", "BUY")
-        qty = float(pos.get("quantity", self.default_quantity))
-
-        if not pos_id:
-            return {"success": False, "error": "Missing mudrex_position_id"}
-
-        close_res = self.adapter.close_position_safely(
-            position_id=pos_id,
-            symbol="BTCUSDT",
-            quantity=qty,
-            direction=direction
-        )
-
-        if not close_res.get("success"):
-            err_msg = close_res.get("error", "Failed to close on Mudrex")
-            print(f"[{datetime.now()}] [MUDREX CLOSE FAILED 5-LIVE] Position {pos_id} failed to close: {err_msg}")
-            return {"success": False, "error": err_msg}
+        if not trade_id:
+            return {"success": False, "error": "Missing trade_id"}
 
         curr_price_usd, hedge_rate, _ = self.fetch_mudrex_futures_market_data()
         pos_hr = float(pos.get("hedge_rate") or hedge_rate or 102.0)
@@ -405,20 +352,34 @@ class BitcoinLive5Engine:
         self.today_realized_pnl += net_pnl
         self.save_settings()
 
-        # Remove from active positions list
         self.active_positions = [p for p in self.active_positions if p.get("trade_id") != trade_id]
-
-        print(f"[{datetime.now()}] [BITCOIN 5-LIVE ENGINE] Position {trade_id} (Slot {pos.get('slot_index')}) CLOSED ({exit_reason})! NET P&L: Rs.{net_pnl:,.2f}")
-        return {"success": True, "trade": pos, "mudrex_response": close_res}
+        print(f"[{datetime.now()}] [5-LIVE PAPER EXIT] Position {trade_id} (Slot {pos.get('slot_index')}) CLOSED ({exit_reason})! NET P&L: Rs.{net_pnl:,.2f}")
+        return {"success": True, "trade": pos}
 
     def emergency_close_all_positions(self) -> Dict[str, Any]:
-        """Master Emergency Control: Closes ALL active 5-live open positions cleanly."""
+        """Master Emergency Control: Closes ALL active 5-live paper test positions."""
         active = DB.load_active_bitcoin_live5_positions()
         results = []
         for pos in active:
             res = self.close_single_position(pos, exit_reason="EMERGENCY CLOSE ALL")
             results.append(res)
         return {"success": True, "closed_count": len(results), "details": results}
+
+    def reset_paper_test(self) -> Dict[str, Any]:
+        """Resets paper test engine state and trades without affecting existing live engine."""
+        with DB._get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute("DELETE FROM bitcoin_live5_trades")
+            conn.commit()
+        
+        self.today_realized_pnl = 0.0
+        self.save_settings()
+        self.active_positions = []
+        self.last_entry_time = 0.0
+        self.last_signal_action = ""
+        self.last_api_status = "PAPER TEST RESET COMPLETED"
+        print(f"[{datetime.now()}] [5-LIVE PAPER TEST RESET] Cleared paper trades DB!")
+        return {"success": True, "message": "Paper test state reset successfully"}
 
     def update_risk_settings(
         self,
@@ -428,7 +389,7 @@ class BitcoinLive5Engine:
         quantity: Optional[float] = None,
         leverage: Optional[float] = None
     ):
-        """Updates user-configurable risk & position parameters."""
+        """Updates configurable paper test settings."""
         if per_trade_limit is not None and per_trade_limit > 0:
             self.per_trade_loss_limit_inr = float(per_trade_limit)
         if profit_target is not None and profit_target > 0:
@@ -443,8 +404,11 @@ class BitcoinLive5Engine:
         self.save_settings()
 
     def process_tick(self):
-        """Main 5-live engine evaluation tick."""
+        """Main 5-slot rolling paper test engine tick."""
         try:
+            if self.test_status != "RUNNING":
+                return
+
             curr_price_usd, hedge_rate, price_source = self.fetch_mudrex_futures_market_data()
             if curr_price_usd is None or curr_price_usd <= 0:
                 return
@@ -475,6 +439,8 @@ class BitcoinLive5Engine:
 
             # 1. EVALUATE EXITS FOR ALL ACTIVE OPEN POSITIONS INDEPENDENTLY
             active_list = DB.load_active_bitcoin_live5_positions()
+            now_dt = datetime.now()
+
             for pos in active_list:
                 g_usd, g_inr, ef, xf, total_chg, net_pnl = self.calculate_live_position_pnl(pos, curr_price_usd, hedge_rate)
                 tp_usd = float(pos.get("target_usd") or 0.0)
@@ -484,16 +450,30 @@ class BitcoinLive5Engine:
                 tp_hit = (net_pnl >= self.per_trade_profit_target_inr) or ((curr_price_usd >= tp_usd) if (direction == "BUY" and tp_usd > 0) else (curr_price_usd <= tp_usd if tp_usd > 0 else False))
                 sl_hit = (net_pnl <= -self.per_trade_loss_limit_inr) or ((curr_price_usd <= sl_usd) if (direction == "BUY" and sl_usd > 0) else (curr_price_usd >= sl_usd if sl_usd > 0 else False))
 
+                # Check 10-Minute Maximum Holding Time Exit
+                holding_seconds = 0
+                try:
+                    entry_dt = datetime.strptime(pos.get("entry_timestamp", ""), "%Y-%m-%d %H:%M:%S")
+                    holding_seconds = (now_dt - entry_dt).total_seconds()
+                except Exception:
+                    holding_seconds = 0
+
+                time_exit_hit = (holding_seconds >= self.max_holding_time_seconds)
+
                 if tp_hit:
                     reason = f"PROFIT TARGET +Rs.{int(self.per_trade_profit_target_inr)} NET"
-                    print(f"[{datetime.now()}] [5-LIVE EXIT TRIGGER] Position Slot {pos.get('slot_index')} Net P&L Rs.{net_pnl:,.2f} >= Target +Rs.{self.per_trade_profit_target_inr:,.2f}! Executing close.")
+                    print(f"[{datetime.now()}] [5-LIVE PAPER EXIT] Slot {pos.get('slot_index')} Net P&L Rs.{net_pnl:,.2f} >= Target +Rs.{self.per_trade_profit_target_inr:,.2f}!")
                     self.close_single_position(pos, exit_reason=reason)
                 elif sl_hit:
-                    reason = f"LOSS LIMIT -Rs.{int(self.per_trade_loss_limit_inr)} NET"
-                    print(f"[{datetime.now()}] [5-LIVE EXIT TRIGGER] Position Slot {pos.get('slot_index')} Net P&L Rs.{net_pnl:,.2f} <= Loss Limit -Rs.{self.per_trade_loss_limit_inr:,.2f}! Executing close.")
+                    reason = f"MAX LOSS -Rs.{int(self.per_trade_loss_limit_inr)} NET"
+                    print(f"[{datetime.now()}] [5-LIVE PAPER EXIT] Slot {pos.get('slot_index')} Net P&L Rs.{net_pnl:,.2f} <= Loss Limit -Rs.{self.per_trade_loss_limit_inr:,.2f}!")
+                    self.close_single_position(pos, exit_reason=reason)
+                elif time_exit_hit:
+                    reason = f"10-MINUTE TIME EXIT ({int(holding_seconds)}s)"
+                    print(f"[{datetime.now()}] [5-LIVE PAPER EXIT] Slot {pos.get('slot_index')} reached 10-min max holding time ({int(holding_seconds)}s)! Executing time exit.")
                     self.close_single_position(pos, exit_reason=reason)
 
-            # 2. EVALUATE NEW POSITION ENTRY (IF ACTIVE POSITIONS < MAX POSITIONS)
+            # 2. EVALUATE NEW POSITION ENTRY (2-MINUTE ENTRY INTERVAL & MAX 5 POSITIONS)
             current_active_count = len(DB.load_active_bitcoin_live5_positions())
             if current_active_count >= self.max_positions:
                 return
@@ -501,55 +481,29 @@ class BitcoinLive5Engine:
             action = eval_res.get("action", "WAIT")
             if action in ("BUY", "SELL"):
                 now_ts = time.time()
-                # Anti-duplicate entry filter: Prevent immediate repeated entries on same tick/signal
-                if action == self.last_signal_action and (now_ts - self.last_signal_time) < 180:
+                # 2-Minute Entry Interval Lock: Earliest new entry opportunity is every 120 seconds
+                if (now_ts - self.last_entry_time) < self.entry_interval_seconds:
                     return
 
-                # CAPITAL SAFETY CHECK: Verify free margin from Mudrex
-                fut_bal = self.adapter.fetch_futures_balance()
-                effective_bal = fut_bal if fut_bal > 0 else 5000.0
+                # Calculate required paper margin
                 qty = self.default_quantity
                 lev = self.default_leverage
-
                 required_margin = (qty * curr_price_inr) / lev
-                if fut_bal < required_margin and self.live_trading_enabled:
-                    err_msg = f"INSUFFICIENT MARGIN: Available Rs.{fut_bal:,.2f} < Required Rs.{required_margin:,.2f} for {qty} BTC"
-                    print(f"[{datetime.now()}] [MUDREX 5-LIVE ENTRY ABORTED] {err_msg}")
-                    self.last_api_status = err_msg
-                    return
 
-                if not self.live_trading_enabled:
+                # Check simulated free buffer from Rs. 20,000 test capital
+                active_pos_list = DB.load_active_bitcoin_live5_positions()
+                used_margin = sum([((p.get("entry_price_usd", 85000.0) * hedge_rate * p.get("quantity", qty)) / lev) for p in active_pos_list])
+                free_buffer = self.test_capital_reference - used_margin
+
+                if free_buffer < required_margin:
+                    err_msg = f"INSUFFICIENT TEST BUFFER: Free Rs.{free_buffer:,.2f} < Required Rs.{required_margin:,.2f}"
+                    print(f"[{datetime.now()}] [5-LIVE PAPER ENTRY ABORTED] {err_msg}")
+                    self.last_api_status = err_msg
                     return
 
                 tp_usd, sl_usd, tp_val, sl_val, est_chg = self.calculate_sl_and_target_prices(action, curr_price_usd, qty, hedge_rate)
 
-                order_res = self.adapter.place_futures_order(
-                    symbol="BTCUSDT",
-                    side=action,
-                    quantity=qty,
-                    order_type="MARKET",
-                    stoploss_price=sl_val
-                )
-
-                if not order_res.get("success"):
-                    err_msg = order_res.get("error", "API error")
-                    print(f"[{datetime.now()}] [MUDREX 5-LIVE ORDER REJECTED] {err_msg}")
-                    self.last_api_status = f"ORDER REJECTED: {err_msg}"
-                    return
-
-                mudrex_data = order_res.get("data", {})
-                if isinstance(mudrex_data, dict) and "data" in mudrex_data:
-                    mudrex_data = mudrex_data["data"]
-
-                order_id = str(mudrex_data.get("order_id") or mudrex_data.get("id") or "").strip()
-                pos_id = str(mudrex_data.get("position_id") or mudrex_data.get("mudrex_position_id") or "").strip()
-
-                if not order_id or not pos_id:
-                    print(f"[{datetime.now()}] [MUDREX 5-LIVE ORDER REJECTED] Missing broker IDs!")
-                    return
-
-                # Assign slot_index
-                active_pos_list = DB.load_active_bitcoin_live5_positions()
+                # Assign slot_index (1 to 5)
                 used_slots = {p.get("slot_index", 1) for p in active_pos_list}
                 avail_slot = 1
                 for s in range(1, self.max_positions + 1):
@@ -557,12 +511,12 @@ class BitcoinLive5Engine:
                         avail_slot = s
                         break
 
-                trade_id = f"BTC_LIVE5_{int(time.time())}"
+                trade_id = f"PAPER_BTC5_{int(time.time())}"
                 now_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
                 pos_dict = {
                     "trade_id": trade_id,
-                    "mudrex_position_id": pos_id,
+                    "mudrex_position_id": f"PAPER_POS_{int(time.time())}",
                     "slot_index": avail_slot,
                     "entry_timestamp": now_str,
                     "symbol": "BTCUSDT",
@@ -593,24 +547,24 @@ class BitcoinLive5Engine:
                 }
 
                 DB.save_bitcoin_live5_trade(pos_dict)
-                self.last_signal_time = now_ts
+                self.last_entry_time = now_ts
                 self.last_signal_action = action
-                self.last_api_status = f"SLOT {avail_slot} ORDER EXECUTED"
-                print(f"[{datetime.now()}] [MUDREX 5-LIVE REAL ORDER EXECUTED] Slot {avail_slot}: {action} {qty} BTC @ Rs.{curr_price_inr:,.2f}")
+                self.last_api_status = f"SLOT {avail_slot} PAPER TRADE CREATED ({action})"
+                print(f"[{datetime.now()}] [5-LIVE PAPER TRADE CREATED] Slot {avail_slot}: {action} {qty} BTC @ Rs.{curr_price_inr:,.2f}")
 
         except Exception as e:
-            print(f"[{datetime.now()}] [BITCOIN 5-LIVE ENGINE TICK ERROR] {e}")
+            print(f"[{datetime.now()}] [5-LIVE PAPER ENGINE TICK ERROR] {e}")
 
     async def start_feed_loop(self):
-        """Continuous background loop for 5-live engine."""
+        """Continuous background loop for 5-live paper test engine."""
         self.is_running = True
-        print(f"[{datetime.now()}] [BITCOIN 5-LIVE ENGINE] Background loop started.")
+        print(f"[{datetime.now()}] [BITCOIN 5-LIVE PAPER TEST ENGINE] Background loop started.")
         while self.is_running:
             try:
                 self.process_tick()
             except Exception as e:
-                print(f"[{datetime.now()}] [BITCOIN 5-LIVE LOOP ERROR] {e}")
-            await asyncio.sleep(5)
+                print(f"[{datetime.now()}] [BITCOIN 5-LIVE PAPER LOOP ERROR] {e}")
+            await asyncio.sleep(3)
 
 # Global Instance for 5-Live Engine
 BITCOIN_LIVE5_ENGINE = BitcoinLive5Engine()
