@@ -515,45 +515,29 @@ class TestBitcoinLive5EngineLogic(unittest.TestCase):
         self.assertEqual(closed_trades[0]["exit_reason"], "PROFIT TARGET +Rs.100 NET")
         print("[TEST 17 PASS] Completed trade history recorded cleanly!")
 
-    def test_18_direction_reversal_when_long_flow_is_red(self):
-        """18. Verify next entry direction is SHORT when active LONG flow is RED."""
-        now_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-        active_longs = [
-            {
-                "trade_id": f"PAPER_BTC5_L_{i}",
-                "slot_index": i,
-                "direction": "BUY",
-                "quantity": 0.002,
-                "entry_price_usd": 88000.0, # High entry price
-                "hedge_rate": 102.0,
-                "status": "OPEN"
-            }
-            for i in range(1, 4)
-        ]
-        # Current price = 86000 USD -> LONG positions are in loss (RED)
-        next_dir = self.engine.determine_next_entry_direction(active_longs, 86000.0, 102.0, "BUY")
-        self.assertEqual(next_dir, "SELL")
-        print(f"[TEST 18 PASS] Active LONG flow RED -> Next entry direction correctly reversed to SHORT ({next_dir})!")
-
-    def test_19_direction_reversal_when_short_flow_is_red(self):
-        """19. Verify next entry direction is LONG when active SHORT flow is RED."""
-        now_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-        active_shorts = [
-            {
-                "trade_id": f"PAPER_BTC5_S_{i}",
-                "slot_index": i,
-                "direction": "SELL",
-                "quantity": 0.002,
-                "entry_price_usd": 84000.0, # Low entry price
-                "hedge_rate": 102.0,
-                "status": "OPEN"
-            }
-            for i in range(1, 4)
-        ]
-        # Current price = 86000 USD -> SHORT positions are in loss (RED)
-        next_dir = self.engine.determine_next_entry_direction(active_shorts, 86000.0, 102.0, "SELL")
+    def test_18_1min_up_movement_gives_long_entry(self):
+        """18. Verify previous 1-min BTC UP movement generates LONG entry."""
+        now_ts = time.time()
+        price_history = [(now_ts - 60, 85000.0)]
+        next_dir = self.engine.determine_1m_directional_entry(85500.0, price_history_override=price_history)
         self.assertEqual(next_dir, "BUY")
-        print(f"[TEST 19 PASS] Active SHORT flow RED -> Next entry direction correctly reversed to LONG ({next_dir})!")
+        print(f"[TEST 18 PASS] 1-min BTC movement UP ($85,000 -> $85,500) -> Next entry direction set to LONG ({next_dir})!")
+
+    def test_19_1min_down_movement_gives_short_entry(self):
+        """19. Verify previous 1-min BTC DOWN movement generates SHORT entry."""
+        now_ts = time.time()
+        price_history = [(now_ts - 60, 86000.0)]
+        next_dir = self.engine.determine_1m_directional_entry(85500.0, price_history_override=price_history)
+        self.assertEqual(next_dir, "SELL")
+        print(f"[TEST 19 PASS] 1-min BTC movement DOWN ($86,000 -> $85,500) -> Next entry direction set to SHORT ({next_dir})!")
+
+    def test_20_1min_flat_movement_skips_entry(self):
+        """20. Verify 1-min BTC FLAT movement skips entry."""
+        now_ts = time.time()
+        price_history = [(now_ts - 60, 85500.0)]
+        next_dir = self.engine.determine_1m_directional_entry(85500.0, price_history_override=price_history)
+        self.assertEqual(next_dir, "SKIP")
+        print(f"[TEST 20 PASS] 1-min BTC movement FLAT -> Entry opportunity safely SKIPPED ({next_dir})!")
 
 if __name__ == "__main__":
     unittest.main()

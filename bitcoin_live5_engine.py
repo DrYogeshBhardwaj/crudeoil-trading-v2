@@ -45,6 +45,7 @@ class BitcoinLive5Engine:
         self.last_api_status = "PAPER TEST INITIALIZED"
         self.last_entry_time = 0.0
         self.last_signal_action = ""
+        self.price_history_1m: List[Tuple[float, float]] = [] # (timestamp, price_usd) buffer
         self.test_mode_enabled = True # Test mode default
         self.test_status = "RUNNING" # RUNNING, PAUSED
 
@@ -192,47 +193,52 @@ class BitcoinLive5Engine:
             round(net_pnl_inr, 2)
         )
 
-    def determine_next_entry_direction(
+    def determine_1m_directional_entry(
         self,
-        active_pos_list: List[Dict[str, Any]],
         curr_price_usd: float,
-        hedge_rate: float,
-        default_signal_action: str
+        price_history_override: Optional[List[Tuple[float, float]]] = None
     ) -> str:
         """
-        Determines direction for the next 1-minute entry candidate based on active positions flow P&L.
-        If existing active positions have a majority/aggregate RED Net P&L in one direction,
-        the next entry MUST take the OPPOSITE direction (reversal/hedge entry).
-        Otherwise, defaults to default_signal_action (or 'BUY' if signal is WAIT).
+        Determines entry direction strictly based on previous 1-minute BTC price movement:
+        - 1-min BTC price UP -> LONG ('BUY')
+        - 1-min BTC price DOWN -> SHORT ('SELL')
+        - 1-min BTC price FLAT/UNCHANGED -> 'SKIP' (no entry for this opportunity)
         """
-        if not active_pos_list:
-            return default_signal_action if default_signal_action in ("BUY", "SELL") else "BUY"
+        now_ts = time.time()
+        history = price_history_override if price_history_override is not None else self.price_history_1m
 
-        long_positions = [p for p in active_pos_list if p.get("direction") == "BUY"]
-        short_positions = [p for p in active_pos_list if p.get("direction") in ("SELL", "SHORT")]
-
-        long_net_pnl = sum([self.calculate_live_position_pnl(p, curr_price_usd, hedge_rate)[5] for p in long_positions])
-        short_net_pnl = sum([self.calculate_live_position_pnl(p, curr_price_usd, hedge_rate)[5] for p in short_positions])
-
-        # Case 1: Pure LONG active positions flow is RED (< 0) -> Next entry MUST BE SELL
-        if long_positions and not short_positions and long_net_pnl < 0:
-            return "SELL"
-
-        # Case 2: Pure SHORT active positions flow is RED (< 0) -> Next entry MUST BE BUY
-        if short_positions and not long_positions and short_net_pnl < 0:
-            return "BUY"
-
-        # Case 3: Mixed active positions — compare losing side dominance
-        if long_positions and short_positions:
-            if long_net_pnl < 0 and long_net_pnl < short_net_pnl:
-                return "SELL"
-            if short_net_pnl < 0 and short_net_pnl < long_net_pnl:
+        # Look for recorded price closest to ~60 seconds ago (between 45s and 120s ago)
+        past_prices = [p for ts, p in history if 45 <= (now_ts - ts) <= 120]
+        if past_prices:
+            price_60s_ago = past_prices[-1]
+            diff = curr_price_usd - price_60s_ago
+            if diff > 0.05:
                 return "BUY"
+            elif diff < -0.05:
+                return "SELL"
+            else:
+                return "SKIP"
 
-        # Case 4: No active RED flow — follow standard signal action (fallback to BUY if WAIT)
-        if default_signal_action in ("BUY", "SELL"):
-            return default_signal_action
-        return "BUY"
+        # Fallback if buffer does not have 60s history yet: try fetching 1-minute candle
+        try:
+            url = "https://fapi.binance.com/fapi/v1/klines?symbol=BTCUSDT&interval=1m&limit=2"
+            resp = requests.get(url, timeout=3)
+            if resp.status_code == 200:
+                klines = resp.json()
+                if len(klines) >= 1:
+                    last_kline = klines[-1]
+                    open_p = float(last_kline[1])
+                    close_p = float(last_kline[4])
+                    if close_p > open_p:
+                        return "BUY"
+                    elif close_p < open_p:
+                        return "SELL"
+                    else:
+                        return "SKIP"
+        except Exception:
+            pass
+
+        return "SKIP"
 
     def auto_reconcile_active_positions(self) -> List[Dict[str, Any]]:
         """Queries local DB for active paper test positions."""
@@ -521,13 +527,14 @@ class BitcoinLive5Engine:
                 return
 
             now_ts = time.time()
+            self.price_history_1m.append((now_ts, curr_price_usd))
+            self.price_history_1m = [item for item in self.price_history_1m if (now_ts - item[0]) <= 180]
+
             # 1-Minute Entry Interval Lock: Earliest new entry opportunity is every 60 seconds
             if (now_ts - self.last_entry_time) < self.entry_interval_seconds:
                 return
 
-            active_pos_list = DB.load_active_bitcoin_live5_positions()
-            raw_action = eval_res.get("action", "WAIT")
-            action = self.determine_next_entry_direction(active_pos_list, curr_price_usd, hedge_rate, raw_action)
+            action = self.determine_1m_directional_entry(curr_price_usd)
 
             if action in ("BUY", "SELL"):
 
