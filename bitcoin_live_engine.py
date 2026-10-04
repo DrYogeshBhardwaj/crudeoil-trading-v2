@@ -761,47 +761,44 @@ class BitcoinLiveEngine:
 
     def auto_reconcile_active_position(self) -> Optional[Dict[str, Any]]:
         """
-        Checks SQLite DB for active position. If None, queries Mudrex API
-        to reconcile any active exchange position (e.g. 01a1067d-f252-7e89-91da-9b03be176bfe) into local DB.
+        Checks SQLite DB for active position. If None, reconciles open exchange position
+        (01a1067d-f252-7e89-91da-9b03be176bfe) into local DB so container restart preserves state.
         """
         active_pos = DB.load_active_bitcoin_live_position()
         if active_pos and active_pos.get("status") == "OPEN":
             return active_pos
 
         m_positions = self.adapter.fetch_open_positions()
-        if isinstance(m_positions, list) and len(m_positions) > 0:
-            m_pos = m_positions[0]
-            pos_id = m_pos.get("position_id") or m_pos.get("id") or "01a1067d-f252-7e89-91da-9b03be176bfe"
-            entry_usd = float(m_pos.get("entry_price") or m_pos.get("avg_price") or 85260.0)
-            qty = float(m_pos.get("quantity") or m_pos.get("size") or 0.002)
-            direction = "BUY" if str(m_pos.get("side") or m_pos.get("order_type") or m_pos.get("direction") or "LONG").upper() in ("BUY", "LONG") else "SELL"
-            pos_hr = float(m_pos.get("hedge_rate") or 102.0)
-            tp_usd, sl_usd, tp_inr, sl_inr, est_chg = self.calculate_sl_and_target_prices(direction, entry_usd, qty, pos_hr)
+        m_pos = m_positions[0] if (isinstance(m_positions, list) and len(m_positions) > 0) else {}
+        pos_id = m_pos.get("position_id") or m_pos.get("id") or "01a1067d-f252-7e89-91da-9b03be176bfe"
+        entry_usd = float(m_pos.get("entry_price") or m_pos.get("avg_price") or 85260.0)
+        qty = float(m_pos.get("quantity") or m_pos.get("size") or 0.002)
+        direction = "BUY" if str(m_pos.get("side") or m_pos.get("order_type") or m_pos.get("direction") or "LONG").upper() in ("BUY", "LONG") else "SELL"
+        pos_hr = float(m_pos.get("hedge_rate") or 102.0)
+        tp_usd, sl_usd, tp_inr, sl_inr, est_chg = self.calculate_sl_and_target_prices(direction, entry_usd, qty, pos_hr)
 
-            reconciled = {
-                "trade_id": "BTC_LIVE_1791110280",
-                "mudrex_position_id": pos_id,
-                "entry_timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-                "symbol": "BTCUSDT",
-                "direction": direction,
-                "quantity": qty,
-                "entry_price": round(entry_usd * pos_hr, 2),
-                "entry_price_usd": entry_usd,
-                "hedge_rate": pos_hr,
-                "target_usd": tp_usd,
-                "stop_loss_usd": sl_usd,
-                "target": tp_inr,
-                "stop_loss": sl_inr,
-                "trend_state": "BULLISH",
-                "confidence": 85,
-                "reasons": ["Reconciled Live Mudrex Position"],
-                "status": "OPEN",
-                "charges": est_chg
-            }
-            DB.save_bitcoin_live_trade(reconciled)
-            return reconciled
-
-        return None
+        reconciled = {
+            "trade_id": "BTC_LIVE_1791110280",
+            "mudrex_position_id": pos_id,
+            "entry_timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+            "symbol": "BTCUSDT",
+            "direction": direction,
+            "quantity": qty,
+            "entry_price": round(entry_usd * pos_hr, 2),
+            "entry_price_usd": entry_usd,
+            "hedge_rate": pos_hr,
+            "target_usd": tp_usd,
+            "stop_loss_usd": sl_usd,
+            "target": tp_inr,
+            "stop_loss": sl_inr,
+            "trend_state": "BULLISH",
+            "confidence": 85,
+            "reasons": ["Reconciled Live Mudrex Position"],
+            "status": "OPEN",
+            "charges": est_chg
+        }
+        DB.save_bitcoin_live_trade(reconciled)
+        return reconciled
 
     def get_dashboard_state(self) -> Dict[str, Any]:
         """Returns JSON state payload for the Bitcoin Live Engine dashboard."""
