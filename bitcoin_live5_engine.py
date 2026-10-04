@@ -38,6 +38,7 @@ class BitcoinLive5Engine:
         self.adapter = MudrexLiveAdapter()
         self.test_capital_reference = 25000.0 # Rs. 25,000 test capital
         self.max_holding_time_seconds = 300 # 5 minutes maximum holding time
+        self.enable_time_exit = False # Stopwatch time exit disabled as requested by user
         self.entry_interval_seconds = 60 # 1 minute rolling entry interval
         self.load_settings()
         self.active_positions: List[Dict[str, Any]] = []
@@ -62,6 +63,7 @@ class BitcoinLive5Engine:
             DB.save_bitcoin_live5_setting("today_date", self.today_date)
             DB.save_bitcoin_live5_setting("today_realized_pnl", "0.0")
 
+        self.test_capital_reference = float(DB.load_bitcoin_live5_setting("test_capital_reference", "25000.0"))
         self.max_positions = int(DB.load_bitcoin_live5_setting("max_positions", "6"))
         self.default_quantity = float(DB.load_bitcoin_live5_setting("default_quantity", "0.002"))
         self.default_leverage = float(DB.load_bitcoin_live5_setting("default_leverage", "5.0"))
@@ -70,6 +72,7 @@ class BitcoinLive5Engine:
         self.per_trade_loss_limit_inr = float(DB.load_bitcoin_live5_setting("per_trade_loss_limit_inr", "50.0"))
         self.daily_loss_limit_inr = float(DB.load_bitcoin_live5_setting("daily_loss_limit_inr", "1000.0"))
 
+        DB.save_bitcoin_live5_setting("test_capital_reference", str(self.test_capital_reference))
         DB.save_bitcoin_live5_setting("max_positions", str(self.max_positions))
         DB.save_bitcoin_live5_setting("default_quantity", str(self.default_quantity))
         DB.save_bitcoin_live5_setting("default_leverage", str(self.default_leverage))
@@ -84,6 +87,7 @@ class BitcoinLive5Engine:
     def save_settings(self):
         """Persists current 5-live settings to SQLite DB."""
         DB.save_bitcoin_live5_setting("live_trading_enabled", "FALSE")
+        DB.save_bitcoin_live5_setting("test_capital_reference", str(self.test_capital_reference))
         DB.save_bitcoin_live5_setting("max_positions", str(self.max_positions))
         DB.save_bitcoin_live5_setting("default_quantity", str(self.default_quantity))
         DB.save_bitcoin_live5_setting("default_leverage", str(self.default_leverage))
@@ -442,7 +446,7 @@ class BitcoinLive5Engine:
             self.per_trade_loss_limit_inr = float(per_trade_limit)
         if profit_target is not None and profit_target > 0:
             self.per_trade_profit_target_inr = float(profit_target)
-        if max_positions is not None and 1 <= max_positions <= 5:
+        if max_positions is not None and 1 <= max_positions <= 6:
             self.max_positions = int(max_positions)
         if quantity is not None and quantity >= 0.001:
             self.default_quantity = float(quantity)
@@ -506,7 +510,7 @@ class BitcoinLive5Engine:
                 except Exception:
                     holding_seconds = 0
 
-                time_exit_hit = (holding_seconds >= self.max_holding_time_seconds)
+                time_exit_hit = (self.enable_time_exit and holding_seconds >= self.max_holding_time_seconds)
 
                 if tp_hit:
                     reason = f"PROFIT TARGET +Rs.{int(self.per_trade_profit_target_inr)} NET"
@@ -518,40 +522,37 @@ class BitcoinLive5Engine:
                     self.close_single_position(pos, exit_reason=reason)
                 elif time_exit_hit:
                     reason = f"5-MINUTE TIME EXIT ({int(holding_seconds)}s)"
-                    print(f"[{datetime.now()}] [5-LIVE PAPER EXIT] Slot {pos.get('slot_index')} reached 5-min max holding time ({int(holding_seconds)}s)! Executing time exit.")
+                    print(f"[{datetime.now()}] [5-LIVE PAPER EXIT] Slot {pos.get('slot_index')} time exit triggered.")
                     self.close_single_position(pos, exit_reason=reason)
 
-            # 2. EVALUATE BATCH BASKET ENTRY (OPEN 6 POSITIONS SIMULTANEOUSLY: 3 LONG + 3 SHORT AT SAME PRICE)
+            # 2. EVALUATE AUTOMATIC PER-SLOT ENTRY & AUTO REPLACEMENT (OPEN NEW BID IMMEDIATELY AS SOON AS ANY BID ENDS)
             active_pos_list = DB.load_active_bitcoin_live5_positions()
-            current_active_count = len(active_pos_list)
+            occupied_slots = {p.get("slot_index") for p in active_pos_list}
 
-            if current_active_count == 0:
-                now_ts = time.time()
-                qty = self.default_quantity
-                lev = self.default_leverage
-                single_margin = (qty * curr_price_inr) / lev
-                now_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            qty = self.default_quantity
+            lev = self.default_leverage
+            single_margin = (qty * curr_price_inr) / lev
+            now_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
-                # Basket direction split: Slots 1,2,3 = BUY (LONG), Slots 4,5,6 = SELL (SHORT)
-                basket_directions = {
-                    1: "BUY",
-                    2: "BUY",
-                    3: "BUY",
-                    4: "SELL",
-                    5: "SELL",
-                    6: "SELL"
-                }
+            basket_directions = {
+                1: "BUY",
+                2: "BUY",
+                3: "BUY",
+                4: "SELL",
+                5: "SELL",
+                6: "SELL"
+            }
 
-                batch_ts = int(time.time() * 1000)
-
-                for slot_idx in range(1, 7):
-                    direction = basket_directions[slot_idx]
+            for slot_idx in range(1, self.max_positions + 1):
+                if slot_idx not in occupied_slots:
+                    direction = basket_directions.get(slot_idx, "BUY" if slot_idx <= 3 else "SELL")
                     tp_usd, sl_usd, tp_val, sl_val, est_chg = self.calculate_sl_and_target_prices(direction, curr_price_usd, qty, hedge_rate)
 
-                    trade_id = f"PAPER_BTC6_BASKET_{batch_ts}_SLOT_{slot_idx}"
+                    ts_ms = int(time.time() * 1000)
+                    trade_id = f"PAPER_BTC6_POS_{ts_ms}_SLOT_{slot_idx}"
                     pos_dict = {
                         "trade_id": trade_id,
-                        "mudrex_position_id": f"PAPER_POS_{batch_ts}_{slot_idx}",
+                        "mudrex_position_id": f"PAPER_POS_{ts_ms}_{slot_idx}",
                         "slot_index": slot_idx,
                         "entry_timestamp": now_str,
                         "symbol": "BTCUSDT",
@@ -564,9 +565,9 @@ class BitcoinLive5Engine:
                         "stop_loss_usd": sl_usd,
                         "target": tp_val,
                         "target_usd": tp_usd,
-                        "trend_state": "BASKET_3L3S",
+                        "trend_state": "AUTO_REPLACEMENT",
                         "confidence": 100,
-                        "reasons": [f"3-LONG 3-SHORT Same-Price Basket Entry ({direction})"],
+                        "reasons": [f"Auto-replacement on bid end ({direction})"],
                         "status": "OPEN",
                         "exit_timestamp": None,
                         "exit_price": None,
@@ -580,10 +581,10 @@ class BitcoinLive5Engine:
                         "initial_margin": round(single_margin, 2)
                     }
                     DB.save_bitcoin_live5_trade(pos_dict)
-                    print(f"[{datetime.now()}] [6-BASKET PAPER ENTRY] Slot {slot_idx}: {direction} 0.002 BTC @ ${curr_price_usd:,.2f} (Rs.{curr_price_inr:,.2f})")
+                    print(f"[{datetime.now()}] [6-BASKET AUTO REPLACEMENT] Slot {slot_idx}: {direction} {qty} BTC @ ${curr_price_usd:,.2f} (Rs.{curr_price_inr:,.2f})")
 
-                self.last_entry_time = now_ts
-                self.last_api_status = f"6-BASKET BATCH OPENED @ ${curr_price_usd:,.2f}"
+            self.active_positions = DB.load_active_bitcoin_live5_positions()
+            self.last_api_status = f"RUNNING • Active Basket: {len(self.active_positions)}/{self.max_positions} slots"
 
         except Exception as e:
             print(f"[{datetime.now()}] [5-LIVE PAPER ENGINE TICK ERROR] {e}")

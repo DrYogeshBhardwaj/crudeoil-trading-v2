@@ -548,15 +548,15 @@
             <div class="form-grid">
                 <div class="form-group">
                     <label class="form-label">Target Profit (NET ₹)</label>
-                    <input type="number" id="inpProfitTarget" class="form-input" value="100" step="10">
+                    <input type="number" id="inpProfitTarget" class="form-input" value="25" step="5">
                 </div>
                 <div class="form-group">
                     <label class="form-label">Max Loss (NET ₹)</label>
-                    <input type="number" id="inpMaxLoss" class="form-input" value="200" step="10">
+                    <input type="number" id="inpMaxLoss" class="form-input" value="50" step="5">
                 </div>
                 <div class="form-group">
                     <label class="form-label">Max Positions</label>
-                    <input type="number" id="inpMaxPositions" class="form-input" value="5" min="1" max="5">
+                    <input type="number" id="inpMaxPositions" class="form-input" value="6" min="1" max="6">
                 </div>
                 <div class="form-group">
                     <label class="form-label">Quantity per Position</label>
@@ -570,49 +570,47 @@
 
             <button class="btn-action btn-blue" onclick="saveRiskSettings()">💾 SAVE SETTINGS</button>
         </div>
-    </div>
+        <!-- PRIMARY P/L LEDGER & TRADE HISTORY -->
+        <div class="section-card">
+            <div class="section-header">
+                <div class="section-title">📊 REAL-TIME P/L LEDGER & COMPLETED TRADE HISTORY</div>
+                <div class="pos-info-lbl" id="lblHistoryCount" style="font-size: 0.85rem; color: var(--accent-blue);">0 Trades Closed</div>
+            </div>
 
-    <!-- SECONDARY: TRADINGVIEW CHART -->
-    <div class="section-card">
-        <div class="section-header">
-            <div class="section-title">📈 BTCUSDT REAL-TIME CHART (TradingView)</div>
+            <div class="table-container" style="max-height: 480px; overflow-y: auto;">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Trade ID</th>
+                            <th>Slot</th>
+                            <th>Side</th>
+                            <th>Qty</th>
+                            <th>Entry Price</th>
+                            <th>Exit Price</th>
+                            <th>Entry Time</th>
+                            <th>Exit Time</th>
+                            <th>Gross P&L</th>
+                            <th>Fees</th>
+                            <th>NET P&L</th>
+                            <th>Exit Reason</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tradeHistoryBody">
+                        <tr>
+                            <td colspan="12" style="text-align: center; color: var(--text-muted);">No closed paper test trades recorded yet.</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
         </div>
-        <div class="chart-box" id="tradingview_chart"></div>
-    </div>
 
-    <!-- COMPLETED PAPER TEST TRADES HISTORY -->
-    <div class="section-card">
-        <div class="section-header">
-            <div class="section-title">📜 COMPLETED PAPER TEST TRADES HISTORY</div>
-            <div class="pos-info-lbl" id="lblHistoryCount">0 Trades Closed</div>
+        <!-- SECONDARY: TRADINGVIEW CHART -->
+        <div class="section-card">
+            <div class="section-header">
+                <div class="section-title">📈 BTCUSDT REAL-TIME CHART (TradingView)</div>
+            </div>
+            <div class="chart-box" id="tradingview_chart"></div>
         </div>
-
-        <div class="table-container">
-            <table>
-                <thead>
-                    <tr>
-                        <th>Trade ID</th>
-                        <th>Slot</th>
-                        <th>Side</th>
-                        <th>Qty</th>
-                        <th>Entry Price</th>
-                        <th>Exit Price</th>
-                        <th>Entry Time</th>
-                        <th>Exit Time</th>
-                        <th>Gross P&L</th>
-                        <th>Fees</th>
-                        <th>NET P&L</th>
-                        <th>Exit Reason</th>
-                    </tr>
-                </thead>
-                <tbody id="tradeHistoryBody">
-                    <tr>
-                        <td colspan="12" style="text-align: center; color: var(--text-muted);">No closed paper test trades recorded yet.</td>
-                    </tr>
-                </tbody>
-            </table>
-        </div>
-    </div>
 
     <!-- TradingView Widget Script -->
     <script type="text/javascript" src="https://s3.tradingview.com/tv.js"></script>
@@ -632,47 +630,7 @@
             "container_id": "tradingview_chart"
         });
 
-        // Client-side Live Ticking Stopwatch State
-        let slotHoldingSeconds = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0, 6: 0 };
-        let slotIsActive = { 1: false, 2: false, 3: false, 4: false, 5: false, 6: false };
-
-        // 1-Second Live Stopwatch Ticker Loop
-        setInterval(() => {
-            for (let i = 1; i <= 6; i++) {
-                if (slotIsActive[i]) {
-                    slotHoldingSeconds[i]++;
-                    updateStopwatchDisplay(i);
-                }
-            }
-        }, 1000);
-
-        function updateStopwatchDisplay(slotIdx) {
-            const elVal = document.getElementById(`timerValSlot${slotIdx}`);
-            const elSub = document.getElementById(`timerSubSlot${slotIdx}`);
-            const elBox = document.getElementById(`timerBoxSlot${slotIdx}`);
-            if (!elVal || !elSub || !elBox) return;
-
-            const totalSec = slotHoldingSeconds[slotIdx] || 0;
-            const remSec = Math.max(0, 300 - totalSec); // 5-minute max = 300s
-
-            const ageMm = String(Math.floor(totalSec / 60)).padStart(2, '0');
-            const ageSs = String(totalSec % 60).padStart(2, '0');
-            const remMm = String(Math.floor(remSec / 60)).padStart(2, '0');
-            const remSs = String(remSec % 60).padStart(2, '0');
-
-            // Downward Countdown Stopwatch (Top to Bottom: 05:00 -> 00:00)
-            elVal.innerText = `⏳ ${remMm}:${remSs}`;
-            elSub.innerText = `Elapsed: ${ageMm}:${ageSs} / 05:00`;
-
-            if (remSec <= 60) { // Under 1 minute remaining
-                elVal.className = 'timer-val expiring';
-                elBox.className = 'pos-timer-box expiring';
-                elSub.innerText = `⚠️ ${remMm}:${remSs} (EXPIRING) • Elapsed: ${ageMm}:${ageSs}`;
-            } else {
-                elVal.className = 'timer-val';
-                elBox.className = 'pos-timer-box';
-            }
-        }
+        let riskInputsLoaded = false;
 
         // Fetch Dashboard State Loop (2-second interval)
         async function fetchDashboardState() {
@@ -680,6 +638,26 @@
                 const resp = await fetch('/api/bitcoin/live5/state');
                 if (!resp.ok) return;
                 const data = await resp.json();
+
+                // Populate risk configuration input fields on initial fetch
+                if (!riskInputsLoaded && data) {
+                    if (data.per_trade_profit_target_inr !== undefined) {
+                        document.getElementById('inpProfitTarget').value = data.per_trade_profit_target_inr;
+                    }
+                    if (data.per_trade_loss_limit_inr !== undefined) {
+                        document.getElementById('inpMaxLoss').value = data.per_trade_loss_limit_inr;
+                    }
+                    if (data.max_positions !== undefined) {
+                        document.getElementById('inpMaxPositions').value = data.max_positions;
+                    }
+                    if (data.default_quantity !== undefined) {
+                        document.getElementById('inpQuantity').value = data.default_quantity;
+                    }
+                    if (data.default_leverage !== undefined) {
+                        document.getElementById('inpLeverage').value = data.default_leverage;
+                    }
+                    riskInputsLoaded = true;
+                }
 
                 // 1. Top Bar & Prices
                 document.getElementById('valBtcUsd').innerText = `$${(data.mudrex_btc_usd_price || 0).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
@@ -709,19 +687,18 @@
                 if (data.statistics) {
                     document.getElementById('statTotalTrades').innerText = data.statistics.total_trades || 0;
                     document.getElementById('statWinRate').innerText = `${data.statistics.win_rate || 0}%`;
-                    document.getElementById('statTimeExits').innerText = data.statistics.time_exits || 0;
                 }
 
                 document.getElementById('lblTestStatusStr').innerText = `Status: ${data.test_status || 'RUNNING'}`;
 
-                // 3. Render 5 Position P/L Rows & Update Stopwatch Timers
+                // 3. Render 6 Position P/L Rows
                 renderPnlRows(data.slots || [], data.btc_price || 0, data.mudrex_btc_usd_price || 0);
 
                 // 4. Render History Table
                 renderTradeHistory(data.trade_history || []);
 
             } catch (err) {
-                console.error("Error fetching 5-live state:", err);
+                console.error("Error fetching 6-basket state:", err);
             }
         }
 

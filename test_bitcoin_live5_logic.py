@@ -99,6 +99,7 @@ class TestBitcoinLive5EngineLogic(unittest.TestCase):
 
     def test_05_independent_time_exit_per_position(self):
         """5. Verify Position 1 closes at 5 minutes even if Position 5 is only 1 minute old."""
+        self.engine.enable_time_exit = True
         curr_usd, hr, _ = self.engine.fetch_mudrex_futures_market_data()
         curr_usd = curr_usd or 86000.0
         hr = hr or 102.0
@@ -255,6 +256,7 @@ class TestBitcoinLive5EngineLogic(unittest.TestCase):
 
     def test_08_time_expiry_closes_only_affected_position(self):
         """8. Verify time expiry closes ONLY the affected position."""
+        self.engine.enable_time_exit = True
         curr_usd, hr, _ = self.engine.fetch_mudrex_futures_market_data()
         curr_usd = curr_usd or 86000.0
         hr = hr or 102.0
