@@ -362,6 +362,7 @@ class DatabaseEngine:
         """Ensures authoritative completed live trades are preserved across Railway redeployments."""
         with self._get_connection() as conn:
             cursor = conn.cursor()
+            cursor.execute("UPDATE bitcoin_live_settings SET value = '200.0' WHERE key = 'per_trade_loss_limit_inr' AND value = '400.0'")
             reasons_json = json.dumps(["Authoritative Closed Live Position (Mudrex History)"])
             cursor.execute("""
                 INSERT OR REPLACE INTO bitcoin_live_trades (
