@@ -3,12 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>BTC 5-LIVE ROLLING TEST — PAPER TRADING ENGINE</title>
+    <title>BTC 5-LIVE ROLLING TEST — POSITION P/L MONITOR</title>
     <!-- Google Fonts & Modern Styling -->
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;700;800&display=swap" rel="stylesheet">
     <style>
         :root {
-            --bg-base: #090d16;
+            --bg-base: #080c14;
             --bg-card: #0f172a;
             --bg-hover: #1e293b;
             --border-color: #1e293b;
@@ -42,7 +42,7 @@
             background: linear-gradient(90deg, #0f172a 0%, #1e1b4b 100%);
             border: 1px solid #312e81;
             border-radius: 8px;
-            padding: 12px 16px;
+            padding: 10px 16px;
             display: flex;
             align-items: center;
             justify-content: space-between;
@@ -73,9 +73,7 @@
         }
 
         .badge-green { background: rgba(16, 185, 129, 0.2); color: #10b981; border: 1px solid rgba(16, 185, 129, 0.4); }
-        .badge-red { background: rgba(239, 68, 68, 0.2); color: #ef4444; border: 1px solid rgba(239, 68, 68, 0.4); }
         .badge-amber { background: rgba(245, 158, 11, 0.2); color: #f59e0b; border: 1px solid rgba(245, 158, 11, 0.4); }
-        .badge-blue { background: rgba(56, 189, 248, 0.2); color: #38bdf8; border: 1px solid rgba(56, 189, 248, 0.4); }
 
         .price-strip {
             display: flex;
@@ -95,173 +93,182 @@
         .price-lbl { font-size: 0.65rem; color: var(--text-muted); font-weight: 700; text-transform: uppercase; }
         .price-val { font-size: 1rem; font-weight: 800; color: #38bdf8; }
 
-        /* ACCOUNT OVERVIEW METRICS PANEL */
-        .metrics-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-            gap: 8px;
-        }
-
-        .metric-card {
-            background: var(--bg-card);
-            border: 1px solid var(--border-color);
-            border-radius: 8px;
-            padding: 10px 14px;
+        /* MAIN PROMINENT POSITION P/L 1 TO 5 PANEL */
+        .pnl-master-panel {
+            background: linear-gradient(180deg, #0f172a 0%, #090d16 100%);
+            border: 2px solid #0284c7;
+            box-shadow: 0 0 20px rgba(2, 132, 199, 0.15);
+            border-radius: 10px;
+            padding: 16px;
             display: flex;
             flex-direction: column;
-            gap: 4px;
+            gap: 14px;
         }
 
-        .metric-title {
-            font-size: 0.68rem;
-            font-weight: 700;
-            color: var(--text-muted);
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-        }
-
-        .metric-value {
-            font-family: 'JetBrains Mono', monospace;
-            font-size: 1.1rem;
-            font-weight: 800;
-        }
-
-        .metric-sub {
-            font-size: 0.65rem;
-            color: var(--text-muted);
-        }
-
-        .val-positive { color: var(--accent-green); }
-        .val-negative { color: var(--accent-red); }
-        .val-neutral { color: var(--text-main); }
-        .val-amber { color: var(--accent-amber); }
-        .val-blue { color: #38bdf8; }
-
-        /* 5 SLOTS GRID */
-        .slots-header {
+        .pnl-master-header {
             display: flex;
             align-items: center;
             justify-content: space-between;
-            margin-top: 4px;
-            margin-bottom: 2px;
+            flex-wrap: wrap;
+            gap: 12px;
+            border-bottom: 1px solid rgba(255,255,255,0.08);
+            padding-bottom: 12px;
         }
 
-        .slots-title {
-            font-size: 0.9rem;
-            font-weight: 800;
-            letter-spacing: 0.5px;
-            text-transform: uppercase;
-            color: #94a3b8;
+        .pnl-master-title {
+            font-size: 1.1rem;
+            font-weight: 900;
+            color: #38bdf8;
+            letter-spacing: 0.8px;
             display: flex;
             align-items: center;
             gap: 8px;
         }
 
-        .slots-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+        .pnl-summary-boxes {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+
+        .pnl-sum-card {
+            background: rgba(15, 23, 42, 0.9);
+            border: 1px solid #334155;
+            border-radius: 8px;
+            padding: 8px 16px;
+            display: flex;
+            flex-direction: column;
+            align-items: flex-end;
+        }
+
+        .pnl-sum-card.primary-pnl {
+            background: linear-gradient(135deg, rgba(2, 132, 199, 0.2) 0%, rgba(15, 23, 42, 0.9) 100%);
+            border: 1.5px solid #0284c7;
+            padding: 8px 20px;
+        }
+
+        .pnl-sum-lbl {
+            font-size: 0.68rem;
+            font-weight: 800;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .pnl-sum-val {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 1.35rem;
+            font-weight: 900;
+        }
+
+        .val-positive { color: #10b981; text-shadow: 0 0 10px rgba(16, 185, 129, 0.3); }
+        .val-negative { color: #ef4444; text-shadow: 0 0 10px rgba(239, 68, 68, 0.3); }
+        .val-neutral { color: #f8fafc; }
+        .val-amber { color: #f59e0b; }
+        .val-blue { color: #38bdf8; }
+
+        /* 5 POSITION ROWS / CARDS */
+        .pnl-rows-container {
+            display: flex;
+            flex-direction: column;
             gap: 10px;
         }
 
-        .slot-card {
-            background: var(--bg-card);
+        .pnl-row-card {
+            background: #0f172a;
             border: 1px solid var(--border-color);
             border-radius: 8px;
-            padding: 12px;
-            display: flex;
-            flex-direction: column;
-            gap: 8px;
-            position: relative;
+            padding: 12px 16px;
+            display: grid;
+            grid-template-columns: 120px 100px 1.4fr 1.4fr 120px 140px 1.3fr 100px;
+            align-items: center;
+            gap: 12px;
             transition: all 0.2s ease;
         }
 
-        .slot-card.open-long { border-color: rgba(16, 185, 129, 0.4); background: linear-gradient(180deg, rgba(16, 185, 129, 0.04) 0%, var(--bg-card) 100%); }
-        .slot-card.open-short { border-color: rgba(239, 68, 68, 0.4); background: linear-gradient(180deg, rgba(239, 68, 68, 0.04) 0%, var(--bg-card) 100%); }
-        .slot-card.empty { border-style: dashed; border-color: #334155; opacity: 0.85; }
-
-        .slot-top {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            border-bottom: 1px solid rgba(255,255,255,0.05);
-            padding-bottom: 6px;
+        @media (max-width: 1200px) {
+            .pnl-row-card {
+                grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+            }
         }
 
-        .slot-num {
-            font-size: 0.75rem;
-            font-weight: 800;
-            color: var(--text-muted);
+        .pnl-row-card.open-long {
+            border-left: 4px solid #10b981;
+            background: linear-gradient(90deg, rgba(16, 185, 129, 0.06) 0%, #0f172a 100%);
+        }
+
+        .pnl-row-card.open-short {
+            border-left: 4px solid #ef4444;
+            background: linear-gradient(90deg, rgba(239, 68, 68, 0.06) 0%, #0f172a 100%);
+        }
+
+        .pnl-row-card.empty-row {
+            border-left: 4px solid #475569;
+            opacity: 0.75;
+        }
+
+        .pos-slot-tag {
+            font-size: 0.85rem;
+            font-weight: 900;
+            color: #94a3b8;
             letter-spacing: 0.5px;
         }
 
-        .slot-side {
-            padding: 3px 8px;
+        .pos-badge {
+            padding: 4px 8px;
             border-radius: 4px;
-            font-size: 0.7rem;
+            font-size: 0.72rem;
             font-weight: 800;
+            text-align: center;
             letter-spacing: 0.5px;
         }
 
-        .side-long { background: rgba(16, 185, 129, 0.2); color: #10b981; }
-        .side-short { background: rgba(239, 68, 68, 0.2); color: #ef4444; }
-        .side-empty { background: rgba(148, 163, 184, 0.1); color: #94a3b8; }
+        .badge-long { background: rgba(16, 185, 129, 0.2); color: #10b981; border: 1px solid rgba(16, 185, 129, 0.4); }
+        .badge-short { background: rgba(239, 68, 68, 0.2); color: #ef4444; border: 1px solid rgba(239, 68, 68, 0.4); }
+        .badge-empty { background: rgba(148, 163, 184, 0.1); color: #94a3b8; border: 1px solid rgba(148, 163, 184, 0.2); }
 
-        .slot-row {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            font-size: 0.78rem;
-        }
-
-        .slot-lbl { color: var(--text-muted); font-weight: 500; }
-        .slot-val { font-family: 'JetBrains Mono', monospace; font-weight: 700; }
-
-        .slot-pnl-box {
-            background: rgba(15, 23, 42, 0.9);
-            border: 1px solid #1e293b;
-            border-radius: 6px;
-            padding: 8px;
-            margin-top: 2px;
+        .pos-info-col {
             display: flex;
             flex-direction: column;
-            gap: 4px;
+            gap: 2px;
         }
 
-        .slot-pnl-main {
+        .pos-info-lbl { font-size: 0.65rem; color: var(--text-muted); font-weight: 700; text-transform: uppercase; }
+        .pos-info-val { font-family: 'JetBrains Mono', monospace; font-size: 0.82rem; font-weight: 700; }
+
+        /* PROMINENT NET PNL DISPLAY */
+        .pos-pnl-display {
             display: flex;
-            align-items: center;
-            justify-content: space-between;
-            font-size: 0.95rem;
-            font-weight: 800;
-            font-family: 'JetBrains Mono', monospace;
+            flex-direction: column;
+            align-items: flex-end;
+            justify-content: center;
+            background: rgba(9, 13, 22, 0.8);
+            border: 1px solid #1e293b;
+            padding: 6px 14px;
+            border-radius: 6px;
         }
 
-        .timer-badge {
-            background: rgba(245, 158, 11, 0.15);
-            color: #f59e0b;
-            border: 1px solid rgba(245, 158, 11, 0.3);
-            padding: 2px 6px;
-            border-radius: 4px;
-            font-size: 0.68rem;
-            font-weight: 700;
+        .pos-pnl-val {
             font-family: 'JetBrains Mono', monospace;
+            font-size: 1.3rem;
+            font-weight: 900;
+            line-height: 1.1;
         }
 
-        .btn-close-slot {
-            width: 100%;
+        .btn-close-row {
             background: rgba(239, 68, 68, 0.15);
             color: #ef4444;
             border: 1px solid rgba(239, 68, 68, 0.4);
             border-radius: 6px;
-            padding: 6px;
+            padding: 6px 12px;
             font-size: 0.75rem;
             font-weight: 800;
             cursor: pointer;
             transition: all 0.2s;
-            margin-top: 4px;
         }
 
-        .btn-close-slot:hover {
+        .btn-close-row:hover {
             background: #ef4444;
             color: #fff;
         }
@@ -337,11 +344,6 @@
             width: 100%;
         }
 
-        .form-input:focus {
-            outline: none;
-            border-color: #38bdf8;
-        }
-
         .btn-action {
             padding: 8px 14px;
             border-radius: 6px;
@@ -395,53 +397,22 @@
 
         tr:hover td { background: rgba(255,255,255,0.02); }
 
-        /* CHART & LOGS */
-        .bottom-grid {
-            display: grid;
-            grid-template-columns: 2fr 1fr;
-            gap: 12px;
-        }
-
-        @media (max-width: 1024px) {
-            .bottom-grid { grid-template-columns: 1fr; }
-        }
-
         .chart-box {
             height: 380px;
             width: 100%;
             border-radius: 8px;
             overflow: hidden;
         }
-
-        .stream-log {
-            font-family: 'JetBrains Mono', monospace;
-            font-size: 0.68rem;
-            height: 380px;
-            overflow-y: auto;
-            background: #090d16;
-            border: 1px solid var(--border-color);
-            border-radius: 8px;
-            padding: 10px;
-            display: flex;
-            flex-direction: column;
-            gap: 6px;
-        }
-
-        .stream-item {
-            border-bottom: 1px solid rgba(255,255,255,0.03);
-            padding-bottom: 4px;
-            line-height: 1.3;
-        }
     </style>
 </head>
 <body>
 
-    <!-- TOP BANNER -->
+    <!-- TOP HEADER BANNER -->
     <div class="top-banner">
         <div class="banner-title">
             <h1>BTC 5-LIVE ROLLING TEST</h1>
-            <span class="badge-status badge-amber" id="badgeTestMode">PAPER / TEST MODE — REAL ORDERS: OFF</span>
-            <span class="badge-status badge-green" id="badgeEngineStatus">TEST SCANNER ACTIVE</span>
+            <span class="badge-status badge-amber">PAPER / TEST MODE — REAL ORDERS: OFF</span>
+            <span class="badge-status badge-green">ROLLING 2-MIN TEST SCANNER ACTIVE</span>
         </div>
         <div class="price-strip">
             <div class="price-box">
@@ -455,55 +426,33 @@
         </div>
     </div>
 
-    <!-- ACCOUNT & TEST CAPITAL OVERVIEW METRICS -->
-    <div class="metrics-grid">
-        <div class="metric-card">
-            <div class="metric-title">Test Capital Reference</div>
-            <div class="metric-value val-blue" id="lblTestCapital">₹20,000.00</div>
-            <div class="metric-sub">Fixed Paper Reference</div>
+    <!-- PRIMARY MONITORING PANEL: POSITION P/L — 1 TO 5 -->
+    <div class="pnl-master-panel">
+        <div class="pnl-master-header">
+            <div class="pnl-master-title">
+                <span>🔥 POSITION P/L — 1 TO 5</span>
+                <span style="font-size: 0.72rem; color: #94a3b8; font-weight: 600;">(AUTHORITATIVE LIVE MUDREX NET P&L)</span>
+            </div>
+            <div class="pnl-summary-boxes">
+                <div class="pnl-sum-card primary-pnl">
+                    <span class="pnl-sum-lbl">TOTAL OPEN NET P&L</span>
+                    <span class="pnl-sum-val val-neutral" id="lblTotalOpenNetPnl">₹0.00</span>
+                </div>
+                <div class="pnl-sum-card">
+                    <span class="pnl-sum-lbl">REALIZED TEST P&L</span>
+                    <span class="pnl-sum-val val-neutral" id="lblRealizedTestPnl">₹0.00</span>
+                </div>
+                <div class="pnl-sum-card">
+                    <span class="pnl-sum-lbl">TOTAL TEST P&L</span>
+                    <span class="pnl-sum-val val-neutral" id="lblTotalTestPnl">₹0.00</span>
+                </div>
+            </div>
         </div>
-        <div class="metric-card">
-            <div class="metric-title">Used Margin</div>
-            <div class="metric-value val-amber" id="lblUsedMargin">₹0.00</div>
-            <div class="metric-sub" id="lblUsedMarginSub">5 Slots (5x Leverage)</div>
-        </div>
-        <div class="metric-card">
-            <div class="metric-title">Free Buffer</div>
-            <div class="metric-value val-positive" id="lblFreeBuffer">₹20,000.00</div>
-            <div class="metric-sub">Safety Margin Buffer</div>
-        </div>
-        <div class="metric-card">
-            <div class="metric-title">Active Slots</div>
-            <div class="metric-value val-blue" id="lblActiveSlots">0 / 5</div>
-            <div class="metric-sub">2-Min Entry Cycle</div>
-        </div>
-        <div class="metric-card">
-            <div class="metric-title">Open Net P&L</div>
-            <div class="metric-value val-neutral" id="lblOpenNetPnl">₹0.00</div>
-            <div class="metric-sub" id="lblGrossAndFees">Gross: ₹0 | Fees: ₹0</div>
-        </div>
-        <div class="metric-card">
-            <div class="metric-title">Realized Test P&L</div>
-            <div class="metric-value val-neutral" id="lblRealizedTestPnl">₹0.00</div>
-            <div class="metric-sub">Closed Paper Trades</div>
-        </div>
-        <div class="metric-card">
-            <div class="metric-title">TOTAL TEST P&L</div>
-            <div class="metric-value val-neutral" id="lblTotalTestPnl">₹0.00</div>
-            <div class="metric-sub">Open + Realized</div>
-        </div>
-    </div>
 
-    <!-- 5 POSITION SLOTS GRID -->
-    <div class="slots-header">
-        <div class="slots-title">
-            <span>⚡ INDEPENDENT POSITION SLOTS (MAX 5)</span>
+        <!-- 5 POSITIONS ROWS CONTAINER -->
+        <div class="pnl-rows-container" id="pnlRowsContainer">
+            <!-- Rendered via JS -->
         </div>
-        <div class="metric-sub">Rolling Rules: 2-Min Entry Interval | 10-Min Max Holding Time</div>
-    </div>
-
-    <div class="slots-grid" id="slotsContainer">
-        <!-- Rendered via JS -->
     </div>
 
     <!-- CONTROLS & RISK SETTINGS PANEL -->
@@ -512,7 +461,7 @@
         <div class="section-card">
             <div class="section-header">
                 <div class="section-title">🧪 TEST CONTROLS & STATISTICS</div>
-                <div class="metric-sub" id="lblTestStatusStr">Status: RUNNING</div>
+                <div class="pos-info-lbl" id="lblTestStatusStr">Status: RUNNING</div>
             </div>
 
             <div style="display: flex; gap: 8px; flex-wrap: wrap;">
@@ -524,16 +473,24 @@
 
             <div class="form-grid" style="margin-top: 6px;">
                 <div class="form-group">
+                    <span class="form-label">Test Capital Ref</span>
+                    <span class="form-input" id="lblTestCapital">₹20,000</span>
+                </div>
+                <div class="form-group">
+                    <span class="form-label">Used Margin</span>
+                    <span class="form-input" id="lblUsedMargin">₹0.00</span>
+                </div>
+                <div class="form-group">
+                    <span class="form-label">Free Buffer</span>
+                    <span class="form-input" id="lblFreeBuffer">₹20,000</span>
+                </div>
+                <div class="form-group">
                     <span class="form-label">Total Trades</span>
                     <span class="form-input" id="statTotalTrades">0</span>
                 </div>
                 <div class="form-group">
                     <span class="form-label">Win Rate</span>
                     <span class="form-input" id="statWinRate">0.0%</span>
-                </div>
-                <div class="form-group">
-                    <span class="form-label">Winning / Losing</span>
-                    <span class="form-input" id="statWinLoss">0 / 0</span>
                 </div>
                 <div class="form-group">
                     <span class="form-label">10-Min Time Exits</span>
@@ -576,30 +533,19 @@
         </div>
     </div>
 
-    <!-- BOTTOM GRID: CHART & EVALUATION STREAM -->
-    <div class="bottom-grid">
-        <div class="section-card">
-            <div class="section-header">
-                <div class="section-title">📈 BTCUSDT REAL-TIME CHART (TradingView)</div>
-            </div>
-            <div class="chart-box" id="tradingview_chart"></div>
+    <!-- SECONDARY: TRADINGVIEW CHART -->
+    <div class="section-card">
+        <div class="section-header">
+            <div class="section-title">📈 BTCUSDT REAL-TIME CHART (TradingView)</div>
         </div>
-
-        <div class="section-card">
-            <div class="section-header">
-                <div class="section-title">📡 STRATEGY EVALUATION STREAM</div>
-            </div>
-            <div class="stream-log" id="evaluationStream">
-                <div class="stream-item">Initializing strategy feed...</div>
-            </div>
-        </div>
+        <div class="chart-box" id="tradingview_chart"></div>
     </div>
 
-    <!-- COMPLETED TEST TRADES HISTORY -->
+    <!-- COMPLETED PAPER TEST TRADES HISTORY -->
     <div class="section-card">
         <div class="section-header">
             <div class="section-title">📜 COMPLETED PAPER TEST TRADES HISTORY</div>
-            <div class="metric-sub" id="lblHistoryCount">0 Trades Closed</div>
+            <div class="pos-info-lbl" id="lblHistoryCount">0 Trades Closed</div>
         </div>
 
         <div class="table-container">
@@ -658,48 +604,39 @@
                 document.getElementById('valBtcUsd').innerText = `$${(data.mudrex_btc_usd_price || 0).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
                 document.getElementById('valBtcInr').innerText = `₹${(data.btc_price || 0).toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
 
-                // 2. Metrics Overview
-                document.getElementById('lblTestCapital').innerText = `₹${(data.test_capital || 20000).toLocaleString('en-IN', {minimumFractionDigits: 2})}`;
-                document.getElementById('lblUsedMargin').innerText = `₹${(data.used_margin || 0).toLocaleString('en-IN', {minimumFractionDigits: 2})}`;
-                document.getElementById('lblFreeBuffer').innerText = `₹${(data.free_margin || 20000).toLocaleString('en-IN', {minimumFractionDigits: 2})}`;
-                document.getElementById('lblActiveSlots').innerText = `${data.active_positions_count || 0} / ${data.max_positions || 5}`;
-
-                // Open P&L Styling
+                // 2. Summary P&Ls Top Banner
                 const openNet = data.total_unrealized_net_pnl || 0.0;
-                const elOpenPnl = document.getElementById('lblOpenNetPnl');
+                const elOpenPnl = document.getElementById('lblTotalOpenNetPnl');
                 elOpenPnl.innerText = `₹${openNet >= 0 ? '+' : ''}${openNet.toFixed(2)}`;
-                elOpenPnl.className = `metric-value ${openNet > 0 ? 'val-positive' : (openNet < 0 ? 'val-negative' : 'val-neutral')}`;
-                document.getElementById('lblGrossAndFees').innerText = `Gross: ₹${(data.total_unrealized_gross_pnl || 0).toFixed(2)} | Fees: ₹${(data.total_estimated_fees || 0).toFixed(2)}`;
+                elOpenPnl.className = `pnl-sum-val ${openNet > 0 ? 'val-positive' : (openNet < 0 ? 'val-negative' : 'val-neutral')}`;
 
-                // Realized Test P&L Styling
                 const realizedPnl = data.realized_test_pnl || 0.0;
                 const elRealized = document.getElementById('lblRealizedTestPnl');
                 elRealized.innerText = `₹${realizedPnl >= 0 ? '+' : ''}${realizedPnl.toFixed(2)}`;
-                elRealized.className = `metric-value ${realizedPnl > 0 ? 'val-positive' : (realizedPnl < 0 ? 'val-negative' : 'val-neutral')}`;
+                elRealized.className = `pnl-sum-val ${realizedPnl > 0 ? 'val-positive' : (realizedPnl < 0 ? 'val-negative' : 'val-neutral')}`;
 
-                // Total Test P&L Styling
                 const totalPnl = data.total_test_pnl || 0.0;
                 const elTotalPnl = document.getElementById('lblTotalTestPnl');
                 elTotalPnl.innerText = `₹${totalPnl >= 0 ? '+' : ''}${totalPnl.toFixed(2)}`;
-                elTotalPnl.className = `metric-value ${totalPnl > 0 ? 'val-positive' : (totalPnl < 0 ? 'val-negative' : 'val-neutral')}`;
+                elTotalPnl.className = `pnl-sum-val ${totalPnl > 0 ? 'val-positive' : (totalPnl < 0 ? 'val-negative' : 'val-neutral')}`;
 
-                // Statistics
+                // Controls & Capital
+                document.getElementById('lblTestCapital').innerText = `₹${(data.test_capital || 20000).toLocaleString('en-IN')}`;
+                document.getElementById('lblUsedMargin').innerText = `₹${(data.used_margin || 0).toFixed(2)}`;
+                document.getElementById('lblFreeBuffer').innerText = `₹${(data.free_margin || 20000).toFixed(2)}`;
+
                 if (data.statistics) {
                     document.getElementById('statTotalTrades').innerText = data.statistics.total_trades || 0;
                     document.getElementById('statWinRate').innerText = `${data.statistics.win_rate || 0}%`;
-                    document.getElementById('statWinLoss').innerText = `${data.statistics.winning_trades || 0} / ${data.statistics.losing_trades || 0}`;
                     document.getElementById('statTimeExits').innerText = data.statistics.time_exits || 0;
                 }
 
                 document.getElementById('lblTestStatusStr').innerText = `Status: ${data.test_status || 'RUNNING'}`;
 
-                // 3. Render 5 Position Slots
-                renderSlots(data.slots || [], data.btc_price || 0, data.mudrex_btc_usd_price || 0);
+                // 3. Render 5 Position P/L Rows
+                renderPnlRows(data.slots || [], data.btc_price || 0, data.mudrex_btc_usd_price || 0);
 
-                // 4. Render Evaluation Stream
-                renderEvaluationStream(data.evaluation_stream || []);
-
-                // 5. Render History Table
+                // 4. Render History Table
                 renderTradeHistory(data.trade_history || []);
 
             } catch (err) {
@@ -707,114 +644,85 @@
             }
         }
 
-        function renderSlots(slots, currInr, currUsd) {
-            const container = document.getElementById('slotsContainer');
+        function renderPnlRows(slots, currInr, currUsd) {
+            const container = document.getElementById('pnlRowsContainer');
             let html = '';
 
-            slots.forEach(slot => {
+            for (let i = 1; i <= 5; i++) {
+                const slot = slots.find(s => s.slot_index === i) || { slot_index: i, status: 'EMPTY' };
                 const isOpened = (slot.status === 'OPEN' && slot.position);
                 const pos = slot.position;
 
                 if (isOpened) {
-                    const sideClass = pos.direction === 'BUY' ? 'open-long' : 'open-short';
-                    const sideBadge = pos.direction === 'BUY' ? 'side-long' : 'side-short';
+                    const cardClass = pos.direction === 'BUY' ? 'open-long' : 'open-short';
+                    const badgeClass = pos.direction === 'BUY' ? 'badge-long' : 'badge-short';
                     const sideText = pos.direction === 'BUY' ? 'BUY LONG' : 'SELL SHORT';
                     const netPnl = slot.net_pnl || 0.0;
                     const pnlColor = netPnl > 0 ? 'val-positive' : (netPnl < 0 ? 'val-negative' : 'val-neutral');
 
                     html += `
-                        <div class="slot-card ${sideClass}">
-                            <div class="slot-top">
-                                <span class="slot-num">POSITION ${slot.slot_index}</span>
-                                <span class="slot-side ${sideBadge}">${sideText}</span>
+                        <div class="pnl-row-card ${cardClass}">
+                            <div class="pos-slot-tag">POSITION ${i}</div>
+                            
+                            <div>
+                                <span class="pos-badge ${badgeClass}">${sideText}</span>
                             </div>
 
-                            <div class="slot-row">
-                                <span class="slot-lbl">Trade ID</span>
-                                <span class="slot-val">${pos.trade_id || 'N/A'}</span>
-                            </div>
-                            <div class="slot-row">
-                                <span class="slot-lbl">Quantity</span>
-                                <span class="slot-val">${pos.quantity} BTC</span>
-                            </div>
-                            <div class="slot-row">
-                                <span class="slot-lbl">Entry USD / INR</span>
-                                <span class="slot-val">$${(pos.entry_price_usd || 0).toFixed(2)} | ₹${(pos.entry_price || 0).toLocaleString('en-IN')}</span>
-                            </div>
-                            <div class="slot-row">
-                                <span class="slot-lbl">Current USD / INR</span>
-                                <span class="slot-val">$${(currUsd || 0).toFixed(2)} | ₹${(currInr || 0).toLocaleString('en-IN')}</span>
-                            </div>
-                            <div class="slot-row">
-                                <span class="slot-lbl">Holding Age / Max</span>
-                                <span class="timer-badge">⏳ ${slot.holding_time_str || '00:00 / 10:00'}</span>
-                            </div>
-                            <div class="slot-row">
-                                <span class="slot-lbl">Remaining Time</span>
-                                <span class="slot-val val-amber">${slot.remaining_time_str || '10:00'}</span>
-                            </div>
-                            <div class="slot-row">
-                                <span class="slot-lbl">Initial Margin</span>
-                                <span class="slot-val">₹${(slot.initial_margin || 0).toFixed(2)}</span>
+                            <div class="pos-info-col">
+                                <span class="pos-info-lbl">Quantity & Leverage</span>
+                                <span class="pos-info-val">${pos.quantity} BTC (5x)</span>
                             </div>
 
-                            <div class="slot-pnl-box">
-                                <div class="slot-pnl-main">
-                                    <span>NET P&L</span>
-                                    <span class="${pnlColor}">₹${netPnl >= 0 ? '+' : ''}${netPnl.toFixed(2)}</span>
-                                </div>
-                                <div class="slot-row">
-                                    <span class="slot-lbl">Gross / Fees</span>
-                                    <span class="slot-val" style="font-size:0.7rem;">₹${(slot.gross_pnl || 0).toFixed(2)} | ₹${(slot.charges || 0).toFixed(2)}</span>
-                                </div>
-                                <div class="slot-row">
-                                    <span class="slot-lbl">Target / SL</span>
-                                    <span class="slot-val" style="font-size:0.7rem;">+₹100 NET | -₹200 NET</span>
-                                </div>
+                            <div class="pos-info-col">
+                                <span class="pos-info-lbl">Entry USD / INR</span>
+                                <span class="pos-info-val">$${(pos.entry_price_usd || 0).toFixed(2)} | ₹${(pos.entry_price || 0).toLocaleString('en-IN')}</span>
                             </div>
 
-                            <button class="btn-close-slot" onclick="closeSingleSlot('${pos.trade_id}')">✖ CLOSE POSITION NOW</button>
+                            <div class="pos-info-col">
+                                <span class="pos-info-lbl">Current USD / INR</span>
+                                <span class="pos-info-val">$${(currUsd || 0).toFixed(2)} | ₹${(currInr || 0).toLocaleString('en-IN')}</span>
+                            </div>
+
+                            <div class="pos-info-col">
+                                <span class="pos-info-lbl">Target / SL</span>
+                                <span class="pos-info-val" style="color:#38bdf8;">+₹100 NET | -₹200 NET</span>
+                            </div>
+
+                            <div class="pos-info-col">
+                                <span class="pos-info-lbl">Holding / Remaining Time</span>
+                                <span class="pos-info-val val-amber">⏳ ${slot.holding_time_str || '00:00'} (Rem: ${slot.remaining_time_str || '10:00'})</span>
+                            </div>
+
+                            <div class="pos-pnl-display">
+                                <span class="pos-info-lbl">NET P&L (Fees Included)</span>
+                                <span class="pos-pnl-val ${pnlColor}">₹${netPnl >= 0 ? '+' : ''}${netPnl.toFixed(2)}</span>
+                            </div>
                         </div>
                     `;
                 } else {
                     html += `
-                        <div class="slot-card empty">
-                            <div class="slot-top">
-                                <span class="slot-num">POSITION ${slot.slot_index}</span>
-                                <span class="slot-side side-empty">READY / EMPTY</span>
+                        <div class="pnl-row-card empty-row">
+                            <div class="pos-slot-tag">POSITION ${i}</div>
+                            <div>
+                                <span class="pos-badge badge-empty">READY / EMPTY</span>
                             </div>
-                            <div style="padding: 24px 0; text-align: center; color: var(--text-muted); font-size: 0.8rem;">
-                                <span>Slot Available</span><br>
-                                <span style="font-size: 0.7rem; color: #475569;">Awaiting 2-Min Rolling Signal</span>
+                            <div class="pos-info-col" style="grid-column: span 4;">
+                                <span class="pos-info-lbl">Status</span>
+                                <span class="pos-info-val" style="color:#64748b;">Awaiting 2-Min Rolling Strategy Signal</span>
+                            </div>
+                            <div class="pos-info-col">
+                                <span class="pos-info-lbl">Target / SL</span>
+                                <span class="pos-info-val" style="color:#475569;">+₹100 NET | -₹200 NET</span>
+                            </div>
+                            <div class="pos-pnl-display">
+                                <span class="pos-info-lbl">NET P&L</span>
+                                <span class="pos-pnl-val val-neutral">₹0.00</span>
                             </div>
                         </div>
                     `;
                 }
-            });
-
-            container.innerHTML = html;
-        }
-
-        function renderEvaluationStream(stream) {
-            const container = document.getElementById('evaluationStream');
-            if (!stream || stream.length === 0) {
-                container.innerHTML = '<div class="stream-item">Scanning market...</div>';
-                return;
             }
 
-            let html = '';
-            stream.slice(0, 20).forEach(item => {
-                const actionColor = item.action === 'BUY' ? 'color:#10b981;font-weight:bold;' : (item.action === 'SELL' ? 'color:#ef4444;font-weight:bold;' : 'color:#94a3b8;');
-                html += `
-                    <div class="stream-item">
-                        <span style="color:#64748b;">[${item.timestamp.split(' ')[1] || ''}]</span>
-                        <span style="${actionColor}">ACTION: ${item.action}</span> |
-                        <span>RSI: ${item.rsi.toFixed(1)}</span> |
-                        <span>Price: ₹${item.price.toLocaleString('en-IN')}</span><br>
-                        <span style="color:#64748b;">${item.reasons}</span>
-                    </div>
-                `;
-            });
             container.innerHTML = html;
         }
 
@@ -852,22 +760,6 @@
                 `;
             });
             body.innerHTML = html;
-        }
-
-        async function closeSingleSlot(tradeId) {
-            if (!confirm(`Confirm manual exit for trade ${tradeId}?`)) return;
-            try {
-                const resp = await fetch('/api/bitcoin/live5/close_position', {
-                    method: 'POST',
-                    headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({trade_id: tradeId})
-                });
-                const res = await resp.json();
-                alert(res.success ? "Position closed successfully!" : `Failed: ${res.error}`);
-                fetchDashboardState();
-            } catch (err) {
-                alert(`Error: ${err}`);
-            }
         }
 
         async function handleControl(action) {
@@ -938,7 +830,7 @@
 
         // Start Loop
         fetchDashboardState();
-        setInterval(fetchDashboardState, 3000);
+        setInterval(fetchDashboardState, 2000);
     </script>
 </body>
 </html>
