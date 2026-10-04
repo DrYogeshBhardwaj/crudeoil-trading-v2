@@ -465,12 +465,12 @@
         </div>
     </div>
 
-    <!-- PRIMARY MONITORING PANEL: POSITION P/L — 1 TO 6 -->
+    <!-- TOP SUMMARY P&L BANNER -->
     <div class="pnl-master-panel">
         <div class="pnl-master-header">
             <div class="pnl-master-title">
-                <span>🔥 POSITION P/L — 1 TO 6 (3 LONG + 3 SHORT BASKET)</span>
-                <span style="font-size: 0.72rem; color: #94a3b8; font-weight: 600;">(SAME-PRICE BASKET: P1-P3 LONG | P4-P6 SHORT)</span>
+                <span>⚡ LIVE SUMMARY PERFORMANCE</span>
+                <span style="font-size: 0.72rem; color: #94a3b8; font-weight: 600;">(REAL-TIME CALCULATIONS)</span>
             </div>
             <div class="pnl-summary-boxes">
                 <div class="pnl-sum-card primary-pnl">
@@ -487,10 +487,53 @@
                 </div>
             </div>
         </div>
+    </div>
 
-        <!-- 5 POSITIONS ROWS CONTAINER -->
+    <!-- SECTION A: ACTIVE POSITIONS — LIVE P&L (P1 to P6) -->
+    <div class="section-card" style="border: 1px solid rgba(56, 189, 248, 0.4); background: rgba(15, 23, 42, 0.9);">
+        <div class="section-header">
+            <div class="section-title" style="color: #38bdf8; font-size: 1.1rem; font-weight: 800;">
+                🔥 SECTION A: ACTIVE POSITIONS — LIVE P&L (P1 TO P6)
+            </div>
+            <span class="badge-status badge-green" id="badgeActiveCount">6 / 6 POSITIONS ACTIVE</span>
+        </div>
+
         <div class="pnl-rows-container" id="pnlRowsContainer">
-            <!-- Rendered via JS -->
+            <!-- Rendered via JS: P1 to P6 -->
+        </div>
+    </div>
+
+    <!-- SECTION B: COMPLETED TRADE HISTORY -->
+    <div class="section-card">
+        <div class="section-header">
+            <div class="section-title">📜 SECTION B: COMPLETED TRADE HISTORY</div>
+            <div class="pos-info-lbl" id="lblHistoryCount" style="font-size: 0.85rem; color: var(--accent-blue);">0 Trades Closed</div>
+        </div>
+
+        <div class="table-container" style="max-height: 480px; overflow-y: auto;">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Trade ID</th>
+                        <th>Slot</th>
+                        <th>Side</th>
+                        <th>Qty</th>
+                        <th>Entry Price</th>
+                        <th>Exit Price</th>
+                        <th>Entry Time</th>
+                        <th>Exit Time</th>
+                        <th>Gross P&L</th>
+                        <th>Fees</th>
+                        <th>NET P&L</th>
+                        <th>Exit Reason</th>
+                    </tr>
+                </thead>
+                <tbody id="tradeHistoryBody">
+                    <tr>
+                        <td colspan="12" style="text-align: center; color: var(--text-muted);">No closed paper test trades recorded yet.</td>
+                    </tr>
+                </tbody>
+            </table>
         </div>
     </div>
 
@@ -531,17 +574,13 @@
                     <span class="form-label">Win Rate</span>
                     <span class="form-input" id="statWinRate">0.0%</span>
                 </div>
-                <div class="form-group">
-                    <span class="form-label">10-Min Time Exits</span>
-                    <span class="form-input" id="statTimeExits">0</span>
-                </div>
             </div>
         </div>
 
-        <!-- RISK & POSITION CONFIGURATION -->
+        <!-- SECTION C: RISK & POSITION CONFIGURATION -->
         <div class="section-card">
             <div class="section-header">
-                <div class="section-title">⚙️ RISK & POSITION CONFIGURATION</div>
+                <div class="section-title">⚙️ SECTION C: RISK & POSITION CONFIGURATION</div>
                 <span class="badge-status badge-blue">PER POSITION PARAMETERS</span>
             </div>
 
@@ -570,47 +609,15 @@
 
             <button class="btn-action btn-blue" onclick="saveRiskSettings()">💾 SAVE SETTINGS</button>
         </div>
-        <!-- PRIMARY P/L LEDGER & TRADE HISTORY -->
-        <div class="section-card">
-            <div class="section-header">
-                <div class="section-title">📊 REAL-TIME P/L LEDGER & COMPLETED TRADE HISTORY</div>
-                <div class="pos-info-lbl" id="lblHistoryCount" style="font-size: 0.85rem; color: var(--accent-blue);">0 Trades Closed</div>
-            </div>
+    </div>
 
-            <div class="table-container" style="max-height: 480px; overflow-y: auto;">
-                <table>
-                    <thead>
-                        <tr>
-                            <th>Trade ID</th>
-                            <th>Slot</th>
-                            <th>Side</th>
-                            <th>Qty</th>
-                            <th>Entry Price</th>
-                            <th>Exit Price</th>
-                            <th>Entry Time</th>
-                            <th>Exit Time</th>
-                            <th>Gross P&L</th>
-                            <th>Fees</th>
-                            <th>NET P&L</th>
-                            <th>Exit Reason</th>
-                        </tr>
-                    </thead>
-                    <tbody id="tradeHistoryBody">
-                        <tr>
-                            <td colspan="12" style="text-align: center; color: var(--text-muted);">No closed paper test trades recorded yet.</td>
-                        </tr>
-                    </tbody>
-                </table>
-            </div>
+    <!-- SECTION D: TRADINGVIEW CHART -->
+    <div class="section-card">
+        <div class="section-header">
+            <div class="section-title">📈 SECTION D: BTCUSDT REAL-TIME CHART (TradingView)</div>
         </div>
-
-        <!-- SECONDARY: TRADINGVIEW CHART -->
-        <div class="section-card">
-            <div class="section-header">
-                <div class="section-title">📈 BTCUSDT REAL-TIME CHART (TradingView)</div>
-            </div>
-            <div class="chart-box" id="tradingview_chart"></div>
-        </div>
+        <div class="chart-box" id="tradingview_chart"></div>
+    </div>
 
     <!-- TradingView Widget Script -->
     <script type="text/javascript" src="https://s3.tradingview.com/tv.js"></script>
@@ -692,6 +699,12 @@
                 document.getElementById('lblTestStatusStr').innerText = `Status: ${data.test_status || 'RUNNING'}`;
 
                 // 3. Render 6 Position P/L Rows
+                const activeCount = (data.slots || []).filter(s => s.status === 'OPEN').length;
+                const elBadgeCount = document.getElementById('badgeActiveCount');
+                if (elBadgeCount) {
+                    elBadgeCount.innerText = `${activeCount} / ${data.max_positions || 6} POSITIONS ACTIVE`;
+                }
+
                 renderPnlRows(data.slots || [], data.btc_price || 0, data.mudrex_btc_usd_price || 0);
 
                 // 4. Render History Table
@@ -707,7 +720,7 @@
             let html = '';
 
             for (let i = 1; i <= 6; i++) {
-                const slot = slots.find(s => s.slot_index === i) || { slot_index: i, status: 'EMPTY' };
+                const slot = slots.find(s => (s.slot_index == i || parseInt(s.slot_index) === i)) || { slot_index: i, status: 'EMPTY' };
                 const isOpened = (slot.status === 'OPEN' && slot.position);
                 const pos = slot.position;
 

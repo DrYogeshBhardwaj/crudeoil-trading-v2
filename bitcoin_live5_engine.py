@@ -261,7 +261,15 @@ class BitcoinLive5Engine:
         total_used_margin = 0.0
 
         slots = []
-        pos_by_slot = {p.get("slot_index", i+1): p for i, p in enumerate(active_pos_list)}
+        pos_by_slot = {}
+        for i, p in enumerate(active_pos_list):
+            s_val = p.get("slot_index")
+            try:
+                s_key = int(s_val) if s_val is not None else (i + 1)
+            except Exception:
+                s_key = i + 1
+            pos_by_slot[s_key] = p
+
         btc_inr_val = round((curr_price_usd * hedge_rate), 2) if (curr_price_usd and curr_price_usd > 0) else 0.0
         now_ts = time.time()
 
