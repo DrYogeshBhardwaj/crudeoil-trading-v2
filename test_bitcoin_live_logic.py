@@ -1556,6 +1556,88 @@ class TestBitcoinLiveEngineLogic(unittest.TestCase):
         self.assertEqual(initial_count, post_count)
         print("[TEST 66 PASS] Changing P/L Settings Does NOT Create New Position Verified!")
 
+    def test_67_short_mudrex_pnl_reconciliation(self):
+        """67. Verify SHORT entry $85,866.40 USD and current $86,271.30 USD produces -Rs.82.60 Gross P&L matching Mudrex screenshot, NOT -Rs.1,577."""
+        pos = {
+            "trade_id": "BTC_LIVE_SHORT_AUDIT",
+            "mudrex_position_id": "01a108eb-fdf2-735a-a74c-95ea825ee9aa",
+            "entry_timestamp": "2026-10-05 03:27:26",
+            "symbol": "BTCUSDT",
+            "direction": "SELL",
+            "quantity": 0.002,
+            "entry_price": 8758372.8,
+            "entry_price_usd": 85866.40,
+            "hedge_rate": 102.0,
+            "stop_loss": 8948373.3,
+            "target": 8698372.3,
+            "trend_state": "BEARISH",
+            "confidence": 85,
+            "status": "OPEN"
+        }
+        DB.save_bitcoin_live_trade(pos)
+
+        gross_usd, gross_inr, entry_fee, exit_fee, total_chg, net_inr = self.engine.calculate_live_position_pnl(
+            pos, 86271.30, 102.0
+        )
+        self.assertAlmostEqual(gross_inr, -82.60, delta=0.5)
+        self.assertAlmostEqual(net_inr, -100.16, delta=1.0)
+        self.assertGreater(net_inr, -500.0) # Confirms P&L is ~ -Rs.100, NOT -Rs.1577
+        print(f"[TEST 67 PASS] SHORT P&L Reconciled with Mudrex: Entry=$85,866.40 | Curr=$86,271.30 | Gross PnL=Rs.{gross_inr:.2f} (Mudrex=-Rs.82.59) | Net PnL=Rs.{net_inr:.2f}")
+
+    def test_68_risk_settings_defaults_and_restart_persistence(self):
+        """68. Verify Target Profit Rs.100 and Max Loss Rs.200 load as defaults and persist across restarts."""
+        new_engine = BitcoinLiveEngine()
+        self.assertEqual(new_engine.per_trade_profit_target_inr, 100.0)
+        self.assertEqual(new_engine.per_trade_loss_limit_inr, 200.0)
+
+        dash = new_engine.get_dashboard_state()
+        self.assertEqual(dash.get("per_trade_profit_target_inr"), 100.0)
+        self.assertEqual(dash.get("per_trade_loss_limit_inr"), 200.0)
+        print("[TEST 68 PASS] Target Rs.100 and Max Loss Rs.200 Defaults & Restart Persistence Verified!")
+
+    def test_69_authoritative_closed_long_mudrex_pnl_seeding(self):
+        """69. Verify authoritative Mudrex closed LONG realized P&L (+Rs.124.13) is recorded in trade history."""
+        trades = DB.load_all_bitcoin_live_trades()
+        closed_long = [t for t in trades if t.get("mudrex_position_id") == "01a1067d-f252-7e89-91da-9b03be176bfe"]
+        self.assertTrue(len(closed_long) > 0)
+        t = closed_long[0]
+        self.assertEqual(t.get("status"), "CLOSED")
+        self.assertEqual(t.get("exit_price_usd"), 85868.50)
+        self.assertAlmostEqual(t.get("net_pnl"), 124.13, delta=0.1)
+        print(f"[TEST 69 PASS] Authoritative Mudrex Closed LONG Realized P&L (+Rs.{t.get('net_pnl')}) Recorded Verified!")
+
+    def test_70_no_false_exit_on_notional_vs_margin(self):
+        """70. Verify position is NOT falsely closed due to confusing USD notional value with INR margin."""
+        pos = {
+            "trade_id": "BTC_LIVE_SHORT_TEST70",
+            "mudrex_position_id": "POS_TEST_70",
+            "entry_timestamp": "2026-10-05 03:30:00",
+            "symbol": "BTCUSDT",
+            "direction": "SELL",
+            "quantity": 0.002,
+            "entry_price": 8758372.8,
+            "entry_price_usd": 85866.40,
+            "hedge_rate": 102.0,
+            "stop_loss": 8948373.3,
+            "target": 8698372.3,
+            "trend_state": "BEARISH",
+            "confidence": 85,
+            "status": "OPEN"
+        }
+        DB.save_bitcoin_live_trade(pos)
+
+        closed = []
+        self.engine.adapter.close_position_safely = lambda *a, **kw: closed.append(1) or {"success": True}
+
+        # Current price $86,000 USD -> NET P&L = -Rs.44.80 (well within -Rs.200 max loss)
+        self.engine.fetch_mudrex_futures_market_data = lambda: (86000.0, 102.0, "Mudrex")
+        self.engine.process_tick()
+
+        self.assertEqual(len(closed), 0)
+        active = DB.load_active_bitcoin_live_position()
+        self.assertIsNotNone(active)
+        print("[TEST 70 PASS] No False Exit on USD Notional vs INR Margin Verified!")
+
 if __name__ == "__main__":
     unittest.main()
 

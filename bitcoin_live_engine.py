@@ -567,7 +567,7 @@ class BitcoinLiveEngine:
             DB.save_bitcoin_live_setting("daily_loss_limit_hit", "FALSE")
             DB.save_bitcoin_live_setting("today_realized_pnl", "0.0")
 
-        self.per_trade_loss_limit_inr = float(DB.load_bitcoin_live_setting("per_trade_loss_limit_inr", "400.0"))
+        self.per_trade_loss_limit_inr = float(DB.load_bitcoin_live_setting("per_trade_loss_limit_inr", "200.0"))
         self.per_trade_profit_target_inr = float(DB.load_bitcoin_live_setting("per_trade_profit_target_inr", "100.0"))
         self.daily_loss_limit_inr = float(DB.load_bitcoin_live_setting("daily_loss_limit_inr", "1000.0"))
 
