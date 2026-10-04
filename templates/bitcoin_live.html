@@ -522,17 +522,38 @@
                 <div style="font-size:0.8rem; margin-top:4px;">No active position open. Engine will automatically execute the next BUY / SELL trade on signal.</div>
             </div>
 
+            <!-- 2.5 USER-CONFIGURABLE P/L SETTINGS CONTROL PANEL -->
+            <div class="panel" style="padding:12px; border:1px solid rgba(56,189,248,0.3); background:rgba(15,23,42,0.6);">
+                <div style="font-size:0.82rem; font-weight:700; color:#38bdf8; margin-bottom:8px; display:flex; align-items:center; justify-content:space-between;">
+                    <span>⚙️ P/L SETTINGS (LIVE TARGET & LOSS CONTROL)</span>
+                    <span id="risk_save_status" style="font-size:0.75rem; color:#10b981; font-weight:700;"></span>
+                </div>
+                <div style="display:flex; flex-wrap:wrap; gap:16px; align-items:flex-end;">
+                    <div>
+                        <label style="font-size:0.7rem; color:#94a3b8; display:block; margin-bottom:3px; font-weight:700;">Target Profit (NET ₹)</label>
+                        <input type="number" id="input_target_profit_net" value="100" min="1" step="1" style="background:#0f172a; border:1px solid #334155; color:#10b981; font-weight:800; padding:6px 10px; border-radius:4px; width:120px; font-family:'JetBrains Mono', monospace;">
+                    </div>
+                    <div>
+                        <label style="font-size:0.7rem; color:#94a3b8; display:block; margin-bottom:3px; font-weight:700;">Max Loss (NET ₹)</label>
+                        <input type="number" id="input_max_loss_net" value="200" min="1" step="1" style="background:#0f172a; border:1px solid #334155; color:#ef4444; font-weight:800; padding:6px 10px; border-radius:4px; width:120px; font-family:'JetBrains Mono', monospace;">
+                    </div>
+                    <div>
+                        <button onclick="savePLSettings()" class="btn-action-sm" style="background:#0284c7; color:#fff; border:none; padding:7px 16px; font-weight:700; border-radius:4px; cursor:pointer;">💾 SAVE SETTINGS</button>
+                    </div>
+                </div>
+            </div>
+
             <!-- 3. RISK MANAGEMENT & 1-CLICK ORDER BAR -->
             <div class="panel" style="padding:10px;">
                 <div class="risk-bar-container" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px;">
                     <div class="risk-bar-items" style="display:flex; align-items:center; gap:12px;">
                         <div>
                             <span style="font-size:0.68rem; color:#94a3b8; text-transform:uppercase; font-weight:700;">Target Net</span>
-                            <div id="disp_per_trade_target" style="font-size:0.95rem; font-weight:800; color:#10b981; font-family:'JetBrains Mono', monospace;">+₹600.00</div>
+                            <div id="disp_per_trade_target" style="font-size:0.95rem; font-weight:800; color:#10b981; font-family:'JetBrains Mono', monospace;">+₹100.00</div>
                         </div>
                         <div>
                             <span style="font-size:0.68rem; color:#94a3b8; text-transform:uppercase; font-weight:700;">Loss Limit Net</span>
-                            <div id="disp_per_trade" style="font-size:0.95rem; font-weight:800; color:#ef4444; font-family:'JetBrains Mono', monospace;">-₹400.00</div>
+                            <div id="disp_per_trade" style="font-size:0.95rem; font-weight:800; color:#ef4444; font-family:'JetBrains Mono', monospace;">-₹200.00</div>
                         </div>
                         <div>
                             <span style="font-size:0.68rem; color:#94a3b8; text-transform:uppercase; font-weight:700;">Daily Loss Lock</span>
@@ -696,15 +717,26 @@
             const cbBadge = document.getElementById('cb_badge');
             if (cbBadge) cbBadge.className = 'badge-status ' + (cbStatus === 'NORMAL' ? 'badge-green' : 'badge-red');
 
-            setTxt('disp_per_trade_target', '+₹' + Number(data.per_trade_profit_target_inr || 600).toLocaleString('en-IN', {minimumFractionDigits: 2}));
-            setTxt('disp_per_trade', '-₹' + Number(data.per_trade_loss_limit_inr || 400).toLocaleString('en-IN', {minimumFractionDigits: 2}));
+            setTxt('disp_per_trade_target', '+₹' + Number(data.per_trade_profit_target_inr || 100).toLocaleString('en-IN', {minimumFractionDigits: 2}));
+            setTxt('disp_per_trade', '-₹' + Number(data.per_trade_loss_limit_inr || 200).toLocaleString('en-IN', {minimumFractionDigits: 2}));
             setTxt('disp_daily_limit', '-₹' + Number(data.daily_loss_limit_inr || 1000).toLocaleString('en-IN', {minimumFractionDigits: 2}));
             
-            const slLimitVal = Math.round(Number(data.per_trade_loss_limit_inr || 400));
-            const tpTargetVal = Math.round(Number(data.per_trade_profit_target_inr || 600));
+            const slLimitVal = Math.round(Number(data.per_trade_loss_limit_inr || 200));
+            const tpTargetVal = Math.round(Number(data.per_trade_profit_target_inr || 100));
             setTxt('pos_sl_lbl', `STOP LOSS (-₹${slLimitVal} NET)`);
             setTxt('pos_tp_lbl', `TARGET PROFIT (+₹${tpTargetVal} NET)`);
             
+            if (!window.userEditingSettings) {
+                const targetInput = document.getElementById('input_target_profit_net');
+                const lossInput = document.getElementById('input_max_loss_net');
+                if (targetInput && document.activeElement !== targetInput) {
+                    targetInput.value = data.per_trade_profit_target_inr !== undefined ? data.per_trade_profit_target_inr : 100;
+                }
+                if (lossInput && document.activeElement !== lossInput) {
+                    lossInput.value = data.per_trade_loss_limit_inr !== undefined ? data.per_trade_loss_limit_inr : 200;
+                }
+            }
+
             const todayNet = Number(data.today_realized_pnl || 0);
             const todayEl = document.getElementById('disp_today_pnl');
             if (todayEl) {
@@ -833,6 +865,65 @@
             }
         } catch(e) {
             console.error('Error fetching live state:', e);
+        }
+    }
+
+    window.userEditingSettings = false;
+    document.addEventListener('DOMContentLoaded', () => {
+        const tInput = document.getElementById('input_target_profit_net');
+        const lInput = document.getElementById('input_max_loss_net');
+        if (tInput) {
+            tInput.addEventListener('focus', () => window.userEditingSettings = true);
+            tInput.addEventListener('blur', () => window.userEditingSettings = false);
+        }
+        if (lInput) {
+            lInput.addEventListener('focus', () => window.userEditingSettings = true);
+            lInput.addEventListener('blur', () => window.userEditingSettings = false);
+        }
+    });
+
+    async function savePLSettings() {
+        const targetVal = parseFloat(document.getElementById('input_target_profit_net').value);
+        const lossVal = parseFloat(document.getElementById('input_max_loss_net').value);
+        const statusEl = document.getElementById('risk_save_status');
+
+        if (isNaN(targetVal) || targetVal <= 0 || isNaN(lossVal) || lossVal <= 0) {
+            alert('Please enter valid positive numbers for Target Profit and Max Loss.');
+            return;
+        }
+
+        try {
+            if (statusEl) statusEl.innerText = 'Saving...';
+            const resp = await fetch('/api/bitcoin/live/risk-settings', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({
+                    target_profit_net: targetVal,
+                    max_loss_net: lossVal
+                })
+            });
+            const res = await resp.json();
+            if (res.success) {
+                if (statusEl) {
+                    statusEl.innerText = '✅ SAVED SUCCESSFULLY';
+                    statusEl.style.color = '#10b981';
+                    setTimeout(() => { statusEl.innerText = ''; }, 3000);
+                }
+                window.userEditingSettings = false;
+                updateDashboard();
+            } else {
+                if (statusEl) {
+                    statusEl.innerText = '❌ SAVE FAILED';
+                    statusEl.style.color = '#ef4444';
+                }
+                alert('Failed to save settings: ' + (res.error || 'Unknown error'));
+            }
+        } catch(e) {
+            if (statusEl) {
+                statusEl.innerText = '❌ ERROR';
+                statusEl.style.color = '#ef4444';
+            }
+            alert('Network error saving settings: ' + e);
         }
     }
 

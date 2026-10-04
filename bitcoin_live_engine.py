@@ -227,21 +227,126 @@ class MudrexLiveAdapter:
         except Exception as e:
             return {"success": False, "error": str(e)}
 
-    def close_position_safely(self, position_id: str) -> Dict[str, Any]:
+    def close_position_safely(self, position_id: str, symbol: str = "BTCUSDT", quantity: float = 0.002, direction: str = "BUY") -> Dict[str, Any]:
         """
-        Safely closes an open Mudrex futures position.
-        Endpoint: DELETE /futures/positions/{position_id}
+        Safely closes an open Mudrex futures position using multi-candidate endpoints:
+        1. DELETE /futures/positions/{position_id}?trade_currency=INR
+        2. DELETE /futures/positions/{position_id}
+        3. POST /futures/positions/{position_id}/close
+        4. POST /futures/positions/close
+        5. POST /fapi/v2/futures/order?symbol=BTCUSDT (Opposite MARKET order: SHORT if BUY/LONG, LONG if SELL/SHORT)
+        6. POST /futures/{asset_id}/order?trade_currency=INR (Opposite MARKET order)
+
+        AUTHORITATIVE VERIFICATION:
+        Position is marked closed ONLY IF fetch_open_positions() confirms position_id is no longer open on Mudrex!
         """
+        headers = self._get_headers()
+        opp_side = "SHORT" if str(direction).upper() in ("BUY", "LONG", "1") else "LONG"
+        qty_str = str(quantity)
+
+        asset_id = "01903a7b-bf65-707d-a7dc-d7b84c3c756c"
         try:
-            headers = self._get_headers()
-            url = f"{self.BASE_URL}/futures/positions/{position_id}?trade_currency=INR"
-            resp = requests.delete(url, headers=headers, timeout=5)
-            if resp.status_code in (200, 201):
-                return {"success": True, "data": resp.json()}
-            else:
-                return {"success": False, "status_code": resp.status_code, "error": resp.text}
-        except Exception as e:
-            return {"success": False, "error": str(e)}
+            ast_res = self.fetch_btcusdt_asset()
+            if ast_res.get("success"):
+                ast = ast_res.get("asset", {})
+                if isinstance(ast, list) and ast:
+                    asset_id = ast[0].get("id", asset_id)
+                elif isinstance(ast, dict):
+                    asset_id = ast.get("id", asset_id)
+        except Exception:
+            pass
+
+        candidates = [
+            {
+                "name": "DELETE /futures/positions/{id}?trade_currency=INR",
+                "method": "DELETE",
+                "url": f"{self.BASE_URL}/futures/positions/{position_id}?trade_currency=INR",
+                "payload": None
+            },
+            {
+                "name": "DELETE /futures/positions/{id}",
+                "method": "DELETE",
+                "url": f"{self.BASE_URL}/futures/positions/{position_id}",
+                "payload": None
+            },
+            {
+                "name": "POST /futures/positions/{id}/close",
+                "method": "POST",
+                "url": f"{self.BASE_URL}/futures/positions/{position_id}/close",
+                "payload": {"trade_currency": "INR"}
+            },
+            {
+                "name": "POST /futures/positions/close",
+                "method": "POST",
+                "url": f"{self.BASE_URL}/futures/positions/close",
+                "payload": {"position_id": position_id, "trade_currency": "INR"}
+            },
+            {
+                "name": "POST /fapi/v2/futures/order?symbol=BTCUSDT (Opposite Market Close)",
+                "method": "POST",
+                "url": "https://trade.mudrex.com/fapi/v2/futures/order?symbol=BTCUSDT",
+                "payload": {
+                    "trigger_type": "MARKET",
+                    "order_type": opp_side,
+                    "quantity": qty_str,
+                    "trade_currency": "INR"
+                }
+            },
+            {
+                "name": f"POST /futures/{asset_id}/order?trade_currency=INR (Opposite Market Close)",
+                "method": "POST",
+                "url": f"{self.BASE_URL}/futures/{asset_id}/order?trade_currency=INR",
+                "payload": {
+                    "trigger_type": "MARKET",
+                    "order_type": opp_side,
+                    "quantity": qty_str,
+                    "trade_currency": "INR"
+                }
+            }
+        ]
+
+        last_errors = []
+        for cand in candidates:
+            try:
+                if cand["method"] == "DELETE":
+                    resp = requests.delete(cand["url"], headers=headers, timeout=6)
+                else:
+                    resp = requests.post(cand["url"], headers=headers, json=cand["payload"], timeout=6)
+
+                if resp.status_code in (200, 201, 202):
+                    data = resp.json() if resp.text else {}
+                    if isinstance(data, dict) and data.get("success") is False:
+                        last_errors.append(f"{cand['name']} returned failure: {data}")
+                        continue
+
+                    # Authoritative verification check
+                    time.sleep(0.5)
+                    open_positions = self.fetch_open_positions()
+                    is_still_open = any(
+                        (str(p.get("position_id") or p.get("id")) == str(position_id))
+                        for p in open_positions
+                    )
+
+                    if not is_still_open:
+                        print(f"[{datetime.now()}] [MUDREX CLOSE SUCCESS] Method {cand['name']} succeeded and authoritative position check confirmed CLOSED!")
+                        return {"success": True, "data": data, "method_used": cand["name"]}
+                    else:
+                        last_errors.append(f"{cand['name']} HTTP {resp.status_code} succeeded but Mudrex position {position_id} is STILL OPEN")
+                else:
+                    last_errors.append(f"{cand['name']} HTTP {resp.status_code}: {resp.text}")
+            except Exception as e:
+                last_errors.append(f"{cand['name']} Exception: {e}")
+
+        # Final Authoritative Check
+        open_positions = self.fetch_open_positions()
+        is_still_open = any(
+            (str(p.get("position_id") or p.get("id")) == str(position_id))
+            for p in open_positions
+        )
+        if not is_still_open:
+            return {"success": True, "data": "Position closed during verification check"}
+
+        return {"success": False, "error": " | ".join(last_errors[:3])}
 
     def set_leverage(self, symbol_or_id: str = "BTCUSDT", leverage: str = "5", margin_type: str = "ISOLATED", asset_id: Optional[str] = None) -> Dict[str, Any]:
         """
@@ -463,7 +568,7 @@ class BitcoinLiveEngine:
             DB.save_bitcoin_live_setting("today_realized_pnl", "0.0")
 
         self.per_trade_loss_limit_inr = float(DB.load_bitcoin_live_setting("per_trade_loss_limit_inr", "400.0"))
-        self.per_trade_profit_target_inr = float(DB.load_bitcoin_live_setting("per_trade_profit_target_inr", "600.0"))
+        self.per_trade_profit_target_inr = float(DB.load_bitcoin_live_setting("per_trade_profit_target_inr", "100.0"))
         self.daily_loss_limit_inr = float(DB.load_bitcoin_live_setting("daily_loss_limit_inr", "1000.0"))
 
         DB.save_bitcoin_live_setting("per_trade_loss_limit_inr", str(self.per_trade_loss_limit_inr))
@@ -482,14 +587,15 @@ class BitcoinLiveEngine:
 
     def calculate_trade_charges(self, entry_price: float, exit_price: float, quantity: float) -> Tuple[float, float, float]:
         """
-        Calculates entry charges, exit charges, and total roundtrip charges in INR.
-        Uses Mudrex Taker Fee Rate (0.05% per side).
+        Calculates entry charges, exit charges, and total roundtrip charges dynamically in INR.
+        Uses Mudrex Taker Fee Rate (0.05% per side = 0.0005).
+        No artificial fixed floor is applied.
         """
         entry_val = entry_price * quantity
         exit_val = exit_price * quantity
         entry_fee = round(entry_val * self.TAKER_FEE_RATE, 2)
         exit_fee = round(exit_val * self.TAKER_FEE_RATE, 2)
-        total_fee = max(20.0, round(entry_fee + exit_fee, 2))
+        total_fee = round(entry_fee + exit_fee, 2)
         return entry_fee, exit_fee, total_fee
 
     def calculate_position_quantity(self, entry_price: float, available_balance: float = 5000.0) -> float:
@@ -1022,7 +1128,12 @@ class BitcoinLiveEngine:
                     m_pos_id = active_pos.get("mudrex_position_id")
                     close_success = True
                     if m_pos_id and self.live_trading_enabled:
-                        m_res = self.adapter.close_position_safely(m_pos_id)
+                        m_res = self.adapter.close_position_safely(
+                            position_id=m_pos_id,
+                            symbol=str(active_pos.get("symbol", "BTCUSDT")),
+                            quantity=float(active_pos.get("quantity", 0.002)),
+                            direction=str(active_pos.get("direction", "BUY"))
+                        )
                         if not m_res.get("success"):
                             close_success = False
                             print(f"[{datetime.now()}] [MUDREX CLOSE FAILED] Failed to close position {m_pos_id} on Mudrex API: {m_res}")
@@ -1278,7 +1389,12 @@ class BitcoinLiveEngine:
         close_res = {"success": True}
         if m_pos_id and self.adapter and self.live_trading_enabled:
             try:
-                close_res = self.adapter.close_position_safely(m_pos_id)
+                close_res = self.adapter.close_position_safely(
+                    position_id=m_pos_id,
+                    symbol=str(active_pos.get("symbol", "BTCUSDT")),
+                    quantity=float(active_pos.get("quantity", 0.002)),
+                    direction=str(active_pos.get("direction", "BUY"))
+                )
             except Exception as e:
                 print(f"[{datetime.now()}] [WARNING] Error closing Mudrex position {m_pos_id}: {e}")
 
