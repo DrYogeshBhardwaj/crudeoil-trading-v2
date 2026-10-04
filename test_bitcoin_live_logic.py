@@ -283,7 +283,7 @@ class TestBitcoinLiveEngineLogic(unittest.TestCase):
         # Mock Mudrex API order placement success
         self.engine.adapter.place_futures_order = lambda symbol, side, quantity, order_type="MARKET", stoploss_price=None: {
             "success": True,
-            "data": {"position_id": "MUDREX_REAL_POS_998877", "symbol": "BTCUSDT", "side": "BUY"}
+            "data": {"order_id": "MUDREX_ORDER_998877", "position_id": "MUDREX_REAL_POS_998877", "symbol": "BTCUSDT", "side": "BUY"}
         }
 
         res = self.engine.execute_manual_trade("BUY")
@@ -328,7 +328,7 @@ class TestBitcoinLiveEngineLogic(unittest.TestCase):
 
         res = self.engine.execute_manual_trade("BUY")
         self.assertFalse(res.get("success"))
-        self.assertIn("missing position/order ID", res.get("error"))
+        self.assertIn("missing order_id or position_id", res.get("error"))
 
         active_pos = DB.load_active_bitcoin_live_position()
         self.assertIsNone(active_pos)
@@ -352,12 +352,87 @@ class TestBitcoinLiveEngineLogic(unittest.TestCase):
 
         print("[TEST 13 PASS] Fallback Position ID Generation Completely Disabled!")
 
-    def test_14_inr_leverage_set_success(self):
-        """14. Verify explicit leverage setup (POST /futures/{asset_id}/leverage) succeeds for INR."""
+    def test_14_inr_leverage_url_contains_trade_currency(self):
+        """14. Verify leverage set URL contains trade_currency=INR and ?is_symbol."""
+        captured_urls = []
         import requests
         orig_post = requests.post
         try:
             def mock_post(url, headers=None, json=None, timeout=8):
+                captured_urls.append(url)
+                class Resp:
+                    status_code = 200
+                    def json(self):
+                        return {"success": True, "data": {"leverage": "5", "margin_type": "ISOLATED", "trade_currency": "INR"}}
+                return Resp()
+
+            requests.post = mock_post
+            res = self.engine.adapter.set_leverage("BTCUSDT", leverage="5", margin_type="ISOLATED")
+            self.assertTrue(res.get("success"))
+            self.assertIn("trade_currency=INR", captured_urls[0])
+            self.assertIn("is_symbol", captured_urls[0])
+            print(f"[TEST 14 PASS] INR Leverage URL contains mandatory query parameters: {captured_urls[0]}")
+        finally:
+            requests.post = orig_post
+
+    def test_15_leverage_set_success_allows_order_flow(self):
+        """15. Verify leverage set success allows order placement flow to proceed."""
+        self.engine.adapter.fetch_btcusdt_asset = lambda: {"success": True, "asset": {"id": "01903a7b-bf65-707d-a7dc-d7b84c3c756c"}}
+        self.engine.adapter.set_leverage = lambda symbol_or_id="BTCUSDT", leverage="5", margin_type="ISOLATED", asset_id=None: {"success": True}
+        self.engine.adapter.verify_leverage = lambda symbol_or_id="BTCUSDT", expected_leverage="5", asset_id=None: {"success": True, "leverage": "5"}
+
+        import requests
+        orig_post = requests.post
+        try:
+            def mock_post(url, headers=None, json=None, timeout=8):
+                class Resp:
+                    status_code = 200
+                    def json(self):
+                        return {"success": True, "data": {"order_id": "ORD_1001", "position_id": "POS_1001"}}
+                return Resp()
+
+            requests.post = mock_post
+            res = self.engine.adapter.place_futures_order("BTCUSDT", "BUY", 0.015)
+            self.assertTrue(res.get("success"))
+            print("[TEST 15 PASS] Leverage Set Success Allows Order Flow!")
+        finally:
+            requests.post = orig_post
+
+    def test_16_leverage_set_failure_blocks_order(self):
+        """16. Verify order placement is BLOCKED if explicit leverage setup fails."""
+        self.engine.adapter.fetch_btcusdt_asset = lambda: {"success": True, "asset": {"id": "01903a7b-bf65-707d-a7dc-d7b84c3c756c"}}
+        self.engine.adapter.set_leverage = lambda symbol_or_id="BTCUSDT", leverage="5", margin_type="ISOLATED", asset_id=None: {
+            "success": False,
+            "error": "HTTP 400: Leverage configuration rejected / parameter error"
+        }
+
+        res = self.engine.adapter.place_futures_order("BTCUSDT", "BUY", 0.015)
+        self.assertFalse(res.get("success"))
+        self.assertIn("LEVERAGE SETUP FAILED", res.get("error"))
+        print("[TEST 16 PASS] Leverage Setup Failure Successfully Blocks Order Placement!")
+
+    def test_17_leverage_verification_failure_blocks_order(self):
+        """17. Verify order placement is BLOCKED if leverage GET verification fails."""
+        self.engine.adapter.fetch_btcusdt_asset = lambda: {"success": True, "asset": {"id": "01903a7b-bf65-707d-a7dc-d7b84c3c756c"}}
+        self.engine.adapter.set_leverage = lambda symbol_or_id="BTCUSDT", leverage="5", margin_type="ISOLATED", asset_id=None: {"success": True}
+        self.engine.adapter.verify_leverage = lambda symbol_or_id="BTCUSDT", expected_leverage="5", asset_id=None: {
+            "success": False,
+            "error": "Leverage mismatch: expected 5, got 10"
+        }
+
+        res = self.engine.adapter.place_futures_order("BTCUSDT", "BUY", 0.015)
+        self.assertFalse(res.get("success"))
+        self.assertIn("LEVERAGE VERIFICATION FAILED", res.get("error"))
+        print("[TEST 17 PASS] Leverage GET Verification Failure Blocks Order!")
+
+    def test_18_five_x_leverage_payload(self):
+        """18. Verify 5x leverage is explicitly sent in set_leverage payload."""
+        captured_json = []
+        import requests
+        orig_post = requests.post
+        try:
+            def mock_post(url, headers=None, json=None, timeout=8):
+                captured_json.append(json)
                 class Resp:
                     status_code = 200
                     def json(self):
@@ -365,60 +440,48 @@ class TestBitcoinLiveEngineLogic(unittest.TestCase):
                 return Resp()
 
             requests.post = mock_post
-            res = self.engine.adapter.set_leverage("01903a7b-bf65-707d-a7dc-d7b84c3c756c", leverage="5", margin_type="ISOLATED")
+            res = self.engine.adapter.set_leverage("BTCUSDT", leverage="5", margin_type="ISOLATED")
             self.assertTrue(res.get("success"))
-            self.assertEqual(res["data"]["data"]["leverage"], "5")
-            print("[TEST 14 PASS] Explicit INR Leverage Setup (POST /leverage) Verified!")
+            self.assertEqual(captured_json[0].get("leverage"), "5")
+            self.assertEqual(captured_json[0].get("margin_type"), "ISOLATED")
+            self.assertEqual(captured_json[0].get("trade_currency"), "INR")
+            print(f"[TEST 18 PASS] 5x ISOLATED INR Payload Verified: {captured_json[0]}")
         finally:
             requests.post = orig_post
 
-    def test_15_leverage_setup_failure_blocks_order(self):
-        """15. Verify order placement is BLOCKED if explicit leverage setup fails."""
+    def test_19_long_order_payload_v2_schema(self):
+        """19. Verify LONG order uses official documented v2 schema."""
         self.engine.adapter.fetch_btcusdt_asset = lambda: {"success": True, "asset": {"id": "01903a7b-bf65-707d-a7dc-d7b84c3c756c"}}
-        self.engine.adapter.set_leverage = lambda asset_id, leverage="5", margin_type="ISOLATED": {
-            "success": False,
-            "error": "HTTP 400: Leverage out of allowed range"
-        }
+        self.engine.adapter.set_leverage = lambda symbol_or_id="BTCUSDT", leverage="5", margin_type="ISOLATED", asset_id=None: {"success": True}
+        self.engine.adapter.verify_leverage = lambda symbol_or_id="BTCUSDT", expected_leverage="5", asset_id=None: {"success": True}
 
-        res = self.engine.adapter.place_futures_order("BTCUSDT", "BUY", 0.015)
-        self.assertFalse(res.get("success"))
-        self.assertIn("Leverage setup failed", res.get("error"))
-        print("[TEST 15 PASS] Leverage Setup Failure Successfully Blocks Order Placement!")
-
-    def test_16_long_order_payload_valid_schema(self):
-        """16. Verify LONG order uses official documented schema (order_type='LONG', trigger_type='MARKET')."""
-        self.engine.adapter.fetch_btcusdt_asset = lambda: {"success": True, "asset": {"id": "01903a7b-bf65-707d-a7dc-d7b84c3c756c"}}
-        self.engine.adapter.set_leverage = lambda asset_id, leverage="5", margin_type="ISOLATED": {"success": True}
-        
-        captured_payloads = []
         import requests
         orig_post = requests.post
         try:
             def mock_post(url, headers=None, json=None, timeout=8):
-                captured_payloads.append({"url": url, "payload": json})
                 class Resp:
                     status_code = 200
                     def json(self):
-                        return {"success": True, "data": {"position_id": "MUDREX_LONG_12345"}}
+                        return {"success": True, "data": {"order_id": "ORD_BUY_123", "position_id": "POS_BUY_123"}}
                 return Resp()
 
             requests.post = mock_post
-
             res = self.engine.adapter.place_futures_order("BTCUSDT", "BUY", 0.015)
             self.assertTrue(res.get("success"))
             sent_payload = res.get("payload", {})
             self.assertEqual(sent_payload.get("order_type"), "LONG")
             self.assertEqual(sent_payload.get("trigger_type"), "MARKET")
             self.assertEqual(sent_payload.get("trade_currency"), "INR")
-            print(f"[TEST 16 PASS] Valid LONG Order Payload Verified: {sent_payload}")
+            print(f"[TEST 19 PASS] Valid LONG Order Payload Verified: {sent_payload}")
         finally:
             requests.post = orig_post
 
-    def test_17_short_order_payload_valid_schema(self):
-        """17. Verify SHORT order uses official documented schema (order_type='SHORT', trigger_type='MARKET')."""
+    def test_20_short_order_payload_v2_schema(self):
+        """20. Verify SHORT order uses official documented v2 schema."""
         self.engine.adapter.fetch_btcusdt_asset = lambda: {"success": True, "asset": {"id": "01903a7b-bf65-707d-a7dc-d7b84c3c756c"}}
-        self.engine.adapter.set_leverage = lambda asset_id, leverage="5", margin_type="ISOLATED": {"success": True}
-        
+        self.engine.adapter.set_leverage = lambda symbol_or_id="BTCUSDT", leverage="5", margin_type="ISOLATED", asset_id=None: {"success": True}
+        self.engine.adapter.verify_leverage = lambda symbol_or_id="BTCUSDT", expected_leverage="5", asset_id=None: {"success": True}
+
         import requests
         orig_post = requests.post
         try:
@@ -426,23 +489,158 @@ class TestBitcoinLiveEngineLogic(unittest.TestCase):
                 class Resp:
                     status_code = 200
                     def json(self):
-                        return {"success": True, "data": {"position_id": "MUDREX_SHORT_54321"}}
+                        return {"success": True, "data": {"order_id": "ORD_SELL_321", "position_id": "POS_SELL_321"}}
                 return Resp()
 
             requests.post = mock_post
-
             res = self.engine.adapter.place_futures_order("BTCUSDT", "SELL", 0.015)
             self.assertTrue(res.get("success"))
             sent_payload = res.get("payload", {})
             self.assertEqual(sent_payload.get("order_type"), "SHORT")
             self.assertEqual(sent_payload.get("trigger_type"), "MARKET")
             self.assertEqual(sent_payload.get("trade_currency"), "INR")
-            print(f"[TEST 17 PASS] Valid SHORT Order Payload Verified: {sent_payload}")
+            print(f"[TEST 20 PASS] Valid SHORT Order Payload Verified: {sent_payload}")
         finally:
             requests.post = orig_post
 
+    def test_21_http_202_accepted_valid_submission(self):
+        """21. Verify HTTP 202 Accepted with success=true and valid IDs is accepted as valid API submission."""
+        self.engine.adapter.fetch_btcusdt_asset = lambda: {"success": True, "asset": {"id": "01903a7b-bf65-707d-a7dc-d7b84c3c756c"}}
+        self.engine.adapter.set_leverage = lambda symbol_or_id="BTCUSDT", leverage="5", margin_type="ISOLATED", asset_id=None: {"success": True}
+        self.engine.adapter.verify_leverage = lambda symbol_or_id="BTCUSDT", expected_leverage="5", asset_id=None: {"success": True}
+
+        import requests
+        orig_post = requests.post
+        try:
+            def mock_post(url, headers=None, json=None, timeout=8):
+                class Resp:
+                    status_code = 202 # Accepted
+                    def json(self):
+                        return {"success": True, "data": {"order_id": "ORD_202_ACCEPT", "position_id": "POS_202_INITIATED", "status": "INITIATED"}}
+                return Resp()
+
+            requests.post = mock_post
+            res = self.engine.adapter.place_futures_order("BTCUSDT", "BUY", 0.015)
+            self.assertTrue(res.get("success"))
+            self.assertEqual(res.get("status_code"), 202)
+            print("[TEST 21 PASS] HTTP 202 Accepted Treated as Valid Submission!")
+        finally:
+            requests.post = orig_post
+
+    def test_22_http_200_201_handling_remains_safe(self):
+        """22. Verify HTTP 200/201 response handling remains fully safe."""
+        self.engine.adapter.fetch_btcusdt_asset = lambda: {"success": True, "asset": {"id": "01903a7b-bf65-707d-a7dc-d7b84c3c756c"}}
+        self.engine.adapter.set_leverage = lambda symbol_or_id="BTCUSDT", leverage="5", margin_type="ISOLATED", asset_id=None: {"success": True}
+        self.engine.adapter.verify_leverage = lambda symbol_or_id="BTCUSDT", expected_leverage="5", asset_id=None: {"success": True}
+
+        import requests
+        orig_post = requests.post
+        try:
+            def mock_post(url, headers=None, json=None, timeout=8):
+                class Resp:
+                    status_code = 201
+                    def json(self):
+                        return {"success": True, "data": {"order_id": "ORD_201_CREATED", "position_id": "POS_201_OPEN"}}
+                return Resp()
+
+            requests.post = mock_post
+            res = self.engine.adapter.place_futures_order("BTCUSDT", "BUY", 0.015)
+            self.assertTrue(res.get("success"))
+            self.assertEqual(res.get("status_code"), 201)
+            print("[TEST 22 PASS] HTTP 200/201 Handling Verified!")
+        finally:
+            requests.post = orig_post
+
+    def test_23_missing_order_id_blocks_local_position(self):
+        """23. Verify missing order_id in Mudrex response blocks position creation."""
+        self.engine.adapter.place_futures_order = lambda symbol, side, quantity, order_type="MARKET", stoploss_price=None: {
+            "success": True,
+            "data": {"position_id": "POS_ONLY_NO_ORDER_ID"} # missing order_id
+        }
+
+        res = self.engine.execute_manual_trade("BUY")
+        self.assertFalse(res.get("success"))
+        self.assertIn("missing order_id or position_id", res.get("error"))
+
+        active_pos = DB.load_active_bitcoin_live_position()
+        self.assertIsNone(active_pos)
+        print("[TEST 23 PASS] Missing order_id Successfully Blocks Local Position Creation!")
+
+    def test_24_missing_position_id_blocks_local_position(self):
+        """24. Verify missing position_id in Mudrex response blocks position creation."""
+        self.engine.adapter.place_futures_order = lambda symbol, side, quantity, order_type="MARKET", stoploss_price=None: {
+            "success": True,
+            "data": {"order_id": "ORDER_ONLY_NO_POS_ID"} # missing position_id
+        }
+
+        res = self.engine.execute_manual_trade("BUY")
+        self.assertFalse(res.get("success"))
+        self.assertIn("missing order_id or position_id", res.get("error"))
+
+        active_pos = DB.load_active_bitcoin_live_position()
+        self.assertIsNone(active_pos)
+        print("[TEST 24 PASS] Missing position_id Successfully Blocks Local Position Creation!")
+
+    def test_25_fallback_id_remains_disabled(self):
+        """25. Verify fallback ID generation remains completely disabled on failure."""
+        self.engine.adapter.place_futures_order = lambda symbol, side, quantity, order_type="MARKET", stoploss_price=None: {
+            "success": False,
+            "error": "HTTP 500: Server Error"
+        }
+
+        res = self.engine.execute_manual_trade("BUY")
+        self.assertFalse(res.get("success"))
+
+        trades = DB.load_all_bitcoin_live_trades()
+        self.assertEqual(len(trades), 0)
+        print("[TEST 25 PASS] Fallback Position ID Generation Remains Completely Disabled!")
+
+    def test_26_no_local_pnl_on_rejected_order(self):
+        """26. Verify no local P&L is logged or added on a rejected order."""
+        self.engine.adapter.place_futures_order = lambda symbol, side, quantity, order_type="MARKET", stoploss_price=None: {
+            "success": False,
+            "error": "HTTP 400: Leverage setup rejected"
+        }
+
+        res = self.engine.execute_manual_trade("BUY")
+        self.assertFalse(res.get("success"))
+
+        self.assertEqual(self.engine.today_realized_pnl, 0.0)
+        print("[TEST 26 PASS] No Local P&L Logged on Rejected Order!")
+
+    def test_27_no_daily_loss_impact_on_rejected_order(self):
+        """27. Verify a rejected order has zero impact on daily loss limit or daily loss count."""
+        self.engine.adapter.place_futures_order = lambda symbol, side, quantity, order_type="MARKET", stoploss_price=None: {
+            "success": False,
+            "error": "HTTP 400: Rejection"
+        }
+
+        res = self.engine.execute_manual_trade("SELL")
+        self.assertFalse(res.get("success"))
+
+        self.assertFalse(self.engine.daily_loss_limit_hit)
+        self.assertEqual(self.engine.today_realized_pnl, 0.0)
+        print("[TEST 27 PASS] Zero Daily Loss Impact on Rejected Order!")
+
+    def test_28_no_cooldown_on_rejected_order(self):
+        """28. Verify a rejected order does NOT trigger the 15-minute persistent cooldown."""
+        self.engine.last_sl_time = 0.0
+        self.engine.adapter.place_futures_order = lambda symbol, side, quantity, order_type="MARKET", stoploss_price=None: {
+            "success": False,
+            "error": "HTTP 400: Rejected"
+        }
+
+        res = self.engine.execute_manual_trade("BUY")
+        self.assertFalse(res.get("success"))
+
+        self.assertEqual(self.engine.last_sl_time, 0.0)
+        allowed, reason = self.engine.are_new_entries_allowed()
+        self.assertTrue(allowed)
+        print("[TEST 28 PASS] No Cooldown Triggered on Rejected Order!")
+
 if __name__ == "__main__":
     unittest.main()
+
 
 
 

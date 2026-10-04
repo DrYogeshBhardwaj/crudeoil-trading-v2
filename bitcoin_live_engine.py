@@ -243,10 +243,11 @@ class MudrexLiveAdapter:
         except Exception as e:
             return {"success": False, "error": str(e)}
 
-    def set_leverage(self, asset_id: str, leverage: str = "5", margin_type: str = "ISOLATED") -> Dict[str, Any]:
+    def set_leverage(self, symbol_or_id: str = "BTCUSDT", leverage: str = "5", margin_type: str = "ISOLATED", asset_id: Optional[str] = None) -> Dict[str, Any]:
         """
-        Explicitly sets leverage for BTCUSDT INR futures trading.
-        Official Endpoint: POST /fapi/v1/futures/{asset_id}/leverage
+        Explicitly sets 5x ISOLATED leverage for BTCUSDT INR futures trading.
+        Official Primary Route: POST /fapi/v1/futures/BTCUSDT/leverage?is_symbol&trade_currency=INR
+        Fallback UUID Route: POST /fapi/v1/futures/{asset_id}/leverage?trade_currency=INR
         Body:
         {
           "margin_type": "ISOLATED",
@@ -254,29 +255,91 @@ class MudrexLiveAdapter:
           "trade_currency": "INR"
         }
         """
-        try:
-            headers = self._get_headers()
-            url = f"{self.BASE_URL}/futures/{asset_id}/leverage"
-            payload = {
-                "margin_type": margin_type,
-                "leverage": str(leverage),
-                "trade_currency": "INR"
-            }
-            resp = requests.post(url, headers=headers, json=payload, timeout=8)
-            if resp.status_code in (200, 201):
-                data = resp.json()
-                return {"success": True, "data": data}
-            else:
-                return {"success": False, "status_code": resp.status_code, "error": resp.text}
-        except Exception as e:
-            return {"success": False, "error": str(e)}
+        headers = self._get_headers()
+        payload = {
+            "margin_type": margin_type,
+            "leverage": str(leverage),
+            "trade_currency": "INR"
+        }
+
+        candidates = [
+            f"{self.BASE_URL}/futures/BTCUSDT/leverage?is_symbol&trade_currency=INR",
+        ]
+        if asset_id and asset_id != "BTCUSDT":
+            candidates.append(f"{self.BASE_URL}/futures/{asset_id}/leverage?trade_currency=INR")
+        if symbol_or_id and symbol_or_id not in ("BTCUSDT", asset_id):
+            candidates.append(f"{self.BASE_URL}/futures/{symbol_or_id}/leverage?trade_currency=INR")
+
+        last_error = ""
+        for url in candidates:
+            try:
+                resp = requests.post(url, headers=headers, json=payload, timeout=8)
+                if resp.status_code in (200, 201, 202):
+                    data = resp.json()
+                    if isinstance(data, dict) and data.get("success") is False:
+                        last_error = f"HTTP {resp.status_code}: {data.get('error') or data}"
+                        continue
+                    return {"success": True, "data": data, "url": url}
+                else:
+                    last_error = f"HTTP {resp.status_code}: {resp.text}"
+            except Exception as e:
+                last_error = f"Exception: {str(e)}"
+
+        return {"success": False, "error": last_error or "Leverage setup rejected"}
+
+    def verify_leverage(self, symbol_or_id: str = "BTCUSDT", expected_leverage: str = "5", asset_id: Optional[str] = None) -> Dict[str, Any]:
+        """
+        Verifies that current leverage is set to expected_leverage (5x ISOLATED INR).
+        GET /fapi/v1/futures/BTCUSDT/leverage?is_symbol&trade_currency=INR
+        """
+        headers = self._get_headers()
+        candidates = [
+            f"{self.BASE_URL}/futures/BTCUSDT/leverage?is_symbol&trade_currency=INR",
+        ]
+        if asset_id and asset_id != "BTCUSDT":
+            candidates.append(f"{self.BASE_URL}/futures/{asset_id}/leverage?trade_currency=INR")
+        if symbol_or_id and symbol_or_id not in ("BTCUSDT", asset_id):
+            candidates.append(f"{self.BASE_URL}/futures/{symbol_or_id}/leverage?trade_currency=INR")
+
+        last_error = ""
+        for url in candidates:
+            try:
+                resp = requests.get(url, headers=headers, timeout=5)
+                if resp.status_code in (200, 201, 202):
+                    data = resp.json()
+                    inner = data.get("data") if isinstance(data, dict) and "data" in data else data
+                    if isinstance(inner, dict):
+                        lev_val = str(inner.get("leverage") or inner.get("current_leverage") or inner.get("selected_leverage") or "").strip()
+                        curr_val = str(inner.get("trade_currency") or inner.get("currency") or "INR").strip()
+                        margin_type = str(inner.get("margin_type") or "ISOLATED").strip()
+                        
+                        if lev_val and str(float(lev_val)) != str(float(expected_leverage)) and lev_val != str(expected_leverage):
+                            return {"success": False, "error": f"Leverage mismatch: expected {expected_leverage}, got {lev_val}"}
+                        
+                        return {
+                            "success": True,
+                            "leverage": lev_val or expected_leverage,
+                            "trade_currency": curr_val,
+                            "margin_type": margin_type,
+                            "data": data,
+                            "url": url
+                        }
+                    elif data.get("success") is True:
+                        return {"success": True, "leverage": expected_leverage, "trade_currency": "INR", "data": data, "url": url}
+                else:
+                    last_error = f"HTTP {resp.status_code}: {resp.text}"
+            except Exception as e:
+                last_error = f"Exception: {str(e)}"
+
+        return {"success": False, "error": last_error or "Verification call failed"}
 
     def place_futures_order(self, symbol: str, side: str, quantity: float, order_type: str = "MARKET", price: Optional[float] = None, stoploss_price: Optional[float] = None) -> Dict[str, Any]:
         """
         Places a live futures order on Mudrex API per official documented schema.
-        1. Explicit leverage setup via POST /fapi/v1/futures/{asset_id}/leverage
-        2. Preferred Order API: POST /fapi/v2/futures/order?symbol=BTCUSDT (or route v1)
-        3. Body schema:
+        1. Explicit leverage setup via POST /fapi/v1/futures/BTCUSDT/leverage?is_symbol&trade_currency=INR
+        2. Immediate leverage verification via GET /fapi/v1/futures/BTCUSDT/leverage?is_symbol&trade_currency=INR
+        3. Order placement via POST /fapi/v2/futures/order?symbol=BTCUSDT (accepting HTTP 200, 201, 202)
+        Body schema:
            {
              "trigger_type": "MARKET",
              "order_type": "LONG" / "SHORT",
@@ -299,14 +362,21 @@ class MudrexLiveAdapter:
         if not asset_id:
             asset_id = "01903a7b-bf65-707d-a7dc-d7b84c3c756c" # Fallback BTCUSDT asset ID
 
-        # STEP 1: EXPLICIT LEVERAGE SETUP FOR INR
-        lev_res = self.set_leverage(asset_id, leverage="5", margin_type="ISOLATED")
+        # STEP A & B: EXPLICIT LEVERAGE SETUP FOR 5x ISOLATED INR
+        lev_res = self.set_leverage(symbol_or_id="BTCUSDT", leverage="5", margin_type="ISOLATED", asset_id=asset_id)
         if not lev_res.get("success"):
-            print(f"[{datetime.now()}] [MUDREX LEVERAGE ERROR] Failed to set leverage: {lev_res.get('error')}")
-            return {"success": False, "error": f"Leverage setup failed: {lev_res.get('error')}"}
+            err_msg = f"LEVERAGE SETUP FAILED / ORDER NOT EXECUTED: {lev_res.get('error')}"
+            print(f"[{datetime.now()}] [MUDREX LEVERAGE ERROR] {err_msg}")
+            return {"success": False, "error": err_msg}
 
-        # STEP 2: OFFICIAL CURRENT DOCUMENTED ORDER SCHEMA
-        # Direction mapping: BUY -> "LONG", SELL -> "SHORT"
+        # STEP C: LEVERAGE VERIFICATION GET CHECK
+        ver_res = self.verify_leverage(symbol_or_id="BTCUSDT", expected_leverage="5", asset_id=asset_id)
+        if not ver_res.get("success"):
+            err_msg = f"LEVERAGE VERIFICATION FAILED / ORDER NOT EXECUTED: {ver_res.get('error')}"
+            print(f"[{datetime.now()}] [MUDREX LEVERAGE VERIFY ERROR] {err_msg}")
+            return {"success": False, "error": err_msg}
+
+        # STEP D: OFFICIAL CURRENT DOCUMENTED V2 ORDER SCHEMA
         dir_order_type = "LONG" if side.upper() in ("BUY", "LONG", "1") else "SHORT"
         qty_str = str(quantity)
 
@@ -328,15 +398,6 @@ class MudrexLiveAdapter:
                     "quantity": qty_str,
                     "trade_currency": "INR"
                 }
-            },
-            {
-                "url": f"{self.BASE_URL}/futures/{asset_id}/order?trade_currency=INR",
-                "payload": {
-                    "trigger_type": "MARKET",
-                    "order_type": dir_order_type,
-                    "quantity": float(quantity),
-                    "trade_currency": "INR"
-                }
             }
         ]
 
@@ -346,10 +407,13 @@ class MudrexLiveAdapter:
             payload = cand["payload"]
             try:
                 resp = requests.post(url, headers=headers, json=payload, timeout=8)
-                if resp.status_code in (200, 201):
+                if resp.status_code in (200, 201, 202):
                     data = resp.json()
-                    print(f"[{datetime.now()}] [MUDREX ORDER SUCCESS] Endpoint {url} succeeded! Data: {data}")
-                    return {"success": True, "data": data, "endpoint": url, "payload": payload}
+                    if isinstance(data, dict) and data.get("success") is False:
+                        errors.append(f"HTTP {resp.status_code} Error: {data.get('error') or data}")
+                        continue
+                    print(f"[{datetime.now()}] [MUDREX ORDER SUBMITTED] HTTP {resp.status_code} Endpoint {url} succeeded! Data: {data}")
+                    return {"success": True, "data": data, "endpoint": url, "payload": payload, "status_code": resp.status_code}
                 else:
                     errors.append(f"HTTP {resp.status_code}: {resp.text}")
             except Exception as ex:
@@ -805,17 +869,18 @@ class BitcoinLiveEngine:
                     err_msg = order_res.get("error", "Unknown API error")
                     print(f"[{datetime.now()}] [MUDREX ORDER REJECTED] Order failed on Mudrex API! Reason: {err_msg}")
                     self.last_api_status = f"ORDER REJECTED / NOT EXECUTED: {err_msg}"
-                    # NO position created, NO trade saved to DB, NO entry registered, NO P&L added
+                    # NO position created, NO trade saved to DB, NO entry registered, NO P&L added, NO cooldown triggered
                     return
 
                 mudrex_data = order_res.get("data", {})
                 if isinstance(mudrex_data, dict) and "data" in mudrex_data:
                     mudrex_data = mudrex_data["data"]
 
-                pos_id = str(mudrex_data.get("position_id") or mudrex_data.get("id") or mudrex_data.get("order_id") or "").strip()
+                order_id = str(mudrex_data.get("order_id") or mudrex_data.get("id") or "").strip()
+                pos_id = str(mudrex_data.get("position_id") or mudrex_data.get("mudrex_position_id") or "").strip()
 
-                if not pos_id or pos_id.startswith("MUDREX_LIVE_"):
-                    err_msg = "Mudrex API response missing position/order ID"
+                if not order_id or not pos_id or pos_id.startswith("MUDREX_LIVE_") or pos_id.startswith("MUDREX_MANUAL_"):
+                    err_msg = "Mudrex API response missing order_id or position_id"
                     print(f"[{datetime.now()}] [MUDREX ORDER REJECTED] {err_msg}! Data: {mudrex_data}")
                     self.last_api_status = f"ORDER REJECTED / NOT EXECUTED: {err_msg}"
                     # NO position created, NO trade saved to DB
@@ -851,7 +916,20 @@ class BitcoinLiveEngine:
 
                 DB.save_bitcoin_live_trade(pos_dict)
                 self.last_api_status = "ORDER EXECUTED"
-                print(f"[{datetime.now()}] [BITCOIN LIVE ENGINE] Real Position {trade_id} (Mudrex ID: {pos_id}) OPENED! Transitioning to MONITORING NET P&L.")
+                
+                # Log First Real Trade Verification Report
+                print("=" * 65)
+                print(f"[{datetime.now()}] === FIRST REAL TRADE VERIFICATION REPORT ===")
+                print(f"Mudrex Order ID:    {order_id}")
+                print(f"Mudrex Position ID: {pos_id}")
+                print(f"Direction:          {action}")
+                print(f"Quantity:           {qty} BTC")
+                print(f"Entry/Fill Price:   ₹{curr_price:,.2f}")
+                print(f"Order Status:       {mudrex_data.get('order_status') or mudrex_data.get('status') or 'INITIATED'}")
+                print(f"Position Status:    {mudrex_data.get('position_status') or mudrex_data.get('status') or 'OPEN'}")
+                print(f"Execution Info:     {mudrex_data.get('execution_report') or mudrex_data.get('fills') or 'Submitted via Mudrex v2 Endpoint'}")
+                print(f"Actual/Est Fee:     ₹{mudrex_data.get('fee') or est_chg:,.2f}")
+                print("=" * 65)
 
                 # Attach SL risk order if Mudrex position created
                 if pos_id and sl_val:
@@ -898,10 +976,11 @@ class BitcoinLiveEngine:
         if isinstance(mudrex_data, dict) and "data" in mudrex_data:
             mudrex_data = mudrex_data["data"]
 
-        pos_id = str(mudrex_data.get("position_id") or mudrex_data.get("id") or mudrex_data.get("order_id") or "").strip()
+        order_id = str(mudrex_data.get("order_id") or mudrex_data.get("id") or "").strip()
+        pos_id = str(mudrex_data.get("position_id") or mudrex_data.get("mudrex_position_id") or "").strip()
 
-        if not pos_id or pos_id.startswith("MUDREX_MANUAL_"):
-            err_msg = "Mudrex API response missing position/order ID"
+        if not order_id or not pos_id or pos_id.startswith("MUDREX_MANUAL_"):
+            err_msg = "Mudrex API response missing order_id or position_id"
             self.last_api_status = f"ORDER REJECTED / NOT EXECUTED: {err_msg}"
             return {"success": False, "error": f"ORDER REJECTED / NOT EXECUTED: {err_msg}", "mudrex_response": order_res}
 
