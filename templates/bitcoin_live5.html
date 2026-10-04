@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>BTC 5-LIVE ROLLING TEST — POSITION P/L & LIVE STOPWATCH MONITOR</title>
+    <title>BTC 6-BASKET TEST — 3 LONG + 3 SHORT SAME-PRICE MODEL</title>
     <!-- Google Fonts & Modern Styling -->
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;700;800&display=swap" rel="stylesheet">
     <style>
@@ -444,9 +444,9 @@
     <!-- TOP HEADER BANNER -->
     <div class="top-banner">
         <div class="banner-title">
-            <h1>BTC 5-LIVE ROLLING TEST</h1>
+            <h1>BTC 6-BASKET SAME-PRICE TEST</h1>
             <span class="badge-status badge-amber">PAPER / TEST MODE — REAL ORDERS: OFF</span>
-            <span class="badge-status badge-green">ROLLING 1-MIN TEST SCANNER ACTIVE</span>
+            <span class="badge-status badge-green">3-LONG + 3-SHORT BASKET ACTIVE</span>
         </div>
         <div class="price-strip">
             <div class="price-box">
@@ -460,12 +460,12 @@
         </div>
     </div>
 
-    <!-- PRIMARY MONITORING PANEL: POSITION P/L — 1 TO 5 -->
+    <!-- PRIMARY MONITORING PANEL: POSITION P/L — 1 TO 6 -->
     <div class="pnl-master-panel">
         <div class="pnl-master-header">
             <div class="pnl-master-title">
-                <span>🔥 POSITION P/L — 1 TO 5</span>
-                <span style="font-size: 0.72rem; color: #94a3b8; font-weight: 600;">(AUTHORITATIVE LIVE MUDREX NET P&L & STOPWATCH TIMERS)</span>
+                <span>🔥 POSITION P/L — 1 TO 6 (3 LONG + 3 SHORT BASKET)</span>
+                <span style="font-size: 0.72rem; color: #94a3b8; font-weight: 600;">(SAME-PRICE BASKET: P1-P3 LONG | P4-P6 SHORT)</span>
             </div>
             <div class="pnl-summary-boxes">
                 <div class="pnl-sum-card primary-pnl">
@@ -628,12 +628,12 @@
         });
 
         // Client-side Live Ticking Stopwatch State
-        let slotHoldingSeconds = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 };
-        let slotIsActive = { 1: false, 2: false, 3: false, 4: false, 5: false };
+        let slotHoldingSeconds = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0, 6: 0 };
+        let slotIsActive = { 1: false, 2: false, 3: false, 4: false, 5: false, 6: false };
 
         // 1-Second Live Stopwatch Ticker Loop
         setInterval(() => {
-            for (let i = 1; i <= 5; i++) {
+            for (let i = 1; i <= 6; i++) {
                 if (slotIsActive[i]) {
                     slotHoldingSeconds[i]++;
                     updateStopwatchDisplay(i);
@@ -724,7 +724,7 @@
             const container = document.getElementById('pnlRowsContainer');
             let html = '';
 
-            for (let i = 1; i <= 5; i++) {
+            for (let i = 1; i <= 6; i++) {
                 const slot = slots.find(s => s.slot_index === i) || { slot_index: i, status: 'EMPTY' };
                 const isOpened = (slot.status === 'OPEN' && slot.position);
                 const pos = slot.position;

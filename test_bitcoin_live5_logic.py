@@ -67,45 +67,25 @@ class TestBitcoinLive5EngineLogic(unittest.TestCase):
             pass
 
     def test_01_max_positions_limit_enforced(self):
-        """1. Verify maximum 5 positions limit is enforced."""
-        self.assertEqual(self.engine.max_positions, 5)
-        print("[TEST 1 PASS] Maximum 5 positions limit enforced!")
+        """1. Verify maximum 6 positions limit is enforced."""
+        self.assertEqual(self.engine.max_positions, 6)
+        print("[TEST 1 PASS] Maximum 6 positions limit enforced!")
 
-    def test_02_sixth_position_cannot_open(self):
-        """2. Verify 6th position is rejected when 5 positions are open."""
-        curr_usd, hr, _ = self.engine.fetch_mudrex_futures_market_data()
-        curr_usd = curr_usd or 86000.0
-        hr = hr or 102.0
-        now_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-
-        for i in range(1, 6):
-            trade = {
-                "trade_id": f"PAPER_BTC5_TEST_{i}",
-                "mudrex_position_id": f"PAPER_POS_{i}",
-                "slot_index": i,
-                "entry_timestamp": now_str,
-                "symbol": "BTCUSDT",
-                "direction": "BUY",
-                "quantity": 0.002,
-                "entry_price": round(curr_usd * hr, 2),
-                "entry_price_usd": curr_usd,
-                "hedge_rate": hr,
-                "target_usd": round(curr_usd + 1000.0, 2), # High target
-                "stop_loss_usd": round(curr_usd - 1000.0, 2),
-                "status": "OPEN",
-                "leverage": 5.0,
-                "initial_margin": round((curr_usd * hr * 0.002) / 5.0, 2)
-            }
-            DB.save_bitcoin_live5_trade(trade)
-
-        active = DB.load_active_bitcoin_live5_positions()
-        self.assertEqual(len(active), 5)
-
-        # Attempt process tick -> should return without adding 6th position
+    def test_02_basket_batch_entry_opens_6_positions(self):
+        """2. Verify process_tick opens 6 positions simultaneously (3 BUY + 3 SELL)."""
         self.engine.process_tick()
-        active_after = DB.load_active_bitcoin_live5_positions()
-        self.assertEqual(len(active_after), 5)
-        print("[TEST 2 PASS] 6th position safely rejected when 5 slots are full!")
+        active = DB.load_active_bitcoin_live5_positions()
+        self.assertEqual(len(active), 6)
+
+        buys = [p for p in active if p["direction"] == "BUY"]
+        sells = [p for p in active if p["direction"] == "SELL"]
+        self.assertEqual(len(buys), 3)
+        self.assertEqual(len(sells), 3)
+
+        # Verify all 6 share exact same entry price
+        entry_prices = {p["entry_price_usd"] for p in active}
+        self.assertEqual(len(entry_prices), 1)
+        print("[TEST 2 PASS] 6-basket batch entry opened 3 BUY + 3 SELL at exact same entry price!")
 
     def test_03_new_entry_interval_1_minute(self):
         """3. Verify new-entry interval is 1 minute (60 seconds)."""
@@ -330,12 +310,15 @@ class TestBitcoinLive5EngineLogic(unittest.TestCase):
 
 
     def test_09_no_duplicate_position_on_repeated_ticks(self):
-        """9. Verify no duplicate position created on repeated ticks within 2-min window."""
-        self.engine.last_entry_time = time.time()
-        self.engine.process_tick()
-        active = DB.load_active_bitcoin_live5_positions()
-        self.assertEqual(len(active), 0)
-        print("[TEST 9 PASS] 2-minute rolling interval prevents duplicate position on repeated ticks!")
+        """9. Verify no duplicate basket created on repeated ticks while basket is active."""
+        self.engine.process_tick() # Opens 6 active positions
+        active1 = DB.load_active_bitcoin_live5_positions()
+        self.assertEqual(len(active1), 6)
+
+        self.engine.process_tick() # Ticks again while 6 positions are active
+        active2 = DB.load_active_bitcoin_live5_positions()
+        self.assertEqual(len(active2), 6)
+        print("[TEST 9 PASS] No duplicate basket opened on repeated ticks while basket is active!")
 
     def test_10_no_duplicate_position_after_page_refresh(self):
         """10. Verify active positions remain unique after page refresh / re-instantiation."""
