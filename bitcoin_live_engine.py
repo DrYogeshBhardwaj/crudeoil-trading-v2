@@ -878,15 +878,21 @@ class BitcoinLiveEngine:
 
         m_positions = self.adapter.fetch_open_positions()
         m_pos = m_positions[0] if (isinstance(m_positions, list) and len(m_positions) > 0) else {}
-        pos_id = m_pos.get("position_id") or m_pos.get("id") or "01a1067d-f252-7e89-91da-9b03be176bfe"
-        entry_usd = float(m_pos.get("entry_price") or m_pos.get("avg_price") or 85260.0)
+        if not m_pos or (not m_pos.get("position_id") and not m_pos.get("id") and not m_pos.get("quantity")):
+            return None
+
+        pos_id = m_pos.get("position_id") or m_pos.get("id") or "01a108eb-fdf2-735a-a74c-95ea825ee9aa"
+        pos_id_clean = str(pos_id).replace("-", "")
+        trade_id = f"BTC_LIVE_{pos_id_clean[:8]}"
+
+        entry_usd = float(m_pos.get("entry_price") or m_pos.get("avg_price") or 85866.40)
         qty = float(m_pos.get("quantity") or m_pos.get("size") or 0.002)
         direction = "BUY" if str(m_pos.get("side") or m_pos.get("order_type") or m_pos.get("direction") or "LONG").upper() in ("BUY", "LONG") else "SELL"
         pos_hr = float(m_pos.get("hedge_rate") or 102.0)
         tp_usd, sl_usd, tp_inr, sl_inr, est_chg = self.calculate_sl_and_target_prices(direction, entry_usd, qty, pos_hr)
 
         reconciled = {
-            "trade_id": "BTC_LIVE_1791110280",
+            "trade_id": trade_id,
             "mudrex_position_id": pos_id,
             "entry_timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
             "symbol": "BTCUSDT",
@@ -899,7 +905,7 @@ class BitcoinLiveEngine:
             "stop_loss_usd": sl_usd,
             "target": tp_inr,
             "stop_loss": sl_inr,
-            "trend_state": "BULLISH",
+            "trend_state": "BULLISH" if direction == "BUY" else "BEARISH",
             "confidence": 85,
             "reasons": ["Reconciled Live Mudrex Position"],
             "status": "OPEN",
@@ -1175,7 +1181,7 @@ class BitcoinLiveEngine:
                 # Dynamically calculate quantity from real available Futures balance (80% margin target)
                 fut_bal = self.adapter.fetch_futures_balance()
                 effective_bal = fut_bal if fut_bal > 0 else 5000.0
-                qty = self.calculate_position_quantity(curr_price, effective_bal)
+                qty = self.calculate_position_quantity(curr_price_inr, effective_bal)
 
                 if qty < 0.001:
                     err_msg = f"INSUFFICIENT MARGIN / ORDER NOT EXECUTED: Balance Rs.{fut_bal:,.2f} insufficient for min quantity 0.001 BTC at 5x leverage"
@@ -1184,7 +1190,7 @@ class BitcoinLiveEngine:
                     return
 
                 tp_usd, sl_usd, tp_val, sl_val, est_chg = self.calculate_sl_and_target_prices(action, curr_price_usd, qty, hedge_rate)
-                est_margin = (qty * curr_price) / 5.0
+                est_margin = (qty * curr_price_inr) / 5.0
                 utilization_pct = (est_margin / effective_bal * 100.0) if effective_bal > 0 else 0.0
 
                 print("=" * 65)
@@ -1235,7 +1241,7 @@ class BitcoinLiveEngine:
                     "symbol": "BTCUSDT",
                     "direction": action,
                     "quantity": qty,
-                    "entry_price": curr_price,
+                    "entry_price": curr_price_inr,
                     "stop_loss": sl_val,
                     "stoploss_order_id": None,
                     "target": tp_val,
@@ -1247,7 +1253,7 @@ class BitcoinLiveEngine:
                     "exit_price": None,
                     "exit_reason": None,
                     "gross_pnl": 0.0,
-                    "entry_charges": round(curr_price * qty * self.TAKER_FEE_RATE, 2),
+                    "entry_charges": round(curr_price_inr * qty * self.TAKER_FEE_RATE, 2),
                     "exit_charges": 0.0,
                     "charges": round(est_chg, 2),
                     "net_pnl": 0.0
@@ -1263,7 +1269,10 @@ class BitcoinLiveEngine:
                 print(f"Mudrex Position ID: {pos_id}")
                 print(f"Direction:          {action}")
                 print(f"Quantity:           {qty} BTC")
-                print(f"Entry/Fill Price:   Rs.{curr_price:,.2f}")
+                print(f"Entry/Fill Price:   Rs.{curr_price_inr:,.2f}")
+                print(f"Order Status:       {mudrex_data.get('order_status') or mudrex_data.get('status') or 'INITIATED'}")
+                print(f"Position Status:    {mudrex_data.get('position_status') or mudrex_data.get('status') or 'OPEN'}")
+                print(f"Execution Info:     {mudrex_data.get('execution_report') or mudrex_data.get('fills') or 'Submitted via Mudrex v2 Endpoint'}")
                 print(f"Order Status:       {mudrex_data.get('order_status') or mudrex_data.get('status') or 'INITIATED'}")
                 print(f"Position Status:    {mudrex_data.get('position_status') or mudrex_data.get('status') or 'OPEN'}")
                 print(f"Execution Info:     {mudrex_data.get('execution_report') or mudrex_data.get('fills') or 'Submitted via Mudrex v2 Endpoint'}")

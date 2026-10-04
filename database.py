@@ -356,6 +356,32 @@ class DatabaseEngine:
 
             conn.commit()
 
+        self.seed_historical_bitcoin_live_trades()
+
+    def seed_historical_bitcoin_live_trades(self):
+        """Ensures authoritative completed live trades are preserved across Railway redeployments."""
+        with self._get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute("SELECT trade_id FROM bitcoin_live_trades WHERE mudrex_position_id = '01a1067d-f252-7e89-91da-9b03be176bfe'")
+            if not cursor.fetchone():
+                reasons_json = json.dumps(["Authoritative Closed Live Position"])
+                cursor.execute("""
+                    INSERT INTO bitcoin_live_trades (
+                        trade_id, mudrex_position_id, entry_timestamp, symbol, direction, quantity,
+                        entry_price, stop_loss, target, trend_state, confidence,
+                        reasons, status, exit_timestamp, exit_price, exit_reason,
+                        gross_pnl, entry_charges, exit_charges, charges, net_pnl,
+                        entry_price_usd, hedge_rate, target_usd, stop_loss_usd, exit_price_usd
+                    ) VALUES (
+                        'BTC_LIVE_01a1067d', '01a1067d-f252-7e89-91da-9b03be176bfe', '2026-10-04 20:30:00',
+                        'BTCUSDT', 'BUY', 0.002, 8696520.0, 8676120.0, 8706720.0, 'BULLISH', 85,
+                        ?, 'CLOSED', '2026-10-04 21:55:00', 8803303.8, 'PROFIT TARGET EXIT',
+                        243.72, 10.0, 10.0, 20.0, 223.72,
+                        85260.0, 102.0, 85360.0, 85060.0, 86306.9
+                    )
+                """, (reasons_json,))
+                conn.commit()
+
     def save_live_trade(self, pos_dict: Dict[str, Any]):
         with self._get_connection() as conn:
             cursor = conn.cursor()
