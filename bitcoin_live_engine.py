@@ -494,21 +494,46 @@ class BitcoinLiveEngine:
 
     def calculate_position_quantity(self, entry_price: float, available_balance: float = 5000.0) -> float:
         """
-        Calculates optimal position size Q (in BTC) using ~25x leverage on ₹5,000 INR margin capital.
-        With Q ~0.030 BTC (Turnover ~2.45 Lakhs):
-        - 1,000 INR BTC move = ₹30.00 Gross PnL
-        - Break-even fee recovery happens within ~₹4,000 INR move ($48 USD move).
-        - Profit Target (+₹300 NET) happens within ~₹18,000 INR move ($215 USD move).
+        Calculates dynamic BTC position size Q based on real available Futures INR balance and 5x leverage.
+        
+        Formula:
+        usable_margin = available_balance * 0.80 (80% margin utilization target, 20% safety buffer)
+        max_notional = usable_margin * 5.0 (at 5x leverage)
+        raw_quantity = max_notional / entry_price
+        quantity = rounded DOWN to 0.001 step size
+        
+        Safety Check:
+        If estimated_required_margin >= available_balance:
+            reduce quantity by 0.001 step until estimated_required_margin < available_balance
+            
+        If quantity < 0.001:
+            returns 0.0
         """
-        if entry_price <= 0:
-            return 0.030
-        effective_cap = max(available_balance, 5000.0)
-        # 25x leverage on ₹5,000 margin gives ~₹125,000 to ₹250,000 notional turnover
-        notional = effective_cap * 25.0
-        calc_qty = notional / entry_price
-        qty = round(calc_qty, 3)
-        # Clamp quantity between 0.015 BTC and 0.05 BTC for fast fee recovery and high profit sensitivity
-        return max(0.015, min(0.05, qty))
+        import math
+        if entry_price <= 0 or available_balance <= 0:
+            return 0.0
+
+        # Target 80% margin utilization
+        usable_margin = available_balance * 0.80
+        max_notional = usable_margin * 5.0
+        raw_qty = max_notional / entry_price
+
+        # Round DOWN to 0.001 BTC step size
+        step = 0.001
+        qty = math.floor(raw_qty / step) * step
+        qty = round(qty, 3)
+
+        # Safety Check: Ensure estimated required margin is strictly less than available_balance
+        while qty >= step:
+            est_req_margin = (qty * entry_price) / 5.0
+            if est_req_margin < available_balance:
+                break
+            qty = round(qty - step, 3)
+
+        if qty < step:
+            return 0.0
+
+        return qty
 
     def calculate_sl_and_target_prices(self, direction: str, entry_price: float, quantity: float) -> Tuple[float, float, float]:
         """
@@ -849,12 +874,28 @@ class BitcoinLiveEngine:
 
             action = eval_res.get("action", "WAIT")
             if action in ("BUY", "SELL"):
-                # Dynamically calculate quantity & exact SL/TP taking charges into account
+                # Dynamically calculate quantity from real available Futures balance (80% margin target)
                 fut_bal = self.adapter.fetch_futures_balance()
-                qty = self.calculate_position_quantity(curr_price, fut_bal if fut_bal > 0 else 5000.0)
-                tp_val, sl_val, est_chg = self.calculate_sl_and_target_prices(action, curr_price, qty)
+                effective_bal = fut_bal if fut_bal > 0 else 5000.0
+                qty = self.calculate_position_quantity(curr_price, effective_bal)
 
-                print(f"[{datetime.now()}] [BITCOIN LIVE ENGINE] Valid {action} Signal @ ₹{curr_price:,.2f}! Qty: {qty} BTC | Target (+₹{int(self.per_trade_profit_target_inr)} NET): ₹{tp_val:,.2f} | SL (-₹{int(self.per_trade_loss_limit_inr)} NET): ₹{sl_val:,.2f} | Est. Charges: ₹{est_chg:,.2f}")
+                if qty < 0.001:
+                    err_msg = f"INSUFFICIENT MARGIN / ORDER NOT EXECUTED: Balance ₹{fut_bal:,.2f} insufficient for min quantity 0.001 BTC at 5x leverage"
+                    print(f"[{datetime.now()}] [MUDREX ORDER ABORTED] {err_msg}")
+                    self.last_api_status = err_msg
+                    return
+
+                tp_val, sl_val, est_chg = self.calculate_sl_and_target_prices(action, curr_price, qty)
+                est_margin = (qty * curr_price) / 5.0
+                utilization_pct = (est_margin / effective_bal * 100.0) if effective_bal > 0 else 0.0
+
+                print("=" * 65)
+                print(f"[{datetime.now()}] === ORDER PRE-FLIGHT MARGIN SIZING ===")
+                print(f"ORDER QTY:           {qty} BTC")
+                print(f"EST. REQ MARGIN:     Rs.{est_margin:,.2f}")
+                print(f"AVAILABLE FUTURES:   Rs.{fut_bal:,.2f}")
+                print(f"MARGIN UTILIZATION:  ~{utilization_pct:.1f}%")
+                print("=" * 65)
                 
                 order_res = self.adapter.place_futures_order(
                     symbol="BTCUSDT",
@@ -956,8 +997,25 @@ class BitcoinLiveEngine:
             return {"success": False, "error": "Live BTC market price unavailable"}
 
         fut_bal = self.adapter.fetch_futures_balance()
-        qty = self.calculate_position_quantity(curr_price, fut_bal if fut_bal > 0 else 5000.0)
+        effective_bal = fut_bal if fut_bal > 0 else 5000.0
+        qty = self.calculate_position_quantity(curr_price, effective_bal)
+
+        if qty < 0.001:
+            err_msg = f"INSUFFICIENT MARGIN / ORDER NOT EXECUTED: Balance ₹{fut_bal:,.2f} insufficient for min quantity 0.001 BTC at 5x leverage"
+            self.last_api_status = err_msg
+            return {"success": False, "error": err_msg}
+
         tp_val, sl_val, est_chg = self.calculate_sl_and_target_prices(side, curr_price, qty)
+        est_margin = (qty * curr_price) / 5.0
+        utilization_pct = (est_margin / effective_bal * 100.0) if effective_bal > 0 else 0.0
+
+        print("=" * 65)
+        print(f"[{datetime.now()}] === ORDER PRE-FLIGHT MARGIN SIZING ===")
+        print(f"ORDER QTY:           {qty} BTC")
+        print(f"EST. REQ MARGIN:     Rs.{est_margin:,.2f}")
+        print(f"AVAILABLE FUTURES:   Rs.{fut_bal:,.2f}")
+        print(f"MARGIN UTILIZATION:  ~{utilization_pct:.1f}%")
+        print("=" * 65)
 
         order_res = self.adapter.place_futures_order(
             symbol="BTCUSDT",

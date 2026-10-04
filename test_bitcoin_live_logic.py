@@ -68,13 +68,10 @@ class TestBitcoinLiveEngineLogic(unittest.TestCase):
         print(f"[TEST 1 PASS] Trade Charges Math Verified: Entry Fee=Rs.{entry_fee}, Exit Fee=Rs.{exit_fee}, Total Fee=Rs.{total_fee}")
 
     def test_02_position_sizing_quantity(self):
-        """2. Verify dynamic position sizing calculation for Rs.5,000 capital."""
-        entry_price = 8121844.50
+        """2. Verify dynamic position sizing calculation for Rs.5,000 capital (80% margin utilization target = 0.002 BTC)."""
+        entry_price = 8223426.50
         qty = self.engine.calculate_position_quantity(entry_price, 5000.0)
-        
-        # Expected ~0.015 to 0.035 BTC lot size
-        self.assertGreaterEqual(qty, 0.015)
-        self.assertLessEqual(qty, 0.05)
+        self.assertEqual(qty, 0.002)
         print(f"[TEST 2 PASS] Dynamic Position Sizing Verified: Entry Price=Rs.{entry_price:,.2f} -> Qty={qty} BTC")
 
     def test_03_sl_and_target_math_short(self):
@@ -637,6 +634,74 @@ class TestBitcoinLiveEngineLogic(unittest.TestCase):
         allowed, reason = self.engine.are_new_entries_allowed()
         self.assertTrue(allowed)
         print("[TEST 28 PASS] No Cooldown Triggered on Rejected Order!")
+
+    def test_29_dynamic_quantity_for_5k_balance(self):
+        """29. Verify Rs.5,000 balance at BTC Rs.82,23,426 yields exact 0.002 BTC (80% margin utilization)."""
+        entry_price = 8223426.50
+        qty = self.engine.calculate_position_quantity(entry_price, 5000.0)
+        self.assertEqual(qty, 0.002)
+        est_margin = (qty * entry_price) / 5.0
+        self.assertLess(est_margin, 5000.0)
+        print(f"[TEST 29 PASS] Rs.5,000 Balance Position Sizing: Qty={qty} BTC | Est. Margin=Rs.{est_margin:,.2f}")
+
+    def test_30_quantity_step_and_floor_rounding(self):
+        """30. Verify quantity is always rounded DOWN to 0.001 step size (never rounded UP)."""
+        entry_price = 8223426.50
+        # Rs.6,000 balance -> usable_margin = 4800, max_notional = 24000 -> raw_qty = 0.002918 -> floor to 0.002 BTC
+        qty = self.engine.calculate_position_quantity(entry_price, 6000.0)
+        self.assertEqual(qty, 0.002)
+        
+        # Rs.7,000 balance -> usable_margin = 5600, max_notional = 28000 -> raw_qty = 0.003405 -> floor to 0.003 BTC
+        qty2 = self.engine.calculate_position_quantity(entry_price, 7000.0)
+        self.assertEqual(qty2, 0.003)
+        print("[TEST 30 PASS] Quantity Floor Rounding (0.001 step size) Verified!")
+
+    def test_31_quantity_never_exceeds_available_margin(self):
+        """31. Verify estimated required margin for calculated quantity never exceeds available Futures balance."""
+        balances = [1000.0, 3000.0, 5000.0, 10000.0, 50000.0]
+        entry_price = 8223426.50
+        for bal in balances:
+            qty = self.engine.calculate_position_quantity(entry_price, bal)
+            if qty > 0:
+                est_margin = (qty * entry_price) / 5.0
+                self.assertLess(est_margin, bal)
+        print("[TEST 31 PASS] Estimated Required Margin Never Exceeds Available Futures Balance!")
+
+    def test_32_insufficient_balance_blocks_order(self):
+        """32. Verify available balance insufficient for min quantity 0.001 BTC returns 0.0 quantity and blocks order."""
+        entry_price = 8223426.50
+        # Rs.1,500 balance at 5x leverage -> max notional Rs.6,000 -> raw qty 0.000729 BTC < min step 0.001
+        qty = self.engine.calculate_position_quantity(entry_price, 1500.0)
+        self.assertEqual(qty, 0.0)
+
+        # Mock adapter with low balance Rs.1,500
+        self.engine.adapter.fetch_futures_balance = lambda: 1500.0
+        res = self.engine.execute_manual_trade("BUY")
+        self.assertFalse(res.get("success"))
+        self.assertIn("INSUFFICIENT MARGIN", res.get("error"))
+        print("[TEST 32 PASS] Insufficient Balance (< 0.001 BTC min) Blocks Order Execution!")
+
+    def test_33_quantity_recalculates_when_btc_price_changes(self):
+        """33. Verify quantity recalculates dynamically when BTC price changes."""
+        bal = 5000.0
+        # Low BTC price Rs.4,000,000 -> max_notional Rs.20,000 -> raw_qty 0.005 BTC
+        qty_low_price = self.engine.calculate_position_quantity(4000000.0, bal)
+        self.assertEqual(qty_low_price, 0.005)
+
+        # High BTC price Rs.10,000,000 -> max_notional Rs.20,000 -> raw_qty 0.002 BTC
+        qty_high_price = self.engine.calculate_position_quantity(10000000.0, bal)
+        self.assertEqual(qty_high_price, 0.002)
+        print(f"[TEST 33 PASS] Dynamic Recalculation on Price Change Verified: LowPrice Qty={qty_low_price} BTC, HighPrice Qty={qty_high_price} BTC")
+
+    def test_34_quantity_recalculates_when_futures_balance_changes(self):
+        """34. Verify quantity recalculates dynamically when Futures balance changes."""
+        entry_price = 8223426.50
+        qty_5k = self.engine.calculate_position_quantity(entry_price, 5000.0)
+        qty_15k = self.engine.calculate_position_quantity(entry_price, 15000.0)
+        
+        self.assertEqual(qty_5k, 0.002)
+        self.assertEqual(qty_15k, 0.007)
+        print(f"[TEST 34 PASS] Dynamic Recalculation on Balance Change Verified: 5k Bal Qty={qty_5k} BTC, 15k Bal Qty={qty_15k} BTC")
 
 if __name__ == "__main__":
     unittest.main()
