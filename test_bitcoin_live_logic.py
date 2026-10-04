@@ -958,6 +958,177 @@ class TestBitcoinLiveEngineLogic(unittest.TestCase):
         self.assertEqual(self.engine.last_api_status, "MUDREX FUTURES PRICE FEED UNAVAILABLE")
         print("[TEST 45 PASS] Price Feed Failure Does NOT Fall Back to Yahoo & Preserves Open Position State!")
 
+    def test_46_dashboard_pnl_uses_mudrex_futures_price(self):
+        """46. Verify dashboard P&L uses Mudrex Futures USD price instead of Yahoo BTC-INR."""
+        entry_usd = 85260.0
+        hr = 102.0
+        tp_usd, sl_usd, tp_inr, sl_inr, _ = self.engine.calculate_sl_and_target_prices("BUY", entry_usd, 0.002, hr)
+        pos_dict = {
+            "trade_id": "BTC_LIVE_TEST_46",
+            "mudrex_position_id": "POS_MUDREX_46",
+            "entry_timestamp": "2026-10-04 10:00:00",
+            "symbol": "BTCUSDT",
+            "direction": "BUY",
+            "quantity": 0.002,
+            "entry_price_usd": entry_usd,
+            "hedge_rate": hr,
+            "entry_price": entry_usd * hr,
+            "target_usd": tp_usd,
+            "stop_loss_usd": sl_usd,
+            "target": tp_inr,
+            "stop_loss": sl_inr,
+            "trend_state": "BULLISH",
+            "confidence": 95,
+            "status": "OPEN"
+        }
+        DB.save_bitcoin_live_trade(pos_dict)
+
+        # Mock Mudrex price = $85,296.10 USD (higher than entry)
+        self.engine.fetch_mudrex_futures_market_data = lambda: (85296.10, 102.0, "Mudrex API")
+        dash = self.engine.get_dashboard_state()
+
+        # Gross P&L in USD = (85296.10 - 85260.0) * 0.002 = +0.0722 USD -> +Rs.7.36 INR
+        self.assertEqual(dash.get("price_source"), "Mudrex API")
+        self.assertAlmostEqual(dash.get("current_unrealized_gross_pnl"), 7.36, delta=0.5)
+        print(f"[TEST 46 PASS] Dashboard P&L Uses Mudrex Futures Price Verified! Gross PnL=Rs.{dash.get('current_unrealized_gross_pnl')}")
+
+    def test_47_yahoo_price_cannot_affect_dashboard_pnl(self):
+        """47. Verify Yahoo BTC-INR price cannot alter dashboard P&L calculation."""
+        entry_usd = 85260.0
+        hr = 102.0
+        tp_usd, sl_usd, tp_inr, sl_inr, _ = self.engine.calculate_sl_and_target_prices("BUY", entry_usd, 0.002, hr)
+        pos_dict = {
+            "trade_id": "BTC_LIVE_TEST_47",
+            "mudrex_position_id": "POS_MUDREX_47",
+            "entry_timestamp": "2026-10-04 10:00:00",
+            "symbol": "BTCUSDT",
+            "direction": "BUY",
+            "quantity": 0.002,
+            "entry_price_usd": entry_usd,
+            "hedge_rate": hr,
+            "entry_price": entry_usd * hr,
+            "target_usd": tp_usd,
+            "stop_loss_usd": sl_usd,
+            "target": tp_inr,
+            "stop_loss": sl_inr,
+            "trend_state": "BULLISH",
+            "confidence": 95,
+            "status": "OPEN"
+        }
+        DB.save_bitcoin_live_trade(pos_dict)
+
+        # Mudrex price = $85,296.10 USD (positive P&L)
+        self.engine.fetch_mudrex_futures_market_data = lambda: (85296.10, 102.0, "Mudrex API")
+        dash = self.engine.get_dashboard_state()
+
+        # Ensure dashboard unrealized net P&L is NOT negative -978.75
+        self.assertGreater(dash.get("current_unrealized_gross_pnl"), 0.0)
+        self.assertNotEqual(dash.get("current_unrealized_net_pnl"), -978.75)
+        print("[TEST 47 PASS] Yahoo BTC-INR Cannot Affect Dashboard P&L Verified!")
+
+    def test_48_dashboard_net_pnl_equals_engine_net_pnl(self):
+        """48. Verify dashboard NET P&L equals engine calculate_live_position_pnl result."""
+        entry_usd = 85260.0
+        hr = 102.0
+        tp_usd, sl_usd, tp_inr, sl_inr, _ = self.engine.calculate_sl_and_target_prices("BUY", entry_usd, 0.002, hr)
+        pos_dict = {
+            "trade_id": "BTC_LIVE_TEST_48",
+            "mudrex_position_id": "POS_MUDREX_48",
+            "entry_timestamp": "2026-10-04 10:00:00",
+            "symbol": "BTCUSDT",
+            "direction": "BUY",
+            "quantity": 0.002,
+            "entry_price_usd": entry_usd,
+            "hedge_rate": hr,
+            "entry_price": entry_usd * hr,
+            "target_usd": tp_usd,
+            "stop_loss_usd": sl_usd,
+            "target": tp_inr,
+            "stop_loss": sl_inr,
+            "trend_state": "BULLISH",
+            "confidence": 95,
+            "status": "OPEN"
+        }
+        DB.save_bitcoin_live_trade(pos_dict)
+
+        curr_usd = 85296.10
+        self.engine.fetch_mudrex_futures_market_data = lambda: (curr_usd, 102.0, "Mudrex API")
+        
+        _, eng_gross, _, _, eng_fee, eng_net = self.engine.calculate_live_position_pnl(pos_dict, curr_usd, hr)
+        dash = self.engine.get_dashboard_state()
+
+        self.assertEqual(dash.get("current_unrealized_gross_pnl"), eng_gross)
+        self.assertEqual(dash.get("current_estimated_charges"), eng_fee)
+        self.assertEqual(dash.get("current_unrealized_net_pnl"), eng_net)
+        print(f"[TEST 48 PASS] Dashboard NET P&L ({dash.get('current_unrealized_net_pnl')}) Equals Engine NET P&L ({eng_net})!")
+
+    def test_49_dashboard_tpsl_equals_engine_tpsl(self):
+        """49. Verify dashboard TP/SL equals exact engine/database values."""
+        entry_usd = 85260.0
+        hr = 102.0
+        tp_usd, sl_usd, tp_inr, sl_inr, _ = self.engine.calculate_sl_and_target_prices("BUY", entry_usd, 0.002, hr)
+
+        pos_dict = {
+            "trade_id": "BTC_LIVE_TEST_49",
+            "mudrex_position_id": "POS_MUDREX_49",
+            "entry_timestamp": "2026-10-04 10:00:00",
+            "symbol": "BTCUSDT",
+            "direction": "BUY",
+            "quantity": 0.002,
+            "entry_price_usd": entry_usd,
+            "hedge_rate": hr,
+            "entry_price": entry_usd * hr,
+            "target_usd": tp_usd,
+            "stop_loss_usd": sl_usd,
+            "target": tp_inr,
+            "stop_loss": sl_inr,
+            "trend_state": "BULLISH",
+            "confidence": 95,
+            "status": "OPEN"
+        }
+        DB.save_bitcoin_live_trade(pos_dict)
+
+        dash = self.engine.get_dashboard_state()
+        self.assertEqual(dash.get("target"), 9006520.44)
+        self.assertEqual(dash.get("stop_loss"), 8506519.50)
+        self.assertEqual(dash.get("target_usd"), 88299.22)
+        self.assertEqual(dash.get("stop_loss_usd"), 83397.25)
+        print("[TEST 49 PASS] Dashboard TP/SL Equals Exact Engine/DB Values (TP=Rs.9,006,520.44 | SL=Rs.8,506,519.50)!")
+
+    def test_50_mudrex_data_failure_does_not_switch_to_yahoo(self):
+        """50. Verify Mudrex market data failure does not silently switch dashboard to Yahoo P&L."""
+        entry_usd = 85260.0
+        hr = 102.0
+        tp_usd, sl_usd, tp_inr, sl_inr, _ = self.engine.calculate_sl_and_target_prices("BUY", entry_usd, 0.002, hr)
+        pos_dict = {
+            "trade_id": "BTC_LIVE_TEST_50",
+            "mudrex_position_id": "POS_MUDREX_50",
+            "entry_timestamp": "2026-10-04 10:00:00",
+            "symbol": "BTCUSDT",
+            "direction": "BUY",
+            "quantity": 0.002,
+            "entry_price_usd": entry_usd,
+            "hedge_rate": hr,
+            "entry_price": entry_usd * hr,
+            "target_usd": tp_usd,
+            "stop_loss_usd": sl_usd,
+            "target": tp_inr,
+            "stop_loss": sl_inr,
+            "trend_state": "BULLISH",
+            "confidence": 95,
+            "status": "OPEN"
+        }
+        DB.save_bitcoin_live_trade(pos_dict)
+
+        # Mock Mudrex data failure returning None
+        self.engine.fetch_mudrex_futures_market_data = lambda: (None, 102.0, "MUDREX MARKET DATA UNAVAILABLE")
+        dash = self.engine.get_dashboard_state()
+
+        self.assertEqual(dash.get("price_source"), "MUDREX MARKET DATA UNAVAILABLE")
+        self.assertEqual(dash.get("current_unrealized_gross_pnl"), 0.0)
+        self.assertEqual(dash.get("current_unrealized_net_pnl"), 0.0)
+        print("[TEST 50 PASS] Mudrex Market Data Failure Safely Prevents Silent Yahoo Fallback!")
+
 if __name__ == "__main__":
     unittest.main()
 

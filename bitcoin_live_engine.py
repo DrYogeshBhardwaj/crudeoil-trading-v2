@@ -800,10 +800,47 @@ class BitcoinLiveEngine:
         DB.save_bitcoin_live_trade(reconciled)
         return reconciled
 
+    def calculate_live_position_pnl(
+        self,
+        active_pos: Optional[Dict[str, Any]],
+        curr_price_usd: Optional[float],
+        hedge_rate: Optional[float]
+    ) -> Tuple[float, float, float, float, float, float]:
+        """
+        Single authoritative live position P&L calculation used by BOTH process_tick()
+        and get_dashboard_state().
+        
+        Returns: (gross_pnl_usd, gross_pnl_inr, entry_fee_inr, exit_fee_inr, total_charges_inr, net_pnl_inr)
+        """
+        if not active_pos or curr_price_usd is None or curr_price_usd <= 0 or not hedge_rate or hedge_rate <= 0:
+            return 0.0, 0.0, 0.0, 0.0, 0.0, 0.0
+
+        pos_hr = float(active_pos.get("hedge_rate") or hedge_rate or 102.0)
+        entry_usd = float(active_pos.get("entry_price_usd") or (active_pos["entry_price"] / pos_hr))
+        qty = float(active_pos["quantity"])
+        direction = active_pos["direction"]
+
+        if direction == "BUY":
+            gross_pnl_usd = (curr_price_usd - entry_usd) * qty
+        else:
+            gross_pnl_usd = (entry_usd - curr_price_usd) * qty
+
+        gross_pnl_inr = gross_pnl_usd * pos_hr
+        entry_fee, exit_fee, total_charges = self.calculate_trade_charges(entry_usd * pos_hr, curr_price_usd * pos_hr, qty)
+        net_pnl_inr = gross_pnl_inr - total_charges
+
+        return (
+            round(gross_pnl_usd, 4),
+            round(gross_pnl_inr, 2),
+            round(entry_fee, 2),
+            round(exit_fee, 2),
+            round(total_charges, 2),
+            round(net_pnl_inr, 2)
+        )
+
     def get_dashboard_state(self) -> Dict[str, Any]:
         """Returns JSON state payload for the Bitcoin Live Engine dashboard."""
-        tick = BITCOIN_FEED.fetch_latest_tick()
-        btc_price = float(tick.get("price", 0.0)) if isinstance(tick, dict) else (float(tick.price) if hasattr(tick, "price") else 0.0)
+        curr_price_usd, hedge_rate, price_source = self.fetch_mudrex_futures_market_data()
 
         active_pos = self.auto_reconcile_active_position()
         spot_bal = self.adapter.fetch_spot_balance()
@@ -817,23 +854,22 @@ class BitcoinLiveEngine:
                 fut_bal += spot_bal
                 spot_bal = 0.0
 
-        unrealized_gross = 0.0
-        entry_fee = 0.0
-        exit_fee = 0.0
-        total_charges = 0.0
-        unrealized_net = 0.0
-
-        if active_pos and btc_price > 0:
-            entry = float(active_pos["entry_price"])
-            qty = float(active_pos["quantity"])
-            direction = active_pos["direction"]
-            if direction == "BUY":
-                unrealized_gross = (btc_price - entry) * qty
-            else:
-                unrealized_gross = (entry - btc_price) * qty
-            
-            entry_fee, exit_fee, total_charges = self.calculate_trade_charges(entry, btc_price, qty)
-            unrealized_net = unrealized_gross - total_charges
+        if active_pos and curr_price_usd and curr_price_usd > 0 and hedge_rate > 0:
+            _, unrealized_gross, entry_fee, exit_fee, total_charges, unrealized_net = self.calculate_live_position_pnl(
+                active_pos, curr_price_usd, hedge_rate
+            )
+            btc_inr_val = round((curr_price_usd * hedge_rate), 2)
+        elif curr_price_usd and curr_price_usd > 0 and hedge_rate > 0:
+            unrealized_gross = 0.0
+            total_charges = 0.0
+            unrealized_net = 0.0
+            btc_inr_val = round((curr_price_usd * hedge_rate), 2)
+        else:
+            unrealized_gross = 0.0
+            total_charges = 0.0
+            unrealized_net = 0.0
+            btc_inr_val = 0.0
+            price_source = "MUDREX MARKET DATA UNAVAILABLE"
 
         # Determine Scanner status
         if self.today_realized_pnl <= -self.daily_loss_limit_inr or self.daily_loss_limit_hit:
@@ -852,13 +888,10 @@ class BitcoinLiveEngine:
         allowed, allowed_reason = self.are_new_entries_allowed()
         all_trades = DB.load_all_bitcoin_live_trades()
 
-        curr_price_usd, hedge_rate, price_source = self.fetch_mudrex_futures_market_data()
-        btc_inr_val = round((curr_price_usd * hedge_rate), 2) if curr_price_usd else 0.0
-
         return {
             "btc_price": btc_inr_val,
             "mudrex_btc_usd_price": round(curr_price_usd, 2) if curr_price_usd else 0.0,
-            "mudrex_hedge_rate": round(hedge_rate, 2),
+            "mudrex_hedge_rate": round(hedge_rate, 2) if hedge_rate else 102.0,
             "mudrex_btc_inr_price": btc_inr_val,
             "price_source": price_source,
             "position": "OPEN" if active_pos else "NONE",
@@ -870,9 +903,9 @@ class BitcoinLiveEngine:
             "stop_loss_usd": active_pos.get("stop_loss_usd") if active_pos else None,
             "target": active_pos.get("target") if active_pos else None,
             "target_usd": active_pos.get("target_usd") if active_pos else None,
-            "current_unrealized_gross_pnl": round(unrealized_gross, 2),
-            "current_estimated_charges": round(total_charges, 2),
-            "current_unrealized_net_pnl": round(unrealized_net, 2),
+            "current_unrealized_gross_pnl": round(unrealized_gross, 2) if unrealized_gross is not None else 0.0,
+            "current_estimated_charges": round(total_charges, 2) if total_charges is not None else 0.0,
+            "current_unrealized_net_pnl": round(unrealized_net, 2) if unrealized_net is not None else 0.0,
             "today_realized_pnl": round(self.today_realized_pnl, 2),
             "per_trade_loss_limit_inr": self.per_trade_loss_limit_inr,
             "per_trade_profit_target_inr": self.per_trade_profit_target_inr,
@@ -966,11 +999,9 @@ class BitcoinLiveEngine:
                     active_pos["target"] = tp_inr
                     active_pos["stop_loss"] = sl_inr
 
-                # Live P&L calculations in USD and INR
-                gross_pnl_usd = (curr_price_usd - entry_usd) * qty if direction == "BUY" else (entry_usd - curr_price_usd) * qty
-                gross_pnl_inr = gross_pnl_usd * pos_hr
-                entry_fee, exit_fee, total_charges = self.calculate_trade_charges(entry_usd * pos_hr, curr_price_usd * pos_hr, qty)
-                net_pnl = gross_pnl_inr - total_charges
+                gross_pnl_usd, gross_pnl_inr, entry_fee, exit_fee, total_charges, net_pnl = self.calculate_live_position_pnl(
+                    active_pos, curr_price_usd, hedge_rate
+                )
 
                 # Active position exit checks
                 tp_hit = (net_pnl >= self.per_trade_profit_target_inr) or ((curr_price_usd >= tp_usd) if direction == "BUY" else (curr_price_usd <= tp_usd))
