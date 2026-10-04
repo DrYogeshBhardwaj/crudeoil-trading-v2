@@ -369,7 +369,7 @@ class BitcoinLiveEngine:
 
         self.consecutive_api_failures = 0
         self.last_api_status = "UNKNOWN"
-        self.last_sl_time = 0.0
+        self.last_sl_time = float(DB.load_bitcoin_live_setting("last_sl_time", "0.0"))
         self.evaluation_stream = []
         self.last_evaluation = {}
 
@@ -437,6 +437,7 @@ class BitcoinLiveEngine:
         DB.save_bitcoin_live_setting("today_realized_pnl", str(self.today_realized_pnl))
         DB.save_bitcoin_live_setting("today_date", self.today_date)
         DB.save_bitcoin_live_setting("live_trading_enabled", "TRUE" if self.live_trading_enabled else "FALSE")
+        DB.save_bitcoin_live_setting("last_sl_time", str(self.last_sl_time))
 
     def set_live_trading_enabled(self, enabled: bool):
         """Enables or disables live trading execution."""
@@ -693,11 +694,9 @@ class BitcoinLiveEngine:
                 tp_hit = (net_pnl >= self.per_trade_profit_target_inr) or ((curr_price >= tp_p) if direction == "BUY" else (curr_price <= tp_p))
                 sl_hit = (net_pnl <= -self.per_trade_loss_limit_inr) or ((curr_price <= sl_p) if direction == "BUY" else (curr_price >= sl_p))
 
-                # Trend Reversal Check: Close early if market trend strongly flips against open position
-                sig_act = eval_res.get("action", "WAIT")
-                sig_conf = eval_res.get("confidence", 50)
-                reversal_hit = (direction == "BUY" and sig_act == "SELL" and sig_conf >= 70) or \
-                               (direction == "SELL" and sig_act == "BUY" and sig_conf >= 70)
+                # Reversal hit disabled to prevent whipsaw losses on indicator noise.
+                # Trades will strictly exit on NET Profit Target (+₹600) or NET Loss Limit (-₹400/SL).
+                reversal_hit = False
 
                 if tp_hit or sl_hit or reversal_hit:
                     if tp_hit:
@@ -724,8 +723,8 @@ class BitcoinLiveEngine:
                     active_pos["charges"] = round(total_charges, 2)
                     active_pos["net_pnl"] = round(net_pnl, 2)
 
-                    if sl_hit:
-                        self.last_sl_time = time.time()
+                    # Mandatory 15-minute cooldown after any exit to prevent churn & fee burn
+                    self.last_sl_time = time.time()
                     DB.save_bitcoin_live_trade(active_pos)
                     self.today_realized_pnl += net_pnl
                     self.save_settings()

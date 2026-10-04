@@ -243,5 +243,41 @@ class TestBitcoinLiveEngineLogic(unittest.TestCase):
         self.assertIn("DAILY LOSS LIMIT REACHED", reason)
         print("[TEST 7 PASS] Daily Loss Limit Enforcement Verified")
 
+    def test_08_cooldown_persistence_across_restarts(self):
+        """8. Verify 15-minute cooldown persists in DB across server restarts (e.g. exit 2m ago -> 13m remaining)."""
+        import time
+        exit_time_2m_ago = time.time() - 120.0 # Trade exited 2 minutes ago
+        self.engine.last_sl_time = exit_time_2m_ago
+        self.engine.save_settings()
+
+        # Simulate Railway Server Restart / Redeploy (New Instance)
+        restarted_engine = BitcoinLiveEngine()
+        restarted_engine.live_trading_enabled = True
+
+        self.assertAlmostEqual(restarted_engine.last_sl_time, exit_time_2m_ago, delta=1.0)
+        allowed, reason = restarted_engine.are_new_entries_allowed()
+        
+        self.assertFalse(allowed)
+        self.assertIn("COOLDOWN ACTIVE", reason)
+        self.assertIn("13m wait", reason)
+        print(f"[TEST 8 PASS] Cooldown DB Persistence Across Server Restart Verified! Remaining: {reason}")
+
+    def test_09_cooldown_expiry_allows_new_entry(self):
+        """9. Verify new entries are allowed after full 15-minute cooldown expires (>900s)."""
+        import time
+        exit_time_15m_ago = time.time() - 905.0 # Trade exited 15 mins 5 seconds ago
+        self.engine.last_sl_time = exit_time_15m_ago
+        self.engine.save_settings()
+
+        # Simulate Railway Server Restart / Redeploy (New Instance)
+        restarted_engine = BitcoinLiveEngine()
+        restarted_engine.live_trading_enabled = True
+
+        allowed, reason = restarted_engine.are_new_entries_allowed()
+        self.assertTrue(allowed)
+        self.assertIn("ALLOWED", reason)
+        print(f"[TEST 9 PASS] Cooldown Expiry Verification Passed! Status: {reason}")
+
 if __name__ == "__main__":
     unittest.main()
+
