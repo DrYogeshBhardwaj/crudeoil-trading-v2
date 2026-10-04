@@ -648,18 +648,18 @@
             if (!elVal || !elSub || !elBox) return;
 
             const totalSec = slotHoldingSeconds[slotIdx] || 0;
-            const remSec = Math.max(0, 600 - totalSec); // 10-minute max = 600s
+            const remSec = Math.max(0, 300 - totalSec); // 5-minute max = 300s
 
             const ageMm = String(Math.floor(totalSec / 60)).padStart(2, '0');
             const ageSs = String(totalSec % 60).padStart(2, '0');
             const remMm = String(Math.floor(remSec / 60)).padStart(2, '0');
             const remSs = String(remSec % 60).padStart(2, '0');
 
-            // Downward Countdown Stopwatch (Top to Bottom: 10:00 -> 00:00)
+            // Downward Countdown Stopwatch (Top to Bottom: 05:00 -> 00:00)
             elVal.innerText = `⏳ ${remMm}:${remSs}`;
-            elSub.innerText = `Elapsed: ${ageMm}:${ageSs} / 10:00`;
+            elSub.innerText = `Elapsed: ${ageMm}:${ageSs} / 05:00`;
 
-            if (remSec <= 120) { // Under 2 minutes remaining
+            if (remSec <= 60) { // Under 1 minute remaining
                 elVal.className = 'timer-val expiring';
                 elBox.className = 'pos-timer-box expiring';
                 elSub.innerText = `⚠️ ${remMm}:${remSs} (EXPIRING) • Elapsed: ${ageMm}:${ageSs}`;

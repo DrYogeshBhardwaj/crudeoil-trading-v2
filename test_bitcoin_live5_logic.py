@@ -4,8 +4,8 @@ Verifies all 17 Safety & Logic Checkpoints:
 1. Maximum 5 positions limit enforced.
 2. Sixth position cannot open.
 3. New-entry interval is 1 minute (60 seconds).
-4. Every position gets its own 10-minute timer.
-5. Position 1 closes at 10 minutes even if Position 5 is only 2 minutes old.
+4. Every position gets its own 5-minute timer.
+5. Position 1 closes at 5 minutes even if Position 5 is only 1 minute old.
 6. +Rs.100 NET profit target closes ONLY that affected position.
 7. -Rs.200 NET max loss closes ONLY that affected position.
 8. Time expiry closes ONLY that affected position.
@@ -112,20 +112,20 @@ class TestBitcoinLive5EngineLogic(unittest.TestCase):
         self.assertEqual(self.engine.entry_interval_seconds, 60)
         print("[TEST 3 PASS] New-entry interval set to 1 minute!")
 
-    def test_04_position_timer_10_minutes(self):
-        """4. Verify every position gets its own 10-minute timer."""
-        self.assertEqual(self.engine.max_holding_time_seconds, 600)
-        print("[TEST 4 PASS] 10-minute position holding time timer verified!")
+    def test_04_position_timer_5_minutes(self):
+        """4. Verify every position gets its own 5-minute timer."""
+        self.assertEqual(self.engine.max_holding_time_seconds, 300)
+        print("[TEST 4 PASS] 5-minute position holding time timer verified!")
 
     def test_05_independent_time_exit_per_position(self):
-        """5. Verify Position 1 closes at 10 minutes even if Position 5 is only 2 minutes old."""
+        """5. Verify Position 1 closes at 5 minutes even if Position 5 is only 1 minute old."""
         curr_usd, hr, _ = self.engine.fetch_mudrex_futures_market_data()
         curr_usd = curr_usd or 86000.0
         hr = hr or 102.0
 
         now = datetime.now()
-        p1_time = (now - timedelta(minutes=11)).strftime("%Y-%m-%d %H:%M:%S")
-        p5_time = (now - timedelta(minutes=2)).strftime("%Y-%m-%d %H:%M:%S")
+        p1_time = (now - timedelta(minutes=6)).strftime("%Y-%m-%d %H:%M:%S")
+        p5_time = (now - timedelta(minutes=1)).strftime("%Y-%m-%d %H:%M:%S")
 
         pos1 = {
             "trade_id": "PAPER_BTC5_P1",
@@ -174,8 +174,8 @@ class TestBitcoinLive5EngineLogic(unittest.TestCase):
         all_trades = DB.load_all_bitcoin_live5_trades()
         closed_p1 = [t for t in all_trades if t["trade_id"] == "PAPER_BTC5_P1"][0]
         self.assertEqual(closed_p1["status"], "CLOSED")
-        self.assertIn("10-MINUTE TIME EXIT", closed_p1["exit_reason"])
-        print("[TEST 5 PASS] Position 1 closed at 10 minutes while Position 5 remained open!")
+        self.assertIn("5-MINUTE TIME EXIT", closed_p1["exit_reason"])
+        print("[TEST 5 PASS] Position 1 closed at 5 minutes while Position 5 remained open!")
 
     def test_06_target_profit_closes_only_affected_position(self):
         """6. Verify +Rs.100 NET target profit closes ONLY affected position."""
@@ -280,8 +280,8 @@ class TestBitcoinLive5EngineLogic(unittest.TestCase):
         hr = hr or 102.0
 
         now = datetime.now()
-        p1_time = (now - timedelta(seconds=605)).strftime("%Y-%m-%d %H:%M:%S")
-        p2_time = (now - timedelta(seconds=300)).strftime("%Y-%m-%d %H:%M:%S")
+        p1_time = (now - timedelta(seconds=305)).strftime("%Y-%m-%d %H:%M:%S")
+        p2_time = (now - timedelta(seconds=120)).strftime("%Y-%m-%d %H:%M:%S")
 
         pos1 = {
             "trade_id": "PAPER_BTC5_TE1",
@@ -514,6 +514,46 @@ class TestBitcoinLive5EngineLogic(unittest.TestCase):
         self.assertEqual(closed_trades[0]["status"], "CLOSED")
         self.assertEqual(closed_trades[0]["exit_reason"], "PROFIT TARGET +Rs.100 NET")
         print("[TEST 17 PASS] Completed trade history recorded cleanly!")
+
+    def test_18_direction_reversal_when_long_flow_is_red(self):
+        """18. Verify next entry direction is SHORT when active LONG flow is RED."""
+        now_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        active_longs = [
+            {
+                "trade_id": f"PAPER_BTC5_L_{i}",
+                "slot_index": i,
+                "direction": "BUY",
+                "quantity": 0.002,
+                "entry_price_usd": 88000.0, # High entry price
+                "hedge_rate": 102.0,
+                "status": "OPEN"
+            }
+            for i in range(1, 4)
+        ]
+        # Current price = 86000 USD -> LONG positions are in loss (RED)
+        next_dir = self.engine.determine_next_entry_direction(active_longs, 86000.0, 102.0, "BUY")
+        self.assertEqual(next_dir, "SELL")
+        print(f"[TEST 18 PASS] Active LONG flow RED -> Next entry direction correctly reversed to SHORT ({next_dir})!")
+
+    def test_19_direction_reversal_when_short_flow_is_red(self):
+        """19. Verify next entry direction is LONG when active SHORT flow is RED."""
+        now_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        active_shorts = [
+            {
+                "trade_id": f"PAPER_BTC5_S_{i}",
+                "slot_index": i,
+                "direction": "SELL",
+                "quantity": 0.002,
+                "entry_price_usd": 84000.0, # Low entry price
+                "hedge_rate": 102.0,
+                "status": "OPEN"
+            }
+            for i in range(1, 4)
+        ]
+        # Current price = 86000 USD -> SHORT positions are in loss (RED)
+        next_dir = self.engine.determine_next_entry_direction(active_shorts, 86000.0, 102.0, "SELL")
+        self.assertEqual(next_dir, "BUY")
+        print(f"[TEST 19 PASS] Active SHORT flow RED -> Next entry direction correctly reversed to LONG ({next_dir})!")
 
 if __name__ == "__main__":
     unittest.main()

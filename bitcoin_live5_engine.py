@@ -37,7 +37,7 @@ class BitcoinLive5Engine:
     def __init__(self):
         self.adapter = MudrexLiveAdapter()
         self.test_capital_reference = 20000.0 # Rs. 20,000 test capital
-        self.max_holding_time_seconds = 600 # 10 minutes maximum holding time
+        self.max_holding_time_seconds = 300 # 5 minutes maximum holding time
         self.entry_interval_seconds = 60 # 1 minute rolling entry interval
         self.load_settings()
         self.active_positions: List[Dict[str, Any]] = []
@@ -192,6 +192,48 @@ class BitcoinLive5Engine:
             round(net_pnl_inr, 2)
         )
 
+    def determine_next_entry_direction(
+        self,
+        active_pos_list: List[Dict[str, Any]],
+        curr_price_usd: float,
+        hedge_rate: float,
+        default_signal_action: str
+    ) -> str:
+        """
+        Determines direction for the next 1-minute entry candidate based on active positions flow P&L.
+        If existing active positions have a majority/aggregate RED Net P&L in one direction,
+        the next entry MUST take the OPPOSITE direction (reversal/hedge entry).
+        Otherwise, defaults to default_signal_action (or 'BUY' if signal is WAIT).
+        """
+        if not active_pos_list:
+            return default_signal_action if default_signal_action in ("BUY", "SELL") else "BUY"
+
+        long_positions = [p for p in active_pos_list if p.get("direction") == "BUY"]
+        short_positions = [p for p in active_pos_list if p.get("direction") in ("SELL", "SHORT")]
+
+        long_net_pnl = sum([self.calculate_live_position_pnl(p, curr_price_usd, hedge_rate)[5] for p in long_positions])
+        short_net_pnl = sum([self.calculate_live_position_pnl(p, curr_price_usd, hedge_rate)[5] for p in short_positions])
+
+        # Case 1: Pure LONG active positions flow is RED (< 0) -> Next entry MUST BE SELL
+        if long_positions and not short_positions and long_net_pnl < 0:
+            return "SELL"
+
+        # Case 2: Pure SHORT active positions flow is RED (< 0) -> Next entry MUST BE BUY
+        if short_positions and not long_positions and short_net_pnl < 0:
+            return "BUY"
+
+        # Case 3: Mixed active positions — compare losing side dominance
+        if long_positions and short_positions:
+            if long_net_pnl < 0 and long_net_pnl < short_net_pnl:
+                return "SELL"
+            if short_net_pnl < 0 and short_net_pnl < long_net_pnl:
+                return "BUY"
+
+        # Case 4: No active RED flow — follow standard signal action (fallback to BUY if WAIT)
+        if default_signal_action in ("BUY", "SELL"):
+            return default_signal_action
+        return "BUY"
+
     def auto_reconcile_active_positions(self) -> List[Dict[str, Any]]:
         """Queries local DB for active paper test positions."""
         db_positions = DB.load_active_bitcoin_live5_positions()
@@ -251,7 +293,7 @@ class BitcoinLive5Engine:
                     "initial_margin": margin_req,
                     "current_price_usd": curr_price_usd,
                     "current_price_inr": btc_inr_val,
-                    "holding_time_str": f"{age_mm:02d}:{age_ss:02d} / 10:00",
+                    "holding_time_str": f"{age_mm:02d}:{age_ss:02d} / 05:00",
                     "remaining_time_str": f"{rem_mm:02d}:{rem_ss:02d}",
                     "holding_seconds": holding_seconds
                 })
@@ -264,8 +306,8 @@ class BitcoinLive5Engine:
                     "charges": 0.0,
                     "net_pnl": 0.0,
                     "initial_margin": 0.0,
-                    "holding_time_str": "00:00 / 10:00",
-                    "remaining_time_str": "10:00"
+                    "holding_time_str": "00:00 / 05:00",
+                    "remaining_time_str": "05:00"
                 })
 
         test_used_margin = round(total_used_margin, 2)
@@ -277,7 +319,7 @@ class BitcoinLive5Engine:
         total_test_trades = len(closed_trades)
         winning_trades = len([t for t in closed_trades if float(t.get("net_pnl", 0.0)) > 0])
         losing_trades = len([t for t in closed_trades if float(t.get("net_pnl", 0.0)) < 0])
-        time_exits = len([t for t in closed_trades if "10-MINUTE TIME EXIT" in str(t.get("exit_reason", ""))])
+        time_exits = len([t for t in closed_trades if "5-MINUTE TIME EXIT" in str(t.get("exit_reason", "")) or "10-MINUTE TIME EXIT" in str(t.get("exit_reason", ""))])
         win_rate = round((winning_trades / total_test_trades * 100.0), 1) if total_test_trades > 0 else 0.0
         
         realized_pnl = sum([float(t.get("net_pnl", 0.0)) for t in closed_trades])
@@ -469,21 +511,25 @@ class BitcoinLive5Engine:
                     print(f"[{datetime.now()}] [5-LIVE PAPER EXIT] Slot {pos.get('slot_index')} Net P&L Rs.{net_pnl:,.2f} <= Loss Limit -Rs.{self.per_trade_loss_limit_inr:,.2f}!")
                     self.close_single_position(pos, exit_reason=reason)
                 elif time_exit_hit:
-                    reason = f"10-MINUTE TIME EXIT ({int(holding_seconds)}s)"
-                    print(f"[{datetime.now()}] [5-LIVE PAPER EXIT] Slot {pos.get('slot_index')} reached 10-min max holding time ({int(holding_seconds)}s)! Executing time exit.")
+                    reason = f"5-MINUTE TIME EXIT ({int(holding_seconds)}s)"
+                    print(f"[{datetime.now()}] [5-LIVE PAPER EXIT] Slot {pos.get('slot_index')} reached 5-min max holding time ({int(holding_seconds)}s)! Executing time exit.")
                     self.close_single_position(pos, exit_reason=reason)
 
-            # 2. EVALUATE NEW POSITION ENTRY (2-MINUTE ENTRY INTERVAL & MAX 5 POSITIONS)
+            # 2. EVALUATE NEW POSITION ENTRY (1-MINUTE ENTRY INTERVAL & MAX 5 POSITIONS)
             current_active_count = len(DB.load_active_bitcoin_live5_positions())
             if current_active_count >= self.max_positions:
                 return
 
-            action = eval_res.get("action", "WAIT")
+            now_ts = time.time()
+            # 1-Minute Entry Interval Lock: Earliest new entry opportunity is every 60 seconds
+            if (now_ts - self.last_entry_time) < self.entry_interval_seconds:
+                return
+
+            active_pos_list = DB.load_active_bitcoin_live5_positions()
+            raw_action = eval_res.get("action", "WAIT")
+            action = self.determine_next_entry_direction(active_pos_list, curr_price_usd, hedge_rate, raw_action)
+
             if action in ("BUY", "SELL"):
-                now_ts = time.time()
-                # 2-Minute Entry Interval Lock: Earliest new entry opportunity is every 120 seconds
-                if (now_ts - self.last_entry_time) < self.entry_interval_seconds:
-                    return
 
                 # Calculate required paper margin
                 qty = self.default_quantity
