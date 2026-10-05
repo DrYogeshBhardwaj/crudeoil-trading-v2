@@ -69,7 +69,7 @@ class BitcoinLive5Engine:
         self.default_leverage = float(DB.load_bitcoin_live5_setting("default_leverage", "5.0"))
         
         self.per_trade_profit_target_inr = float(DB.load_bitcoin_live5_setting("per_trade_profit_target_inr", "25.0"))
-        self.per_trade_loss_limit_inr = float(DB.load_bitcoin_live5_setting("per_trade_loss_limit_inr", "50.0"))
+        self.per_trade_loss_limit_inr = float(DB.load_bitcoin_live5_setting("per_trade_loss_limit_inr", "20.0"))
         self.daily_loss_limit_inr = float(DB.load_bitcoin_live5_setting("daily_loss_limit_inr", "1000.0"))
 
         DB.save_bitcoin_live5_setting("test_capital_reference", str(self.test_capital_reference))
