@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>BTC UP-DOWN CAPTURE 10 — Paper Test Dashboard</title>
+    <title>BTC UP-DOWN CAPTURE 10 — Watching Dashboard</title>
     <!-- Google Fonts & Chart.js -->
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;700;800&display=swap" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -124,6 +124,45 @@
             color: var(--text-main);
         }
 
+        /* POSITION SIZING & CAPITAL OVERVIEW GRID */
+        .sizing-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 12px;
+        }
+
+        .sizing-card {
+            border-radius: 10px;
+            padding: 14px 16px;
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+            border: 1px solid;
+            transition: transform 0.2s;
+        }
+
+        .sizing-card:hover {
+            transform: translateY(-2px);
+        }
+
+        .sizing-card .stitle {
+            font-size: 0.72rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .sizing-card .sval {
+            font-family: var(--font-mono);
+            font-size: 1.35rem;
+            font-weight: 800;
+        }
+
+        .sizing-card .ssub {
+            font-size: 0.7rem;
+            opacity: 0.8;
+        }
+
         /* METRICS SUMMARY GRID */
         .summary-grid {
             display: grid;
@@ -170,7 +209,7 @@
         .text-cyan { color: var(--accent-cyan) !important; }
         .text-amber { color: var(--accent-amber) !important; }
 
-        /* MAIN CONTENT AREA: CHART & SLOTS */
+        /* MAIN CONTENT AREA */
         .main-layout {
             display: grid;
             grid-template-columns: 1fr 340px;
@@ -210,7 +249,7 @@
             gap: 8px;
         }
 
-        /* 10-SLOT TABLE */
+        /* 10-SLOT WATCHING TABLE (OPTIMIZED FOR VISUAL EFFORTLESS WATCHING) */
         .slots-table-wrapper {
             overflow-x: auto;
         }
@@ -218,24 +257,25 @@
         table.slots-table {
             width: 100%;
             border-collapse: collapse;
-            font-size: 0.82rem;
+            font-size: 0.85rem;
             text-align: left;
         }
 
         table.slots-table th {
             background-color: #090d1a;
             color: var(--text-muted);
-            padding: 10px 12px;
-            font-weight: 600;
+            padding: 12px 14px;
+            font-weight: 700;
             text-transform: uppercase;
-            font-size: 0.7rem;
+            font-size: 0.72rem;
             border-bottom: 1px solid var(--border-color);
         }
 
         table.slots-table td {
-            padding: 10px 12px;
+            padding: 12px 14px;
             border-bottom: 1px solid #141e33;
             font-family: var(--font-mono);
+            vertical-align: middle;
         }
 
         table.slots-table tr:hover {
@@ -244,39 +284,52 @@
 
         .status-pill {
             display: inline-block;
-            padding: 3px 8px;
-            border-radius: 4px;
-            font-size: 0.72rem;
-            font-weight: 700;
+            padding: 5px 12px;
+            border-radius: 6px;
+            font-size: 0.78rem;
+            font-weight: 800;
             text-align: center;
+            letter-spacing: 0.5px;
         }
 
         .pill-long {
-            background: rgba(16, 185, 129, 0.15);
+            background: rgba(16, 185, 129, 0.18);
             color: var(--accent-green);
-            border: 1px solid rgba(16, 185, 129, 0.4);
+            border: 1px solid rgba(16, 185, 129, 0.5);
         }
 
         .pill-short {
-            background: rgba(244, 63, 94, 0.15);
+            background: rgba(244, 63, 94, 0.18);
             color: var(--accent-red);
-            border: 1px solid rgba(244, 63, 94, 0.4);
+            border: 1px solid rgba(244, 63, 94, 0.5);
         }
 
         .pill-empty {
-            background: rgba(148, 163, 184, 0.1);
+            background: rgba(148, 163, 184, 0.08);
             color: #64748b;
             border: 1px dashed #334155;
+        }
+
+        .pnl-badge {
+            font-size: 1.1rem;
+            font-weight: 800;
+            font-family: var(--font-mono);
+        }
+
+        .compact-price {
+            font-size: 0.72rem;
+            color: #64748b;
+            line-height: 1.3;
         }
 
         .btn-action {
             background-color: rgba(244, 63, 94, 0.2);
             border: 1px solid var(--accent-red);
             color: #fecdd3;
-            padding: 4px 10px;
+            padding: 5px 12px;
             border-radius: 6px;
             font-size: 0.75rem;
-            font-weight: 600;
+            font-weight: 700;
             cursor: pointer;
             transition: background 0.2s;
         }
@@ -426,6 +479,30 @@
         </div>
     </div>
 
+    <!-- POSITION SIZING & CAPITAL OVERVIEW BAR (VERIFIED ACCORDING TO MODEL) -->
+    <div class="sizing-grid">
+        <div class="sizing-card" style="background: linear-gradient(135deg, #09132b, #0f1d3a); border-color: #1e3a8a;">
+            <span class="stitle" style="color: #93c5fd;">Reference / Margin Capital</span>
+            <span class="sval text-cyan" id="sz-ref-capital">₹35,000</span>
+            <span class="ssub" style="color: #60a5fa;">10 Slots × ₹3,500 Required Margin</span>
+        </div>
+        <div class="sizing-card" style="background: linear-gradient(135deg, #170d38, #251254); border-color: #581c87;">
+            <span class="stitle" style="color: #c084fc;">Total Market Exposure</span>
+            <span class="sval" style="color: #e879f9;" id="sz-total-exposure">₹1,75,000</span>
+            <span class="ssub" style="color: #f0abfc;">10 Slots × ₹17,500 Market Position</span>
+        </div>
+        <div class="sizing-card" style="background: linear-gradient(135deg, #071f1b, #0c332c); border-color: #065f46;">
+            <span class="stitle" style="color: #6ee7b7;">Per Slot Market Position</span>
+            <span class="sval text-green" id="sz-slot-position">₹17,500</span>
+            <span class="ssub" style="color: #34d399;">5× Leverage Notional Exposure</span>
+        </div>
+        <div class="sizing-card" style="background: linear-gradient(135deg, #1f1707, #33260c); border-color: #78350f;">
+            <span class="stitle" style="color: #fde047;">Per Slot Required Margin</span>
+            <span class="sval text-amber" id="sz-slot-margin">₹3,500</span>
+            <span class="ssub" style="color: #facc15;">₹17,500 / 5 Leverage</span>
+        </div>
+    </div>
+
     <!-- SUMMARY METRICS GRID -->
     <div class="summary-grid">
         <div class="metric-card">
@@ -458,13 +535,13 @@
     <!-- MAIN LAYOUT -->
     <div class="main-layout">
         
-        <!-- LEFT COLUMN: 10-SLOT TABLE & LIVE CHART -->
+        <!-- LEFT COLUMN: STREAMLINED 10-SLOT WATCHING VIEW & CHART -->
         <div style="display: flex; flex-direction: column; gap: 16px;">
             
-            <!-- 10-SLOT POSITIONS PANEL -->
+            <!-- 10-SLOT POSITIONS WATCHING PANEL -->
             <div class="card-panel">
                 <div class="panel-header">
-                    <h2>⚡ 10 Simultaneous Position Slots Status</h2>
+                    <h2>👁️ 10 Slots Watching View (P&L Focused)</h2>
                     <span style="font-size: 0.75rem; color: var(--text-muted);" id="last-update-time">Updating...</span>
                 </div>
                 
@@ -474,12 +551,10 @@
                             <tr>
                                 <th>Slot</th>
                                 <th>Status</th>
-                                <th>Entry Price</th>
-                                <th>Current Price</th>
+                                <th style="text-align: center;">NET P&L (Target +₹100 / Max -₹60)</th>
                                 <th>Gross P&L</th>
-                                <th>Fees (Taker)</th>
-                                <th>NET P&L</th>
-                                <th>Target / Loss</th>
+                                <th>Taker Fees</th>
+                                <th>Prices (Entry → Current)</th>
                                 <th>Action</th>
                             </tr>
                         </thead>
@@ -662,6 +737,14 @@
                 document.getElementById('slots-ratio-chip').innerText = `${data.active_slots_count} / ${data.total_slots} Slots`;
                 document.getElementById('btc-header-price').innerText = `₹${(data.current_btc_price_inr || 0).toLocaleString('en-IN', {minimumFractionDigits: 2})}`;
 
+                // Position Sizing Overview Cards
+                if (data.reference_margin_capital_inr) {
+                    document.getElementById('sz-ref-capital').innerText = `₹${(data.reference_margin_capital_inr).toLocaleString('en-IN')}`;
+                    document.getElementById('sz-total-exposure').innerText = `₹${(data.total_market_exposure_inr).toLocaleString('en-IN')}`;
+                    document.getElementById('sz-slot-position').innerText = `₹${(data.per_slot_market_position_inr).toLocaleString('en-IN')}`;
+                    document.getElementById('sz-slot-margin').innerText = `₹${(data.per_slot_margin_inr).toLocaleString('en-IN')}`;
+                }
+
                 // Summary Cards
                 const openPnlEl = document.getElementById('open-net-pnl');
                 openPnlEl.innerText = `₹${data.total_open_net_pnl >= 0 ? '+' : ''}${data.total_open_net_pnl.toFixed(2)}`;
@@ -690,7 +773,7 @@
                 document.getElementById('avg-loss').innerText = `₹${data.avg_net_loss_losing_trade.toFixed(2)}`;
                 document.getElementById('avg-holding').innerText = data.avg_holding_time_str;
 
-                // 10 Slots Table
+                // 10 Slots Watching Table (Streamlined & P&L Focused)
                 const tbody = document.getElementById('slots-tbody');
                 tbody.innerHTML = '';
 
@@ -704,15 +787,19 @@
                         ? `<span class="status-pill ${isLong ? 'pill-long' : 'pill-short'}">${isLong ? 'LONG' : 'SHORT'}</span>`
                         : `<span class="status-pill pill-empty">AVAILABLE</span>`;
 
-                    const entryPriceStr = isActive ? `₹${(s.entry_price || 0).toLocaleString('en-IN', {minimumFractionDigits: 2})}` : '-';
-                    const currPriceStr = isActive ? `₹${(s.current_price || 0).toLocaleString('en-IN', {minimumFractionDigits: 2})}` : '-';
+                    const netPnlClass = s.net_pnl >= 0 ? 'text-green' : 'text-red';
+                    const netPnlDisplay = isActive 
+                        ? `<div style="text-align: center;"><span class="pnl-badge ${netPnlClass}">₹${s.net_pnl >= 0 ? '+' : ''}${s.net_pnl.toFixed(2)}</span></div>`
+                        : `<div style="text-align: center; color: #475569;">-</div>`;
+
                     const grossPnlStr = isActive ? `₹${s.gross_pnl >= 0 ? '+' : ''}${s.gross_pnl.toFixed(2)}` : '-';
                     const feesStr = isActive ? `₹${s.charges.toFixed(2)}` : '-';
                     
-                    const netPnlClass = s.net_pnl >= 0 ? 'text-green' : 'text-red';
-                    const netPnlStr = isActive ? `<span class="${netPnlClass}">₹${s.net_pnl >= 0 ? '+' : ''}${s.net_pnl.toFixed(2)}</span>` : '-';
+                    // Compact prices (subtle, non-distracting)
+                    const pricesStr = isActive 
+                        ? `<div class="compact-price">E: ₹${Math.round(s.entry_price).toLocaleString('en-IN')}<br>C: ₹${Math.round(s.current_price).toLocaleString('en-IN')}</div>`
+                        : `<span style="color: #475569;">-</span>`;
 
-                    const targetLossStr = `+₹${s.target_net_inr} / -₹${s.max_loss_net_inr}`;
                     const actionBtn = isActive 
                         ? `<button class="btn-action" onclick="closeSlot(${s.slot_index})">Close Slot</button>`
                         : `<span style="color: #475569;">-</span>`;
@@ -720,12 +807,10 @@
                     tr.innerHTML = `
                         <td><strong>Slot #${s.slot_index}</strong></td>
                         <td>${statusPill}</td>
-                        <td>${entryPriceStr}</td>
-                        <td>${currPriceStr}</td>
-                        <td>${grossPnlStr}</td>
-                        <td style="color: var(--accent-amber);">${feesStr}</td>
-                        <td><strong>${netPnlStr}</strong></td>
-                        <td style="color: var(--text-muted); font-size: 0.75rem;">${targetLossStr}</td>
+                        <td>${netPnlDisplay}</td>
+                        <td style="font-size: 0.8rem;">${grossPnlStr}</td>
+                        <td style="color: var(--accent-amber); font-size: 0.8rem;">${feesStr}</td>
+                        <td>${pricesStr}</td>
                         <td>${actionBtn}</td>
                     `;
                     tbody.appendChild(tr);
