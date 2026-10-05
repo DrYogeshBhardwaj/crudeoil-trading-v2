@@ -579,6 +579,7 @@
                         <thead>
                             <tr>
                                 <th>#</th>
+                                <th>TIME (IST)</th>
                                 <th>TYPE</th>
                                 <th>ENTRY PRICE</th>
                                 <th>QTY</th>
@@ -591,7 +592,7 @@
                         </thead>
                         <tbody id="trade_history_tbody">
                             <tr>
-                                <td colspan="9" style="text-align:center; color:#94a3b8; padding:12px;">No completed paper trades yet today.</td>
+                                <td colspan="10" style="text-align:center; color:#94a3b8; padding:12px;">No completed paper trades yet today.</td>
                             </tr>
                         </tbody>
                     </table>
@@ -766,6 +767,7 @@
                     tbody.innerHTML = state.trade_history.map((t, idx) => `
                         <tr>
                             <td>#${idx + 1}</td>
+                            <td style="font-size:0.7rem; color:#cbd5e1; white-space:nowrap; font-family:'JetBrains Mono', monospace;">${t.exit_timestamp || t.entry_timestamp || t.timestamp || '-'}</td>
                             <td><span class="badge-status ${t.side === 'LONG' || t.direction === 'BUY' ? 'badge-green' : 'badge-red'}">${t.side || t.direction}</span></td>
                             <td style="font-family:'JetBrains Mono',monospace;">₹${Number(t.entry_price||0).toLocaleString('en-IN')}</td>
                             <td>${t.quantity || 100}</td>
