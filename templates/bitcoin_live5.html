@@ -503,38 +503,12 @@
         </div>
     </div>
 
-    <!-- SECTION B: COMPLETED TRADE HISTORY -->
+    <!-- SECTION B: TRADINGVIEW REAL-TIME CHART -->
     <div class="section-card">
         <div class="section-header">
-            <div class="section-title">📜 SECTION B: COMPLETED TRADE HISTORY</div>
-            <div class="pos-info-lbl" id="lblHistoryCount" style="font-size: 0.85rem; color: var(--accent-blue);">0 Trades Closed</div>
+            <div class="section-title">📈 SECTION B: BTCUSDT REAL-TIME CHART (TradingView)</div>
         </div>
-
-        <div class="table-container" style="max-height: 480px; overflow-y: auto;">
-            <table>
-                <thead>
-                    <tr>
-                        <th>Trade ID</th>
-                        <th>Slot</th>
-                        <th>Side</th>
-                        <th>Qty</th>
-                        <th>Entry Price</th>
-                        <th>Exit Price</th>
-                        <th>Entry Time</th>
-                        <th>Exit Time</th>
-                        <th>Gross P&L</th>
-                        <th>Fees</th>
-                        <th>NET P&L</th>
-                        <th>Exit Reason</th>
-                    </tr>
-                </thead>
-                <tbody id="tradeHistoryBody">
-                    <tr>
-                        <td colspan="12" style="text-align: center; color: var(--text-muted);">No closed paper test trades recorded yet.</td>
-                    </tr>
-                </tbody>
-            </table>
-        </div>
+        <div class="chart-box" id="tradingview_chart"></div>
     </div>
 
     <!-- CONTROLS & RISK SETTINGS PANEL -->
@@ -609,14 +583,6 @@
 
             <button class="btn-action btn-blue" onclick="saveRiskSettings()">💾 SAVE SETTINGS</button>
         </div>
-    </div>
-
-    <!-- SECTION D: TRADINGVIEW CHART -->
-    <div class="section-card">
-        <div class="section-header">
-            <div class="section-title">📈 SECTION D: BTCUSDT REAL-TIME CHART (TradingView)</div>
-        </div>
-        <div class="chart-box" id="tradingview_chart"></div>
     </div>
 
     <!-- TradingView Widget Script -->
@@ -817,7 +783,9 @@
 
         function renderTradeHistory(history) {
             const body = document.getElementById('tradeHistoryBody');
-            document.getElementById('lblHistoryCount').innerText = `${history.length} Trades Recorded`;
+            const lbl = document.getElementById('lblHistoryCount');
+            if (lbl) lbl.innerText = `${history ? history.length : 0} Trades Recorded`;
+            if (!body) return;
 
             if (!history || history.length === 0) {
                 body.innerHTML = '<tr><td colspan="12" style="text-align: center; color: var(--text-muted);">No closed paper test trades recorded yet.</td></tr>';
