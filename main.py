@@ -23,6 +23,7 @@ from bitcoin_paper_engine import BITCOIN_ENGINE
 from bitcoin_feed import BITCOIN_FEED
 from bitcoin_live_engine import BITCOIN_LIVE_ENGINE
 from bitcoin_live5_engine import BITCOIN_LIVE5_ENGINE
+from bitcoin_updown10_engine import BITCOIN_UPDOWN10_ENGINE
 
 app = FastAPI(
     title="AI Trend Detector & Paper Trading Engine V1",
@@ -363,6 +364,74 @@ async def control_bitcoin_live5_test(payload: dict):
         BITCOIN_LIVE5_ENGINE.test_status = "PAUSED"
         return JSONResponse({"success": True, "test_status": "PAUSED", "message": "Paper test paused successfully"})
     return JSONResponse({"success": False, "error": "Invalid action. Use START or PAUSE"}, status_code=400)
+
+
+# ==============================================================================
+# BTC UP-DOWN CAPTURE 10 PAPER TEST ROUTES (/btc-updown10)
+# ==============================================================================
+
+@app.get("/btc-updown10", response_class=HTMLResponse)
+async def get_bitcoin_updown10_dashboard():
+    """Renders the BTC UP-DOWN CAPTURE 10 Dashboard HTML interface."""
+    html_path = os.path.join(os.path.dirname(__file__), "templates", "bitcoin_updown10.html")
+    if os.path.exists(html_path):
+        with open(html_path, "r", encoding="utf-8") as f:
+            return HTMLResponse(content=f.read())
+    return HTMLResponse("<h2>BTC UP-DOWN CAPTURE 10 Dashboard</h2>")
+
+@app.get("/api/btc-updown10/state")
+async def get_bitcoin_updown10_state():
+    """Returns JSON state payload for the BTC UP-DOWN CAPTURE 10 Dashboard."""
+    return JSONResponse(
+        content=BITCOIN_UPDOWN10_ENGINE.get_dashboard_state(),
+        headers={
+            "Cache-Control": "no-cache, no-store, must-revalidate",
+            "Pragma": "no-cache",
+            "Expires": "0"
+        }
+    )
+
+@app.get("/api/btc-updown10/candles")
+async def get_bitcoin_updown10_candles(tf: str = "1m", period: str = "1d"):
+    """Returns historical OHLCV 1m candles for BTC chart."""
+    candles = BITCOIN_FEED.fetch_historical_candles(tf=tf, period=period)
+    return JSONResponse(candles)
+
+@app.post("/api/btc-updown10/settings")
+async def update_bitcoin_updown10_settings(payload: dict):
+    """Updates target net inr, max loss net inr, and min movement pct for updown10 engine."""
+    target_net = payload.get("target_net_inr") or payload.get("per_trade_profit_target_inr")
+    max_loss = payload.get("max_loss_net_inr") or payload.get("per_trade_loss_limit_inr")
+    min_move = payload.get("min_movement_pct")
+
+    BITCOIN_UPDOWN10_ENGINE.update_settings(
+        target_net_inr=float(target_net) if target_net is not None else None,
+        max_loss_net_inr=float(max_loss) if max_loss is not None else None,
+        min_movement_pct=float(min_move) if min_move is not None else None
+    )
+    return JSONResponse({
+        "success": True,
+        "status": "SUCCESS",
+        "message": "BTC UP-DOWN CAPTURE 10 settings updated successfully.",
+        "settings": BITCOIN_UPDOWN10_ENGINE.get_dashboard_state()["settings"]
+    })
+
+@app.post("/api/btc-updown10/emergency_exit")
+async def emergency_exit_bitcoin_updown10(payload: dict):
+    """Manually closes a single slot or all active slots."""
+    slot_idx = payload.get("slot_index")
+    if slot_idx is not None:
+        pos = BITCOIN_UPDOWN10_ENGINE.emergency_exit_slot(int(slot_idx))
+        return JSONResponse({"success": True, "message": f"Closed Slot #{slot_idx}", "closed_position": pos})
+    else:
+        closed = BITCOIN_UPDOWN10_ENGINE.emergency_exit_all()
+        return JSONResponse({"success": True, "message": f"Closed {len(closed)} active positions", "closed_positions": closed})
+
+@app.post("/api/btc-updown10/reset")
+async def reset_bitcoin_updown10_account():
+    """Resets paper test account balance and clears trade history."""
+    BITCOIN_UPDOWN10_ENGINE.reset_account()
+    return JSONResponse({"success": True, "message": "BTC UP-DOWN CAPTURE 10 paper account reset successfully."})
 
 
 @app.post("/api/bitcoin/live/transfer-spot-to-futures")
@@ -1042,6 +1111,9 @@ async def startup_event():
 
     print(f"[{datetime.now()}] [STARTUP] Spawning BITCOIN_LIVE5_ENGINE.start_feed_loop background task...")
     asyncio.create_task(BITCOIN_LIVE5_ENGINE.start_feed_loop())
+
+    print(f"[{datetime.now()}] [STARTUP] Spawning BITCOIN_UPDOWN10_ENGINE.start_feed_loop background task...")
+    asyncio.create_task(BITCOIN_UPDOWN10_ENGINE.start_feed_loop())
 
 if __name__ == "__main__":
     import uvicorn

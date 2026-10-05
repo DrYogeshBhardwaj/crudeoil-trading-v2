@@ -397,6 +397,55 @@ class DatabaseEngine:
                 )
             """)
 
+            # Bitcoin UP-DOWN CAPTURE 10 Tables (100% Dedicated Paper Test Namespace)
+            cursor.execute("""
+                CREATE TABLE IF NOT EXISTS bitcoin_updown10_trades (
+                    trade_id TEXT PRIMARY KEY,
+                    slot_index INTEGER NOT NULL,
+                    entry_timestamp TEXT NOT NULL,
+                    symbol TEXT NOT NULL,
+                    direction TEXT NOT NULL,
+                    quantity REAL NOT NULL,
+                    notional_inr REAL NOT NULL DEFAULT 17500.0,
+                    leverage REAL DEFAULT 5.0,
+                    margin_inr REAL NOT NULL DEFAULT 3500.0,
+                    entry_price REAL NOT NULL,
+                    entry_price_usd REAL,
+                    hedge_rate REAL DEFAULT 102.0,
+                    target_net_inr REAL NOT NULL DEFAULT 100.0,
+                    max_loss_net_inr REAL NOT NULL DEFAULT 60.0,
+                    status TEXT NOT NULL,
+                    exit_timestamp TEXT,
+                    exit_price REAL,
+                    exit_price_usd REAL,
+                    exit_reason TEXT,
+                    gross_pnl REAL,
+                    entry_charges REAL,
+                    exit_charges REAL,
+                    charges REAL,
+                    funding_fee REAL DEFAULT 0.0,
+                    net_pnl REAL
+                )
+            """)
+
+            cursor.execute("""
+                CREATE TABLE IF NOT EXISTS bitcoin_updown10_settings (
+                    key TEXT PRIMARY KEY,
+                    value TEXT NOT NULL
+                )
+            """)
+
+            cursor.execute("""
+                CREATE TABLE IF NOT EXISTS bitcoin_updown10_evaluations (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    timestamp TEXT NOT NULL,
+                    price REAL NOT NULL,
+                    signal TEXT NOT NULL,
+                    change_pct_3m REAL,
+                    reason TEXT NOT NULL
+                )
+            """)
+
             conn.commit()
 
         self.seed_historical_bitcoin_live_trades()
@@ -941,5 +990,103 @@ class DatabaseEngine:
                 t["reasons"] = json.loads(t["reasons"]) if t["reasons"] else []
                 trades.append(t)
             return trades
+
+    # =========================================================================
+    # BITCOIN UP-DOWN CAPTURE 10 PAPER TEST DATABASE METHODS
+    # =========================================================================
+
+    def save_bitcoin_updown10_setting(self, key: str, value: str):
+        with self._get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute("INSERT OR REPLACE INTO bitcoin_updown10_settings (key, value) VALUES (?, ?)", (key, str(value)))
+            conn.commit()
+
+    def load_bitcoin_updown10_setting(self, key: str, default_val: str = "") -> str:
+        with self._get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute("SELECT value FROM bitcoin_updown10_settings WHERE key = ?", (key,))
+            row = cursor.fetchone()
+            if row:
+                return row["value"]
+            return default_val
+
+    def save_bitcoin_updown10_trade(self, pos_dict: Dict[str, Any]):
+        with self._get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute("""
+                INSERT OR REPLACE INTO bitcoin_updown10_trades (
+                    trade_id, slot_index, entry_timestamp, symbol, direction, quantity,
+                    notional_inr, leverage, margin_inr, entry_price, entry_price_usd,
+                    hedge_rate, target_net_inr, max_loss_net_inr, status, exit_timestamp,
+                    exit_price, exit_price_usd, exit_reason, gross_pnl, entry_charges,
+                    exit_charges, charges, funding_fee, net_pnl
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """, (
+                pos_dict["trade_id"],
+                pos_dict.get("slot_index", 1),
+                pos_dict["entry_timestamp"],
+                pos_dict.get("symbol", "BTCUSDT"),
+                pos_dict["direction"],
+                pos_dict["quantity"],
+                pos_dict.get("notional_inr", 17500.0),
+                pos_dict.get("leverage", 5.0),
+                pos_dict.get("margin_inr", 3500.0),
+                pos_dict["entry_price"],
+                pos_dict.get("entry_price_usd"),
+                pos_dict.get("hedge_rate", 102.0),
+                pos_dict.get("target_net_inr", 100.0),
+                pos_dict.get("max_loss_net_inr", 60.0),
+                pos_dict["status"],
+                pos_dict.get("exit_timestamp"),
+                pos_dict.get("exit_price"),
+                pos_dict.get("exit_price_usd"),
+                pos_dict.get("exit_reason"),
+                pos_dict.get("gross_pnl"),
+                pos_dict.get("entry_charges"),
+                pos_dict.get("exit_charges"),
+                pos_dict.get("charges"),
+                pos_dict.get("funding_fee", 0.0),
+                pos_dict.get("net_pnl")
+            ))
+            conn.commit()
+
+    def load_active_bitcoin_updown10_positions(self) -> List[Dict[str, Any]]:
+        with self._get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute("SELECT * FROM bitcoin_updown10_trades WHERE status = 'OPEN' ORDER BY slot_index ASC, entry_timestamp ASC")
+            rows = cursor.fetchall()
+            return [dict(r) for r in rows]
+
+    def load_all_bitcoin_updown10_trades(self) -> List[Dict[str, Any]]:
+        with self._get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute("SELECT * FROM bitcoin_updown10_trades ORDER BY entry_timestamp DESC")
+            rows = cursor.fetchall()
+            return [dict(r) for r in rows]
+
+    def log_bitcoin_updown10_evaluation(self, price: float, signal: str, change_pct_3m: float, reason: str):
+        with self._get_connection() as conn:
+            cursor = conn.cursor()
+            now_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            cursor.execute("""
+                INSERT INTO bitcoin_updown10_evaluations (timestamp, price, signal, change_pct_3m, reason)
+                VALUES (?, ?, ?, ?, ?)
+            """, (now_str, price, signal, change_pct_3m, reason))
+            conn.commit()
+
+    def get_recent_bitcoin_updown10_evaluations(self, limit: int = 50) -> List[Dict[str, Any]]:
+        with self._get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute("SELECT * FROM bitcoin_updown10_evaluations ORDER BY id DESC LIMIT ?", (limit,))
+            rows = cursor.fetchall()
+            return [dict(r) for r in rows]
+
+    def reset_bitcoin_updown10_paper_account(self):
+        with self._get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute("DELETE FROM bitcoin_updown10_trades")
+            cursor.execute("DELETE FROM bitcoin_updown10_evaluations")
+            cursor.execute("DELETE FROM bitcoin_updown10_settings")
+            conn.commit()
 
 DB = DatabaseEngine()
