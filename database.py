@@ -340,9 +340,16 @@ class DatabaseEngine:
             """)
 
             # Migration for existing bitcoin_live_trades tables
-            for col in ["entry_charges", "exit_charges", "entry_price_usd", "hedge_rate", "target_usd", "stop_loss_usd", "exit_price_usd"]:
+            for col, col_type in [
+                ("entry_charges", "REAL"), ("exit_charges", "REAL"), ("entry_price_usd", "REAL"),
+                ("hedge_rate", "REAL"), ("target_usd", "REAL"), ("stop_loss_usd", "REAL"),
+                ("exit_price_usd", "REAL"), ("entry_order_id", "TEXT"), ("exit_order_id", "TEXT"),
+                ("leverage", "REAL"), ("entry_fee_gst", "REAL"), ("exit_fee_gst", "REAL"),
+                ("funding_fee", "REAL"), ("target_net_inr", "REAL"), ("max_loss_net_inr", "REAL"),
+                ("target_gross_inr", "REAL"), ("stop_gross_inr", "REAL"), ("trigger_price_usd", "REAL")
+            ]:
                 try:
-                    cursor.execute(f"ALTER TABLE bitcoin_live_trades ADD COLUMN {col} REAL")
+                    cursor.execute(f"ALTER TABLE bitcoin_live_trades ADD COLUMN {col} {col_type}")
                 except Exception:
                     pass
 
@@ -851,8 +858,11 @@ class DatabaseEngine:
                     entry_price, stop_loss, stoploss_order_id, target, trend_state, confidence,
                     reasons, status, exit_timestamp, exit_price, exit_reason,
                     gross_pnl, entry_charges, exit_charges, charges, net_pnl,
-                    entry_price_usd, hedge_rate, target_usd, stop_loss_usd, exit_price_usd
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    entry_price_usd, hedge_rate, target_usd, stop_loss_usd, exit_price_usd,
+                    entry_order_id, exit_order_id, leverage, entry_fee_gst, exit_fee_gst,
+                    funding_fee, target_net_inr, max_loss_net_inr, target_gross_inr,
+                    stop_gross_inr, trigger_price_usd
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """, (
                 pos_dict["trade_id"],
                 pos_dict.get("mudrex_position_id"),
@@ -861,33 +871,44 @@ class DatabaseEngine:
                 pos_dict["direction"],
                 pos_dict["quantity"],
                 pos_dict["entry_price"],
-                pos_dict["stop_loss"],
+                pos_dict.get("stop_loss", 0.0),
                 pos_dict.get("stoploss_order_id"),
-                pos_dict["target"],
-                pos_dict["trend_state"],
-                pos_dict["confidence"],
+                pos_dict.get("target", 0.0),
+                pos_dict.get("trend_state", "NEUTRAL"),
+                pos_dict.get("confidence", 50),
                 reasons_json,
                 pos_dict["status"],
                 pos_dict.get("exit_timestamp"),
                 pos_dict.get("exit_price"),
                 pos_dict.get("exit_reason"),
-                pos_dict.get("gross_pnl"),
-                pos_dict.get("entry_charges"),
-                pos_dict.get("exit_charges"),
-                pos_dict.get("charges"),
-                pos_dict.get("net_pnl"),
-                pos_dict.get("entry_price_usd"),
-                pos_dict.get("hedge_rate"),
-                pos_dict.get("target_usd"),
-                pos_dict.get("stop_loss_usd"),
-                pos_dict.get("exit_price_usd")
+                pos_dict.get("gross_pnl", 0.0),
+                pos_dict.get("entry_charges", 0.0),
+                pos_dict.get("exit_charges", 0.0),
+                pos_dict.get("charges", 0.0),
+                pos_dict.get("net_pnl", 0.0),
+                pos_dict.get("entry_price_usd", 0.0),
+                pos_dict.get("hedge_rate", 102.0),
+                pos_dict.get("target_usd", 0.0),
+                pos_dict.get("stop_loss_usd", 0.0),
+                pos_dict.get("exit_price_usd", 0.0),
+                pos_dict.get("entry_order_id"),
+                pos_dict.get("exit_order_id"),
+                pos_dict.get("leverage", 5.0),
+                pos_dict.get("entry_fee_gst", 0.0),
+                pos_dict.get("exit_fee_gst", 0.0),
+                pos_dict.get("funding_fee", 0.0),
+                pos_dict.get("target_net_inr", 100.0),
+                pos_dict.get("max_loss_net_inr", 200.0),
+                pos_dict.get("target_gross_inr", 0.0),
+                pos_dict.get("stop_gross_inr", 0.0),
+                pos_dict.get("trigger_price_usd")
             ))
             conn.commit()
 
     def load_active_bitcoin_live_position(self) -> Optional[Dict[str, Any]]:
         with self._get_connection() as conn:
             cursor = conn.cursor()
-            cursor.execute("SELECT * FROM bitcoin_live_trades WHERE status = 'OPEN' ORDER BY entry_timestamp DESC LIMIT 1")
+            cursor.execute("SELECT * FROM bitcoin_live_trades WHERE status IN ('OPEN', 'EXIT_REQUESTED') ORDER BY entry_timestamp DESC LIMIT 1")
             row = cursor.fetchone()
             if row:
                 d = dict(row)

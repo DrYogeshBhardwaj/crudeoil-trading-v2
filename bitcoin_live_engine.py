@@ -1,35 +1,175 @@
 """
 Bitcoin Live Engine & Risk Protection System (Mudrex API)
-STRICTLY DECOUPLED FROM PAPER ENGINE, CRUDEOILM, WTI, AND PI42.
+CLEAN ARCHITECTURE REBUILD V2
 
-Implements Mandatory Risk Guardrails:
-1. Max 1 open BTC position.
-2. Every live position MUST have a hard Stop Loss.
-3. Per-trade maximum loss limit (configurable, persisted in DB).
-4. Daily maximum loss limit (configurable, persisted in DB).
-5. Automatic Daily Loss Limit enforcement (close position, cancel orders, block entries for rest of day).
-6. Emergency Circuit Breaker for API failures, feed drops, or SL attachment failures.
-7. Strictly NO averaging down.
-8. Strictly NO martingale.
-9. Persistent state across Railway restarts via SQLite (bitcoin_live_settings).
+Implements Mandatory Architecture Requirements:
+1. Strongly validated LiveTradeState object (Single Source of Truth).
+2. Atomic state machine: OPEN -> EXIT_REQUESTED -> CLOSED.
+3. Strict non-zero Target/SL validation (No Silent Defaults / No 0 default TP/SL hit).
+4. Exact Net Target (+₹100 NET) and Net Loss (-₹200 NET) calculations inclusive of Mudrex fees & GST.
+5. Mudrex Authoritative Accounting from actual exchange fills and order history.
+6. Exit Reason Integrity (Reason assigned ONLY after authoritative fill confirmation).
+7. Order Duplication Protection (Secondary exit requests blocked during EXIT_REQUESTED state).
+8. Position Existence Verification before & after exit calls.
+9. Startup / Restart reconciliation between SQLite DB and Mudrex API.
+10. Multi-component Wallet & P&L accounting on dashboard.
+11. Execution rate control & debounce without modifying strategy signals.
+12. Actual Mudrex fee/GST structure (0.05% per side + 18% GST = 0.059% per side).
+13. Database schema compatibility and clean persistence.
 """
 
 import os
 import time
 import json
+import math
 import asyncio
 import requests
 import traceback
-from datetime import datetime
+from datetime import datetime, timezone, timedelta
 from typing import Dict, Any, Optional, List, Tuple
+from dataclasses import dataclass, field, asdict
+from enum import Enum
 
 from database import DB
 from bitcoin_feed import BITCOIN_FEED
 from bitcoin_strategy import BITCOIN_STRATEGY
 
+
+class TradeStatus(str, Enum):
+    OPEN = "OPEN"
+    EXIT_REQUESTED = "EXIT_REQUESTED"
+    CLOSED = "CLOSED"
+
+
+@dataclass
+class LiveTradeState:
+    """
+    Single Source of Truth for Open Position and Trade Execution.
+    Requirement 1: Strongly validated state object.
+    """
+    trade_id: str
+    mudrex_position_id: str
+    direction: str  # BUY / SELL / LONG / SHORT
+    quantity: float  # e.g., 0.002
+    leverage: float  # 5.0
+    entry_price_usd: float
+    entry_price: float  # INR
+    hedge_rate: float
+    entry_timestamp: str
+    entry_order_id: Optional[str] = None
+    entry_fee_gst: float = 0.0
+    target_net_inr: float = 100.0
+    max_loss_net_inr: float = 200.0
+    target_gross_inr: float = 0.0
+    stop_gross_inr: float = 0.0
+    target_usd: float = 0.0
+    stop_loss_usd: float = 0.0
+    target: float = 0.0  # INR
+    stop_loss: float = 0.0  # INR
+    trend_state: str = "NEUTRAL"
+    confidence: int = 50
+    reasons: List[str] = field(default_factory=list)
+    status: str = TradeStatus.OPEN.value
+    exit_order_id: Optional[str] = None
+    exit_timestamp: Optional[str] = None
+    exit_price_usd: Optional[float] = None
+    exit_price: Optional[float] = None  # INR
+    exit_fee_gst: float = 0.0
+    funding_fee: float = 0.0
+    trigger_price_usd: Optional[float] = None
+    exit_reason: Optional[str] = None
+    gross_pnl: float = 0.0  # INR
+    entry_charges: float = 0.0
+    exit_charges: float = 0.0
+    charges: float = 0.0
+    net_pnl: float = 0.0
+    symbol: str = "BTCUSDT"
+    stoploss_order_id: Optional[str] = None
+
+    def is_valid_for_execution(self) -> Tuple[bool, str]:
+        """Validates all required fields before trade is executable or TP/SL evaluated."""
+        if not self.trade_id:
+            return False, "Missing trade_id"
+        if not self.mudrex_position_id:
+            return False, "Missing mudrex_position_id"
+        if str(self.direction).upper() not in ("BUY", "SELL", "LONG", "SHORT"):
+            return False, f"Invalid direction: {self.direction}"
+        if float(self.quantity or 0) <= 0:
+            return False, f"Invalid quantity: {self.quantity}"
+        if float(self.entry_price_usd or 0) <= 0:
+            return False, f"Invalid entry_price_usd: {self.entry_price_usd}"
+        if float(self.hedge_rate or 0) <= 0:
+            return False, f"Invalid hedge_rate: {self.hedge_rate}"
+        if float(self.target_usd or 0) <= 0:
+            return False, f"Missing or zero target_usd ({self.target_usd})"
+        if float(self.stop_loss_usd or 0) <= 0:
+            return False, f"Missing or zero stop_loss_usd ({self.stop_loss_usd})"
+        if float(self.target_net_inr or 0) <= 0:
+            return False, f"Invalid target_net_inr ({self.target_net_inr})"
+        if float(self.max_loss_net_inr or 0) <= 0:
+            return False, f"Invalid max_loss_net_inr ({self.max_loss_net_inr})"
+        return True, "VALID"
+
+    def to_dict(self) -> Dict[str, Any]:
+        return asdict(self)
+
+    @classmethod
+    def from_dict(cls, d: Dict[str, Any]) -> "LiveTradeState":
+        if not isinstance(d, dict):
+            raise ValueError("Input must be a dictionary")
+        
+        reasons = d.get("reasons", [])
+        if isinstance(reasons, str):
+            try:
+                reasons = json.loads(reasons)
+            except Exception:
+                reasons = [reasons]
+
+        return cls(
+            trade_id=str(d.get("trade_id") or ""),
+            mudrex_position_id=str(d.get("mudrex_position_id") or ""),
+            direction=str(d.get("direction") or "BUY").upper(),
+            quantity=float(d.get("quantity") or 0.002),
+            leverage=float(d.get("leverage") or 5.0),
+            entry_price_usd=float(d.get("entry_price_usd") or 0.0),
+            entry_price=float(d.get("entry_price") or 0.0),
+            hedge_rate=float(d.get("hedge_rate") or 102.0),
+            entry_timestamp=str(d.get("entry_timestamp") or ""),
+            entry_order_id=d.get("entry_order_id"),
+            entry_fee_gst=float(d.get("entry_fee_gst") or d.get("entry_charges") or 0.0),
+            target_net_inr=float(d.get("target_net_inr") or 100.0),
+            max_loss_net_inr=float(d.get("max_loss_net_inr") or 200.0),
+            target_gross_inr=float(d.get("target_gross_inr") or 0.0),
+            stop_gross_inr=float(d.get("stop_gross_inr") or 0.0),
+            target_usd=float(d.get("target_usd") or 0.0),
+            stop_loss_usd=float(d.get("stop_loss_usd") or 0.0),
+            target=float(d.get("target") or 0.0),
+            stop_loss=float(d.get("stop_loss") or 0.0),
+            trend_state=str(d.get("trend_state") or "NEUTRAL"),
+            confidence=int(d.get("confidence") or 50),
+            reasons=reasons if isinstance(reasons, list) else [],
+            status=str(d.get("status") or TradeStatus.OPEN.value),
+            exit_order_id=d.get("exit_order_id"),
+            exit_timestamp=d.get("exit_timestamp"),
+            exit_price_usd=float(d["exit_price_usd"]) if d.get("exit_price_usd") is not None else None,
+            exit_price=float(d["exit_price"]) if d.get("exit_price") is not None else None,
+            exit_fee_gst=float(d.get("exit_fee_gst") or d.get("exit_charges") or 0.0),
+            funding_fee=float(d.get("funding_fee") or 0.0),
+            trigger_price_usd=float(d["trigger_price_usd"]) if d.get("trigger_price_usd") is not None else None,
+            exit_reason=d.get("exit_reason"),
+            gross_pnl=float(d.get("gross_pnl") or 0.0),
+            entry_charges=float(d.get("entry_charges") or 0.0),
+            exit_charges=float(d.get("exit_charges") or 0.0),
+            charges=float(d.get("charges") or 0.0),
+            net_pnl=float(d.get("net_pnl") or 0.0),
+            symbol=str(d.get("symbol") or "BTCUSDT"),
+            stoploss_order_id=d.get("stoploss_order_id")
+        )
+
+
 class MudrexLiveAdapter:
     """Handles REST interactions with Mudrex API for funds, positions, risk orders, and leverage."""
-    
+
     BASE_URL = "https://trade.mudrex.com/fapi/v1"
 
     def __init__(self):
@@ -37,20 +177,20 @@ class MudrexLiveAdapter:
 
     def _get_headers(self) -> Dict[str, str]:
         api_secret = (
-            os.environ.get("MUDREX_API_SECRET") or 
-            os.environ.get("MUDREX_SECRET") or 
+            os.environ.get("MUDREX_API_SECRET") or
+            os.environ.get("MUDREX_SECRET") or
             os.environ.get("MUDREX_SECRET_KEY") or ""
         ).strip()
-        
+
         api_key = (
-            os.environ.get("MUDREX_API_KEY") or 
+            os.environ.get("MUDREX_API_KEY") or
             os.environ.get("MUDREX_KEY") or ""
         ).strip()
 
         headers = {
             "X-Authentication": api_secret,
             "Content-Type": "application/json",
-            "User-Agent": "Bitcoin-Live-Engine/1.0"
+            "User-Agent": "Bitcoin-Live-Engine/2.0"
         }
         if api_key:
             headers["X-Api-Key"] = api_key
@@ -111,18 +251,13 @@ class MudrexLiveAdapter:
             return 0.0
 
     def transfer_inr_spot_to_futures(self, amount: float) -> Dict[str, Any]:
-        """
-        Transfers INR funds from Spot Wallet to Futures Wallet.
-        Endpoint: POST /futures/transfers/inr
-        """
+        """Transfers INR funds from Spot Wallet to Futures Wallet."""
         try:
             headers = self._get_headers()
             url = f"{self.BASE_URL}/futures/transfers/inr"
             payloads = [
                 {"amount": str(amount), "from_wallet_type": "SPOT", "to_wallet_type": "FUTURES"},
-                {"amount": str(amount), "from_wallet_type": "spot", "to_wallet_type": "futures"},
-                {"amount": str(amount), "FromWalletType": "SPOT", "ToWalletType": "FUTURES"},
-                {"amount": str(amount), "from_wallet_type": "WALLET", "to_wallet_type": "FUTURES"}
+                {"amount": str(amount), "from_wallet_type": "spot", "to_wallet_type": "futures"}
             ]
             last_resp = None
             for payload in payloads:
@@ -135,7 +270,7 @@ class MudrexLiveAdapter:
             return {"success": False, "error": str(e)}
 
     def fetch_btcusdt_asset(self) -> Dict[str, Any]:
-        """Fetches exact BTCUSDT futures instrument metadata from Mudrex."""
+        """Fetches BTCUSDT futures instrument metadata from Mudrex."""
         try:
             headers = self._get_headers()
             url = f"{self.BASE_URL}/futures/BTCUSDT?is_symbol"
@@ -149,27 +284,13 @@ class MudrexLiveAdapter:
             return {"success": False, "error": str(e)}
 
     def fetch_leverage_info(self) -> Dict[str, Any]:
-        """Fetches leverage information for BTCUSDT with trade_currency=INR."""
+        """Fetches leverage information for BTCUSDT."""
         try:
             headers = self._get_headers()
             url = f"{self.BASE_URL}/futures/BTCUSDT/leverage?is_symbol&trade_currency=INR"
             resp = requests.get(url, headers=headers, timeout=5)
             if resp.status_code in (200, 201):
                 return {"success": True, "data": resp.json()}
-            
-            # Fallback to asset details leverage info
-            ast_res = self.fetch_btcusdt_asset()
-            if ast_res.get("success"):
-                ast = ast_res.get("asset", {})
-                if ast and "min_leverage" in ast:
-                    return {
-                        "success": True,
-                        "data": {
-                            "min_leverage": ast.get("min_leverage", "1"),
-                            "max_leverage": ast.get("max_leverage", "150"),
-                            "leverage_step": ast.get("leverage_step", "0.01")
-                        }
-                    }
             return {"success": False, "status_code": resp.status_code if 'resp' in locals() else 500, "error": resp.text if 'resp' in locals() else "Unknown"}
         except Exception as e:
             return {"success": False, "error": str(e)}
@@ -205,10 +326,7 @@ class MudrexLiveAdapter:
             return []
 
     def attach_stop_loss(self, position_id: str, stoploss_price: float, takeprofit_price: Optional[float] = None) -> Dict[str, Any]:
-        """
-        Attaches hard Stop Loss (and optional Take Profit) to an existing Mudrex position.
-        Endpoint: POST /futures/positions/{position_id}/riskorder
-        """
+        """Attaches hard Stop Loss (and optional Take Profit) to an existing Mudrex position."""
         try:
             headers = self._get_headers()
             url = f"{self.BASE_URL}/futures/positions/{position_id}/riskorder"
@@ -229,16 +347,8 @@ class MudrexLiveAdapter:
 
     def close_position_safely(self, position_id: str, symbol: str = "BTCUSDT", quantity: float = 0.002, direction: str = "BUY") -> Dict[str, Any]:
         """
-        Safely closes an open Mudrex futures position using multi-candidate endpoints:
-        1. DELETE /futures/positions/{position_id}?trade_currency=INR
-        2. DELETE /futures/positions/{position_id}
-        3. POST /futures/positions/{position_id}/close
-        4. POST /futures/positions/close
-        5. POST /fapi/v2/futures/order?symbol=BTCUSDT (Opposite MARKET order: SHORT if BUY/LONG, LONG if SELL/SHORT)
-        6. POST /futures/{asset_id}/order?trade_currency=INR (Opposite MARKET order)
-
-        AUTHORITATIVE VERIFICATION:
-        Position is marked closed ONLY IF fetch_open_positions() confirms position_id is no longer open on Mudrex!
+        Safely closes an open Mudrex futures position.
+        Requirement 8: Position existence verification after close request.
         """
         headers = self._get_headers()
         opp_side = "SHORT" if str(direction).upper() in ("BUY", "LONG", "1") else "LONG"
@@ -291,17 +401,6 @@ class MudrexLiveAdapter:
                     "quantity": qty_str,
                     "trade_currency": "INR"
                 }
-            },
-            {
-                "name": f"POST /futures/{asset_id}/order?trade_currency=INR (Opposite Market Close)",
-                "method": "POST",
-                "url": f"{self.BASE_URL}/futures/{asset_id}/order?trade_currency=INR",
-                "payload": {
-                    "trigger_type": "MARKET",
-                    "order_type": opp_side,
-                    "quantity": qty_str,
-                    "trade_currency": "INR"
-                }
             }
         ]
 
@@ -319,7 +418,7 @@ class MudrexLiveAdapter:
                         last_errors.append(f"{cand['name']} returned failure: {data}")
                         continue
 
-                    # Authoritative verification check
+                    # Authoritative verification check (Requirement 8)
                     time.sleep(0.5)
                     open_positions = self.fetch_open_positions()
                     is_still_open = any(
@@ -328,175 +427,86 @@ class MudrexLiveAdapter:
                     )
 
                     if not is_still_open:
-                        print(f"[{datetime.now()}] [MUDREX CLOSE SUCCESS] Method {cand['name']} succeeded and authoritative position check confirmed CLOSED!")
+                        print(f"[{datetime.now()}] [MUDREX CLOSE SUCCESS] Method {cand['name']} succeeded and confirmed CLOSED on Mudrex!")
                         return {"success": True, "data": data, "method_used": cand["name"]}
                     else:
-                        last_errors.append(f"{cand['name']} HTTP {resp.status_code} succeeded but Mudrex position {position_id} is STILL OPEN")
+                        last_errors.append(f"{cand['name']} HTTP {resp.status_code} succeeded but Mudrex position {position_id} STILL OPEN")
                 else:
                     last_errors.append(f"{cand['name']} HTTP {resp.status_code}: {resp.text}")
             except Exception as e:
                 last_errors.append(f"{cand['name']} Exception: {e}")
 
-        # Final Authoritative Check
+        # Final Verification Check
         open_positions = self.fetch_open_positions()
         is_still_open = any(
             (str(p.get("position_id") or p.get("id")) == str(position_id))
             for p in open_positions
         )
         if not is_still_open:
-            return {"success": True, "data": "Position closed during verification check"}
+            return {"success": True, "data": "Position verified closed on Mudrex"}
 
         return {"success": False, "error": " | ".join(last_errors[:3])}
 
     def set_leverage(self, symbol_or_id: str = "BTCUSDT", leverage: str = "5", margin_type: str = "ISOLATED", asset_id: Optional[str] = None) -> Dict[str, Any]:
-        """
-        Explicitly sets 5x ISOLATED leverage for BTCUSDT INR futures trading.
-        Official Primary Route: POST /fapi/v1/futures/BTCUSDT/leverage?is_symbol&trade_currency=INR
-        Fallback UUID Route: POST /fapi/v1/futures/{asset_id}/leverage?trade_currency=INR
-        Body:
-        {
-          "margin_type": "ISOLATED",
-          "leverage": "5",
-          "trade_currency": "INR"
-        }
-        """
+        """Sets 5x ISOLATED leverage for BTCUSDT INR futures trading."""
         headers = self._get_headers()
         payload = {
             "margin_type": margin_type,
             "leverage": str(leverage),
             "trade_currency": "INR"
         }
-
-        candidates = [
-            f"{self.BASE_URL}/futures/BTCUSDT/leverage?is_symbol&trade_currency=INR",
-        ]
-        if asset_id and asset_id != "BTCUSDT":
-            candidates.append(f"{self.BASE_URL}/futures/{asset_id}/leverage?trade_currency=INR")
-        if symbol_or_id and symbol_or_id not in ("BTCUSDT", asset_id):
-            candidates.append(f"{self.BASE_URL}/futures/{symbol_or_id}/leverage?trade_currency=INR")
-
-        last_error = ""
-        for url in candidates:
-            try:
-                resp = requests.post(url, headers=headers, json=payload, timeout=8)
-                if resp.status_code in (200, 201, 202):
-                    data = resp.json()
-                    if isinstance(data, dict) and data.get("success") is False:
-                        last_error = f"HTTP {resp.status_code}: {data.get('error') or data}"
-                        continue
-                    return {"success": True, "data": data, "url": url}
-                else:
-                    last_error = f"HTTP {resp.status_code}: {resp.text}"
-            except Exception as e:
-                last_error = f"Exception: {str(e)}"
-
-        return {"success": False, "error": last_error or "Leverage setup rejected"}
+        url = f"{self.BASE_URL}/futures/BTCUSDT/leverage?is_symbol&trade_currency=INR"
+        try:
+            resp = requests.post(url, headers=headers, json=payload, timeout=8)
+            if resp.status_code in (200, 201, 202):
+                data = resp.json()
+                if isinstance(data, dict) and data.get("success") is False:
+                    return {"success": False, "error": f"HTTP {resp.status_code}: {data.get('error') or data}"}
+                return {"success": True, "data": data, "url": url}
+            return {"success": False, "error": f"HTTP {resp.status_code}: {resp.text}"}
+        except Exception as e:
+            return {"success": False, "error": str(e)}
 
     def verify_leverage(self, symbol_or_id: str = "BTCUSDT", expected_leverage: str = "5", asset_id: Optional[str] = None) -> Dict[str, Any]:
-        """
-        Verifies that current leverage is set to expected_leverage (5x ISOLATED INR).
-        GET /fapi/v1/futures/BTCUSDT/leverage?is_symbol&trade_currency=INR
-        """
+        """Verifies current leverage is set to expected_leverage."""
         headers = self._get_headers()
-        candidates = [
-            f"{self.BASE_URL}/futures/BTCUSDT/leverage?is_symbol&trade_currency=INR",
-        ]
-        if asset_id and asset_id != "BTCUSDT":
-            candidates.append(f"{self.BASE_URL}/futures/{asset_id}/leverage?trade_currency=INR")
-        if symbol_or_id and symbol_or_id not in ("BTCUSDT", asset_id):
-            candidates.append(f"{self.BASE_URL}/futures/{symbol_or_id}/leverage?trade_currency=INR")
-
-        last_error = ""
-        for url in candidates:
-            try:
-                resp = requests.get(url, headers=headers, timeout=5)
-                if resp.status_code in (200, 201, 202):
-                    data = resp.json()
-                    inner = data.get("data") if isinstance(data, dict) and "data" in data else data
-                    if isinstance(inner, dict):
-                        lev_val = str(inner.get("leverage") or inner.get("current_leverage") or inner.get("selected_leverage") or "").strip()
-                        curr_val = str(inner.get("trade_currency") or inner.get("currency") or "INR").strip()
-                        margin_type = str(inner.get("margin_type") or "ISOLATED").strip()
-                        
-                        if lev_val and str(float(lev_val)) != str(float(expected_leverage)) and lev_val != str(expected_leverage):
-                            return {"success": False, "error": f"Leverage mismatch: expected {expected_leverage}, got {lev_val}"}
-                        
-                        return {
-                            "success": True,
-                            "leverage": lev_val or expected_leverage,
-                            "trade_currency": curr_val,
-                            "margin_type": margin_type,
-                            "data": data,
-                            "url": url
-                        }
-                    elif data.get("success") is True:
-                        return {"success": True, "leverage": expected_leverage, "trade_currency": "INR", "data": data, "url": url}
-                else:
-                    last_error = f"HTTP {resp.status_code}: {resp.text}"
-            except Exception as e:
-                last_error = f"Exception: {str(e)}"
-
-        return {"success": False, "error": last_error or "Verification call failed"}
+        url = f"{self.BASE_URL}/futures/BTCUSDT/leverage?is_symbol&trade_currency=INR"
+        try:
+            resp = requests.get(url, headers=headers, timeout=5)
+            if resp.status_code in (200, 201, 202):
+                data = resp.json()
+                inner = data.get("data") if isinstance(data, dict) and "data" in data else data
+                if isinstance(inner, dict):
+                    lev_val = str(inner.get("leverage") or inner.get("current_leverage") or "").strip()
+                    if lev_val and str(float(lev_val)) != str(float(expected_leverage)) and lev_val != str(expected_leverage):
+                        return {"success": False, "error": f"Leverage mismatch: expected {expected_leverage}, got {lev_val}"}
+                    return {"success": True, "leverage": lev_val or expected_leverage, "data": data}
+                return {"success": True, "leverage": expected_leverage, "data": data}
+            return {"success": False, "error": f"HTTP {resp.status_code}: {resp.text}"}
+        except Exception as e:
+            return {"success": False, "error": str(e)}
 
     def place_futures_order(self, symbol: str, side: str, quantity: float, order_type: str = "MARKET", price: Optional[float] = None, stoploss_price: Optional[float] = None) -> Dict[str, Any]:
-        """
-        Places a live futures order on Mudrex API per official documented schema.
-        1. Explicit leverage setup via POST /fapi/v1/futures/BTCUSDT/leverage?is_symbol&trade_currency=INR
-        2. Immediate leverage verification via GET /fapi/v1/futures/BTCUSDT/leverage?is_symbol&trade_currency=INR
-        3. Order placement via POST /fapi/v2/futures/order?symbol=BTCUSDT (accepting HTTP 200, 201, 202)
-        Body schema:
-           {
-             "trigger_type": "MARKET",
-             "order_type": "LONG" / "SHORT",
-             "quantity": "...",
-             "trade_currency": "INR"
-           }
-        """
+        """Places a live futures order on Mudrex API."""
         headers = self._get_headers()
-        
-        # Discover Asset ID for BTCUSDT
-        asset_id = ""
-        ast_res = self.fetch_btcusdt_asset()
-        if ast_res.get("success"):
-            ast = ast_res.get("asset", {})
-            if isinstance(ast, list) and ast:
-                asset_id = ast[0].get("id", "")
-            elif isinstance(ast, dict):
-                asset_id = ast.get("id", "")
-        
-        if not asset_id:
-            asset_id = "01903a7b-bf65-707d-a7dc-d7b84c3c756c" # Fallback BTCUSDT asset ID
 
-        # STEP A & B: EXPLICIT LEVERAGE SETUP FOR 5x ISOLATED INR
-        lev_res = self.set_leverage(symbol_or_id="BTCUSDT", leverage="5", margin_type="ISOLATED", asset_id=asset_id)
+        # Step 1: Set leverage
+        lev_res = self.set_leverage(symbol_or_id="BTCUSDT", leverage="5", margin_type="ISOLATED")
         if not lev_res.get("success"):
-            err_msg = f"LEVERAGE SETUP FAILED / ORDER NOT EXECUTED: {lev_res.get('error')}"
-            print(f"[{datetime.now()}] [MUDREX LEVERAGE ERROR] {err_msg}")
-            return {"success": False, "error": err_msg}
+            return {"success": False, "error": f"LEVERAGE SETUP FAILED: {lev_res.get('error')}"}
 
-        # STEP C: LEVERAGE VERIFICATION GET CHECK
-        ver_res = self.verify_leverage(symbol_or_id="BTCUSDT", expected_leverage="5", asset_id=asset_id)
+        # Step 2: Verify leverage
+        ver_res = self.verify_leverage(symbol_or_id="BTCUSDT", expected_leverage="5")
         if not ver_res.get("success"):
-            err_msg = f"LEVERAGE VERIFICATION FAILED / ORDER NOT EXECUTED: {ver_res.get('error')}"
-            print(f"[{datetime.now()}] [MUDREX LEVERAGE VERIFY ERROR] {err_msg}")
-            return {"success": False, "error": err_msg}
+            return {"success": False, "error": f"LEVERAGE VERIFICATION FAILED: {ver_res.get('error')}"}
 
-        # STEP D: OFFICIAL CURRENT DOCUMENTED V2 ORDER SCHEMA
+        # Step 3: Place Order
         dir_order_type = "LONG" if side.upper() in ("BUY", "LONG", "1") else "SHORT"
         qty_str = str(quantity)
 
         candidates = [
             {
                 "url": "https://trade.mudrex.com/fapi/v2/futures/order?symbol=BTCUSDT",
-                "payload": {
-                    "trigger_type": "MARKET",
-                    "order_type": dir_order_type,
-                    "quantity": qty_str,
-                    "trade_currency": "INR"
-                }
-            },
-            {
-                "url": f"{self.BASE_URL}/futures/{asset_id}/order?trade_currency=INR",
                 "payload": {
                     "trigger_type": "MARKET",
                     "order_type": dir_order_type,
@@ -517,7 +527,6 @@ class MudrexLiveAdapter:
                     if isinstance(data, dict) and data.get("success") is False:
                         errors.append(f"HTTP {resp.status_code} Error: {data.get('error') or data}")
                         continue
-                    print(f"[{datetime.now()}] [MUDREX ORDER SUBMITTED] HTTP {resp.status_code} Endpoint {url} succeeded! Data: {data}")
                     return {"success": True, "data": data, "endpoint": url, "payload": payload, "status_code": resp.status_code}
                 else:
                     errors.append(f"HTTP {resp.status_code}: {resp.text}")
@@ -528,9 +537,8 @@ class MudrexLiveAdapter:
 
     def fetch_closed_position_audit(self, position_id: str, max_retries: int = 6, retry_delay: float = 1.0) -> Optional[Dict[str, Any]]:
         """
-        Queries Mudrex API for actual position history and order fill data for position_id.
-        Retries if position history hasn't populated yet.
-        Returns exact entry/exit fill prices, realized gross P&L, entry/exit fees+GST, funding fee, and net P&L.
+        Requirement 5: Queries Mudrex API for actual position history and order fill data.
+        Returns exact entry/exit fill prices, realized gross P&L, entry/exit fees+GST, funding fee, and NET P&L.
         """
         headers = self._get_headers()
         if not headers.get("X-Authentication"):
@@ -558,7 +566,6 @@ class MudrexLiveAdapter:
             time.sleep(retry_delay)
 
         if not pos_item:
-            print(f"[{datetime.now()}] [MUDREX AUDIT FETCH] Position {position_id} not found in Mudrex position history.")
             return None
 
         try:
@@ -625,51 +632,43 @@ class MudrexLiveAdapter:
         }
 
 
-
 class BitcoinLiveEngine:
     """
-    Production-ready Bitcoin Live Trading & Risk Management Engine (Mudrex API).
+    Production Bitcoin Live Engine (Mudrex API) V2 Rebuild.
     LOGIC & RISK CONTRACT:
-    - Capital: ₹5,000 live capital.
-    - Max 1 open BTCUSDT position at a time.
-    - Daily NET loss limit: -₹1,000 NET.
-    - Per-trade profit target: +₹600 NET.
-    - Per-trade loss limit: -₹500 NET.
-    - Exit thresholds are based on ACTUAL NET P&L after Mudrex trading charges.
-    - Automatic re-entry cycle: SCAN -> ENTRY -> MONITOR NET P&L -> EXIT -> SCAN AGAIN -> NEXT ENTRY.
-    - Position sizing dynamically determines BTC quantity (e.g. ~0.01 BTC for ₹5k capital) so +₹600 / -₹500 NET targets are realistic.
+    - Intended Strategy: EMA 9/21/50 + RSI 14 (Preserved 100%).
+    - Quantity: 0.002 BTC (Fixed per user spec).
+    - Leverage: 5x Isolated.
+    - Target: ₹100 NET profit after all charges & GST.
+    - Max Loss: ₹200 NET loss after all charges & GST.
     """
 
     def __init__(self):
         self.adapter = MudrexLiveAdapter()
-        
-        # Hardcoded System Guardrails
+
+        # Hardcoded System Parameters & Guardrails
+        self.QUANTITY = 0.002
+        self.LEVERAGE = 5.0
         self.MAX_POSITIONS = 1
         self.ALLOW_AVERAGING = False
         self.ALLOW_MARTINGALE = False
-        self.HARD_STOP_LOSS_REQUIRED = True
+        self.TAKER_FEE_RATE = 0.0005  # 0.05% per side
+        self.GST_RATE = 0.18          # 18% GST on fee
+        self.TOTAL_FEE_RATE = 0.00059 # 0.059% per side inclusive of GST
 
-        # Fee rate for Mudrex Futures (0.05% per side = 0.10% roundtrip)
-        self.TAKER_FEE_RATE = 0.0005
-
-        # Trading Enable Safety Lock
+        # Load Trading Enable Lock (Live Trading Active)
         saved_enable = DB.load_bitcoin_live_setting("live_trading_enabled", "TRUE")
         self.live_trading_enabled = (saved_enable.upper() == "TRUE")
 
-        # Load Persistent Settings from SQLite DB
+        # Load Persistent Risk Settings
         self.today_date = datetime.now().strftime("%Y-%m-%d")
         saved_date = DB.load_bitcoin_live_setting("today_date", self.today_date)
-        
-        # Auto-reset daily flags at midnight
         if saved_date != self.today_date:
             DB.save_bitcoin_live_setting("today_date", self.today_date)
             DB.save_bitcoin_live_setting("daily_loss_limit_hit", "FALSE")
             DB.save_bitcoin_live_setting("today_realized_pnl", "0.0")
 
-        loaded_loss = float(DB.load_bitcoin_live_setting("per_trade_loss_limit_inr", "200.0"))
-        if loaded_loss == 400.0:
-            loaded_loss = 200.0
-        self.per_trade_loss_limit_inr = loaded_loss
+        self.per_trade_loss_limit_inr = float(DB.load_bitcoin_live_setting("per_trade_loss_limit_inr", "200.0"))
         self.per_trade_profit_target_inr = float(DB.load_bitcoin_live_setting("per_trade_profit_target_inr", "100.0"))
         self.daily_loss_limit_inr = float(DB.load_bitcoin_live_setting("daily_loss_limit_inr", "1000.0"))
 
@@ -681,81 +680,100 @@ class BitcoinLiveEngine:
         self.daily_loss_limit_hit = DB.load_bitcoin_live_setting("daily_loss_limit_hit", "FALSE").upper() == "TRUE"
         self.today_realized_pnl = float(DB.load_bitcoin_live_setting("today_realized_pnl", "0.0"))
 
-        self.consecutive_api_failures = 0
         self.last_api_status = "UNKNOWN"
         self.last_sl_time = float(DB.load_bitcoin_live_setting("last_sl_time", "0.0"))
         self.evaluation_stream = []
         self.last_evaluation = {}
 
-    def calculate_trade_charges(self, entry_price: float, exit_price: float, quantity: float) -> Tuple[float, float, float]:
+    def calculate_sl_and_target_prices(
+        self,
+        direction: str,
+        entry_price_usd: float,
+        quantity: float = 0.002,
+        hedge_rate: float = 102.0,
+        target_net_inr: float = 100.0,
+        max_loss_net_inr: float = 200.0,
+        funding_fee: float = 0.0
+    ) -> Tuple[float, float, float, float, float, float]:
         """
-        Calculates entry charges, exit charges, and total roundtrip charges dynamically in INR.
-        Uses Mudrex Taker Fee Rate (0.05% per side = 0.0005).
-        No artificial fixed floor is applied.
+        Calculates exact Target Price (+₹100 NET) and Stop Loss Price (-₹200 NET)
+        inclusive of Mudrex Futures fees and GST.
+        
+        Returns:
+        (target_price_usd, stop_loss_price_usd, target_price_inr, stop_loss_price_inr, target_gross_inr, stop_gross_inr)
         """
-        entry_val = entry_price * quantity
-        exit_val = exit_price * quantity
-        entry_fee = round(entry_val * self.TAKER_FEE_RATE, 2)
-        exit_fee = round(exit_val * self.TAKER_FEE_RATE, 2)
+        if hedge_rate <= 0:
+            hedge_rate = 102.0
+        if quantity <= 0:
+            quantity = 0.002
+
+        if entry_price_usd > 100000.0:
+            entry_price_usd = entry_price_usd / hedge_rate
+
+        v_entry = entry_price_usd * quantity * hedge_rate
+        f_entry = v_entry * self.TOTAL_FEE_RATE
+
+        dir_upper = str(direction).upper()
+
+        if dir_upper in ("BUY", "LONG"):
+            # Target USD
+            denom_tp = quantity * hedge_rate * (1.0 - self.TOTAL_FEE_RATE)
+            num_tp = v_entry + f_entry + funding_fee + target_net_inr
+            target_price_usd = round(num_tp / denom_tp, 2)
+
+            # Stop Loss USD
+            denom_sl = quantity * hedge_rate * (1.0 - self.TOTAL_FEE_RATE)
+            num_sl = v_entry + f_entry + funding_fee - max_loss_net_inr
+            stop_loss_price_usd = round(num_sl / denom_sl, 2)
+
+            target_gross_inr = round((target_price_usd - entry_price_usd) * quantity * hedge_rate, 2)
+            stop_gross_inr = round((entry_price_usd - stop_loss_price_usd) * quantity * hedge_rate, 2)
+
+        else:  # SELL / SHORT
+            # Target USD
+            denom_tp = quantity * hedge_rate * (1.0 + self.TOTAL_FEE_RATE)
+            num_tp = v_entry - f_entry - funding_fee - target_net_inr
+            target_price_usd = round(num_tp / denom_tp, 2)
+
+            # Stop Loss USD
+            denom_sl = quantity * hedge_rate * (1.0 + self.TOTAL_FEE_RATE)
+            num_sl = v_entry - f_entry - funding_fee + max_loss_net_inr
+            stop_loss_price_usd = round(num_sl / denom_sl, 2)
+
+            target_gross_inr = round((entry_price_usd - target_price_usd) * quantity * hedge_rate, 2)
+            stop_gross_inr = round((stop_loss_price_usd - entry_price_usd) * quantity * hedge_rate, 2)
+
+        target_price_inr = round(target_price_usd * hedge_rate, 2)
+        stop_loss_price_inr = round(stop_loss_price_usd * hedge_rate, 2)
+
+        return (
+            target_price_usd,
+            stop_loss_price_usd,
+            target_price_inr,
+            stop_loss_price_inr,
+            target_gross_inr,
+            stop_gross_inr
+        )
+
+    def calculate_trade_charges(self, entry_price_inr: float, exit_price_inr: float, quantity: float = 0.002) -> Tuple[float, float, float]:
+        """Calculates entry charges, exit charges, and total charges in INR."""
+        entry_val = entry_price_inr * quantity
+        exit_val = exit_price_inr * quantity
+        entry_fee = round(entry_val * self.TOTAL_FEE_RATE, 2)
+        exit_fee = round(exit_val * self.TOTAL_FEE_RATE, 2)
         total_fee = round(entry_fee + exit_fee, 2)
         return entry_fee, exit_fee, total_fee
 
     def calculate_position_quantity(self, entry_price: float, available_balance: float = 5000.0) -> float:
-        """
-        Calculates dynamic BTC position size Q based on real available Futures INR balance and 5x leverage.
-        
-        Formula:
-        usable_margin = available_balance * 0.80 (80% margin utilization target, 20% safety buffer)
-        max_notional = usable_margin * 5.0 (at 5x leverage)
-        raw_quantity = max_notional / entry_price
-        quantity = rounded DOWN to 0.001 step size
-        
-        Safety Check:
-        If estimated_required_margin >= available_balance:
-            reduce quantity by 0.001 step until estimated_required_margin < available_balance
-            
-        If quantity < 0.001:
-            returns 0.0
-        """
-        import math
-        if entry_price <= 0 or available_balance <= 0:
-            return 0.0
-
-        # Target 80% margin utilization
-        usable_margin = available_balance * 0.80
-        max_notional = usable_margin * 5.0
-        raw_qty = max_notional / entry_price
-
-        # Round DOWN to 0.001 BTC step size
-        step = 0.001
-        qty = math.floor(raw_qty / step) * step
-        qty = round(qty, 3)
-
-        # Safety Check: Ensure estimated required margin is strictly less than available_balance
-        while qty >= step:
-            est_req_margin = (qty * entry_price) / 5.0
-            if est_req_margin < available_balance:
-                break
-            qty = round(qty - step, 3)
-
-        if qty < step:
-            return 0.0
-
-        return qty
+        """Fixed 0.002 BTC per current intended strategy spec."""
+        return 0.002
 
     def fetch_mudrex_futures_market_data(self) -> Tuple[Optional[float], float, str]:
-        """
-        Fetches authoritative live Mudrex BTCUSDT Futures price in USD and dynamic hedge rate.
-        Returns: (price_usd, hedge_rate, source_description)
-        
-        STRICT FAIL-SAFE RULE (Part 6):
-        Never falls back to Yahoo BTC-INR for trading execution.
-        """
+        """Fetches live Mudrex BTCUSDT Futures price in USD and hedge rate."""
         price_usd = None
         hedge_rate = 102.0
         source = "Mudrex API"
 
-        # 1. Query Mudrex API asset details for BTCUSDT
         try:
             ast_res = self.adapter.fetch_btcusdt_asset()
             if ast_res.get("success"):
@@ -765,7 +783,6 @@ class BitcoinLiveEngine:
         except Exception as e:
             print(f"[{datetime.now()}] [MUDREX ASSET FETCH ERROR] {e}")
 
-        # 2. Query open position on Mudrex to get dynamic hedge rate if available
         try:
             positions = self.adapter.fetch_open_positions()
             if isinstance(positions, list) and positions:
@@ -780,7 +797,6 @@ class BitcoinLiveEngine:
         except Exception as e:
             print(f"[{datetime.now()}] [MUDREX POSITION FETCH ERROR] {e}")
 
-        # 3. Fallback to Binance BTCUSDT USD price if Mudrex API is unauthenticated (e.g. offline unit testing)
         if price_usd is None or price_usd <= 0:
             try:
                 resp = requests.get("https://api.binance.com/api/v3/ticker/price?symbol=BTCUSDT", timeout=4)
@@ -789,57 +805,57 @@ class BitcoinLiveEngine:
                     price_usd = float(data.get("price", 0.0))
                     source = "Binance Futures/Spot API (BTCUSDT USD)"
             except Exception as e:
-                print(f"[{datetime.now()}] [MUDREX/BINANCE PRICE FEED ERROR] {e}")
+                print(f"[{datetime.now()}] [PRICE FEED ERROR] {e}")
 
         if price_usd is not None and price_usd > 0:
             return price_usd, hedge_rate, source
 
         return None, hedge_rate, "PRICE FEED UNAVAILABLE"
 
-    def calculate_sl_and_target_prices(
+    def calculate_live_position_pnl(
         self,
-        direction: str,
-        entry_price_usd: float,
-        quantity: float,
-        hedge_rate: float = 102.0
-    ) -> Tuple[float, float, float, float, float]:
+        position: LiveTradeState,
+        curr_price_usd: float,
+        hedge_rate: float
+    ) -> Tuple[float, float, float, float, float, float]:
         """
-        Calculates exact Target Price (+₹600 NET) and Stop Loss Price (-₹400 NET)
-        in both USD price basis and INR equivalent basis.
-        
-        Returns: (target_price_usd, stop_loss_price_usd, target_price_inr, stop_loss_price_inr, estimated_charges_inr)
+        Single authoritative unrealized P&L calculation for active position state.
+        Returns: (gross_pnl_usd, gross_pnl_inr, entry_fee_gst, exit_fee_gst, total_charges, net_pnl_inr)
         """
-        if hedge_rate <= 0:
-            hedge_rate = 102.0
+        if not position or curr_price_usd <= 0 or hedge_rate <= 0:
+            return 0.0, 0.0, 0.0, 0.0, 0.0, 0.0
 
-        # Legacy INR input safety guard
-        if entry_price_usd > 100000.0:
-            entry_price_usd = entry_price_usd / hedge_rate
+        pos_hr = position.hedge_rate if position.hedge_rate > 0 else hedge_rate
+        entry_usd = position.entry_price_usd
+        qty = position.quantity
 
-        # Estimated roundtrip charges in INR (0.10% total turnover in INR)
-        turnover_inr = entry_price_usd * hedge_rate * quantity
-        est_charges_inr = max(20.0, round(turnover_inr * 0.0010, 2))
+        if position.direction in ("BUY", "LONG"):
+            gross_pnl_usd = (curr_price_usd - entry_usd) * qty
+        else:
+            gross_pnl_usd = (entry_usd - curr_price_usd) * qty
 
-        target_gross_inr = self.per_trade_profit_target_inr + est_charges_inr
-        sl_gross_diff_inr = self.per_trade_loss_limit_inr - est_charges_inr
+        gross_pnl_inr = gross_pnl_usd * pos_hr
 
-        target_gross_usd = target_gross_inr / hedge_rate
-        sl_gross_diff_usd = sl_gross_diff_inr / hedge_rate
+        entry_val_inr = entry_usd * qty * pos_hr
+        exit_val_inr = curr_price_usd * qty * pos_hr
 
-        if direction.upper() == "BUY":
-            target_price_usd = round(entry_price_usd + (target_gross_usd / quantity), 2)
-            stop_loss_price_usd = round(entry_price_usd - (sl_gross_diff_usd / quantity), 2)
-        else:  # SELL / SHORT
-            target_price_usd = round(entry_price_usd - (target_gross_usd / quantity), 2)
-            stop_loss_price_usd = round(entry_price_usd + (sl_gross_diff_usd / quantity), 2)
+        entry_fee_gst = entry_val_inr * self.TOTAL_FEE_RATE
+        exit_fee_gst = exit_val_inr * self.TOTAL_FEE_RATE
+        total_charges = entry_fee_gst + exit_fee_gst + position.funding_fee
 
-        target_price_inr = round(target_price_usd * hedge_rate, 2)
-        stop_loss_price_inr = round(stop_loss_price_usd * hedge_rate, 2)
+        net_pnl_inr = gross_pnl_inr - total_charges
 
-        return target_price_usd, stop_loss_price_usd, target_price_inr, stop_loss_price_inr, est_charges_inr
+        return (
+            round(gross_pnl_usd, 4),
+            round(gross_pnl_inr, 2),
+            round(entry_fee_gst, 2),
+            round(exit_fee_gst, 2),
+            round(total_charges, 2),
+            round(net_pnl_inr, 2)
+        )
 
     def save_settings(self):
-        """Persists risk configuration & state flags to SQLite DB."""
+        """Persists settings & state flags to SQLite DB."""
         DB.save_bitcoin_live_setting("per_trade_loss_limit_inr", str(self.per_trade_loss_limit_inr))
         DB.save_bitcoin_live_setting("daily_loss_limit_inr", str(self.daily_loss_limit_inr))
         DB.save_bitcoin_live_setting("circuit_breaker_tripped", "TRUE" if self.circuit_breaker_tripped else "FALSE")
@@ -847,25 +863,21 @@ class BitcoinLiveEngine:
         DB.save_bitcoin_live_setting("daily_loss_limit_hit", "TRUE" if self.daily_loss_limit_hit else "FALSE")
         DB.save_bitcoin_live_setting("today_realized_pnl", str(self.today_realized_pnl))
         DB.save_bitcoin_live_setting("today_date", self.today_date)
+        DB.save_bitcoin_live_setting("live_trading_enabled", "TRUE" if self.live_trading_enabled else "FALSE")
+        DB.save_bitcoin_live_setting("last_sl_time", str(self.last_sl_time))
 
     def recalculate_realized_pnl(self):
-        """
-        Recalculates today_realized_pnl from DB trade net_pnl values.
-        Ensures existing #1-#13 trades remain untouched, while #14 onward use Mudrex confirmed Net PnL.
-        """
+        """Recalculates today_realized_pnl from DB trade net_pnl values."""
         all_trades = DB.load_all_bitcoin_live_trades()
         today_str = datetime.now().strftime("%Y-%m-%d")
         today_sum = 0.0
         for t in all_trades:
-            if t.get("status") == "CLOSED":
+            if t.get("status") == TradeStatus.CLOSED.value:
                 exit_time = str(t.get("exit_timestamp") or t.get("entry_timestamp") or "")
                 if today_str in exit_time:
                     today_sum += float(t.get("net_pnl") or 0.0)
         self.today_realized_pnl = round(today_sum, 2)
         DB.save_bitcoin_live_setting("today_realized_pnl", str(self.today_realized_pnl))
-
-        DB.save_bitcoin_live_setting("live_trading_enabled", "TRUE" if self.live_trading_enabled else "FALSE")
-        DB.save_bitcoin_live_setting("last_sl_time", str(self.last_sl_time))
 
     def set_live_trading_enabled(self, enabled: bool):
         """Enables or disables live trading execution."""
@@ -873,7 +885,7 @@ class BitcoinLiveEngine:
         self.save_settings()
 
     def update_risk_settings(self, per_trade_limit: Optional[float] = None, profit_target: Optional[float] = None, daily_limit: Optional[float] = None):
-        """Updates configurable target and loss limits."""
+        """Updates target and loss limits."""
         if per_trade_limit is not None and float(per_trade_limit) > 0:
             self.per_trade_loss_limit_inr = float(per_trade_limit)
         if profit_target is not None and float(profit_target) > 0:
@@ -883,38 +895,33 @@ class BitcoinLiveEngine:
         self.save_settings()
 
     def trip_circuit_breaker(self, reason: str):
-        """Trips emergency circuit breaker to prevent further trading."""
+        """Trips emergency circuit breaker."""
         self.circuit_breaker_tripped = True
         self.circuit_breaker_reason = reason
         self.save_settings()
-        print(f"[{datetime.now()}] [CIRCUIT BREAKER TRIPPED] Reason: {reason}")
 
     def reset_circuit_breaker(self):
-        """Resets circuit breaker manually."""
+        """Resets circuit breaker."""
         self.circuit_breaker_tripped = False
         self.circuit_breaker_reason = ""
-        self.consecutive_api_failures = 0
         self.save_settings()
 
     def reset_daily_pnl(self):
-        """Resets daily realized P&L and daily loss limit flag."""
+        """Resets daily P&L state."""
         self.today_realized_pnl = 0.0
         self.daily_loss_limit_hit = False
         self.circuit_breaker_tripped = False
         self.circuit_breaker_reason = ""
         self.save_settings()
-        print(f"[{datetime.now()}] [RESET DAILY P&L] Reset today's P&L to Rs.0.00.")
 
     def are_new_entries_allowed(self) -> Tuple[bool, str]:
-        """Checks whether new trade entries are allowed based on strict risk rules."""
-        # Auto-reset at midnight (IST date rollover)
+        """Requirement 11: Rate control and risk state checking."""
         curr_date = datetime.now().strftime("%Y-%m-%d")
         if self.today_date != curr_date:
             self.today_date = curr_date
             self.today_realized_pnl = 0.0
             self.daily_loss_limit_hit = False
             self.save_settings()
-            print(f"[{datetime.now()}] [MIDNIGHT RESET] New day started ({curr_date}). Daily Loss Lock automatically reset!")
 
         if not self.live_trading_enabled:
             return False, "LIVE TRADING DISABLED (Pre-Flight / Read-Only Mode)"
@@ -924,25 +931,21 @@ class BitcoinLiveEngine:
             self.daily_loss_limit_hit = True
             return False, f"DAILY LOSS LIMIT REACHED (Rs.{abs(self.today_realized_pnl):,.2f} >= Rs.{self.daily_loss_limit_inr:,.2f})"
 
-        # Check anti-whipsaw cooldown after Stop Loss exit (15 minutes = 900s)
+        # Execution Debounce (60s after trade exit to prevent tick churn)
         if self.last_sl_time > 0:
             elapsed = time.time() - self.last_sl_time
-            if elapsed < 900:
-                rem_mins = int((900 - elapsed) / 60) + 1
-                return False, f"COOLDOWN ACTIVE ({rem_mins}m wait after SL to prevent whipsaw)"
+            if elapsed < 60:
+                rem_secs = int(60 - elapsed)
+                return False, f"EXECUTION DEBOUNCE ACTIVE ({rem_secs}s remaining)"
 
-        # Check active position in DB
-        active_pos = DB.load_active_bitcoin_live_position()
-        if active_pos and active_pos.get("status") == "OPEN":
-            return False, "MAXIMUM POSITIONS REACHED (1 open BTC position active)"
+        active_raw = DB.load_active_bitcoin_live_position()
+        if active_raw and active_raw.get("status") in (TradeStatus.OPEN.value, TradeStatus.EXIT_REQUESTED.value):
+            return False, f"POSITION ACTIVE ({active_raw.get('status')})"
 
         return True, "ALLOWED (SCANNING FOR SIGNALS)"
 
     def run_preflight_check(self) -> Dict[str, Any]:
-        """
-        Executes a 100% READ-ONLY Pre-Flight Audit against Mudrex API.
-        NO orders placed, NO funds transferred.
-        """
+        """Executes a 100% READ-ONLY Pre-Flight Audit."""
         auth_res = self.adapter.test_authentication()
         auth_pass = auth_res.get("success", False)
 
@@ -988,131 +991,127 @@ class BitcoinLiveEngine:
 
     def auto_reconcile_active_position(self) -> Optional[Dict[str, Any]]:
         """
-        Checks SQLite DB for active position. If None, reconciles open exchange position
-        (01a1067d-f252-7e89-91da-9b03be176bfe) into local DB so container restart preserves state.
+        Requirement 9: Reconciles open positions between SQLite database and Mudrex API.
+        Handles orphan positions, offline closures, and state alignment.
         """
-        active_pos = DB.load_active_bitcoin_live_position()
-        if active_pos and active_pos.get("status") == "OPEN":
-            return active_pos
-
+        raw_db_pos = DB.load_active_bitcoin_live_position()
         m_positions = self.adapter.fetch_open_positions()
+
         m_pos = m_positions[0] if (isinstance(m_positions, list) and len(m_positions) > 0) else {}
-        if not m_pos or (not m_pos.get("position_id") and not m_pos.get("id") and not m_pos.get("quantity")):
-            return None
+        m_pos_id = m_pos.get("position_id") or m_pos.get("id")
 
-        pos_id = m_pos.get("position_id") or m_pos.get("id") or "01a108eb-fdf2-735a-a74c-95ea825ee9aa"
-        pos_id_clean = str(pos_id).replace("-", "")
-        trade_id = f"BTC_LIVE_{pos_id_clean[:8]}"
+        if raw_db_pos:
+            try:
+                db_state = LiveTradeState.from_dict(raw_db_pos)
+            except Exception as e:
+                print(f"[{datetime.now()}] [RECONCILIATION ERROR] Unable to parse DB position: {e}")
+                return raw_db_pos
 
-        entry_usd = float(m_pos.get("entry_price") or m_pos.get("avg_price") or 85866.40)
-        qty = float(m_pos.get("quantity") or m_pos.get("size") or 0.002)
-        direction = "BUY" if str(m_pos.get("side") or m_pos.get("order_type") or m_pos.get("direction") or "LONG").upper() in ("BUY", "LONG") else "SELL"
-        pos_hr = float(m_pos.get("hedge_rate") or 102.0)
-        tp_usd, sl_usd, tp_inr, sl_inr, est_chg = self.calculate_sl_and_target_prices(direction, entry_usd, qty, pos_hr)
+            if m_pos_id and str(m_pos_id).lower() == str(db_state.mudrex_position_id).lower():
+                # Align state
+                return db_state.to_dict()
+            elif not m_pos_id or not any(str(p.get("position_id") or p.get("id")).lower() == str(db_state.mudrex_position_id).lower() for p in m_positions):
+                # DB shows OPEN/EXIT_REQUESTED, but position is CLOSED on Mudrex! Reconcile to CLOSED.
+                print(f"[{datetime.now()}] [RECONCILIATION] DB trade {db_state.trade_id} closed on Mudrex. Finalizing...")
+                curr_usd, hr, src = self.fetch_mudrex_futures_market_data()
+                self._finalize_closed_position(db_state, curr_usd or db_state.entry_price_usd, src)
+                return None
+            else:
+                return db_state.to_dict()
 
-        reconciled = {
-            "trade_id": trade_id,
-            "mudrex_position_id": pos_id,
-            "entry_timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-            "symbol": "BTCUSDT",
-            "direction": direction,
-            "quantity": qty,
-            "entry_price": round(entry_usd * pos_hr, 2),
-            "entry_price_usd": entry_usd,
-            "hedge_rate": pos_hr,
-            "target_usd": tp_usd,
-            "stop_loss_usd": sl_usd,
-            "target": tp_inr,
-            "stop_loss": sl_inr,
-            "trend_state": "BULLISH" if direction == "BUY" else "BEARISH",
-            "confidence": 85,
-            "reasons": ["Reconciled Live Mudrex Position"],
-            "status": "OPEN",
-            "charges": est_chg
-        }
-        DB.save_bitcoin_live_trade(reconciled)
-        return reconciled
+        # DB has NO active position, but Mudrex HAS an open position! Adopt orphan position.
+        if m_pos and m_pos_id:
+            pos_id = str(m_pos_id)
+            pos_id_clean = pos_id.replace("-", "")
+            trade_id = f"BTC_LIVE_{pos_id_clean[:8]}"
+            entry_usd = float(m_pos.get("entry_price") or m_pos.get("avg_price") or 85000.0)
+            qty = float(m_pos.get("quantity") or m_pos.get("size") or 0.002)
+            direction = "BUY" if str(m_pos.get("side") or m_pos.get("order_type") or m_pos.get("direction") or "LONG").upper() in ("BUY", "LONG") else "SELL"
+            pos_hr = float(m_pos.get("hedge_rate") or 102.0)
 
-    def calculate_live_position_pnl(
-        self,
-        active_pos: Optional[Dict[str, Any]],
-        curr_price_usd: Optional[float],
-        hedge_rate: Optional[float]
-    ) -> Tuple[float, float, float, float, float, float]:
-        """
-        Single authoritative live position P&L calculation used by BOTH process_tick()
-        and get_dashboard_state().
-        
-        Returns: (gross_pnl_usd, gross_pnl_inr, entry_fee_inr, exit_fee_inr, total_charges_inr, net_pnl_inr)
-        """
-        if not active_pos or curr_price_usd is None or curr_price_usd <= 0 or not hedge_rate or hedge_rate <= 0:
-            return 0.0, 0.0, 0.0, 0.0, 0.0, 0.0
+            tp_usd, sl_usd, tp_inr, sl_inr, tp_gross, sl_gross = self.calculate_sl_and_target_prices(
+                direction, entry_usd, qty, pos_hr, self.per_trade_profit_target_inr, self.per_trade_loss_limit_inr
+            )
 
-        pos_hr = float(active_pos.get("hedge_rate") or hedge_rate or 102.0)
-        entry_usd = float(active_pos.get("entry_price_usd") or (active_pos["entry_price"] / pos_hr))
-        qty = float(active_pos["quantity"])
-        direction = active_pos["direction"]
+            now_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            reconciled_state = LiveTradeState(
+                trade_id=trade_id,
+                mudrex_position_id=pos_id,
+                direction=direction,
+                quantity=qty,
+                leverage=5.0,
+                entry_price_usd=entry_usd,
+                entry_price=round(entry_usd * pos_hr, 2),
+                hedge_rate=pos_hr,
+                entry_timestamp=now_str,
+                target_net_inr=self.per_trade_profit_target_inr,
+                max_loss_net_inr=self.per_trade_loss_limit_inr,
+                target_gross_inr=tp_gross,
+                stop_gross_inr=sl_gross,
+                target_usd=tp_usd,
+                stop_loss_usd=sl_usd,
+                target=tp_inr,
+                stop_loss=sl_inr,
+                trend_state="BULLISH" if direction == "BUY" else "BEARISH",
+                confidence=85,
+                reasons=["Adopted Orphan Mudrex Position"],
+                status=TradeStatus.OPEN.value,
+                entry_charges=round(entry_usd * qty * pos_hr * self.TOTAL_FEE_RATE, 2),
+                charges=round(entry_usd * qty * pos_hr * self.TOTAL_FEE_RATE, 2),
+                symbol="BTCUSDT"
+            )
 
-        if direction == "BUY":
-            gross_pnl_usd = (curr_price_usd - entry_usd) * qty
-        else:
-            gross_pnl_usd = (entry_usd - curr_price_usd) * qty
+            DB.save_bitcoin_live_trade(reconciled_state.to_dict())
+            print(f"[{datetime.now()}] [RECONCILIATION] Adopted orphan Mudrex position {pos_id} as trade {trade_id}.")
+            return reconciled_state.to_dict()
 
-        gross_pnl_inr = gross_pnl_usd * pos_hr
-        entry_fee, exit_fee, total_charges = self.calculate_trade_charges(entry_usd * pos_hr, curr_price_usd * pos_hr, qty)
-        net_pnl_inr = gross_pnl_inr - total_charges
-
-        return (
-            round(gross_pnl_usd, 4),
-            round(gross_pnl_inr, 2),
-            round(entry_fee, 2),
-            round(exit_fee, 2),
-            round(total_charges, 2),
-            round(net_pnl_inr, 2)
-        )
+        return None
 
     def get_dashboard_state(self) -> Dict[str, Any]:
-        """Returns JSON state payload for the Bitcoin Live Engine dashboard."""
+        """Returns JSON state payload for dashboard display (Requirement 10)."""
         curr_price_usd, hedge_rate, price_source = self.fetch_mudrex_futures_market_data()
+        active_pos_dict = self.auto_reconcile_active_position()
 
-        active_pos = self.auto_reconcile_active_position()
         spot_bal = self.adapter.fetch_spot_balance()
         fut_bal = self.adapter.fetch_futures_balance()
 
-        # Auto-transfer Spot balance to Futures balance if Spot has funds
         if spot_bal >= 100.0 and fut_bal < 100.0:
             tr_res = self.adapter.transfer_inr_spot_to_futures(spot_bal)
             if tr_res.get("success"):
-                print(f"[{datetime.now()}] [AUTO TRANSFER] Transferred Rs.{spot_bal:,.2f} Spot -> Futures Wallet.")
                 fut_bal += spot_bal
                 spot_bal = 0.0
 
-        if active_pos and curr_price_usd and curr_price_usd > 0 and hedge_rate > 0:
-            _, unrealized_gross, entry_fee, exit_fee, total_charges, unrealized_net = self.calculate_live_position_pnl(
-                active_pos, curr_price_usd, hedge_rate
-            )
-            btc_inr_val = round((curr_price_usd * hedge_rate), 2)
+        if active_pos_dict and curr_price_usd and curr_price_usd > 0 and hedge_rate > 0:
+            try:
+                pos = LiveTradeState.from_dict(active_pos_dict)
+                _, unrealized_gross, entry_fee, exit_fee, total_charges, unrealized_net = self.calculate_live_position_pnl(
+                    pos, curr_price_usd, hedge_rate
+                )
+            except Exception:
+                unrealized_gross = 0.0
+                total_charges = 0.0
+                unrealized_net = 0.0
+            btc_inr_val = round(curr_price_usd * hedge_rate, 2)
         elif curr_price_usd and curr_price_usd > 0 and hedge_rate > 0:
             unrealized_gross = 0.0
             total_charges = 0.0
             unrealized_net = 0.0
-            btc_inr_val = round((curr_price_usd * hedge_rate), 2)
+            btc_inr_val = round(curr_price_usd * hedge_rate, 2)
         else:
             unrealized_gross = 0.0
             total_charges = 0.0
             unrealized_net = 0.0
             btc_inr_val = 0.0
-            price_source = "MUDREX MARKET DATA UNAVAILABLE"
+            price_source = "MARKET DATA UNAVAILABLE"
 
-        # Determine Scanner status
         if self.today_realized_pnl <= -self.daily_loss_limit_inr or self.daily_loss_limit_hit:
-            scanner_status = "DAILY LOSS LOCK (-Rs.1,000)"
+            scanner_status = f"DAILY LOSS LOCK (-Rs.{int(self.daily_loss_limit_inr):,})"
         elif self.circuit_breaker_tripped:
-            scanner_status = "CIRCUIT BREAKER"
-        elif active_pos and active_pos.get("status") == "OPEN":
-            scanner_status = "POSITION OPEN"
+            scanner_status = f"CIRCUIT BREAKER: {self.circuit_breaker_reason}"
+        elif active_pos_dict and active_pos_dict.get("status") in (TradeStatus.OPEN.value, TradeStatus.EXIT_REQUESTED.value):
+            scanner_status = f"POSITION ACTIVE ({active_pos_dict.get('status')})"
         elif not self.live_trading_enabled:
-            scanner_status = "TRADING PAUSED"
+            scanner_status = "TRADING PAUSED (Pre-Flight Mode)"
         elif "ORDER REJECTED" in getattr(self, "last_api_status", ""):
             scanner_status = "ORDER REJECTED / NOT EXECUTED"
         else:
@@ -1121,25 +1120,34 @@ class BitcoinLiveEngine:
         allowed, allowed_reason = self.are_new_entries_allowed()
         all_trades = DB.load_all_bitcoin_live_trades()
 
+        total_gross_realized = sum(float(t.get("gross_pnl") or 0.0) for t in all_trades if t.get("status") == TradeStatus.CLOSED.value)
+        total_fees_gst = sum(float(t.get("charges") or 0.0) for t in all_trades if t.get("status") == TradeStatus.CLOSED.value)
+        total_funding = sum(float(t.get("funding_fee") or 0.0) for t in all_trades if t.get("status") == TradeStatus.CLOSED.value)
+        total_net_realized = sum(float(t.get("net_pnl") or 0.0) for t in all_trades if t.get("status") == TradeStatus.CLOSED.value)
+
         return {
             "btc_price": btc_inr_val,
             "mudrex_btc_usd_price": round(curr_price_usd, 2) if curr_price_usd else 0.0,
             "mudrex_hedge_rate": round(hedge_rate, 2) if hedge_rate else 102.0,
             "mudrex_btc_inr_price": btc_inr_val,
             "price_source": price_source,
-            "position": "OPEN" if active_pos else "NONE",
+            "position": active_pos_dict.get("status") if active_pos_dict else "NONE",
             "scanner_status": scanner_status,
-            "active_position": active_pos,
-            "entry_price": active_pos.get("entry_price") if active_pos else None,
-            "entry_price_usd": active_pos.get("entry_price_usd") if active_pos else None,
-            "stop_loss": active_pos.get("stop_loss") if active_pos else None,
-            "stop_loss_usd": active_pos.get("stop_loss_usd") if active_pos else None,
-            "target": active_pos.get("target") if active_pos else None,
-            "target_usd": active_pos.get("target_usd") if active_pos else None,
-            "current_unrealized_gross_pnl": round(unrealized_gross, 2) if unrealized_gross is not None else 0.0,
-            "current_estimated_charges": round(total_charges, 2) if total_charges is not None else 0.0,
-            "current_unrealized_net_pnl": round(unrealized_net, 2) if unrealized_net is not None else 0.0,
+            "active_position": active_pos_dict,
+            "entry_price": active_pos_dict.get("entry_price") if active_pos_dict else None,
+            "entry_price_usd": active_pos_dict.get("entry_price_usd") if active_pos_dict else None,
+            "stop_loss": active_pos_dict.get("stop_loss") if active_pos_dict else None,
+            "stop_loss_usd": active_pos_dict.get("stop_loss_usd") if active_pos_dict else None,
+            "target": active_pos_dict.get("target") if active_pos_dict else None,
+            "target_usd": active_pos_dict.get("target_usd") if active_pos_dict else None,
+            "current_unrealized_gross_pnl": round(unrealized_gross, 2),
+            "current_estimated_charges": round(total_charges, 2),
+            "current_unrealized_net_pnl": round(unrealized_net, 2),
             "today_realized_pnl": round(self.today_realized_pnl, 2),
+            "total_gross_realized_pnl": round(total_gross_realized, 2),
+            "total_fees_gst": round(total_fees_gst, 2),
+            "total_funding_fee": round(total_funding, 2),
+            "total_net_realized_pnl": round(total_net_realized, 2),
             "per_trade_loss_limit_inr": self.per_trade_loss_limit_inr,
             "per_trade_profit_target_inr": self.per_trade_profit_target_inr,
             "daily_loss_limit_inr": self.daily_loss_limit_inr,
@@ -1154,17 +1162,17 @@ class BitcoinLiveEngine:
             "trade_history": all_trades,
             "evaluation_stream": self.evaluation_stream[:25],
             "latest_evaluation": self.last_evaluation,
-            "disclaimer": "BITCOIN LIVE ENGINE — MUDREX FUTURES USD AUTHORITATIVE PRICE FEED"
+            "disclaimer": "BITCOIN LIVE ENGINE V2 — CLEAN REBUILD ARCHITECTURE"
         }
 
     def process_tick(self):
-        """Processes live market ticks and evaluates automated strategy for Mudrex execution."""
+        """Processes live market ticks with strict state management and Mudrex authoritative accounting."""
         try:
             curr_price_usd, hedge_rate, price_source = self.fetch_mudrex_futures_market_data()
 
-            # STRICT FAIL-SAFE (Part 6): If Mudrex price API fails or returns <= 0, DO NOT fall back to Yahoo!
+            # REQUIREMENT 2 & FAIL-SAFE: If price feed unavailable or <= 0, NEVER process triggers
             if curr_price_usd is None or curr_price_usd <= 0:
-                print(f"[{datetime.now()}] [PRICE FEED UNAVAILABLE] Mudrex Futures USD price feed unavailable. Position state unchanged.")
+                print(f"[{datetime.now()}] [PRICE FEED UNAVAILABLE] Mudrex Futures USD price feed unavailable. Tick ignored.")
                 self.last_api_status = "MUDREX FUTURES PRICE FEED UNAVAILABLE"
                 return
 
@@ -1173,10 +1181,8 @@ class BitcoinLiveEngine:
             eval_res = BITCOIN_STRATEGY.evaluate_market(candles, curr_price_inr)
             self.last_evaluation = eval_res
 
-            # Log evaluation stream for real-time live monitoring
-            from datetime import timezone, timedelta
-            ist_tz = timezone(timedelta(hours=5, minutes=30))
-            now_ist_str = datetime.now(ist_tz).strftime("%Y-%m-%d %H:%M:%S")
+            # Evaluation logging stream
+            now_ist_str = datetime.now(timezone(timedelta(hours=5, minutes=30))).strftime("%Y-%m-%d %H:%M:%S")
             reasons_str = " | ".join(eval_res.get("reasons", []))
             eval_log_entry = {
                 "timestamp": now_ist_str,
@@ -1195,280 +1201,190 @@ class BitcoinLiveEngine:
             if len(self.evaluation_stream) > 100:
                 self.evaluation_stream = self.evaluation_stream[:100]
 
-            # 1. CHECK ACTIVE OPEN POSITION
-            active_pos = self.auto_reconcile_active_position()
-            
-            if active_pos and active_pos.get("status") == "OPEN":
-                # Reconcile existing active position if missing entry_price_usd
-                if not active_pos.get("entry_price_usd") or float(active_pos.get("entry_price", 0)) < 1000000:
-                    entry_usd = float(active_pos.get("entry_price_usd") or 85260.0)
-                    pos_hr = float(active_pos.get("hedge_rate") or hedge_rate or 102.0)
-                    tp_usd, sl_usd, tp_inr, sl_inr, _ = self.calculate_sl_and_target_prices(
-                        active_pos["direction"], entry_usd, float(active_pos["quantity"]), pos_hr
-                    )
-                    active_pos["entry_price_usd"] = entry_usd
-                    active_pos["hedge_rate"] = pos_hr
-                    active_pos["entry_price"] = round(entry_usd * pos_hr, 2)
-                    active_pos["target_usd"] = tp_usd
-                    active_pos["stop_loss_usd"] = sl_usd
-                    active_pos["target"] = tp_inr
-                    active_pos["stop_loss"] = sl_inr
-                    DB.save_bitcoin_live_trade(active_pos)
+            # 1. CHECK ACTIVE POSITION IN DB
+            raw_pos = DB.load_active_bitcoin_live_position()
 
-                pos_hr = float(active_pos.get("hedge_rate") or hedge_rate or 102.0)
-                entry_usd = float(active_pos.get("entry_price_usd") or (active_pos["entry_price"] / pos_hr))
-                qty = float(active_pos["quantity"])
-                direction = active_pos["direction"]
+            if raw_pos:
+                try:
+                    position = LiveTradeState.from_dict(raw_pos)
+                except Exception as e:
+                    print(f"[{datetime.now()}] [POSITION LOAD ERROR] Failed to parse active trade state: {e}")
+                    return
 
-                # Recalculate target & SL if missing
-                tp_usd = float(active_pos.get("target_usd") or 0.0)
-                sl_usd = float(active_pos.get("stop_loss_usd") or 0.0)
-                if tp_usd <= 0 or sl_usd <= 0:
-                    tp_usd, sl_usd, tp_inr, sl_inr, _ = self.calculate_sl_and_target_prices(
-                        direction, entry_usd, qty, pos_hr
-                    )
-                    active_pos["target_usd"] = tp_usd
-                    active_pos["stop_loss_usd"] = sl_usd
-                    active_pos["target"] = tp_inr
-                    active_pos["stop_loss"] = sl_inr
-
-                gross_pnl_usd, gross_pnl_inr, entry_fee, exit_fee, total_charges, net_pnl = self.calculate_live_position_pnl(
-                    active_pos, curr_price_usd, hedge_rate
-                )
-
-                # Active position exit checks
-                if direction == "BUY":
-                    tp_hit = (net_pnl >= self.per_trade_profit_target_inr) or (tp_usd > 0 and curr_price_usd >= tp_usd)
-                    sl_hit = (net_pnl <= -self.per_trade_loss_limit_inr) or (sl_usd > 0 and curr_price_usd <= sl_usd)
-                else:
-                    tp_hit = (net_pnl >= self.per_trade_profit_target_inr) or (tp_usd > 0 and curr_price_usd <= tp_usd)
-                    sl_hit = (net_pnl <= -self.per_trade_loss_limit_inr) or (sl_usd > 0 and curr_price_usd >= sl_usd)
-                reversal_hit = False
-
-                if tp_hit or sl_hit or reversal_hit:
-                    if tp_hit:
-                        exit_reason = f"PROFIT TARGET +Rs.{int(self.per_trade_profit_target_inr)} NET"
-                    elif sl_hit:
-                        exit_reason = f"LOSS LIMIT -Rs.{int(self.per_trade_loss_limit_inr)} NET"
-                    else:
-                        exit_reason = "TREND REVERSAL EXIT"
-
-                    now_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-
-                    # Attempt Mudrex API close safely
-                    m_pos_id = active_pos.get("mudrex_position_id")
-                    close_success = True
-                    if m_pos_id and self.live_trading_enabled:
-                        m_res = self.adapter.close_position_safely(
-                            position_id=m_pos_id,
-                            symbol=str(active_pos.get("symbol", "BTCUSDT")),
-                            quantity=float(active_pos.get("quantity", 0.002)),
-                            direction=str(active_pos.get("direction", "BUY"))
+                # Check if position is valid for execution (Requirement 1 & 2)
+                valid, err_msg = position.is_valid_for_execution()
+                if not valid:
+                    print(f"[{datetime.now()}] [WARNING] Active trade {position.trade_id} missing parameters: {err_msg}. Recalculating...")
+                    if position.entry_price_usd > 0 and position.quantity > 0:
+                        tp_usd, sl_usd, tp_inr, sl_inr, tp_gross, sl_gross = self.calculate_sl_and_target_prices(
+                            position.direction, position.entry_price_usd, position.quantity, position.hedge_rate,
+                            position.target_net_inr, position.max_loss_net_inr
                         )
-                        if not m_res.get("success"):
-                            close_success = False
-                            print(f"[{datetime.now()}] [MUDREX CLOSE FAILED] Failed to close position {m_pos_id} on Mudrex API: {m_res}")
+                        position.target_usd = tp_usd
+                        position.stop_loss_usd = sl_usd
+                        position.target = tp_inr
+                        position.stop_loss = sl_inr
+                        position.target_gross_inr = tp_gross
+                        position.stop_gross_inr = sl_gross
+                        DB.save_bitcoin_live_trade(position.to_dict())
+                        valid, err_msg = position.is_valid_for_execution()
 
-                    # PART 5 & PART 10.12: Only mark CLOSED if Mudrex API close succeeded (or live_trading_enabled is False in test mode)
-                    if not close_success:
+                    if not valid:
+                        print(f"[{datetime.now()}] [CRITICAL ERROR] Position {position.trade_id} cannot be validated ({err_msg}). TP/SL triggers BLOCKED!")
                         return
 
-                    active_pos["status"] = "CLOSED"
-                    active_pos["exit_timestamp"] = now_str
-                    active_pos["exit_reason"] = exit_reason
-
-                    # RULE 1, 2, 3, 5, 7: Fetch Mudrex-authoritative execution audit data for actual fill & fee values
-                    audit_data = None
+                # REQUIREMENT 7: ATOMIC STATE TRANSITION & DUPLICATION PROTECTION
+                if position.status == TradeStatus.EXIT_REQUESTED.value:
+                    print(f"[{datetime.now()}] [EXIT IN PROGRESS] Position {position.trade_id} is in EXIT_REQUESTED state. Verifying exit status with Mudrex...")
+                    m_pos_id = position.mudrex_position_id
                     if m_pos_id and self.live_trading_enabled:
-                        audit_data = self.adapter.fetch_closed_position_audit(m_pos_id)
+                        open_positions = self.adapter.fetch_open_positions()
+                        is_still_open = any(
+                            (str(p.get("position_id") or p.get("id")) == str(m_pos_id))
+                            for p in open_positions
+                        )
+                        if is_still_open:
+                            print(f"[{datetime.now()}] [MUDREX CLOSE PENDING] Mudrex position {m_pos_id} still open on exchange. Awaiting execution.")
+                            return
 
-                    if audit_data:
-                        active_pos["entry_price_usd"] = audit_data["entry_price_usd"]
-                        active_pos["exit_price_usd"] = audit_data["exit_price_usd"]
-                        active_pos["entry_price"] = audit_data["entry_price_inr"]
-                        active_pos["exit_price"] = audit_data["exit_price_inr"]
-                        active_pos["gross_pnl"] = audit_data["gross_pnl_inr"]
-                        active_pos["entry_charges"] = audit_data["entry_fee_gst"]
-                        active_pos["exit_charges"] = audit_data["exit_fee_gst"]
-                        active_pos["charges"] = audit_data["charges"]
-                        active_pos["net_pnl"] = audit_data["net_pnl_inr"]
-                        net_pnl = audit_data["net_pnl_inr"]
-                        print(f"[{datetime.now()}] [MUDREX CONFIRMED AUDIT] Position {m_pos_id} PnL updated from Mudrex fill history: Gross=Rs.{audit_data['gross_pnl_inr']}, Charges=Rs.{audit_data['charges']}, Net=Rs.{net_pnl}")
-                    else:
-                        active_pos["exit_price_usd"] = curr_price_usd
-                        active_pos["exit_price"] = round(curr_price_usd * pos_hr, 2)
-                        active_pos["gross_pnl"] = round(gross_pnl_inr, 2)
-                        active_pos["entry_charges"] = round(entry_fee, 2)
-                        active_pos["exit_charges"] = round(exit_fee, 2)
-                        active_pos["charges"] = round(total_charges, 2)
-                        active_pos["net_pnl"] = round(net_pnl, 2)
+                    # Position is confirmed closed on Mudrex!
+                    self._finalize_closed_position(position, curr_price_usd, price_source)
+                    return
 
-                    # Mandatory 15-minute cooldown after any exit to prevent churn & fee burn
-                    self.last_sl_time = time.time()
-                    DB.save_bitcoin_live_trade(active_pos)
-                    self.recalculate_realized_pnl()
-                    self.save_settings()
-                    print(f"[{datetime.now()}] [BITCOIN LIVE ENGINE] Active position {active_pos['trade_id']} CLOSED ({exit_reason})! MUDREX CONFIRMED NET P&L: Rs.{net_pnl:,.2f}. Returning to MARKET SCANNING mode.")
-                
-                # While position is open, return without checking new entries
-                return
+                if position.status == TradeStatus.CLOSED.value:
+                    return
 
-            # 2. NO OPEN POSITION -> SCANNING FOR NEW ENTRIES
+                # AT STATUS == OPEN: EVALUATE TARGET & SL
+                gross_usd, gross_inr, entry_fee, exit_fee, total_charges, net_pnl = self.calculate_live_position_pnl(
+                    position, curr_price_usd, hedge_rate
+                )
+
+                # Target & Loss trigger condition checks (REQUIREMENT 3 & 4)
+                if position.direction in ("BUY", "LONG"):
+                    tp_hit = (curr_price_usd >= position.target_usd) and (net_pnl >= position.target_net_inr)
+                    sl_hit = (curr_price_usd <= position.stop_loss_usd) or (net_pnl <= -position.max_loss_net_inr)
+                else:  # SELL / SHORT
+                    tp_hit = (curr_price_usd <= position.target_usd) and (net_pnl >= position.target_net_inr)
+                    sl_hit = (curr_price_usd >= position.stop_loss_usd) or (net_pnl <= -position.max_loss_net_inr)
+
+                if tp_hit or sl_hit:
+                    # ATOMIC STATE CHANGE TO EXIT_REQUESTED
+                    position.status = TradeStatus.EXIT_REQUESTED.value
+                    position.trigger_price_usd = curr_price_usd
+                    DB.save_bitcoin_live_trade(position.to_dict())
+
+                    m_pos_id = position.mudrex_position_id
+                    close_success = True
+                    if m_pos_id and self.live_trading_enabled:
+                        # REQUIREMENT 8: Verify position exists on exchange before sending close request
+                        open_positions = self.adapter.fetch_open_positions()
+                        is_open_on_exchange = any(
+                            (str(p.get("position_id") or p.get("id")) == str(m_pos_id))
+                            for p in open_positions
+                        )
+                        if is_open_on_exchange:
+                            close_res = self.adapter.close_position_safely(
+                                position_id=m_pos_id,
+                                symbol=position.symbol,
+                                quantity=position.quantity,
+                                direction=position.direction
+                            )
+                            if not close_res.get("success"):
+                                close_success = False
+                                print(f"[{datetime.now()}] [MUDREX CLOSE FAILED] Failed to close position {m_pos_id}: {close_res}")
+                        else:
+                            print(f"[{datetime.now()}] [EXTERNAL EXIT DETECTED] Position {m_pos_id} already closed on Mudrex.")
+
+                    if close_success or not self.live_trading_enabled:
+                        self._finalize_closed_position(position, curr_price_usd, price_source)
+
+                return  # While position exists, skip scanning for new entries
+
+            # 2. NO ACTIVE POSITION -> SCAN FOR NEW SIGNALS (REQUIREMENT 11)
             allowed, reason = self.are_new_entries_allowed()
             if not allowed:
                 return
 
             action = eval_res.get("action", "WAIT")
             if action in ("BUY", "SELL"):
-                # Dynamically calculate quantity from real available Futures balance (80% margin target)
-                fut_bal = self.adapter.fetch_futures_balance()
-                effective_bal = fut_bal if fut_bal > 0 else 5000.0
-                qty = self.calculate_position_quantity(curr_price_inr, effective_bal)
-
-                if qty < 0.001:
-                    err_msg = f"INSUFFICIENT MARGIN / ORDER NOT EXECUTED: Balance Rs.{fut_bal:,.2f} insufficient for min quantity 0.001 BTC at 5x leverage"
-                    print(f"[{datetime.now()}] [MUDREX ORDER ABORTED] {err_msg}")
-                    self.last_api_status = err_msg
-                    return
-
-                tp_usd, sl_usd, tp_val, sl_val, est_chg = self.calculate_sl_and_target_prices(action, curr_price_usd, qty, hedge_rate)
-                est_margin = (qty * curr_price_inr) / 5.0
-                utilization_pct = (est_margin / effective_bal * 100.0) if effective_bal > 0 else 0.0
-
-                print("=" * 65)
-                print(f"[{datetime.now()}] === ORDER PRE-FLIGHT MARGIN SIZING ===")
-                print(f"ORDER QTY:           {qty} BTC")
-                print(f"EST. REQ MARGIN:     Rs.{est_margin:,.2f}")
-                print(f"AVAILABLE FUTURES:   Rs.{fut_bal:,.2f}")
-                print(f"MARGIN UTILIZATION:  ~{utilization_pct:.1f}%")
-                print("=" * 65)
-                
-                order_res = self.adapter.place_futures_order(
-                    symbol="BTCUSDT",
-                    side=action,
-                    quantity=qty,
-                    order_type="MARKET",
-                    stoploss_price=sl_val
-                )
-
-                # STRICT FAIL-SAFE: Real position ONLY created if Mudrex order API succeeded AND returned a valid real ID from Mudrex
-                if not order_res.get("success"):
-                    err_msg = order_res.get("error", "Unknown API error")
-                    print(f"[{datetime.now()}] [MUDREX ORDER REJECTED] Order failed on Mudrex API! Reason: {err_msg}")
-                    self.last_api_status = f"ORDER REJECTED / NOT EXECUTED: {err_msg}"
-                    # NO position created, NO trade saved to DB, NO entry registered, NO P&L added, NO cooldown triggered
-                    return
-
-                mudrex_data = order_res.get("data", {})
-                if isinstance(mudrex_data, dict) and "data" in mudrex_data:
-                    mudrex_data = mudrex_data["data"]
-
-                order_id = str(mudrex_data.get("order_id") or mudrex_data.get("id") or "").strip()
-                pos_id = str(mudrex_data.get("position_id") or mudrex_data.get("mudrex_position_id") or "").strip()
-
-                if not order_id or not pos_id or pos_id.startswith("MUDREX_LIVE_") or pos_id.startswith("MUDREX_MANUAL_"):
-                    err_msg = "Mudrex API response missing order_id or position_id"
-                    print(f"[{datetime.now()}] [MUDREX ORDER REJECTED] {err_msg}! Data: {mudrex_data}")
-                    self.last_api_status = f"ORDER REJECTED / NOT EXECUTED: {err_msg}"
-                    # NO position created, NO trade saved to DB
-                    return
-
-                now_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-                trade_id = f"BTC_LIVE_{int(time.time())}"
-
-                pos_dict = {
-                    "trade_id": trade_id,
-                    "mudrex_position_id": pos_id,
-                    "entry_timestamp": now_str,
-                    "symbol": "BTCUSDT",
-                    "direction": action,
-                    "quantity": qty,
-                    "entry_price": curr_price_inr,
-                    "entry_price_usd": curr_price_usd,
-                    "hedge_rate": hedge_rate,
-                    "stop_loss": sl_val,
-                    "stop_loss_usd": sl_usd,
-                    "stoploss_order_id": None,
-                    "target": tp_val,
-                    "target_usd": tp_usd,
-                    "trend_state": eval_res.get("trend", "NEUTRAL"),
-                    "confidence": eval_res.get("confidence", 50),
-                    "reasons": eval_res.get("reasons", []),
-                    "status": "OPEN",
-                    "exit_timestamp": None,
-                    "exit_price": None,
-                    "exit_reason": None,
-                    "gross_pnl": 0.0,
-                    "entry_charges": round(curr_price_inr * qty * self.TAKER_FEE_RATE, 2),
-                    "exit_charges": 0.0,
-                    "charges": round(est_chg, 2),
-                    "net_pnl": 0.0
-                }
-
-                DB.save_bitcoin_live_trade(pos_dict)
-                self.last_api_status = "ORDER EXECUTED"
-                
-                # Log First Real Trade Verification Report
-                print("=" * 65)
-                print(f"[{datetime.now()}] === FIRST REAL TRADE VERIFICATION REPORT ===")
-                print(f"Mudrex Order ID:    {order_id}")
-                print(f"Mudrex Position ID: {pos_id}")
-                print(f"Direction:          {action}")
-                print(f"Quantity:           {qty} BTC")
-                print(f"Entry/Fill Price:   Rs.{curr_price_inr:,.2f}")
-                print(f"Order Status:       {mudrex_data.get('order_status') or mudrex_data.get('status') or 'INITIATED'}")
-                print(f"Position Status:    {mudrex_data.get('position_status') or mudrex_data.get('status') or 'OPEN'}")
-                print(f"Execution Info:     {mudrex_data.get('execution_report') or mudrex_data.get('fills') or 'Submitted via Mudrex v2 Endpoint'}")
-                print(f"Order Status:       {mudrex_data.get('order_status') or mudrex_data.get('status') or 'INITIATED'}")
-                print(f"Position Status:    {mudrex_data.get('position_status') or mudrex_data.get('status') or 'OPEN'}")
-                print(f"Execution Info:     {mudrex_data.get('execution_report') or mudrex_data.get('fills') or 'Submitted via Mudrex v2 Endpoint'}")
-                print(f"Actual/Est Fee:     Rs.{mudrex_data.get('fee') or est_chg:,.2f}")
-                print("=" * 65)
-
-                # Attach SL risk order if Mudrex position created
-                if pos_id and sl_val:
-                    sl_res = self.adapter.attach_stop_loss(pos_id, sl_val, tp_val)
-                    if not sl_res.get("success"):
-                        print(f"[{datetime.now()}] [WARNING] Failed to attach SL on Mudrex: {sl_res}")
+                self.execute_live_trade(action, curr_price_usd, hedge_rate, eval_res)
         except Exception as err:
-            print(f"[{datetime.now()}] [BITCOIN LIVE TICK ERROR] {err}")
+            print(f"[{datetime.now()}] [BITCOIN LIVE TICK ERROR] {err}\n{traceback.format_exc()}")
 
-    def execute_manual_trade(self, side: str) -> Dict[str, Any]:
-        """Manually triggers a BUY or SELL live market order with +₹600 NET Target and -₹400 NET SL."""
+    def _finalize_closed_position(self, position: LiveTradeState, current_price_usd: float, price_source: str):
+        """
+        Fetches Mudrex authoritative audit data and finalizes position status to CLOSED.
+        Enforces Exit Reason Integrity (Requirement 6) and Mudrex Authoritative Accounting (Requirement 5).
+        """
+        now_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        m_pos_id = position.mudrex_position_id
+
+        audit_data = None
+        if m_pos_id and self.live_trading_enabled:
+            audit_data = self.adapter.fetch_closed_position_audit(m_pos_id)
+
+        if audit_data:
+            position.entry_price_usd = audit_data["entry_price_usd"]
+            position.exit_price_usd = audit_data["exit_price_usd"]
+            position.entry_price = audit_data["entry_price_inr"]
+            position.exit_price = audit_data["exit_price_inr"]
+            position.gross_pnl = audit_data["gross_pnl_inr"]
+            position.entry_fee_gst = audit_data["entry_fee_gst"]
+            position.exit_fee_gst = audit_data["exit_fee_gst"]
+            position.entry_charges = audit_data["entry_fee_gst"]
+            position.exit_charges = audit_data["exit_fee_gst"]
+            position.charges = audit_data["charges"]
+            position.funding_fee = audit_data["funding_fee"]
+            position.net_pnl = audit_data["net_pnl_inr"]
+            final_net = audit_data["net_pnl_inr"]
+            print(f"[{datetime.now()}] [MUDREX CONFIRMED AUDIT] Position {m_pos_id} PnL updated: Gross=Rs.{audit_data['gross_pnl_inr']}, Charges=Rs.{audit_data['charges']}, Net=Rs.{final_net}")
+        else:
+            exit_usd = current_price_usd or position.entry_price_usd
+            _, gross_inr, entry_fee, exit_fee, total_charges, net_inr = self.calculate_live_position_pnl(
+                position, exit_usd, position.hedge_rate
+            )
+            position.exit_price_usd = exit_usd
+            position.exit_price = round(exit_usd * position.hedge_rate, 2)
+            position.gross_pnl = round(gross_inr, 2)
+            position.entry_fee_gst = round(entry_fee, 2)
+            position.exit_fee_gst = round(exit_fee, 2)
+            position.entry_charges = round(entry_fee, 2)
+            position.exit_charges = round(exit_fee, 2)
+            position.charges = round(total_charges, 2)
+            position.net_pnl = round(net_inr, 2)
+            final_net = position.net_pnl
+
+        # EXIT REASON INTEGRITY CHECK (Requirement 6)
+        if final_net >= position.target_net_inr:
+            position.exit_reason = f"PROFIT TARGET +Rs.{int(position.target_net_inr)} NET"
+        elif final_net <= -position.max_loss_net_inr:
+            position.exit_reason = f"LOSS LIMIT -Rs.{int(position.max_loss_net_inr)} NET"
+        elif position.trigger_price_usd is not None:
+            position.exit_reason = f"ENGINE SIGNAL EXIT (NET: Rs.{final_net:,.2f})"
+        else:
+            position.exit_reason = f"EXTERNAL MUDREX ORDER (NET: Rs.{final_net:,.2f})"
+
+        position.status = TradeStatus.CLOSED.value
+        position.exit_timestamp = now_str
+        self.last_sl_time = time.time()
+
+        DB.save_bitcoin_live_trade(position.to_dict())
+        self.recalculate_realized_pnl()
+        self.save_settings()
+        print(f"[{datetime.now()}] [TRADE CLOSED] Trade {position.trade_id} CLOSED ({position.exit_reason})! Final Authoritative NET P&L: Rs.{position.net_pnl:,.2f}")
+
+    def execute_live_trade(self, side: str, curr_price_usd: float, hedge_rate: float, eval_res: Dict[str, Any]) -> Dict[str, Any]:
+        """Executes a new live trade order on Mudrex with mandatory state validation."""
         side = side.upper()
         if side not in ("BUY", "SELL"):
             return {"success": False, "error": f"Invalid trade side: {side}"}
-        
-        allowed, reason = self.are_new_entries_allowed()
-        if not allowed:
-            return {"success": False, "error": f"Manual trade blocked: {reason}"}
 
-        curr_price_usd, hedge_rate, _ = self.fetch_mudrex_futures_market_data()
+        curr_price_inr = round(curr_price_usd * hedge_rate, 2)
+        qty = 0.002
 
-        if curr_price_usd is None or curr_price_usd <= 0:
-            return {"success": False, "error": "Mudrex Futures BTC market price unavailable"}
-
-        curr_price_inr = curr_price_usd * hedge_rate
-        fut_bal = self.adapter.fetch_futures_balance()
-        effective_bal = fut_bal if fut_bal > 0 else 5000.0
-        qty = self.calculate_position_quantity(curr_price_inr, effective_bal)
-
-        if qty < 0.001:
-            err_msg = f"INSUFFICIENT MARGIN / ORDER NOT EXECUTED: Balance Rs.{fut_bal:,.2f} insufficient for min quantity 0.001 BTC at 5x leverage"
-            self.last_api_status = err_msg
-            return {"success": False, "error": err_msg}
-
-        tp_usd, sl_usd, tp_inr, sl_inr, est_chg = self.calculate_sl_and_target_prices(side, curr_price_usd, qty, hedge_rate)
-        est_margin = (qty * curr_price_inr) / 5.0
-        utilization_pct = (est_margin / effective_bal * 100.0) if effective_bal > 0 else 0.0
-
-        print("=" * 65)
-        print(f"[{datetime.now()}] === ORDER PRE-FLIGHT MARGIN SIZING ===")
-        print(f"ORDER QTY:           {qty} BTC")
-        print(f"EST. REQ MARGIN:     Rs.{est_margin:,.2f}")
-        print(f"AVAILABLE FUTURES:   Rs.{fut_bal:,.2f}")
-        print(f"MARGIN UTILIZATION:  ~{utilization_pct:.1f}%")
-        print("=" * 65)
+        tp_usd, sl_usd, tp_inr, sl_inr, tp_gross, sl_gross = self.calculate_sl_and_target_prices(
+            side, curr_price_usd, qty, hedge_rate, self.per_trade_profit_target_inr, self.per_trade_loss_limit_inr
+        )
 
         order_res = self.adapter.place_futures_order(
             symbol="BTCUSDT",
@@ -1479,9 +1395,9 @@ class BitcoinLiveEngine:
         )
 
         if not order_res.get("success"):
-            err_msg = order_res.get("error", "Unknown API error")
-            self.last_api_status = f"ORDER REJECTED / NOT EXECUTED: {err_msg}"
-            return {"success": False, "error": f"ORDER REJECTED / NOT EXECUTED: {err_msg}", "mudrex_response": order_res}
+            err_msg = order_res.get("error", "Order placement failed")
+            self.last_api_status = f"ORDER REJECTED: {err_msg}"
+            return {"success": False, "error": err_msg}
 
         mudrex_data = order_res.get("data", {})
         if isinstance(mudrex_data, dict) and "data" in mudrex_data:
@@ -1490,67 +1406,105 @@ class BitcoinLiveEngine:
         order_id = str(mudrex_data.get("order_id") or mudrex_data.get("id") or "").strip()
         pos_id = str(mudrex_data.get("position_id") or mudrex_data.get("mudrex_position_id") or "").strip()
 
-        if not order_id or not pos_id or pos_id.startswith("MUDREX_MANUAL_"):
+        if not order_id or not pos_id:
             err_msg = "Mudrex API response missing order_id or position_id"
-            self.last_api_status = f"ORDER REJECTED / NOT EXECUTED: {err_msg}"
-            return {"success": False, "error": f"ORDER REJECTED / NOT EXECUTED: {err_msg}", "mudrex_response": order_res}
+            self.last_api_status = f"ORDER REJECTED: {err_msg}"
+            return {"success": False, "error": err_msg}
 
         now_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         trade_id = f"BTC_LIVE_{int(time.time())}"
 
-        pos_dict = {
-            "trade_id": trade_id,
-            "mudrex_position_id": pos_id,
-            "entry_timestamp": now_str,
-            "symbol": "BTCUSDT",
-            "direction": side,
-            "quantity": qty,
-            "entry_price_usd": curr_price_usd,
-            "hedge_rate": hedge_rate,
-            "entry_price": round(curr_price_inr, 2),
-            "stop_loss_usd": sl_usd,
-            "stop_loss": sl_inr,
-            "stoploss_order_id": None,
-            "target_usd": tp_usd,
-            "target": tp_inr,
-            "trend_state": "MANUAL",
-            "confidence": 100,
-            "reasons": ["Manual 1-Click Execution via Live Dashboard"],
-            "status": "OPEN",
-            "exit_timestamp": None,
-            "exit_price": None,
-            "exit_reason": None,
-            "gross_pnl": 0.0,
-            "entry_charges": round(curr_price_inr * qty * self.TAKER_FEE_RATE, 2),
-            "exit_charges": 0.0,
-            "charges": round(est_chg, 2),
-            "net_pnl": 0.0
-        }
+        v_entry = curr_price_usd * qty * hedge_rate
+        f_entry = round(v_entry * self.TOTAL_FEE_RATE, 2)
 
-        DB.save_bitcoin_live_trade(pos_dict)
+        trade_state = LiveTradeState(
+            trade_id=trade_id,
+            mudrex_position_id=pos_id,
+            direction=side,
+            quantity=qty,
+            leverage=5.0,
+            entry_price_usd=curr_price_usd,
+            entry_price=curr_price_inr,
+            hedge_rate=hedge_rate,
+            entry_timestamp=now_str,
+            entry_order_id=order_id,
+            entry_fee_gst=f_entry,
+            target_net_inr=self.per_trade_profit_target_inr,
+            max_loss_net_inr=self.per_trade_loss_limit_inr,
+            target_gross_inr=tp_gross,
+            stop_gross_inr=sl_gross,
+            target_usd=tp_usd,
+            stop_loss_usd=sl_usd,
+            target=tp_inr,
+            stop_loss=sl_inr,
+            trend_state=eval_res.get("trend", "NEUTRAL"),
+            confidence=eval_res.get("confidence", 50),
+            reasons=eval_res.get("reasons", []),
+            status=TradeStatus.OPEN.value,
+            entry_charges=f_entry,
+            charges=f_entry,
+            symbol="BTCUSDT"
+        )
+
+        valid, err_msg = trade_state.is_valid_for_execution()
+        if not valid:
+            print(f"[{datetime.now()}] [CRITICAL] Generated trade state invalid: {err_msg}")
+            return {"success": False, "error": f"Invalid trade state generated: {err_msg}"}
+
+        DB.save_bitcoin_live_trade(trade_state.to_dict())
         self.last_api_status = "ORDER EXECUTED"
+
         if pos_id and sl_usd:
             self.adapter.attach_stop_loss(pos_id, sl_usd, tp_usd)
 
-        return {"success": True, "trade": pos_dict, "mudrex_response": order_res}
+        return {"success": True, "trade": trade_state.to_dict(), "mudrex_response": order_res}
 
-    def close_active_position(self) -> Dict[str, Any]:
-        """Manually closes active live position and updates database status."""
-        active_pos = DB.load_active_bitcoin_live_position()
-        if not active_pos or active_pos.get("status") != "OPEN":
-            return {"success": False, "error": "No active position is currently open"}
+    def execute_manual_trade(self, side: str) -> Dict[str, Any]:
+        """Manually triggers a BUY or SELL live market order."""
+        allowed, reason = self.are_new_entries_allowed()
+        if not allowed:
+            return {"success": False, "error": f"Manual trade blocked: {reason}"}
 
         curr_price_usd, hedge_rate, _ = self.fetch_mudrex_futures_market_data()
-        
-        m_pos_id = active_pos.get("mudrex_position_id")
+        if curr_price_usd is None or curr_price_usd <= 0:
+            return {"success": False, "error": "Mudrex Futures BTC market price unavailable"}
+
+        eval_res = {
+            "trend": "MANUAL",
+            "confidence": 100,
+            "reasons": ["Manual 1-Click Execution via Live Dashboard"],
+            "action": side.upper()
+        }
+
+        return self.execute_live_trade(side, curr_price_usd, hedge_rate, eval_res)
+
+    def close_active_position(self) -> Dict[str, Any]:
+        """Manually closes active live position with verification and authoritative accounting."""
+        raw_pos = DB.load_active_bitcoin_live_position()
+        if not raw_pos or raw_pos.get("status") not in (TradeStatus.OPEN.value, TradeStatus.EXIT_REQUESTED.value):
+            return {"success": False, "error": "No active position is currently open"}
+
+        try:
+            position = LiveTradeState.from_dict(raw_pos)
+        except Exception as e:
+            return {"success": False, "error": f"Failed to parse active position: {e}"}
+
+        curr_price_usd, hedge_rate, price_source = self.fetch_mudrex_futures_market_data()
+
+        # Atomic state update to EXIT_REQUESTED
+        position.status = TradeStatus.EXIT_REQUESTED.value
+        position.trigger_price_usd = curr_price_usd
+        DB.save_bitcoin_live_trade(position.to_dict())
+
+        m_pos_id = position.mudrex_position_id
         close_res = {"success": True}
         if m_pos_id and self.adapter and self.live_trading_enabled:
             try:
                 close_res = self.adapter.close_position_safely(
                     position_id=m_pos_id,
-                    symbol=str(active_pos.get("symbol", "BTCUSDT")),
-                    quantity=float(active_pos.get("quantity", 0.002)),
-                    direction=str(active_pos.get("direction", "BUY"))
+                    symbol=position.symbol,
+                    quantity=position.quantity,
+                    direction=position.direction
                 )
             except Exception as e:
                 print(f"[{datetime.now()}] [WARNING] Error closing Mudrex position {m_pos_id}: {e}")
@@ -1558,56 +1512,13 @@ class BitcoinLiveEngine:
         if not close_res.get("success") and self.live_trading_enabled:
             return {"success": False, "error": f"Failed to close Mudrex position: {close_res}"}
 
-        now_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-        pos_hr = float(active_pos.get("hedge_rate") or hedge_rate or 102.0)
-
-        active_pos["status"] = "CLOSED"
-        active_pos["exit_timestamp"] = now_str
-        active_pos["exit_reason"] = "MANUAL EMERGENCY EXIT"
-
-        audit_data = None
-        if m_pos_id and self.live_trading_enabled:
-            audit_data = self.adapter.fetch_closed_position_audit(m_pos_id)
-
-        if audit_data:
-            active_pos["entry_price_usd"] = audit_data["entry_price_usd"]
-            active_pos["exit_price_usd"] = audit_data["exit_price_usd"]
-            active_pos["entry_price"] = audit_data["entry_price_inr"]
-            active_pos["exit_price"] = audit_data["exit_price_inr"]
-            active_pos["gross_pnl"] = audit_data["gross_pnl_inr"]
-            active_pos["entry_charges"] = audit_data["entry_fee_gst"]
-            active_pos["exit_charges"] = audit_data["exit_fee_gst"]
-            active_pos["charges"] = audit_data["charges"]
-            active_pos["net_pnl"] = audit_data["net_pnl_inr"]
-            net_pnl = audit_data["net_pnl_inr"]
-        else:
-            entry_usd = float(active_pos.get("entry_price_usd") or (active_pos["entry_price"] / pos_hr))
-            qty = float(active_pos["quantity"])
-            direction = active_pos["direction"]
-            curr_usd = curr_price_usd or entry_usd
-            gross_usd = (curr_usd - entry_usd) * qty if direction == "BUY" else (entry_usd - curr_usd) * qty
-            gross_inr = gross_usd * pos_hr
-            entry_fee, exit_fee, total_charges = self.calculate_trade_charges(entry_usd * pos_hr, curr_usd * pos_hr, qty)
-            net_pnl = gross_inr - total_charges
-            active_pos["exit_price_usd"] = curr_usd
-            active_pos["exit_price"] = round(curr_usd * pos_hr, 2)
-            active_pos["gross_pnl"] = round(gross_inr, 2)
-            active_pos["entry_charges"] = round(entry_fee, 2)
-            active_pos["exit_charges"] = round(exit_fee, 2)
-            active_pos["charges"] = round(total_charges, 2)
-            active_pos["net_pnl"] = round(net_pnl, 2)
-
-        self.last_sl_time = time.time()
-        DB.save_bitcoin_live_trade(active_pos)
-        self.recalculate_realized_pnl()
-        self.save_settings()
-
-        return {"success": True, "trade": active_pos, "mudrex_response": close_res}
+        self._finalize_closed_position(position, curr_price_usd or position.entry_price_usd, price_source)
+        return {"success": True, "trade": position.to_dict(), "mudrex_response": close_res}
 
     async def start_feed_loop(self):
         """Continuous background loop for Bitcoin Live Engine."""
         self.is_running = True
-        print(f"[{datetime.now()}] [BITCOIN LIVE ENGINE] Background feed & evaluation loop started.")
+        print(f"[{datetime.now()}] [BITCOIN LIVE ENGINE V2] Background loop started.")
         while self.is_running:
             try:
                 self.process_tick()
@@ -1615,6 +1526,6 @@ class BitcoinLiveEngine:
                 print(f"[{datetime.now()}] [BITCOIN LIVE ENGINE LOOP ERROR] {e}")
             await asyncio.sleep(5)
 
-# Global Instance
-BITCOIN_LIVE_ENGINE = BitcoinLiveEngine()
 
+# Global Singleton Instance
+BITCOIN_LIVE_ENGINE = BitcoinLiveEngine()
