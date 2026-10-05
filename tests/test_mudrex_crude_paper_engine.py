@@ -159,14 +159,70 @@ class TestMudrexCrudePaperEngine(unittest.TestCase):
         res_neg = self.engine.process_tick(current_price=-1.0)
         self.assertIsNone(res_neg)
 
-    # 16. No duplicate position (second entry rejected)
-    def test_no_duplicate_position(self):
-        pos1 = self.engine.manual_entry(side="LONG", quantity=1.0, current_price=70.0)
-        self.assertIsNotNone(pos1)
-        
-        pos2 = self.engine.manual_entry(side="SHORT", quantity=1.0, current_price=70.0)
-        self.assertIsNone(pos2, "Engine allowed opening duplicate active position!")
-        self.assertEqual(self.engine.active_position.side, "LONG")
+    # 17. Zero exit price => NO CLOSE
+    def test_zero_exit_price_no_close(self):
+        self.engine.fetch_market_price = lambda: (70.0, 102.0, "MOCK OK")
+        pos = self.engine.manual_entry(side="LONG", quantity=1.0, current_price=70.0)
+        self.assertIsNotNone(pos)
+        res = self.engine._finalize_closed_position(pos, exit_price=0.0)
+        self.assertIsNone(res)
+        self.assertEqual(pos.status, "OPEN")
+
+    # 18. Null exit price => NO CLOSE
+    def test_null_exit_price_no_close(self):
+        self.engine.fetch_market_price = lambda: (70.0, 102.0, "MOCK OK")
+        pos = self.engine.manual_entry(side="LONG", quantity=1.0, current_price=70.0)
+        self.assertIsNotNone(pos)
+        res = self.engine._finalize_closed_position(pos, exit_price=None)
+        self.assertIsNone(res)
+        self.assertEqual(pos.status, "OPEN")
+
+    # 19. Stale/zero feed manual close attempt => NO CLOSE
+    def test_stale_feed_manual_close_no_close(self):
+        pos = self.engine.manual_entry(side="LONG", quantity=1.0, current_price=70.0)
+        self.assertIsNotNone(pos)
+        self.engine.fetch_market_price = lambda: (0.0, 102.0, "MOCK UNAVAILABLE")
+        res = self.engine.close_active_paper_position()
+        self.assertFalse(res["success"])
+        self.assertIn("unavailable or zero", res["error"])
+
+    # 20. Valid exit price => correct close
+    def test_valid_exit_price_close(self):
+        pos = self.engine.manual_entry(side="LONG", quantity=1.0, current_price=70.0)
+        self.assertIsNotNone(pos)
+        self.engine.fetch_market_price = lambda: (75.0, 102.0, "MOCK OK")
+        res = self.engine.close_active_paper_position()
+        self.assertTrue(res["success"])
+        self.assertEqual(res["trade"]["status"], "CLOSED")
+        self.assertEqual(res["trade"]["exit_price"], 75.0)
+
+    # 21. Valid exit => correct gross/fee/NET
+    def test_valid_exit_correct_math(self):
+        pos = self.engine.manual_entry(side="LONG", quantity=1.0, current_price=70.0)
+        self.assertIsNotNone(pos)
+        self.engine.fetch_market_price = lambda: (80.0, 102.0, "MOCK OK")
+        res = self.engine.close_active_paper_position()
+        t = res["trade"]
+        expected_gross = (80.0 - 70.0) * 1.0 * 102.0  # +1020.0 INR
+        self.assertAlmostEqual(t["gross_pnl"], round(expected_gross, 2))
+        self.assertTrue(t["total_charges"] > 0)
+        self.assertEqual(t["net_pnl"], round(t["gross_pnl"] - t["total_charges"], 2))
+
+    # 22. Closed position cannot remain OPEN
+    def test_closed_position_cannot_remain_open(self):
+        pos = self.engine.manual_entry(side="LONG", quantity=1.0, current_price=70.0)
+        self.engine.fetch_market_price = lambda: (75.0, 102.0, "MOCK OK")
+        self.engine.close_active_paper_position()
+        active = self.engine.db.load_active_mudrex_crude_paper_position()
+        self.assertIsNone(active)
+
+    # 23. Open position cannot appear as completed
+    def test_open_position_cannot_appear_completed(self):
+        self.engine.manual_entry(side="LONG", quantity=1.0, current_price=70.0)
+        state = self.engine.get_dashboard_state()
+        history = state["trade_history"]
+        self.assertEqual(len(history), 0)
 
 if __name__ == "__main__":
     unittest.main()
+

@@ -461,6 +461,18 @@ class MudrexCrudePaperEngine:
 
     def _finalize_closed_position(self, position: MudrexCrudePaperTradeState, exit_price: float):
         """Finalizes Mudrex Crude paper position to CLOSED with exact fee and P&L accounting."""
+        if exit_price is None or float(exit_price or 0) <= 0:
+            print(f"[{datetime.now()}] [CRITICAL SAFETY GUARD] Refusing to close Mudrex Crude trade {position.trade_id}: exit_price is zero or invalid ({exit_price}). Position remains OPEN.")
+            position.status = MudrexCrudeTradeStatus.OPEN.value
+            self.db.save_mudrex_crude_paper_trade(position.to_dict())
+            return None
+
+        if position.entry_price is None or float(position.entry_price or 0) <= 0:
+            print(f"[{datetime.now()}] [CRITICAL SAFETY GUARD] Refusing to close Mudrex Crude trade {position.trade_id}: entry_price is zero or invalid ({position.entry_price}). Position remains OPEN.")
+            position.status = MudrexCrudeTradeStatus.OPEN.value
+            self.db.save_mudrex_crude_paper_trade(position.to_dict())
+            return None
+
         now_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         _, gross_inr, entry_fee, exit_fee, total_charges, net_inr = self.calculate_position_pnl(
             position, exit_price, position.hedge_rate
@@ -494,7 +506,8 @@ class MudrexCrudePaperEngine:
             return None
         price = float(current_price) if (current_price and float(current_price) > 0) else self.fetch_market_price()[0]
         if not price or price <= 0:
-            price = 70.0
+            print(f"[{datetime.now()}] [CRUDE ENTRY REJECTED] Cannot open manual position: Market price is zero or unavailable ({price})")
+            return None
         side_upper = side.upper()
         exec_side = "BUY" if side_upper in ("BUY", "LONG") else ("SELL" if side_upper in ("SELL", "SHORT") else side_upper)
         old_qty = self.QUANTITY
@@ -528,6 +541,9 @@ class MudrexCrudePaperEngine:
 
     def execute_paper_trade(self, side: str, curr_price: float, hedge_rate: float, eval_res: Dict[str, Any]) -> Dict[str, Any]:
         """Simulates paper order execution for Mudrex Crude CL/USDT."""
+        if curr_price is None or float(curr_price or 0) <= 0:
+            return {"success": False, "error": "Cannot execute paper trade: Entry price is zero or unavailable"}
+
         side = side.upper()
         if side not in ("BUY", "SELL"):
             return {"success": False, "error": f"Invalid side: {side}"}
@@ -576,7 +592,7 @@ class MudrexCrudePaperEngine:
         """Manually triggers a paper trade."""
         curr_price, hedge_rate, _ = self.fetch_market_price()
         if curr_price is None or curr_price <= 0:
-            return {"success": False, "error": "Mudrex Crude CL/USDT market price unavailable"}
+            return {"success": False, "error": "Mudrex Crude CL/USDT market price unavailable or zero"}
 
         eval_res = {
             "trend": "MANUAL",
@@ -598,20 +614,34 @@ class MudrexCrudePaperEngine:
             return {"success": False, "error": f"Failed to parse active position: {e}"}
 
         curr_price, hedge_rate, price_source = self.fetch_market_price()
+        if curr_price is None or float(curr_price or 0) <= 0:
+            return {"success": False, "error": "Cannot close position: Authoritative market price feed is currently unavailable or zero ($0.000)"}
+
         position.status = MudrexCrudeTradeStatus.EXIT_REQUESTED.value
         position.trigger_price = curr_price
         self.db.save_mudrex_crude_paper_trade(position.to_dict())
-        self._finalize_closed_position(position, curr_price or position.entry_price)
+        res = self._finalize_closed_position(position, curr_price)
+        if not res:
+            return {"success": False, "error": "Close rejected due to invalid exit price validation"}
 
         return {"success": True, "trade": position.to_dict()}
 
+    def _is_valid_closed_trade(self, t: Dict[str, Any]) -> bool:
+        """Validates that a closed paper trade has valid positive entry price, exit price, and quantity."""
+        if t.get("status") != MudrexCrudeTradeStatus.CLOSED.value:
+            return False
+        entry = float(t.get("entry_price") or 0.0)
+        exit_p = float(t.get("exit_price") or 0.0)
+        qty = float(t.get("quantity") or 0.0)
+        return (entry > 0 and exit_p > 0 and qty > 0)
+
     def recalculate_realized_pnl(self):
-        """Recalculates today's realized NET P&L for Mudrex Crude paper engine."""
+        """Recalculates today's realized NET P&L for Mudrex Crude paper engine excluding invalid records."""
         all_trades = self.db.load_all_mudrex_crude_paper_trades()
         today_str = datetime.now().strftime("%Y-%m-%d")
         today_sum = 0.0
         for t in all_trades:
-            if t.get("status") == MudrexCrudeTradeStatus.CLOSED.value:
+            if self._is_valid_closed_trade(t):
                 exit_time = str(t.get("exit_timestamp") or t.get("entry_timestamp") or "")
                 if today_str in exit_time:
                     today_sum += float(t.get("net_pnl") or 0.0)
@@ -651,15 +681,26 @@ class MudrexCrudePaperEngine:
 
         all_trades = self.db.load_all_mudrex_crude_paper_trades()
 
-        total_gross_realized = sum(float(t.get("gross_pnl") or 0.0) for t in all_trades if t.get("status") == MudrexCrudeTradeStatus.CLOSED.value)
-        total_charges_realized = sum(float(t.get("total_charges") or t.get("charges") or 0.0) for t in all_trades if t.get("status") == MudrexCrudeTradeStatus.CLOSED.value)
-        total_funding_realized = sum(float(t.get("funding_fee") or 0.0) for t in all_trades if t.get("status") == MudrexCrudeTradeStatus.CLOSED.value)
-        total_net_realized = sum(float(t.get("net_pnl") or 0.0) for t in all_trades if t.get("status") == MudrexCrudeTradeStatus.CLOSED.value)
+        valid_closed_trades = [t for t in all_trades if self._is_valid_closed_trade(t)]
+        total_gross_realized = sum(float(t.get("gross_pnl") or 0.0) for t in valid_closed_trades)
+        total_charges_realized = sum(float(t.get("total_charges") or t.get("charges") or 0.0) for t in valid_closed_trades)
+        total_funding_realized = sum(float(t.get("funding_fee") or 0.0) for t in valid_closed_trades)
+        total_net_realized = sum(float(t.get("net_pnl") or 0.0) for t in valid_closed_trades)
 
-        today_trades = [t for t in all_trades if self.today_date in str(t.get("entry_timestamp", ""))]
-        today_wins = len([t for t in today_trades if float(t.get("net_pnl") or 0) > 0])
-        today_losses = len([t for t in today_trades if float(t.get("net_pnl") or 0) < 0])
-        win_rate = (today_wins / len(today_trades) * 100.0) if today_trades else 0.0
+        today_valid_trades = [t for t in valid_closed_trades if self.today_date in str(t.get("entry_timestamp", ""))]
+        today_wins = len([t for t in today_valid_trades if float(t.get("net_pnl") or 0) > 0])
+        today_losses = len([t for t in today_valid_trades if float(t.get("net_pnl") or 0) < 0])
+        win_rate = (today_wins / len(today_valid_trades) * 100.0) if today_valid_trades else 0.0
+
+        formatted_history = []
+        for t in all_trades:
+            t_copy = dict(t)
+            if t_copy.get("status") == MudrexCrudeTradeStatus.CLOSED.value and not self._is_valid_closed_trade(t_copy):
+                t_copy["exit_reason"] = "INVALID RECORD (ZERO EXIT PRICE)"
+                t_copy["is_invalid"] = True
+                t_copy["gross_pnl"] = 0.0
+                t_copy["net_pnl"] = 0.0
+            formatted_history.append(t_copy)
 
         if active_pos_dict and active_pos_dict.get("status") in (MudrexCrudeTradeStatus.OPEN.value, MudrexCrudeTradeStatus.EXIT_REQUESTED.value):
             scanner_status = f"POSITION ACTIVE ({active_pos_dict.get('status')})"
@@ -696,13 +737,13 @@ class MudrexCrudePaperEngine:
             "daily_loss_limit_inr": self.daily_loss_limit_inr,
             "per_trade_loss_limit_inr": self.per_trade_loss_limit_inr,
             "per_trade_profit_target_inr": self.per_trade_profit_target_inr,
-            "today_trades_count": len(today_trades),
+            "today_trades_count": len(today_valid_trades),
             "today_wins_count": today_wins,
             "today_losses_count": today_losses,
             "win_rate": round(win_rate, 1),
             "live_trading_enabled": False,
             "paper_mode": True,
-            "trade_history": all_trades,
+            "trade_history": formatted_history,
             "evaluation_stream": self.evaluation_stream[:25],
             "latest_evaluation": self.last_evaluation
         }
