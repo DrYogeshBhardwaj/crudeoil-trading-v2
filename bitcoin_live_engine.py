@@ -526,6 +526,105 @@ class MudrexLiveAdapter:
 
         return {"success": False, "error": " | ".join(errors[:2])}
 
+    def fetch_closed_position_audit(self, position_id: str, max_retries: int = 6, retry_delay: float = 1.0) -> Optional[Dict[str, Any]]:
+        """
+        Queries Mudrex API for actual position history and order fill data for position_id.
+        Retries if position history hasn't populated yet.
+        Returns exact entry/exit fill prices, realized gross P&L, entry/exit fees+GST, funding fee, and net P&L.
+        """
+        headers = self._get_headers()
+        if not headers.get("X-Authentication"):
+            return None
+
+        pos_item = None
+        pos_orders = []
+
+        for attempt in range(max_retries):
+            try:
+                url = f"{self.BASE_URL}/futures/positions/history?trade_currency=INR"
+                resp = requests.get(url, headers=headers, timeout=5)
+                if resp.status_code in (200, 201):
+                    data = resp.json()
+                    items = data.get("data") if isinstance(data, dict) else data
+                    if isinstance(items, list):
+                        for p in items:
+                            if str(p.get("position_id")).lower() == str(position_id).lower():
+                                pos_item = p
+                                break
+                if pos_item:
+                    break
+            except Exception as e:
+                print(f"[{datetime.now()}] [MUDREX AUDIT FETCH ERROR] {e}")
+            time.sleep(retry_delay)
+
+        if not pos_item:
+            print(f"[{datetime.now()}] [MUDREX AUDIT FETCH] Position {position_id} not found in Mudrex position history.")
+            return None
+
+        try:
+            url = f"{self.BASE_URL}/futures/orders?trade_currency=INR"
+            resp = requests.get(url, headers=headers, timeout=5)
+            if resp.status_code in (200, 201):
+                data = resp.json()
+                items = data.get("data") if isinstance(data, dict) else data
+                if isinstance(items, list):
+                    for o in items:
+                        if str(o.get("position_id")).lower() == str(position_id).lower():
+                            pos_orders.append(o)
+        except Exception as e:
+            print(f"[{datetime.now()}] [MUDREX AUDIT ORDER FETCH ERROR] {e}")
+
+        entry_price_usd = float(pos_item.get("entry_price") or 0.0)
+        closed_price_usd = float(pos_item.get("closed_price") or 0.0)
+        qty = float(pos_item.get("quantity") or 0.002)
+        hedge_rate = float(pos_item.get("entry_hedge_rate") or pos_item.get("exit_hedge_rate") or 102.0)
+        gross_pnl_inr = float(pos_item.get("pnl") or 0.0)
+
+        entry_fee_gst = 0.0
+        exit_fee_gst = 0.0
+
+        if pos_orders:
+            for o in pos_orders:
+                amt = float(o.get("actual_amount") or 0.0)
+                if amt <= 0:
+                    p = float(o.get("filled_price") or o.get("price") or 0.0)
+                    q = float(o.get("filled_quantity") or o.get("quantity") or qty)
+                    hr = float(o.get("hedge_rate") or hedge_rate)
+                    amt = p * q * hr
+                fee = amt * 0.0005
+                gst = fee * 0.18
+                tot = fee + gst
+                reduces = o.get("reduces_only")
+                if not reduces and o == pos_orders[0]:
+                    entry_fee_gst += tot
+                else:
+                    exit_fee_gst += tot
+
+        if entry_fee_gst == 0.0 and exit_fee_gst == 0.0:
+            entry_fee_gst = (entry_price_usd * qty * hedge_rate) * 0.00059
+            exit_fee_gst = (closed_price_usd * qty * hedge_rate) * 0.00059
+
+        total_charges = entry_fee_gst + exit_fee_gst
+        funding_fee = float(pos_item.get("funding_fee") or 0.0)
+        net_pnl_inr = gross_pnl_inr - total_charges - funding_fee
+
+        return {
+            "entry_price_usd": entry_price_usd,
+            "exit_price_usd": closed_price_usd,
+            "entry_price_inr": round(entry_price_usd * hedge_rate, 2),
+            "exit_price_inr": round(closed_price_usd * hedge_rate, 2),
+            "quantity": qty,
+            "hedge_rate": hedge_rate,
+            "gross_pnl_inr": round(gross_pnl_inr, 2),
+            "entry_fee_gst": round(entry_fee_gst, 2),
+            "exit_fee_gst": round(exit_fee_gst, 2),
+            "charges": round(total_charges, 2),
+            "funding_fee": round(funding_fee, 2),
+            "net_pnl_inr": round(net_pnl_inr, 2),
+            "raw_position": pos_item
+        }
+
+
 
 class BitcoinLiveEngine:
     """
@@ -748,6 +847,23 @@ class BitcoinLiveEngine:
         DB.save_bitcoin_live_setting("daily_loss_limit_hit", "TRUE" if self.daily_loss_limit_hit else "FALSE")
         DB.save_bitcoin_live_setting("today_realized_pnl", str(self.today_realized_pnl))
         DB.save_bitcoin_live_setting("today_date", self.today_date)
+
+    def recalculate_realized_pnl(self):
+        """
+        Recalculates today_realized_pnl from DB trade net_pnl values.
+        Ensures existing #1-#13 trades remain untouched, while #14 onward use Mudrex confirmed Net PnL.
+        """
+        all_trades = DB.load_all_bitcoin_live_trades()
+        today_str = datetime.now().strftime("%Y-%m-%d")
+        today_sum = 0.0
+        for t in all_trades:
+            if t.get("status") == "CLOSED":
+                exit_time = str(t.get("exit_timestamp") or t.get("entry_timestamp") or "")
+                if today_str in exit_time:
+                    today_sum += float(t.get("net_pnl") or 0.0)
+        self.today_realized_pnl = round(today_sum, 2)
+        DB.save_bitcoin_live_setting("today_realized_pnl", str(self.today_realized_pnl))
+
         DB.save_bitcoin_live_setting("live_trading_enabled", "TRUE" if self.live_trading_enabled else "FALSE")
         DB.save_bitcoin_live_setting("last_sl_time", str(self.last_sl_time))
 
@@ -1155,21 +1271,40 @@ class BitcoinLiveEngine:
 
                     active_pos["status"] = "CLOSED"
                     active_pos["exit_timestamp"] = now_str
-                    active_pos["exit_price_usd"] = curr_price_usd
-                    active_pos["exit_price"] = round(curr_price_usd * pos_hr, 2)
                     active_pos["exit_reason"] = exit_reason
-                    active_pos["gross_pnl"] = round(gross_pnl_inr, 2)
-                    active_pos["entry_charges"] = round(entry_fee, 2)
-                    active_pos["exit_charges"] = round(exit_fee, 2)
-                    active_pos["charges"] = round(total_charges, 2)
-                    active_pos["net_pnl"] = round(net_pnl, 2)
+
+                    # RULE 1, 2, 3, 5, 7: Fetch Mudrex-authoritative execution audit data for actual fill & fee values
+                    audit_data = None
+                    if m_pos_id and self.live_trading_enabled:
+                        audit_data = self.adapter.fetch_closed_position_audit(m_pos_id)
+
+                    if audit_data:
+                        active_pos["entry_price_usd"] = audit_data["entry_price_usd"]
+                        active_pos["exit_price_usd"] = audit_data["exit_price_usd"]
+                        active_pos["entry_price"] = audit_data["entry_price_inr"]
+                        active_pos["exit_price"] = audit_data["exit_price_inr"]
+                        active_pos["gross_pnl"] = audit_data["gross_pnl_inr"]
+                        active_pos["entry_charges"] = audit_data["entry_fee_gst"]
+                        active_pos["exit_charges"] = audit_data["exit_fee_gst"]
+                        active_pos["charges"] = audit_data["charges"]
+                        active_pos["net_pnl"] = audit_data["net_pnl_inr"]
+                        net_pnl = audit_data["net_pnl_inr"]
+                        print(f"[{datetime.now()}] [MUDREX CONFIRMED AUDIT] Position {m_pos_id} PnL updated from Mudrex fill history: Gross=Rs.{audit_data['gross_pnl_inr']}, Charges=Rs.{audit_data['charges']}, Net=Rs.{net_pnl}")
+                    else:
+                        active_pos["exit_price_usd"] = curr_price_usd
+                        active_pos["exit_price"] = round(curr_price_usd * pos_hr, 2)
+                        active_pos["gross_pnl"] = round(gross_pnl_inr, 2)
+                        active_pos["entry_charges"] = round(entry_fee, 2)
+                        active_pos["exit_charges"] = round(exit_fee, 2)
+                        active_pos["charges"] = round(total_charges, 2)
+                        active_pos["net_pnl"] = round(net_pnl, 2)
 
                     # Mandatory 15-minute cooldown after any exit to prevent churn & fee burn
                     self.last_sl_time = time.time()
                     DB.save_bitcoin_live_trade(active_pos)
-                    self.today_realized_pnl += net_pnl
+                    self.recalculate_realized_pnl()
                     self.save_settings()
-                    print(f"[{datetime.now()}] [BITCOIN LIVE ENGINE] Active position {active_pos['trade_id']} CLOSED ({exit_reason})! NET P&L: Rs.{net_pnl:,.2f}. Returning to MARKET SCANNING mode.")
+                    print(f"[{datetime.now()}] [BITCOIN LIVE ENGINE] Active position {active_pos['trade_id']} CLOSED ({exit_reason})! MUDREX CONFIRMED NET P&L: Rs.{net_pnl:,.2f}. Returning to MARKET SCANNING mode.")
                 
                 # While position is open, return without checking new entries
                 return
@@ -1417,30 +1552,46 @@ class BitcoinLiveEngine:
 
         now_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         pos_hr = float(active_pos.get("hedge_rate") or hedge_rate or 102.0)
-        entry_usd = float(active_pos.get("entry_price_usd") or (active_pos["entry_price"] / pos_hr))
-        qty = float(active_pos["quantity"])
-        direction = active_pos["direction"]
-
-        curr_usd = curr_price_usd or entry_usd
-        gross_usd = (curr_usd - entry_usd) * qty if direction == "BUY" else (entry_usd - curr_usd) * qty
-        gross_inr = gross_usd * pos_hr
-        entry_fee, exit_fee, total_charges = self.calculate_trade_charges(entry_usd * pos_hr, curr_usd * pos_hr, qty)
-        net_pnl = gross_inr - total_charges
 
         active_pos["status"] = "CLOSED"
         active_pos["exit_timestamp"] = now_str
-        active_pos["exit_price_usd"] = curr_usd
-        active_pos["exit_price"] = round(curr_usd * pos_hr, 2)
         active_pos["exit_reason"] = "MANUAL EMERGENCY EXIT"
-        active_pos["gross_pnl"] = round(gross_inr, 2)
-        active_pos["entry_charges"] = round(entry_fee, 2)
-        active_pos["exit_charges"] = round(exit_fee, 2)
-        active_pos["charges"] = round(total_charges, 2)
-        active_pos["net_pnl"] = round(net_pnl, 2)
+
+        audit_data = None
+        if m_pos_id and self.live_trading_enabled:
+            audit_data = self.adapter.fetch_closed_position_audit(m_pos_id)
+
+        if audit_data:
+            active_pos["entry_price_usd"] = audit_data["entry_price_usd"]
+            active_pos["exit_price_usd"] = audit_data["exit_price_usd"]
+            active_pos["entry_price"] = audit_data["entry_price_inr"]
+            active_pos["exit_price"] = audit_data["exit_price_inr"]
+            active_pos["gross_pnl"] = audit_data["gross_pnl_inr"]
+            active_pos["entry_charges"] = audit_data["entry_fee_gst"]
+            active_pos["exit_charges"] = audit_data["exit_fee_gst"]
+            active_pos["charges"] = audit_data["charges"]
+            active_pos["net_pnl"] = audit_data["net_pnl_inr"]
+            net_pnl = audit_data["net_pnl_inr"]
+        else:
+            entry_usd = float(active_pos.get("entry_price_usd") or (active_pos["entry_price"] / pos_hr))
+            qty = float(active_pos["quantity"])
+            direction = active_pos["direction"]
+            curr_usd = curr_price_usd or entry_usd
+            gross_usd = (curr_usd - entry_usd) * qty if direction == "BUY" else (entry_usd - curr_usd) * qty
+            gross_inr = gross_usd * pos_hr
+            entry_fee, exit_fee, total_charges = self.calculate_trade_charges(entry_usd * pos_hr, curr_usd * pos_hr, qty)
+            net_pnl = gross_inr - total_charges
+            active_pos["exit_price_usd"] = curr_usd
+            active_pos["exit_price"] = round(curr_usd * pos_hr, 2)
+            active_pos["gross_pnl"] = round(gross_inr, 2)
+            active_pos["entry_charges"] = round(entry_fee, 2)
+            active_pos["exit_charges"] = round(exit_fee, 2)
+            active_pos["charges"] = round(total_charges, 2)
+            active_pos["net_pnl"] = round(net_pnl, 2)
 
         self.last_sl_time = time.time()
         DB.save_bitcoin_live_trade(active_pos)
-        self.today_realized_pnl += net_pnl
+        self.recalculate_realized_pnl()
         self.save_settings()
 
         return {"success": True, "trade": active_pos, "mudrex_response": close_res}
