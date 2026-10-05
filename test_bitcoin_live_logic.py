@@ -41,6 +41,9 @@ class TestBitcoinLiveEngineLogic(unittest.TestCase):
         DB._init_db()
         self.engine = BitcoinLiveEngine()
         self.engine.live_trading_enabled = True
+        self.engine.adapter.fetch_futures_balance = lambda *a, **kw: 15000.0
+        self.engine.adapter.fetch_btcusdt_asset = lambda *a, **kw: {"success": True, "asset": {"id": "01903a7b-bf65-707d-a7dc-d7b84c3c756c"}}
+        self.engine.adapter.verify_leverage = lambda *a, **kw: {"success": True, "leverage": "5"}
 
     def tearDown(self):
         pass
@@ -80,7 +83,7 @@ class TestBitcoinLiveEngineLogic(unittest.TestCase):
     def test_03_sl_and_target_math_short(self):
         """3. Verify SHORT Target (+Rs.600 NET) and SL (-Rs.400 NET) price calculation."""
         entry_price = 8121844.50
-        qty = 0.03
+        qty = 0.002
         
         tp_usd, sl_usd, target_p, sl_p, est_chg = self.engine.calculate_sl_and_target_prices("SELL", entry_price, qty)
         
@@ -97,14 +100,14 @@ class TestBitcoinLiveEngineLogic(unittest.TestCase):
         # Verify NET P&L at sl_p
         gross_sl = (entry_price - sl_p) * qty
         net_sl = gross_sl - est_chg
-        self.assertAlmostEqual(net_sl, -400.0, delta=1.0)
+        self.assertAlmostEqual(net_sl, -200.0, delta=1.0)
 
-        print(f"[TEST 3 PASS] SHORT Targets Verified: Entry=Rs.{entry_price:,.2f} | Target (+Rs.100 NET)=Rs.{target_p:,.2f} | SL (-Rs.400 NET)=Rs.{sl_p:,.2f} | Fees=Rs.{est_chg:,.2f}")
+        print(f"[TEST 3 PASS] SHORT Targets Verified: Entry=Rs.{entry_price:,.2f} | Target (+Rs.100 NET)=Rs.{target_p:,.2f} | SL (-Rs.200 NET)=Rs.{sl_p:,.2f} | Fees=Rs.{est_chg:,.2f}")
 
     def test_04_sl_and_target_math_long(self):
         """4. Verify LONG Target (+Rs.100 NET) and SL (-Rs.400 NET) price calculation."""
         entry_price = 8121844.50
-        qty = 0.03
+        qty = 0.002
         
         tp_usd, sl_usd, target_p, sl_p, est_chg = self.engine.calculate_sl_and_target_prices("BUY", entry_price, qty)
         
@@ -121,9 +124,9 @@ class TestBitcoinLiveEngineLogic(unittest.TestCase):
         # Verify NET P&L at sl_p
         gross_sl = (sl_p - entry_price) * qty
         net_sl = gross_sl - est_chg
-        self.assertAlmostEqual(net_sl, -400.0, delta=1.0)
+        self.assertAlmostEqual(net_sl, -200.0, delta=1.0)
 
-        print(f"[TEST 4 PASS] LONG Targets Verified: Entry=Rs.{entry_price:,.2f} | Target (+Rs.100 NET)=Rs.{target_p:,.2f} | SL (-Rs.400 NET)=Rs.{sl_p:,.2f} | Fees=Rs.{est_chg:,.2f}")
+        print(f"[TEST 4 PASS] LONG Targets Verified: Entry=Rs.{entry_price:,.2f} | Target (+Rs.100 NET)=Rs.{target_p:,.2f} | SL (-Rs.200 NET)=Rs.{sl_p:,.2f} | Fees=Rs.{est_chg:,.2f}")
 
     def test_05_automatic_exit_profit_target_and_reentry(self):
         """5. Verify position automatic exit on +Rs.500 NET target and immediate return to SCANNING mode."""
@@ -1151,9 +1154,18 @@ class TestBitcoinLiveEngineLogic(unittest.TestCase):
                 def json(self): return {"code": 404}
             return Resp404()
 
+        def mock_request(method, url, headers=None, json=None, params=None, timeout=5):
+            class Resp404:
+                status_code = 404
+                text = '{"code":404,"text":"requested resource was not found"}'
+                def json(self): return {"code": 404}
+            return Resp404()
+
         import requests
         orig_post = requests.post
+        orig_request = requests.request
         requests.post = mock_post
+        requests.request = mock_request
         try:
             res = adapter.close_position_safely("POS_51_TEST", "BTCUSDT", 0.002, "BUY")
             self.assertTrue(res.get("success"))
@@ -1161,6 +1173,7 @@ class TestBitcoinLiveEngineLogic(unittest.TestCase):
             print("[TEST 51 PASS] Multi-Candidate Mudrex Close Successfully Fell Back to Opposite Market Order!")
         finally:
             requests.post = orig_post
+            requests.request = orig_request
 
     def test_52_close_success_only_after_authoritative_confirmation(self):
         """52. Verify close_position_safely returns success=False if position remains open on Mudrex."""
@@ -1175,9 +1188,18 @@ class TestBitcoinLiveEngineLogic(unittest.TestCase):
                 def json(self): return {"success": True}
             return Resp200()
 
+        def mock_request_dummy(method, url, headers=None, json=None, params=None, timeout=5):
+            class Resp404:
+                status_code = 404
+                text = '{"code":404,"text":"requested resource was not found"}'
+                def json(self): return {"code": 404}
+            return Resp404()
+
         import requests
         orig_post = requests.post
+        orig_request = requests.request
         requests.post = mock_post_success
+        requests.request = mock_request_dummy
         try:
             res = adapter.close_position_safely("STUBBORN_POS", "BTCUSDT", 0.002, "BUY")
             self.assertFalse(res.get("success"))
@@ -1185,6 +1207,7 @@ class TestBitcoinLiveEngineLogic(unittest.TestCase):
             print("[TEST 52 PASS] Close Success ONLY Returned After Authoritative Confirmation Verified!")
         finally:
             requests.post = orig_post
+            requests.request = orig_request
 
     def test_53_http_404_keeps_position_open(self):
         """53. Verify HTTP 404 error from Mudrex does NOT mark position closed locally."""

@@ -467,12 +467,12 @@
 
     <!-- TOP SUMMARY P&L BANNER -->
     <div class="pnl-master-panel">
-        <div class="pnl-master-header">
+        <div class="pnl-master-header" style="flex-wrap: wrap; gap: 12px; align-items: center; justify-content: space-between;">
             <div class="pnl-master-title">
                 <span>⚡ LIVE SUMMARY PERFORMANCE</span>
                 <span style="font-size: 0.72rem; color: #94a3b8; font-weight: 600;">(REAL-TIME CALCULATIONS)</span>
             </div>
-            <div class="pnl-summary-boxes">
+            <div class="pnl-summary-boxes" style="align-items: center; gap: 12px;">
                 <div class="pnl-sum-card primary-pnl">
                     <span class="pnl-sum-lbl">TOTAL OPEN NET P&L</span>
                     <span class="pnl-sum-val val-neutral" id="lblTotalOpenNetPnl">₹0.00</span>
@@ -485,7 +485,13 @@
                     <span class="pnl-sum-lbl">TOTAL TEST P&L</span>
                     <span class="pnl-sum-val val-neutral" id="lblTotalTestPnl">₹0.00</span>
                 </div>
+                <button class="btn-action btn-blue" onclick="handleResetTest()" style="padding: 10px 16px; font-size: 0.82rem; font-weight: 800; border: 1px solid #38bdf8; box-shadow: 0 0 12px rgba(56,189,248,0.3); background: #0284c7;">
+                    🔄 RESET / RESTART TEST SESSION
+                </button>
             </div>
+        </div>
+        <div id="archivedSummaryStrip" style="margin-top: 10px; padding: 8px 12px; background: rgba(56, 189, 248, 0.12); border-left: 4px solid #38bdf8; border-radius: 4px; font-size: 0.78rem; color: #93c5fd; display: none;">
+            <span style="font-weight: 800; color: #38bdf8;">📁 LAST ARCHIVED SESSION LOG:</span> <span id="lblArchivedSummaryText">None</span>
         </div>
     </div>
 
@@ -651,6 +657,18 @@
                 const elTotalPnl = document.getElementById('lblTotalTestPnl');
                 elTotalPnl.innerText = `₹${totalPnl >= 0 ? '+' : ''}${totalPnl.toFixed(2)}`;
                 elTotalPnl.className = `pnl-sum-val ${totalPnl > 0 ? 'val-positive' : (totalPnl < 0 ? 'val-negative' : 'val-neutral')}`;
+
+                if (data.last_archived_summary) {
+                    const strip = document.getElementById('archivedSummaryStrip');
+                    const textEl = document.getElementById('lblArchivedSummaryText');
+                    if (strip && textEl) {
+                        textEl.innerText = data.last_archived_summary;
+                        strip.style.display = 'block';
+                    }
+                } else {
+                    const strip = document.getElementById('archivedSummaryStrip');
+                    if (strip) strip.style.display = 'none';
+                }
 
                 // Controls & Capital
                 document.getElementById('lblTestCapital').innerText = `₹${(data.test_capital || 25000).toLocaleString('en-IN')}`;
@@ -835,7 +853,7 @@
         }
 
         async function handleResetTest() {
-            if (!confirm("Are you sure you want to RESET the paper test state and history?\n\nThis will NOT affect your real Mudrex account or the 1-position live engine.")) return;
+            if (!confirm("🔄 RESET / RESTART TEST SESSION?\n\nThis will:\n1. Save an archived summary log of this completed session.\n2. Reset realized test P&L to ₹0.00.\n3. Clear trade history and open fresh 6-basket positions at current market price.\n\n(This is 100% paper test mode and will NOT affect real Mudrex funds or 1-position live engine).\n\nProceed?")) return;
             try {
                 const resp = await fetch('/api/bitcoin/live5/reset', {method: 'POST'});
                 const res = await resp.json();

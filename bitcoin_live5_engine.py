@@ -380,7 +380,8 @@ class BitcoinLive5Engine:
                 "total_test_pnl": total_test_pnl
             },
             "evaluation_stream": self.evaluation_stream[:25],
-            "latest_evaluation": self.last_evaluation
+            "latest_evaluation": self.last_evaluation,
+            "last_archived_summary": getattr(self, "last_archived_summary", DB.load_bitcoin_live5_setting("last_archived_summary", ""))
         }
 
     def close_single_position(self, pos: Dict[str, Any], exit_reason: str = "MANUAL EXIT") -> Dict[str, Any]:
@@ -426,20 +427,37 @@ class BitcoinLive5Engine:
         return {"success": True, "closed_count": len(results), "details": results}
 
     def reset_paper_test(self) -> Dict[str, Any]:
-        """Resets paper test engine state and trades without affecting existing live engine."""
+        """Resets paper test engine state and trades, saving an archived summary of the completed test session."""
+        all_trades = DB.load_all_bitcoin_live5_trades()
+        closed_trades = [t for t in all_trades if t.get("status") == "CLOSED"]
+        total_test_trades = len(closed_trades)
+        winning_trades = len([t for t in closed_trades if float(t.get("net_pnl", 0.0)) > 0])
+        realized_pnl = sum([float(t.get("net_pnl", 0.0)) for t in closed_trades])
+        win_rate = round((winning_trades / total_test_trades * 100.0), 1) if total_test_trades > 0 else 0.0
+
+        ist_tz = timezone(timedelta(hours=5, minutes=30))
+        now_str = datetime.now(ist_tz).strftime("%Y-%m-%d %H:%M:%S IST")
+        summary_msg = f"Session Ended at {now_str} | Trades: {total_test_trades} | Win Rate: {win_rate}% | Realized P&L: Rs.{realized_pnl:+,.2f}"
+
         with DB._get_connection() as conn:
             cursor = conn.cursor()
             cursor.execute("DELETE FROM bitcoin_live5_trades")
             conn.commit()
         
         self.today_realized_pnl = 0.0
+        self.last_archived_summary = summary_msg
+        DB.save_bitcoin_live5_setting("last_archived_summary", summary_msg)
         self.save_settings()
         self.active_positions = []
         self.last_entry_time = 0.0
         self.last_signal_action = ""
         self.last_api_status = "PAPER TEST RESET COMPLETED"
-        print(f"[{datetime.now()}] [5-LIVE PAPER TEST RESET] Cleared paper trades DB!")
-        return {"success": True, "message": "Paper test state reset successfully"}
+        print(f"[{datetime.now()}] [5-LIVE PAPER TEST RESET] {summary_msg}")
+        return {
+            "success": True, 
+            "message": f"Paper test session reset successfully!\n\n{summary_msg}",
+            "archived_summary": summary_msg
+        }
 
     def update_risk_settings(
         self,
