@@ -453,6 +453,110 @@ class DatabaseEngine:
                 )
             """)
 
+            # Silver Paper Trading Engine Tables (100% Dedicated Paper Test Namespace)
+            cursor.execute("""
+                CREATE TABLE IF NOT EXISTS silver_paper_trades (
+                    trade_id TEXT PRIMARY KEY,
+                    instrument TEXT NOT NULL,
+                    direction TEXT NOT NULL,
+                    quantity REAL NOT NULL,
+                    leverage REAL NOT NULL DEFAULT 5.0,
+                    entry_price REAL NOT NULL,
+                    entry_timestamp TEXT NOT NULL,
+                    target_net REAL NOT NULL DEFAULT 100.0,
+                    max_loss_net REAL NOT NULL DEFAULT 200.0,
+                    target_gross REAL NOT NULL DEFAULT 0.0,
+                    stop_gross REAL NOT NULL DEFAULT 0.0,
+                    target_price REAL NOT NULL DEFAULT 0.0,
+                    stop_loss_price REAL NOT NULL DEFAULT 0.0,
+                    trend_state TEXT NOT NULL DEFAULT 'NEUTRAL',
+                    confidence INTEGER NOT NULL DEFAULT 50,
+                    reasons TEXT,
+                    status TEXT NOT NULL DEFAULT 'OPEN',
+                    exit_timestamp TEXT,
+                    exit_price REAL,
+                    exit_reason TEXT,
+                    gross_pnl REAL DEFAULT 0.0,
+                    entry_fee_gst REAL DEFAULT 0.0,
+                    exit_fee_gst REAL DEFAULT 0.0,
+                    funding_fee REAL DEFAULT 0.0,
+                    total_charges REAL DEFAULT 0.0,
+                    net_pnl REAL DEFAULT 0.0,
+                    trigger_price REAL
+                )
+            """)
+
+            cursor.execute("""
+                CREATE TABLE IF NOT EXISTS silver_paper_settings (
+                    key TEXT PRIMARY KEY,
+                    value TEXT NOT NULL
+                )
+            """)
+
+            cursor.execute("""
+                CREATE TABLE IF NOT EXISTS silver_paper_evaluations (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    timestamp TEXT NOT NULL,
+                    price REAL NOT NULL,
+                    action TEXT NOT NULL,
+                    trend_state TEXT NOT NULL,
+                    confidence INTEGER NOT NULL,
+                    reason TEXT NOT NULL
+                )
+            """)
+
+            # Mudrex Crude Paper Trading Engine Tables (100% Dedicated Paper Test Namespace)
+            cursor.execute("""
+                CREATE TABLE IF NOT EXISTS mudrex_crude_paper_trades (
+                    trade_id TEXT PRIMARY KEY,
+                    instrument TEXT NOT NULL,
+                    direction TEXT NOT NULL,
+                    quantity REAL NOT NULL,
+                    leverage REAL NOT NULL DEFAULT 5.0,
+                    entry_price REAL NOT NULL,
+                    entry_timestamp TEXT NOT NULL,
+                    target_net REAL NOT NULL DEFAULT 100.0,
+                    max_loss_net REAL NOT NULL DEFAULT 200.0,
+                    target_gross REAL NOT NULL DEFAULT 0.0,
+                    stop_gross REAL NOT NULL DEFAULT 0.0,
+                    target_price REAL NOT NULL DEFAULT 0.0,
+                    stop_loss_price REAL NOT NULL DEFAULT 0.0,
+                    trend_state TEXT NOT NULL DEFAULT 'NEUTRAL',
+                    confidence INTEGER NOT NULL DEFAULT 50,
+                    reasons TEXT,
+                    status TEXT NOT NULL DEFAULT 'OPEN',
+                    exit_timestamp TEXT,
+                    exit_price REAL,
+                    exit_reason TEXT,
+                    gross_pnl REAL DEFAULT 0.0,
+                    entry_fee_gst REAL DEFAULT 0.0,
+                    exit_fee_gst REAL DEFAULT 0.0,
+                    funding_fee REAL DEFAULT 0.0,
+                    total_charges REAL DEFAULT 0.0,
+                    net_pnl REAL DEFAULT 0.0,
+                    trigger_price REAL
+                )
+            """)
+
+            cursor.execute("""
+                CREATE TABLE IF NOT EXISTS mudrex_crude_paper_settings (
+                    key TEXT PRIMARY KEY,
+                    value TEXT NOT NULL
+                )
+            """)
+
+            cursor.execute("""
+                CREATE TABLE IF NOT EXISTS mudrex_crude_paper_evaluations (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    timestamp TEXT NOT NULL,
+                    price REAL NOT NULL,
+                    action TEXT NOT NULL,
+                    trend_state TEXT NOT NULL,
+                    confidence INTEGER NOT NULL,
+                    reason TEXT NOT NULL
+                )
+            """)
+
             conn.commit()
 
         self.seed_historical_bitcoin_live_trades()
@@ -1109,5 +1213,165 @@ class DatabaseEngine:
             cursor.execute("DELETE FROM bitcoin_updown10_evaluations")
             cursor.execute("DELETE FROM bitcoin_updown10_settings")
             conn.commit()
+
+    # --- SILVER PAPER TRADING DATABASE METHODS ---
+
+    def save_silver_paper_setting(self, key: str, value: str):
+        with self._get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute("INSERT OR REPLACE INTO silver_paper_settings (key, value) VALUES (?, ?)", (key, str(value)))
+            conn.commit()
+
+    def load_silver_paper_setting(self, key: str, default: str = "") -> str:
+        with self._get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute("SELECT value FROM silver_paper_settings WHERE key = ?", (key,))
+            row = cursor.fetchone()
+            return row["value"] if row else default
+
+    def save_silver_paper_trade(self, pos_dict: Dict[str, Any]):
+        with self._get_connection() as conn:
+            cursor = conn.cursor()
+            reasons_json = json.dumps(pos_dict.get("reasons", []))
+            cursor.execute("""
+                INSERT OR REPLACE INTO silver_paper_trades (
+                    trade_id, instrument, direction, quantity, leverage, entry_price, entry_timestamp,
+                    target_net, max_loss_net, target_gross, stop_gross, target_price, stop_loss_price,
+                    trend_state, confidence, reasons, status, exit_timestamp, exit_price, exit_reason,
+                    gross_pnl, entry_fee_gst, exit_fee_gst, funding_fee, total_charges, net_pnl, trigger_price
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """, (
+                pos_dict["trade_id"],
+                pos_dict.get("instrument", "XAG/USDT"),
+                pos_dict["direction"],
+                pos_dict["quantity"],
+                pos_dict.get("leverage", 5.0),
+                pos_dict["entry_price"],
+                pos_dict["entry_timestamp"],
+                pos_dict.get("target_net", 100.0),
+                pos_dict.get("max_loss_net", 200.0),
+                pos_dict.get("target_gross", 0.0),
+                pos_dict.get("stop_gross", 0.0),
+                pos_dict.get("target_price", 0.0),
+                pos_dict.get("stop_loss_price", 0.0),
+                pos_dict.get("trend_state", "NEUTRAL"),
+                pos_dict.get("confidence", 50),
+                reasons_json,
+                pos_dict["status"],
+                pos_dict.get("exit_timestamp"),
+                pos_dict.get("exit_price"),
+                pos_dict.get("exit_reason"),
+                pos_dict.get("gross_pnl", 0.0),
+                pos_dict.get("entry_fee_gst", 0.0),
+                pos_dict.get("exit_fee_gst", 0.0),
+                pos_dict.get("funding_fee", 0.0),
+                pos_dict.get("total_charges", 0.0),
+                pos_dict.get("net_pnl", 0.0),
+                pos_dict.get("trigger_price")
+            ))
+            conn.commit()
+
+    def load_active_silver_paper_position(self) -> Optional[Dict[str, Any]]:
+        with self._get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute("SELECT * FROM silver_paper_trades WHERE status IN ('OPEN', 'EXIT_REQUESTED') ORDER BY entry_timestamp DESC LIMIT 1")
+            row = cursor.fetchone()
+            if row:
+                d = dict(row)
+                d["reasons"] = json.loads(d["reasons"]) if d["reasons"] else []
+                return d
+            return None
+
+    def load_all_silver_paper_trades(self) -> List[Dict[str, Any]]:
+        with self._get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute("SELECT * FROM silver_paper_trades ORDER BY entry_timestamp DESC")
+            rows = cursor.fetchall()
+            trades = []
+            for r in rows:
+                t = dict(r)
+                t["reasons"] = json.loads(t["reasons"]) if t["reasons"] else []
+                trades.append(t)
+            return trades
+
+    # --- MUDREX CRUDE PAPER TRADING DATABASE METHODS ---
+
+    def save_mudrex_crude_paper_setting(self, key: str, value: str):
+        with self._get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute("INSERT OR REPLACE INTO mudrex_crude_paper_settings (key, value) VALUES (?, ?)", (key, str(value)))
+            conn.commit()
+
+    def load_mudrex_crude_paper_setting(self, key: str, default: str = "") -> str:
+        with self._get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute("SELECT value FROM mudrex_crude_paper_settings WHERE key = ?", (key,))
+            row = cursor.fetchone()
+            return row["value"] if row else default
+
+    def save_mudrex_crude_paper_trade(self, pos_dict: Dict[str, Any]):
+        with self._get_connection() as conn:
+            cursor = conn.cursor()
+            reasons_json = json.dumps(pos_dict.get("reasons", []))
+            cursor.execute("""
+                INSERT OR REPLACE INTO mudrex_crude_paper_trades (
+                    trade_id, instrument, direction, quantity, leverage, entry_price, entry_timestamp,
+                    target_net, max_loss_net, target_gross, stop_gross, target_price, stop_loss_price,
+                    trend_state, confidence, reasons, status, exit_timestamp, exit_price, exit_reason,
+                    gross_pnl, entry_fee_gst, exit_fee_gst, funding_fee, total_charges, net_pnl, trigger_price
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """, (
+                pos_dict["trade_id"],
+                pos_dict.get("instrument", "CL/USDT"),
+                pos_dict["direction"],
+                pos_dict["quantity"],
+                pos_dict.get("leverage", 5.0),
+                pos_dict["entry_price"],
+                pos_dict["entry_timestamp"],
+                pos_dict.get("target_net", 100.0),
+                pos_dict.get("max_loss_net", 200.0),
+                pos_dict.get("target_gross", 0.0),
+                pos_dict.get("stop_gross", 0.0),
+                pos_dict.get("target_price", 0.0),
+                pos_dict.get("stop_loss_price", 0.0),
+                pos_dict.get("trend_state", "NEUTRAL"),
+                pos_dict.get("confidence", 50),
+                reasons_json,
+                pos_dict["status"],
+                pos_dict.get("exit_timestamp"),
+                pos_dict.get("exit_price"),
+                pos_dict.get("exit_reason"),
+                pos_dict.get("gross_pnl", 0.0),
+                pos_dict.get("entry_fee_gst", 0.0),
+                pos_dict.get("exit_fee_gst", 0.0),
+                pos_dict.get("funding_fee", 0.0),
+                pos_dict.get("total_charges", 0.0),
+                pos_dict.get("net_pnl", 0.0),
+                pos_dict.get("trigger_price")
+            ))
+            conn.commit()
+
+    def load_active_mudrex_crude_paper_position(self) -> Optional[Dict[str, Any]]:
+        with self._get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute("SELECT * FROM mudrex_crude_paper_trades WHERE status IN ('OPEN', 'EXIT_REQUESTED') ORDER BY entry_timestamp DESC LIMIT 1")
+            row = cursor.fetchone()
+            if row:
+                d = dict(row)
+                d["reasons"] = json.loads(d["reasons"]) if d["reasons"] else []
+                return d
+            return None
+
+    def load_all_mudrex_crude_paper_trades(self) -> List[Dict[str, Any]]:
+        with self._get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute("SELECT * FROM mudrex_crude_paper_trades ORDER BY entry_timestamp DESC")
+            rows = cursor.fetchall()
+            trades = []
+            for r in rows:
+                t = dict(r)
+                t["reasons"] = json.loads(t["reasons"]) if t["reasons"] else []
+                trades.append(t)
+            return trades
 
 DB = DatabaseEngine()

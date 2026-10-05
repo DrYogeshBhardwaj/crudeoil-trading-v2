@@ -24,6 +24,8 @@ from bitcoin_feed import BITCOIN_FEED
 from bitcoin_live_engine import BITCOIN_LIVE_ENGINE
 from bitcoin_live5_engine import BITCOIN_LIVE5_ENGINE
 from bitcoin_updown10_engine import BITCOIN_UPDOWN10_ENGINE
+from silver_paper_engine import SILVER_PAPER_ENGINE
+from mudrex_crude_paper_engine import MUDREX_CRUDE_PAPER_ENGINE
 
 app = FastAPI(
     title="AI Trend Detector & Paper Trading Engine V1",
@@ -449,6 +451,94 @@ async def transfer_spot_to_futures(payload: dict):
         "status": "ERROR",
         "message": f"Transfer failed: {res.get('error', 'Unknown error')} (Status {res.get('status_code', 'N/A')})"
     }, status_code=400)
+
+# --- SILVER PAPER ENGINE (XAG/USDT) ENDPOINTS ---
+
+@app.get("/silver/live", response_class=HTMLResponse)
+async def serve_silver_live_dashboard():
+    """Serves the 24x7 Silver Paper Trading Dashboard (/silver/live)."""
+    silver_path = os.path.join(os.path.dirname(__file__), "templates", "silver_live.html")
+    if os.path.exists(silver_path):
+        with open(silver_path, "r", encoding="utf-8") as f:
+            return HTMLResponse(content=f.read())
+    return HTMLResponse("<h2>Silver (XAG/USDT) Paper Trading Dashboard</h2>")
+
+@app.get("/api/silver/state")
+async def get_silver_paper_state():
+    """Returns state for Silver Paper Engine."""
+    return JSONResponse({"success": True, "state": SILVER_PAPER_ENGINE.get_state()})
+
+@app.post("/api/silver/trade")
+async def execute_silver_paper_trade(payload: dict):
+    """Executes manual paper trade for Silver (XAG/USDT)."""
+    side = payload.get("side", "").upper()
+    qty = float(payload.get("quantity", 100.0))
+    if side not in ("LONG", "SHORT"):
+        return JSONResponse({"success": False, "error": "Invalid side"}, status_code=400)
+    pos = SILVER_PAPER_ENGINE.manual_entry(side=side, quantity=qty)
+    if pos:
+        return JSONResponse({"success": True, "position": pos.to_dict()})
+    return JSONResponse({"success": False, "error": "Position already open or feed inactive"}, status_code=400)
+
+@app.post("/api/silver/close")
+async def close_silver_paper_trade(payload: dict = {}):
+    """Closes active Silver paper position."""
+    reason = payload.get("reason", "MANUAL_API_CLOSE")
+    closed = SILVER_PAPER_ENGINE.manual_close(reason=reason)
+    if closed:
+        return JSONResponse({"success": True, "trade": closed})
+    return JSONResponse({"success": False, "error": "No active position to close"}, status_code=400)
+
+@app.post("/api/silver/reset")
+async def reset_silver_paper_stats():
+    """Resets paper trading statistics and history for Silver."""
+    SILVER_PAPER_ENGINE.reset_statistics()
+    return JSONResponse({"success": True, "message": "Silver Paper Engine statistics reset successfully."})
+
+
+# --- MUDREX CRUDE PAPER ENGINE (CL/USDT) ENDPOINTS ---
+
+@app.get("/mudrex-crude/live", response_class=HTMLResponse)
+async def serve_mudrex_crude_live_dashboard():
+    """Serves the 24x7 Mudrex Crude Paper Trading Dashboard (/mudrex-crude/live)."""
+    crude_path = os.path.join(os.path.dirname(__file__), "templates", "mudrex_crude_live.html")
+    if os.path.exists(crude_path):
+        with open(crude_path, "r", encoding="utf-8") as f:
+            return HTMLResponse(content=f.read())
+    return HTMLResponse("<h2>Mudrex Crude (CL/USDT) Paper Trading Dashboard</h2>")
+
+@app.get("/api/mudrex-crude/state")
+async def get_mudrex_crude_paper_state():
+    """Returns state for Mudrex Crude Paper Engine."""
+    return JSONResponse({"success": True, "state": MUDREX_CRUDE_PAPER_ENGINE.get_state()})
+
+@app.post("/api/mudrex-crude/trade")
+async def execute_mudrex_crude_paper_trade(payload: dict):
+    """Executes manual paper trade for Mudrex Crude (CL/USDT)."""
+    side = payload.get("side", "").upper()
+    qty = float(payload.get("quantity", 10.0))
+    if side not in ("LONG", "SHORT"):
+        return JSONResponse({"success": False, "error": "Invalid side"}, status_code=400)
+    pos = MUDREX_CRUDE_PAPER_ENGINE.manual_entry(side=side, quantity=qty)
+    if pos:
+        return JSONResponse({"success": True, "position": pos.to_dict()})
+    return JSONResponse({"success": False, "error": "Position already open or feed inactive"}, status_code=400)
+
+@app.post("/api/mudrex-crude/close")
+async def close_mudrex_crude_paper_trade(payload: dict = {}):
+    """Closes active Mudrex Crude paper position."""
+    reason = payload.get("reason", "MANUAL_API_CLOSE")
+    closed = MUDREX_CRUDE_PAPER_ENGINE.manual_close(reason=reason)
+    if closed:
+        return JSONResponse({"success": True, "trade": closed})
+    return JSONResponse({"success": False, "error": "No active position to close"}, status_code=400)
+
+@app.post("/api/mudrex-crude/reset")
+async def reset_mudrex_crude_paper_stats():
+    """Resets paper trading statistics and history for Mudrex Crude."""
+    MUDREX_CRUDE_PAPER_ENGINE.reset_statistics()
+    return JSONResponse({"success": True, "message": "Mudrex Crude Paper Engine statistics reset successfully."})
+
 
 @app.get("/api/live/state")
 async def get_live_state():
@@ -1205,6 +1295,12 @@ async def startup_event():
 
     print(f"[{datetime.now()}] [STARTUP] Spawning BITCOIN_UPDOWN10_ENGINE.start_feed_loop background task...")
     asyncio.create_task(BITCOIN_UPDOWN10_ENGINE.start_feed_loop())
+
+    print(f"[{datetime.now()}] [STARTUP] Spawning SILVER_PAPER_ENGINE.start_feed_loop background task...")
+    asyncio.create_task(SILVER_PAPER_ENGINE.start_feed_loop())
+
+    print(f"[{datetime.now()}] [STARTUP] Spawning MUDREX_CRUDE_PAPER_ENGINE.start_feed_loop background task...")
+    asyncio.create_task(MUDREX_CRUDE_PAPER_ENGINE.start_feed_loop())
 
 if __name__ == "__main__":
     import uvicorn

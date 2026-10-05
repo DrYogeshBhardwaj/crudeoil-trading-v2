@@ -1,0 +1,687 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
+    <title>SILVER • Mudrex Paper</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><rect width=%22100%22 height=%22100%22 rx=%2220%22 fill=%22%2394a3b8%22/><text y=%22.9em%22 x=%2250%25%22 dominant-baseline=%22middle%22 text-anchor=%22middle%22 font-size=%2255%22 font-weight=%22bold%22 fill=%22%230f172a%22>Ag</text></svg>">
+    <meta name="theme-color" content="#94a3b8">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Silver Paper">
+    <link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><rect width=%22100%22 height=%22100%22 rx=%2220%22 fill=%22%2394a3b8%22/><text y=%22.9em%22 x=%2250%25%22 dominant-baseline=%22middle%22 text-anchor=%22middle%22 font-size=%2255%22 font-weight=%22bold%22 fill=%22%230f172a%22>Ag</text></svg>">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;700;800&display=swap" rel="stylesheet">
+    <script type="text/javascript" src="https://s3.tradingview.com/tv.js"></script>
+    <style>
+        :root {
+            --bg-dark: #090d16;
+            --card-bg: rgba(15, 23, 42, 0.95);
+            --card-border: rgba(148, 163, 184, 0.2);
+            --accent-silver: #cbd5e1;
+            --accent-silver-glow: rgba(203, 213, 225, 0.3);
+            --accent-green: #10b981;
+            --accent-red: #ef4444;
+            --accent-blue: #38bdf8;
+            --accent-amber: #f59e0b;
+            --text-main: #f8fafc;
+            --text-muted: #94a3b8;
+        }
+
+        * { box-sizing: border-box; }
+
+        @keyframes pulse-dot {
+            0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(203, 213, 225, 0.8); }
+            70% { transform: scale(1.1); box-shadow: 0 0 0 6px rgba(203, 213, 225, 0); }
+            100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(203, 213, 225, 0); }
+        }
+        .live-pulse {
+            width: 8px;
+            height: 8px;
+            background-color: var(--accent-silver);
+            border-radius: 50%;
+            display: inline-block;
+            animation: pulse-dot 1.5s infinite;
+        }
+
+        html, body {
+            height: 100vh;
+            margin: 0;
+            padding: 0;
+            background-color: var(--bg-dark);
+            color: var(--text-main);
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            overflow: hidden;
+        }
+
+        .dashboard-container {
+            height: 100vh;
+            display: grid;
+            grid-template-rows: auto 1fr auto;
+            max-width: 1800px;
+            margin: 0 auto;
+            padding: 12px;
+            gap: 12px;
+        }
+
+        /* Top Header */
+        .top-header {
+            background: var(--card-bg);
+            border: 1px solid var(--card-border);
+            border-radius: 12px;
+            padding: 12px 20px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            backdrop-filter: blur(10px);
+        }
+        .brand-section {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        .brand-badge {
+            background: linear-gradient(135deg, #475569, #cbd5e1);
+            color: #0f172a;
+            font-weight: 900;
+            font-size: 16px;
+            padding: 6px 14px;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .brand-title {
+            font-size: 18px;
+            font-weight: 700;
+            letter-spacing: -0.3px;
+        }
+        .paper-tag {
+            background: rgba(245, 158, 11, 0.2);
+            color: #f59e0b;
+            border: 1px solid rgba(245, 158, 11, 0.4);
+            font-size: 11px;
+            font-weight: 800;
+            padding: 3px 8px;
+            border-radius: 6px;
+            letter-spacing: 0.5px;
+        }
+
+        .header-stats {
+            display: flex;
+            align-items: center;
+            gap: 24px;
+        }
+        .stat-item {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-end;
+        }
+        .stat-label {
+            font-size: 11px;
+            color: var(--text-muted);
+            font-weight: 500;
+            text-transform: uppercase;
+        }
+        .stat-value {
+            font-family: 'JetBrains Mono', monospace;
+            font-weight: 700;
+            font-size: 16px;
+        }
+
+        /* Main Grid Layout */
+        .main-grid {
+            display: grid;
+            grid-template-columns: 1fr 420px;
+            gap: 12px;
+            min-height: 0;
+        }
+
+        .left-panel {
+            display: grid;
+            grid-template-rows: 1fr auto;
+            gap: 12px;
+            min-height: 0;
+        }
+
+        .chart-box {
+            background: var(--card-bg);
+            border: 1px solid var(--card-border);
+            border-radius: 12px;
+            overflow: hidden;
+            position: relative;
+        }
+        #tv_chart_container {
+            width: 100%;
+            height: 100%;
+        }
+
+        .metrics-bar {
+            background: var(--card-bg);
+            border: 1px solid var(--card-border);
+            border-radius: 12px;
+            padding: 12px 16px;
+            display: grid;
+            grid-template-columns: repeat(6, 1fr);
+            gap: 12px;
+        }
+
+        .metric-card {
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            padding: 10px 12px;
+            border-radius: 8px;
+        }
+        .metric-card .title {
+            font-size: 10px;
+            color: var(--text-muted);
+            font-weight: 600;
+            text-transform: uppercase;
+            margin-bottom: 4px;
+        }
+        .metric-card .val {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 15px;
+            font-weight: 700;
+        }
+
+        /* Right Panel */
+        .right-panel {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            overflow-y: auto;
+        }
+
+        .card-box {
+            background: var(--card-bg);
+            border: 1px solid var(--card-border);
+            border-radius: 12px;
+            padding: 14px 16px;
+        }
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+            padding-bottom: 8px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+        }
+        .card-title {
+            font-size: 13px;
+            font-weight: 700;
+            letter-spacing: 0.5px;
+            text-transform: uppercase;
+            color: var(--text-muted);
+        }
+
+        /* Active Position Box */
+        .pos-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+        }
+        .pos-cell {
+            background: rgba(255, 255, 255, 0.02);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            padding: 8px 10px;
+            border-radius: 6px;
+        }
+        .pos-cell-full {
+            grid-column: span 2;
+        }
+        .pos-label {
+            font-size: 10px;
+            color: var(--text-muted);
+            text-transform: uppercase;
+        }
+        .pos-val {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 13px;
+            font-weight: 700;
+            margin-top: 2px;
+        }
+
+        /* Controls */
+        .btn-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+            margin-top: 10px;
+        }
+        .btn {
+            padding: 10px;
+            border-radius: 8px;
+            border: none;
+            font-weight: 700;
+            font-size: 12px;
+            cursor: pointer;
+            transition: all 0.2s;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        .btn-long {
+            background: rgba(16, 185, 129, 0.2);
+            color: var(--accent-green);
+            border: 1px solid rgba(16, 185, 129, 0.4);
+        }
+        .btn-long:hover { background: rgba(16, 185, 129, 0.3); }
+        .btn-short {
+            background: rgba(239, 68, 68, 0.2);
+            color: var(--accent-red);
+            border: 1px solid rgba(239, 68, 68, 0.4);
+        }
+        .btn-short:hover { background: rgba(239, 68, 68, 0.3); }
+        .btn-close {
+            background: rgba(245, 158, 11, 0.2);
+            color: var(--accent-amber);
+            border: 1px solid rgba(245, 158, 11, 0.4);
+            grid-column: span 2;
+        }
+        .btn-close:hover { background: rgba(245, 158, 11, 0.3); }
+        .btn-reset {
+            background: rgba(148, 163, 184, 0.1);
+            color: var(--text-muted);
+            border: 1px solid rgba(148, 163, 184, 0.2);
+            width: 100%;
+            margin-top: 8px;
+            font-size: 10px;
+        }
+
+        /* Trade Log Table */
+        .trade-log {
+            max-height: 200px;
+            overflow-y: auto;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 11px;
+        }
+        .log-item {
+            padding: 6px 0;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+            display: grid;
+            grid-template-columns: auto 1fr auto;
+            gap: 8px;
+            align-items: center;
+        }
+        .text-green { color: var(--accent-green); }
+        .text-red { color: var(--accent-red); }
+        .text-silver { color: var(--accent-silver); }
+
+        /* Footer */
+        .bottom-footer {
+            background: var(--card-bg);
+            border: 1px solid var(--card-border);
+            border-radius: 8px;
+            padding: 6px 16px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            font-size: 11px;
+            color: var(--text-muted);
+        }
+    </style>
+</head>
+<body>
+    <div class="dashboard-container">
+        <!-- Top Header -->
+        <div class="top-header">
+            <div class="brand-section">
+                <div class="brand-badge">Ag</div>
+                <div>
+                    <div class="brand-title">SILVER PAPER ENGINE</div>
+                    <div style="font-size: 11px; color: var(--text-muted);">XAG/USDT • Mudrex 24x7 Perpetual Futures</div>
+                </div>
+                <span class="paper-tag">PAPER ONLY (NO REAL ORDERS)</span>
+            </div>
+            <div class="header-stats">
+                <div class="stat-item">
+                    <span class="stat-label">Mudrex Live Price</span>
+                    <span class="stat-value text-silver" id="top_ltp">$0.00</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-label">Engine Status</span>
+                    <span class="stat-value text-green"><span class="live-pulse"></span> <span id="top_status">RUNNING</span></span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-label">Total Realized Net</span>
+                    <span class="stat-value" id="top_realized">$0.00</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Main Content Area -->
+        <div class="main-grid">
+            <!-- Left Side: Chart + Top Metric Bar -->
+            <div class="left-panel">
+                <div class="chart-box">
+                    <div id="tv_chart_container"></div>
+                </div>
+                <div class="metrics-bar">
+                    <div class="metric-card">
+                        <div class="title">Today Trades</div>
+                        <div class="val" id="m_today_trades">0</div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="title">Win Rate</div>
+                        <div class="val text-green" id="m_win_rate">0.0%</div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="title">Wins / Losses</div>
+                        <div class="val" id="m_wins_losses">0 / 0</div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="title">Realized Net</div>
+                        <div class="val" id="m_realized_net">$0.00</div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="title">Open Net P&L</div>
+                        <div class="val" id="m_open_net">$0.00</div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="title">Total Net P&L</div>
+                        <div class="val" id="m_total_net">$0.00</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right Side: Position Details & Controls -->
+            <div class="right-panel">
+                <!-- Active Position Card -->
+                <div class="card-box">
+                    <div class="card-header">
+                        <span class="card-title">Active Paper Position</span>
+                        <span id="pos_status_badge" style="font-size:10px; font-weight:800; padding:2px 6px; border-radius:4px; background:rgba(255,255,255,0.1);">NO POSITION</span>
+                    </div>
+
+                    <div class="pos-grid">
+                        <div class="pos-cell">
+                            <div class="pos-label">Side</div>
+                            <div class="pos-val" id="pos_side">FLAT</div>
+                        </div>
+                        <div class="pos-cell">
+                            <div class="pos-label">Quantity</div>
+                            <div class="pos-val" id="pos_qty">0.0</div>
+                        </div>
+                        <div class="pos-cell">
+                            <div class="pos-label">Entry Price</div>
+                            <div class="pos-val" id="pos_entry">$0.00</div>
+                        </div>
+                        <div class="pos-cell">
+                            <div class="pos-label">Current Price</div>
+                            <div class="pos-val" id="pos_ltp">$0.00</div>
+                        </div>
+
+                        <div class="pos-cell">
+                            <div class="pos-label">Gross P&L</div>
+                            <div class="pos-val" id="pos_gross">$0.00</div>
+                        </div>
+                        <div class="pos-cell">
+                            <div class="pos-label">Fees + GST</div>
+                            <div class="pos-val text-red" id="pos_fees">$0.00</div>
+                        </div>
+                        <div class="pos-cell">
+                            <div class="pos-label">Funding</div>
+                            <div class="pos-val" id="pos_funding">$0.00</div>
+                        </div>
+                        <div class="pos-cell">
+                            <div class="pos-label">NET P&L</div>
+                            <div class="pos-val" id="pos_net" style="font-size:15px; font-weight:800;">$0.00</div>
+                        </div>
+
+                        <div class="pos-cell">
+                            <div class="pos-label">Target (Net $2.00)</div>
+                            <div class="pos-val text-green" id="pos_target">$0.00</div>
+                        </div>
+                        <div class="pos-cell">
+                            <div class="pos-label">Stop Loss (Net -$3.00)</div>
+                            <div class="pos-val text-red" id="pos_sl">$0.00</div>
+                        </div>
+                        <div class="pos-cell">
+                            <div class="pos-label">Distance to Target</div>
+                            <div class="pos-val" id="pos_dist_target">N/A</div>
+                        </div>
+                        <div class="pos-cell">
+                            <div class="pos-label">Distance to Stop</div>
+                            <div class="pos-val" id="pos_dist_sl">N/A</div>
+                        </div>
+                    </div>
+
+                    <div class="btn-grid">
+                        <button class="btn btn-long" onclick="manualTrade('LONG')">Paper Long</button>
+                        <button class="btn btn-short" onclick="manualTrade('SHORT')">Paper Short</button>
+                        <button class="btn btn-close" onclick="closePosition()">Close Position</button>
+                    </div>
+                </div>
+
+                <!-- Signal & System Card -->
+                <div class="card-box">
+                    <div class="card-header">
+                        <span class="card-title">Strategy Signal & Safety</span>
+                    </div>
+                    <div class="pos-grid">
+                        <div class="pos-cell">
+                            <div class="pos-label">Last Signal</div>
+                            <div class="pos-val" id="sys_signal">HOLD</div>
+                        </div>
+                        <div class="pos-cell">
+                            <div class="pos-label">Max Drawdown</div>
+                            <div class="pos-val text-red" id="sys_mdd">$0.00</div>
+                        </div>
+                        <div class="pos-cell-full pos-cell">
+                            <div class="pos-label">Last Action</div>
+                            <div class="pos-val" id="sys_action" style="font-size:11px;">ENGINE INITIALIZED</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Recent Paper Trades Log -->
+                <div class="card-box" style="flex: 1; min-height: 140px;">
+                    <div class="card-header">
+                        <span class="card-title">Recent Paper Trades</span>
+                    </div>
+                    <div class="trade-log" id="trade_log_list">
+                        <div style="color:var(--text-muted); padding:10px 0; text-align:center;">No paper trades executed yet today.</div>
+                    </div>
+                    <button class="btn btn-reset" onclick="resetStats()">Reset Paper Statistics</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Bottom Footer -->
+        <div class="bottom-footer">
+            <div><strong>SAFETY LOCK:</strong> LIVE_TRADING_ENABLED = FALSE • Mudrex Orders Strictly Disabled</div>
+            <div>Last Updated: <span id="lbl_last_update">Never</span></div>
+        </div>
+    </div>
+
+    <script>
+        let tvWidget = null;
+
+        function initTradingView() {
+            tvWidget = new TradingView.widget({
+                "autosize": true,
+                "symbol": "BINANCE:XAGUSDT",
+                "interval": "5",
+                "timezone": "Etc/UTC",
+                "theme": "dark",
+                "style": "1",
+                "locale": "en",
+                "toolbar_bg": "#090d16",
+                "enable_publishing": false,
+                "hide_side_toolbar": false,
+                "allow_symbol_change": false,
+                "container_id": "tv_chart_container",
+                "overrides": {
+                    "paneProperties.background": "#090d16",
+                    "paneProperties.vertGridProperties.color": "rgba(255, 255, 255, 0.05)",
+                    "paneProperties.horzGridProperties.color": "rgba(255, 255, 255, 0.05)"
+                }
+            });
+        }
+
+        async function fetchState() {
+            try {
+                const res = await fetch('/api/silver/state');
+                const data = await res.json();
+                if (!data.success) return;
+
+                const state = data.state;
+                const pos = state.position || {};
+
+                // Update Header
+                document.getElementById('top_ltp').innerText = '$' + (state.current_price || 0).toFixed(3);
+                document.getElementById('top_status').innerText = state.engine_status || 'RUNNING';
+
+                const realizedVal = state.realized_net_pnl || 0;
+                const relEl = document.getElementById('top_realized');
+                relEl.innerText = (realizedVal >= 0 ? '+$' : '-$') + Math.abs(realizedVal).toFixed(2);
+                relEl.className = 'stat-value ' + (realizedVal >= 0 ? 'text-green' : 'text-red');
+
+                // Update Metrics Bar
+                document.getElementById('m_today_trades').innerText = state.today_trades || 0;
+                document.getElementById('m_win_rate').innerText = ((state.win_rate || 0) * 100).toFixed(1) + '%';
+                document.getElementById('m_wins_losses').innerText = `${state.today_wins || 0} / ${state.today_losses || 0}`;
+                
+                const rNet = state.realized_net_pnl || 0;
+                const oNet = state.open_net_pnl || 0;
+                const tNet = state.total_net_pnl || 0;
+
+                document.getElementById('m_realized_net').innerText = (rNet >= 0 ? '+$' : '-$') + Math.abs(rNet).toFixed(2);
+                document.getElementById('m_realized_net').className = 'val ' + (rNet >= 0 ? 'text-green' : 'text-red');
+
+                document.getElementById('m_open_net').innerText = (oNet >= 0 ? '+$' : '-$') + Math.abs(oNet).toFixed(2);
+                document.getElementById('m_open_net').className = 'val ' + (oNet >= 0 ? 'text-green' : 'text-red');
+
+                document.getElementById('m_total_net').innerText = (tNet >= 0 ? '+$' : '-$') + Math.abs(tNet).toFixed(2);
+                document.getElementById('m_total_net').className = 'val ' + (tNet >= 0 ? 'text-green' : 'text-red');
+
+                // Active Position Panel
+                const hasPos = pos.side && pos.side !== 'FLAT';
+                const badge = document.getElementById('pos_status_badge');
+                if (hasPos) {
+                    badge.innerText = pos.side + ' OPEN';
+                    badge.style.background = pos.side === 'LONG' ? 'rgba(16, 185, 129, 0.3)' : 'rgba(239, 68, 68, 0.3)';
+                    badge.style.color = pos.side === 'LONG' ? 'var(--accent-green)' : 'var(--accent-red)';
+                } else {
+                    badge.innerText = 'NO POSITION';
+                    badge.style.background = 'rgba(255, 255, 255, 0.1)';
+                    badge.style.color = 'var(--text-muted)';
+                }
+
+                document.getElementById('pos_side').innerText = pos.side || 'FLAT';
+                document.getElementById('pos_side').className = 'pos-val ' + (pos.side === 'LONG' ? 'text-green' : (pos.side === 'SHORT' ? 'text-red' : ''));
+                document.getElementById('pos_qty').innerText = pos.quantity || '0.0';
+                document.getElementById('pos_entry').innerText = '$' + (pos.entry_price || 0).toFixed(3);
+                document.getElementById('pos_ltp').innerText = '$' + (pos.current_price || state.current_price || 0).toFixed(3);
+
+                const gross = pos.gross_pnl || 0;
+                const fees = (pos.estimated_fee || 0) + (pos.gst || 0);
+                const funding = pos.funding || 0;
+                const net = pos.net_pnl || 0;
+
+                document.getElementById('pos_gross').innerText = (gross >= 0 ? '+$' : '-$') + Math.abs(gross).toFixed(2);
+                document.getElementById('pos_gross').className = 'pos-val ' + (gross >= 0 ? 'text-green' : 'text-red');
+
+                document.getElementById('pos_fees').innerText = '-$' + fees.toFixed(2);
+                document.getElementById('pos_funding').innerText = (funding >= 0 ? '+$' : '-$') + Math.abs(funding).toFixed(2);
+
+                document.getElementById('pos_net').innerText = (net >= 0 ? '+$' : '-$') + Math.abs(net).toFixed(2);
+                document.getElementById('pos_net').className = 'pos-val ' + (net >= 0 ? 'text-green' : 'text-red');
+
+                document.getElementById('pos_target').innerText = '$' + (pos.target_price || 0).toFixed(3);
+                document.getElementById('pos_sl').innerText = '$' + (pos.stop_loss_price || 0).toFixed(3);
+
+                if (hasPos) {
+                    const ltp = state.current_price || pos.entry_price;
+                    const tgtDist = Math.abs(pos.target_price - ltp);
+                    const slDist = Math.abs(pos.stop_loss_price - ltp);
+                    document.getElementById('pos_dist_target').innerText = '$' + tgtDist.toFixed(3);
+                    document.getElementById('pos_dist_sl').innerText = '$' + slDist.toFixed(3);
+                } else {
+                    document.getElementById('pos_dist_target').innerText = 'N/A';
+                    document.getElementById('pos_dist_sl').innerText = 'N/A';
+                }
+
+                // Signal & Safety
+                document.getElementById('sys_signal').innerText = state.last_signal || 'HOLD';
+                document.getElementById('sys_mdd').innerText = '-$' + (state.max_drawdown || 0).toFixed(2);
+                document.getElementById('sys_action').innerText = state.last_action || 'FEED ACTIVE';
+                document.getElementById('lbl_last_update').innerText = state.last_update || new Date().toLocaleTimeString();
+
+                // Render Trades
+                if (state.recent_trades && state.recent_trades.length > 0) {
+                    const logContainer = document.getElementById('trade_log_list');
+                    logContainer.innerHTML = state.recent_trades.map(t => `
+                        <div class="log-item">
+                            <span class="${t.side === 'LONG' ? 'text-green' : 'text-red'}">[${t.side}]</span>
+                            <span>$${(t.entry_price||0).toFixed(3)} ➔ $${(t.exit_price||0).toFixed(3)} (${t.exit_reason||'CLOSED'})</span>
+                            <span class="${(t.net_pnl||0) >= 0 ? 'text-green' : 'text-red'}">${(t.net_pnl||0) >= 0 ? '+' : ''}$${(t.net_pnl||0).toFixed(2)}</span>
+                        </div>
+                    `).join('');
+                }
+
+            } catch (err) {
+                console.error('Error fetching Silver paper state:', err);
+            }
+        }
+
+        async function manualTrade(side) {
+            try {
+                const res = await fetch('/api/silver/trade', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ side: side, quantity: 100 })
+                });
+                const data = await res.json();
+                if (data.success) {
+                    fetchState();
+                } else {
+                    alert('Order rejected: ' + data.error);
+                }
+            } catch (err) {
+                alert('API error executing manual paper trade');
+            }
+        }
+
+        async function closePosition() {
+            try {
+                const res = await fetch('/api/silver/close', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ reason: 'MANUAL_DASHBOARD_CLOSE' })
+                });
+                const data = await res.json();
+                if (data.success) {
+                    fetchState();
+                } else {
+                    alert('Close failed: ' + data.error);
+                }
+            } catch (err) {
+                alert('API error closing paper position');
+            }
+        }
+
+        async function resetStats() {
+            if (!confirm('Are you sure you want to reset paper trading statistics?')) return;
+            try {
+                const res = await fetch('/api/silver/reset', { method: 'POST' });
+                const data = await res.json();
+                if (data.success) {
+                    fetchState();
+                }
+            } catch (err) {
+                alert('API error resetting statistics');
+            }
+        }
+
+        window.onload = function() {
+            initTradingView();
+            fetchState();
+            setInterval(fetchState, 3000);
+        };
+    </script>
+</body>
+</html>
