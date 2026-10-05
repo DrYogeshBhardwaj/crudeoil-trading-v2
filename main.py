@@ -1089,6 +1089,97 @@ async def test_mudrex_credentials():
         return JSONResponse({"error": str(err), "traceback": traceback.format_exc()}, status_code=500)
 
 
+@app.get("/api/debug/audit-mudrex-full")
+async def audit_mudrex_full():
+    """Server-side full audit of Mudrex wallet, orders, positions, trades, and local DB reconciliation."""
+    import requests
+    import os
+    import json
+    import sqlite3
+    import traceback
+
+    try:
+        def get_valid_val(val_list: list) -> str:
+            for val in val_list:
+                if val:
+                    v = str(val).strip()
+                    if v and not v.startswith("${{") and "VALUE or" not in v and "REF" not in v:
+                        return v
+            return ""
+
+        mudrex_env_keys = [k for k in os.environ.keys() if "MUDREX" in k.upper()]
+
+        api_key = get_valid_val([
+            os.environ.get("MUDREX_API_KEY"),
+            os.environ.get("MUDREX_KEY"),
+            os.environ.get("BITCOIN_API_KEY"),
+            *[os.environ.get(k) for k in mudrex_env_keys if "KEY" in k.upper()]
+        ])
+
+        api_secret = get_valid_val([
+            os.environ.get("MUDREX_API_SECRET"),
+            os.environ.get("MUDREX_SECRET"),
+            os.environ.get("BITCOIN_API_SECRET"),
+            *[os.environ.get(k) for k in mudrex_env_keys if "SECRET" in k.upper()]
+        ])
+
+        base_url = "https://trade.mudrex.com/fapi/v1"
+        headers = {
+            "X-Authentication": api_secret,
+            "Content-Type": "application/json",
+            "User-Agent": "Mozilla/5.0"
+        }
+        if api_key:
+            headers["X-Api-Key"] = api_key
+
+        audit_data = {
+            "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+            "api_key_present": bool(api_key),
+            "api_secret_present": bool(api_secret),
+            "mudrex_responses": {},
+            "db_trades": {}
+        }
+
+        endpoints = [
+            ("futures_funds_inr", f"{base_url}/futures/funds?trade_currency=INR"),
+            ("spot_funds_inr", f"{base_url}/wallet/funds?currency=INR"),
+            ("open_positions", f"{base_url}/futures/positions?trade_currency=INR"),
+            ("open_orders", f"{base_url}/futures/orders?trade_currency=INR"),
+            ("orders_history", f"{base_url}/futures/orders/history?trade_currency=INR"),
+            ("positions_history", f"{base_url}/futures/positions/history?trade_currency=INR"),
+            ("trades_history", f"{base_url}/futures/trades?trade_currency=INR"),
+            ("wallet_transactions", f"{base_url}/wallet/transactions?currency=INR"),
+            ("futures_transactions", f"{base_url}/futures/transactions?trade_currency=INR")
+        ]
+
+        for name, url in endpoints:
+            try:
+                r = requests.get(url, headers=headers, timeout=6)
+                audit_data["mudrex_responses"][name] = {
+                    "status_code": r.status_code,
+                    "body": r.json() if r.status_code in (200, 201) else r.text[:300]
+                }
+            except Exception as e:
+                audit_data["mudrex_responses"][name] = {"error": str(e)}
+
+        # Load local database records
+        db_path = DB.db_path
+        if os.path.exists(db_path):
+            with sqlite3.connect(db_path) as conn:
+                conn.row_factory = sqlite3.Row
+                cur = conn.cursor()
+                for tbl in ["bitcoin_live_trades", "bitcoin_live_settings", "bitcoin_live5_trades", "bitcoin_updown10_trades"]:
+                    try:
+                        cur.execute(f"SELECT * FROM {tbl}")
+                        audit_data["db_trades"][tbl] = [dict(r) for r in cur.fetchall()]
+                    except Exception as ex:
+                        audit_data["db_trades"][tbl] = f"Error: {ex}"
+
+        return JSONResponse(audit_data)
+    except Exception as err:
+        return JSONResponse({"error": str(err), "traceback": traceback.format_exc()}, status_code=500)
+
+
 
 
 
