@@ -501,7 +501,7 @@
         function initTradingView() {
             tvWidget = new TradingView.widget({
                 "autosize": true,
-                "symbol": "BINANCE:CLUSDT",
+                "symbol": "TVC:USOIL",
                 "interval": "5",
                 "timezone": "Etc/UTC",
                 "theme": "dark",
@@ -530,8 +530,9 @@
                 const pos = state.position || {};
 
                 // Update Header
-                document.getElementById('top_ltp').innerText = '$' + (state.current_price || 0).toFixed(2);
-                document.getElementById('top_status').innerText = state.engine_status || 'RUNNING';
+                const currentPrice = state.crude_price_usd || state.current_price || 0;
+                document.getElementById('top_ltp').innerText = '$' + currentPrice.toFixed(2);
+                document.getElementById('top_status').innerText = state.scanner_status || 'RUNNING';
 
                 const realizedVal = state.realized_net_pnl || 0;
                 const relEl = document.getElementById('top_realized');

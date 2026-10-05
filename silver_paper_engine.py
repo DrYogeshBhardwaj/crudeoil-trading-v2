@@ -670,6 +670,7 @@ class SilverPaperEngine:
         return {
             "symbol": "XAG/USDT",
             "silver_price_usd": price_val,
+            "current_price": price_val,
             "hedge_rate": hedge_rate,
             "price_source": price_source,
             "position": active_pos_dict.get("status") if active_pos_dict else "NONE",
