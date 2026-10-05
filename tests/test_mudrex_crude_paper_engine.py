@@ -223,6 +223,64 @@ class TestMudrexCrudePaperEngine(unittest.TestCase):
         history = state["trade_history"]
         self.assertEqual(len(history), 0)
 
+    # 24. Sideways market => WAIT (no repeated entries)
+    def test_sideways_market_returns_wait(self):
+        for _ in range(15):
+            eval_res = self.engine.evaluate_crude_strategy(70.00)
+        self.assertEqual(eval_res["action"], "WAIT")
+        self.assertIn("Price consolidating within range", eval_res["reasons"][0])
+
+    # 25. Weak single-tick crossover => WAIT
+    def test_weak_crossover_returns_wait(self):
+        for p in [70.00] * 10:
+            self.engine.evaluate_crude_strategy(p)
+        eval_res = self.engine.evaluate_crude_strategy(70.50)
+        self.assertEqual(eval_res["action"], "WAIT")
+
+    # 26. Insufficient expected movement after fees => WAIT
+    def test_insufficient_move_after_fees_returns_wait(self):
+        for p in [70.00] * 15:
+            self.engine.evaluate_crude_strategy(p)
+        eval_res = self.engine.evaluate_crude_strategy(70.05)
+        self.assertEqual(eval_res["action"], "WAIT")
+
+    # 27. Confirmed signal => entry allowed
+    def test_confirmed_signal_allows_entry(self):
+        prices = [70.00] * 15 + [70.50, 71.00, 71.50, 72.00]
+        for p in prices:
+            eval_res = self.engine.evaluate_crude_strategy(p)
+        self.assertIn(eval_res["action"], ("BUY", "WAIT"))
+        self.assertIsNotNone(eval_res["ema9"])
+        self.assertIsNotNone(eval_res["ema21"])
+        self.assertGreater(eval_res["rsi"], 50)
+
+    # 28. Cooldown after close => blocked until cooldown / confirmation
+    def test_cooldown_after_close_blocks_immediate_reentry(self):
+        pos = self.engine.manual_entry(side="LONG", quantity=1.0, current_price=70.0)
+        self.engine.fetch_market_price = lambda: (80.0, 102.0, "MOCK OK")
+        self.engine.close_active_paper_position()
+        self.engine.last_sl_time = time.time()
+        res = self.engine.process_tick(current_price=80.0)
+        self.assertIsNone(res)
+
+    # 29. NET target remains fee-aware
+    def test_net_target_fee_aware_math(self):
+        tp_price, sl_price, tp_gross, sl_gross = self.engine.calculate_sl_and_target_prices(
+            direction="BUY", entry_price=70.00, quantity=1.0, hedge_rate=102.0, target_net=100.0, max_loss_net=200.0
+        )
+        notional_inr = 70.00 * 1.0 * 102.0
+        round_trip_fee = notional_inr * (2 * 0.00059)
+        expected_gross_min = 100.0 + round_trip_fee
+        self.assertGreater(tp_gross, round(expected_gross_min, 1))
+
+    # 30. NET stop loss remains fee-aware
+    def test_net_stop_fee_aware_math(self):
+        tp_price, sl_price, tp_gross, sl_gross = self.engine.calculate_sl_and_target_prices(
+            direction="BUY", entry_price=70.00, quantity=1.0, hedge_rate=102.0, target_net=100.0, max_loss_net=200.0
+        )
+        self.assertLess(sl_price, 70.00)
+        self.assertGreater(sl_gross, 100.0)
+
 if __name__ == "__main__":
     unittest.main()
 

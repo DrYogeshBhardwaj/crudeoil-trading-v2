@@ -322,26 +322,177 @@ class MudrexCrudePaperEngine:
             round(net_pnl_inr, 2)
         )
 
+    def _calculate_ema(self, prices: List[float], period: int) -> Optional[float]:
+        """Calculates Exponential Moving Average over specified period."""
+        if not prices or len(prices) < period:
+            return None
+        k = 2.0 / (period + 1.0)
+        ema = sum(prices[:period]) / float(period)
+        for p in prices[period:]:
+            ema = (p * k) + (ema * (1.0 - k))
+        return round(ema, 4)
+
+    def _calculate_rsi(self, prices: List[float], period: int = 14) -> float:
+        """Calculates Relative Strength Index over specified period."""
+        if not prices or len(prices) < period + 1:
+            return 50.0
+        gains = []
+        losses = []
+        for i in range(1, len(prices)):
+            diff = prices[i] - prices[i - 1]
+            if diff > 0:
+                gains.append(diff)
+                losses.append(0.0)
+            else:
+                gains.append(0.0)
+                losses.append(abs(diff))
+
+        if len(gains) < period:
+            return 50.0
+
+        avg_gain = sum(gains[-period:]) / float(period)
+        avg_loss = sum(losses[-period:]) / float(period)
+
+        if avg_loss == 0.0:
+            return 100.0
+        rs = avg_gain / avg_loss
+        rsi = 100.0 - (100.0 / (1.0 + rs))
+        return round(rsi, 2)
+
     def evaluate_crude_strategy(self, curr_price: float) -> Dict[str, Any]:
-        """Independent Strategy Evaluation for Mudrex Crude Paper Engine."""
+        """Independent Strategy Evaluation for Mudrex Crude Paper Engine with Fee Awareness & Signal Confirmation."""
         if not hasattr(self, "_price_history"):
             self._price_history = []
+            self._consecutive_buy_ticks = 0
+            self._consecutive_sell_ticks = 0
+
         self._price_history.append(curr_price)
-        if len(self._price_history) > 50:
-            self._price_history = self._price_history[-50:]
+        if len(self._price_history) > 100:
+            self._price_history = self._price_history[-100:]
 
         if len(self._price_history) < 5:
-            return {"action": "WAIT", "trend": "NEUTRAL", "confidence": 50, "reasons": ["Warming up price data"]}
+            return {
+                "action": "WAIT",
+                "trend": "NEUTRAL",
+                "confidence": 50,
+                "ema9": None,
+                "ema21": None,
+                "rsi": 50.0,
+                "reasons": ["Warming up price data"]
+            }
 
-        avg_short = sum(self._price_history[-3:]) / 3.0
-        avg_long = sum(self._price_history[-10:]) / len(self._price_history[-10:])
+        ema9 = self._calculate_ema(self._price_history, 9)
+        ema21 = self._calculate_ema(self._price_history, 21)
+        rsi = self._calculate_rsi(self._price_history, 14)
 
-        if avg_short > avg_long * 1.0008:
-            return {"action": "BUY", "trend": "BULLISH", "confidence": 75, "reasons": ["Short-term average crossed above long-term average"]}
-        elif avg_short < avg_long * 0.9992:
-            return {"action": "SELL", "trend": "BEARISH", "confidence": 75, "reasons": ["Short-term average crossed below long-term average"]}
+        if ema9 is None or ema21 is None:
+            ema9 = sum(self._price_history[-3:]) / float(len(self._price_history[-3:]))
+            ema21 = sum(self._price_history) / float(len(self._price_history))
 
-        return {"action": "WAIT", "trend": "NEUTRAL", "confidence": 50, "reasons": ["Price consolidating within range"]}
+        ema9 = round(ema9, 4)
+        ema21 = round(ema21, 4)
+        rsi = round(rsi, 1)
+
+        hedge_rate = getattr(self, "hedge_rate", 102.0) or 102.0
+        qty = getattr(self, "QUANTITY", 1.0) or 1.0
+        notional_inr = curr_price * qty * hedge_rate
+        round_trip_fee_inr = notional_inr * (2.0 * self.TOTAL_FEE_RATE)
+        min_required_move_usd = (self.per_trade_profit_target_inr + round_trip_fee_inr) / (qty * hedge_rate)
+
+        ema_spread = abs(ema9 - ema21)
+        fee_threshold_usd = round(min_required_move_usd * 0.40, 4)
+
+        # 1. Sideways range / consolidation check
+        if ema_spread < 0.20 or (48.0 <= rsi <= 52.0):
+            self._consecutive_buy_ticks = 0
+            self._consecutive_sell_ticks = 0
+            return {
+                "action": "WAIT",
+                "trend": "NEUTRAL",
+                "confidence": 50,
+                "ema9": ema9,
+                "ema21": ema21,
+                "rsi": rsi,
+                "reasons": ["Price consolidating within range"]
+            }
+
+        # 2. Fee-aware move check
+        if ema_spread < fee_threshold_usd:
+            self._consecutive_buy_ticks = 0
+            self._consecutive_sell_ticks = 0
+            return {
+                "action": "WAIT",
+                "trend": "NEUTRAL",
+                "confidence": 55,
+                "ema9": ema9,
+                "ema21": ema21,
+                "rsi": rsi,
+                "reasons": [f"WAIT — MOVE TOO SMALL AFTER FEES (Need spread > ${fee_threshold_usd:.3f})"]
+            }
+
+        # 3. Check Bullish Crossover
+        if ema9 > ema21:
+            self._consecutive_sell_ticks = 0
+            self._consecutive_buy_ticks += 1
+            if rsi > 52.0 and rsi < 75.0 and self._consecutive_buy_ticks >= 2:
+                return {
+                    "action": "BUY",
+                    "trend": "BULLISH",
+                    "confidence": 80,
+                    "ema9": ema9,
+                    "ema21": ema21,
+                    "rsi": rsi,
+                    "reasons": ["Confirmed EMA9 crossed above EMA21 with RSI momentum"]
+                }
+            else:
+                reason_msg = "Weak crossover — awaiting confirmation" if self._consecutive_buy_ticks < 2 else f"RSI out of bounds ({rsi})"
+                return {
+                    "action": "WAIT",
+                    "trend": "BULLISH",
+                    "confidence": 60,
+                    "ema9": ema9,
+                    "ema21": ema21,
+                    "rsi": rsi,
+                    "reasons": [reason_msg]
+                }
+
+        # 4. Check Bearish Crossover
+        elif ema9 < ema21:
+            self._consecutive_buy_ticks = 0
+            self._consecutive_sell_ticks += 1
+            if rsi < 48.0 and rsi > 25.0 and self._consecutive_sell_ticks >= 2:
+                return {
+                    "action": "SELL",
+                    "trend": "BEARISH",
+                    "confidence": 80,
+                    "ema9": ema9,
+                    "ema21": ema21,
+                    "rsi": rsi,
+                    "reasons": ["Confirmed EMA9 crossed below EMA21 with RSI momentum"]
+                }
+            else:
+                reason_msg = "Weak crossover — awaiting confirmation" if self._consecutive_sell_ticks < 2 else f"RSI out of bounds ({rsi})"
+                return {
+                    "action": "WAIT",
+                    "trend": "BEARISH",
+                    "confidence": 60,
+                    "ema9": ema9,
+                    "ema21": ema21,
+                    "rsi": rsi,
+                    "reasons": [reason_msg]
+                }
+
+        self._consecutive_buy_ticks = 0
+        self._consecutive_sell_ticks = 0
+        return {
+            "action": "WAIT",
+            "trend": "NEUTRAL",
+            "confidence": 50,
+            "ema9": ema9,
+            "ema21": ema21,
+            "rsi": rsi,
+            "reasons": ["Price consolidating within range"]
+        }
 
     @property
     def active_position(self) -> Optional[MudrexCrudePaperTradeState]:
@@ -385,6 +536,9 @@ class MudrexCrudePaperEngine:
                 "action": eval_res.get("action", "WAIT"),
                 "trend_state": eval_res.get("trend", "NEUTRAL"),
                 "confidence": eval_res.get("confidence", 50),
+                "ema9": eval_res.get("ema9"),
+                "ema21": eval_res.get("ema21"),
+                "rsi": eval_res.get("rsi"),
                 "reason": reasons_str
             }
             self.evaluation_stream.insert(0, eval_log_entry)
