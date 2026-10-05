@@ -470,6 +470,7 @@ class BitcoinUpDown10Engine:
                 "leverage": self.LEVERAGE,
                 "margin_inr": self.SLOT_MARGIN_INR
             },
+            "trade_history": closed_trades[:100],
             "recent_evaluations": recent_logs,
             "last_update_time_ist": datetime.now().strftime("%Y-%m-%d %H:%M:%S IST")
         }

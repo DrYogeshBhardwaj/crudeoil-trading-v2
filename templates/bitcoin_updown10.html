@@ -535,7 +535,7 @@
     <!-- MAIN LAYOUT -->
     <div class="main-layout">
         
-        <!-- LEFT COLUMN: STREAMLINED 10-SLOT WATCHING VIEW & CHART -->
+        <!-- LEFT COLUMN: STREAMLINED 10-SLOT WATCHING VIEW, CHART & TRADE LEDGER -->
         <div style="display: flex; flex-direction: column; gap: 16px;">
             
             <!-- 10-SLOT POSITIONS WATCHING PANEL -->
@@ -560,6 +560,34 @@
                         </thead>
                         <tbody id="slots-tbody">
                             <!-- Dynamically populated 10 slots -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- COMPLETED TRADES LEDGER (STARTING 100 ENTRIES) -->
+            <div class="card-panel">
+                <div class="panel-header">
+                    <h2>📜 Completed Trade History Ledger (Up to 100 Entries)</h2>
+                    <span style="font-size: 0.75rem; color: var(--text-muted);" id="ledger-count-chip">0 Entries</span>
+                </div>
+
+                <div class="slots-table-wrapper" style="max-height: 400px; overflow-y: auto;">
+                    <table class="slots-table">
+                        <thead>
+                            <tr>
+                                <th>#</th>
+                                <th>Slot / Side</th>
+                                <th>Entry → Exit Time</th>
+                                <th>Entry → Exit Price</th>
+                                <th>Gross P&L</th>
+                                <th>Fees</th>
+                                <th>NET P&L</th>
+                                <th>Exit Reason</th>
+                            </tr>
+                        </thead>
+                        <tbody id="history-tbody">
+                            <!-- Populated with closed trades -->
                         </tbody>
                     </table>
                 </div>
@@ -815,6 +843,39 @@
                     `;
                     tbody.appendChild(tr);
                 });
+
+                // Completed Trade History Ledger (Up to 100 Entries)
+                const historyTbody = document.getElementById('history-tbody');
+                historyTbody.innerHTML = '';
+                const historyList = data.trade_history || [];
+
+                document.getElementById('ledger-count-chip').innerText = `${historyList.length} Entries`;
+
+                if (historyList.length === 0) {
+                    historyTbody.innerHTML = `<tr><td colspan="8" style="text-align: center; color: var(--text-muted); padding: 16px;">No completed paper trades recorded yet.</td></tr>`;
+                } else {
+                    historyList.forEach((t, idx) => {
+                        const tr = document.createElement('tr');
+                        const isLong = t.direction === 'BUY';
+                        const sideBadge = `<span class="status-pill ${isLong ? 'pill-long' : 'pill-short'}">${isLong ? 'LONG' : 'SHORT'}</span>`;
+                        
+                        const netPnlClass = (t.net_pnl || 0) >= 0 ? 'text-green' : 'text-red';
+                        const inTime = t.entry_timestamp ? t.entry_timestamp.split(' ')[1] || t.entry_timestamp : '-';
+                        const outTime = t.exit_timestamp ? t.exit_timestamp.split(' ')[1] || t.exit_timestamp : '-';
+                        
+                        tr.innerHTML = `
+                            <td><strong style="color: #64748b;">${idx + 1}</strong></td>
+                            <td>Slot #${t.slot_index}<br>${sideBadge}</td>
+                            <td style="font-size: 0.75rem; color: #cbd5e1;">${inTime}<br>↓<br>${outTime}</td>
+                            <td class="compact-price">E: ₹${Math.round(t.entry_price || 0).toLocaleString('en-IN')}<br>X: ₹${Math.round(t.exit_price || 0).toLocaleString('en-IN')}</td>
+                            <td style="font-size: 0.8rem;">₹${(t.gross_pnl || 0) >= 0 ? '+' : ''}${(t.gross_pnl || 0).toFixed(2)}</td>
+                            <td style="color: var(--accent-amber); font-size: 0.8rem;">₹${(t.charges || 0).toFixed(2)}</td>
+                            <td><span class="pnl-badge ${netPnlClass}">₹${(t.net_pnl || 0) >= 0 ? '+' : ''}${(t.net_pnl || 0).toFixed(2)}</span></td>
+                            <td style="font-size: 0.75rem; color: var(--text-muted);">${t.exit_reason || 'CLOSED'}</td>
+                        `;
+                        historyTbody.appendChild(tr);
+                    });
+                }
 
                 // Signal & Log Stream
                 const sigBadge = document.getElementById('signal-badge');
