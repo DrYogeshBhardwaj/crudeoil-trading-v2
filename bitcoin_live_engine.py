@@ -1237,8 +1237,12 @@ class BitcoinLiveEngine:
                 )
 
                 # Active position exit checks
-                tp_hit = (net_pnl >= self.per_trade_profit_target_inr) or ((curr_price_usd >= tp_usd) if direction == "BUY" else (curr_price_usd <= tp_usd))
-                sl_hit = (net_pnl <= -self.per_trade_loss_limit_inr) or ((curr_price_usd <= sl_usd) if direction == "BUY" else (curr_price_usd >= sl_usd))
+                if direction == "BUY":
+                    tp_hit = (net_pnl >= self.per_trade_profit_target_inr) or (tp_usd > 0 and curr_price_usd >= tp_usd)
+                    sl_hit = (net_pnl <= -self.per_trade_loss_limit_inr) or (sl_usd > 0 and curr_price_usd <= sl_usd)
+                else:
+                    tp_hit = (net_pnl >= self.per_trade_profit_target_inr) or (tp_usd > 0 and curr_price_usd <= tp_usd)
+                    sl_hit = (net_pnl <= -self.per_trade_loss_limit_inr) or (sl_usd > 0 and curr_price_usd >= sl_usd)
                 reversal_hit = False
 
                 if tp_hit or sl_hit or reversal_hit:
@@ -1380,9 +1384,13 @@ class BitcoinLiveEngine:
                     "direction": action,
                     "quantity": qty,
                     "entry_price": curr_price_inr,
+                    "entry_price_usd": curr_price_usd,
+                    "hedge_rate": hedge_rate,
                     "stop_loss": sl_val,
+                    "stop_loss_usd": sl_usd,
                     "stoploss_order_id": None,
                     "target": tp_val,
+                    "target_usd": tp_usd,
                     "trend_state": eval_res.get("trend", "NEUTRAL"),
                     "confidence": eval_res.get("confidence", 50),
                     "reasons": eval_res.get("reasons", []),
