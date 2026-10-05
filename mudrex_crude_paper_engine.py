@@ -618,6 +618,9 @@ class MudrexCrudePaperEngine:
         self.today_realized_pnl = round(today_sum, 2)
         self.db.save_mudrex_crude_paper_setting("today_realized_pnl", str(self.today_realized_pnl))
 
+    def get_state(self) -> Dict[str, Any]:
+        return self.get_dashboard_state()
+
     def get_dashboard_state(self) -> Dict[str, Any]:
         """Returns JSON state payload for Mudrex Crude Paper Dashboard UI."""
         curr_price, hedge_rate, price_source = self.fetch_market_price()
