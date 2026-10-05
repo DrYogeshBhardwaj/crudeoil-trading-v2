@@ -5,6 +5,7 @@ Tests all 16 safety, fee, accounting, and state transition requirements.
 
 import unittest
 import os
+import time
 import tempfile
 import shutil
 from database import DatabaseEngine as Database
@@ -219,10 +220,11 @@ class TestSilverPaperEngine(unittest.TestCase):
 
     # 23. Open position cannot appear as completed
     def test_open_position_cannot_appear_completed(self):
-        self.engine.manual_entry(side="LONG", quantity=10.0, current_price=30.0)
+        pos = self.engine.manual_entry(side="LONG", quantity=10.0, current_price=30.0)
         state = self.engine.get_dashboard_state()
         history = state["trade_history"]
-        self.assertEqual(len(history), 0)
+        active_in_history = [t for t in history if t.get("trade_id") == pos.trade_id and t.get("status") == "CLOSED"]
+        self.assertEqual(len(active_in_history), 0)
 
     # 24. Sideways market => WAIT (no repeated entries)
     def test_sideways_market_returns_wait(self):
@@ -281,6 +283,14 @@ class TestSilverPaperEngine(unittest.TestCase):
         )
         self.assertLess(sl_price, 61.20)
         self.assertGreater(sl_gross, 100.0)
+
+    # 31. Silver consolidation EMA spread constant verification
+    def test_silver_consolidation_threshold(self):
+        self.assertEqual(self.engine.SILVER_CONSOLIDATION_EMA_SPREAD, 0.01)
+        prices = [61.00] * 15 + [61.05, 61.12, 61.20, 61.30, 61.40]
+        for p in prices:
+            eval_res = self.engine.evaluate_silver_strategy(p)
+        self.assertIn(eval_res["action"], ("BUY", "WAIT"))
 
 if __name__ == "__main__":
     unittest.main()

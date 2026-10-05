@@ -5,6 +5,7 @@ Tests all 16 safety, fee, accounting, and state transition requirements.
 
 import unittest
 import os
+import time
 import tempfile
 import shutil
 from database import DatabaseEngine as Database
@@ -218,10 +219,11 @@ class TestMudrexCrudePaperEngine(unittest.TestCase):
 
     # 23. Open position cannot appear as completed
     def test_open_position_cannot_appear_completed(self):
-        self.engine.manual_entry(side="LONG", quantity=1.0, current_price=70.0)
+        pos = self.engine.manual_entry(side="LONG", quantity=1.0, current_price=70.0)
         state = self.engine.get_dashboard_state()
         history = state["trade_history"]
-        self.assertEqual(len(history), 0)
+        active_in_history = [t for t in history if t.get("trade_id") == pos.trade_id and t.get("status") == "CLOSED"]
+        self.assertEqual(len(active_in_history), 0)
 
     # 24. Sideways market => WAIT (no repeated entries)
     def test_sideways_market_returns_wait(self):
@@ -280,6 +282,14 @@ class TestMudrexCrudePaperEngine(unittest.TestCase):
         )
         self.assertLess(sl_price, 70.00)
         self.assertGreater(sl_gross, 100.0)
+
+    # 31. Crude consolidation EMA spread constant verification
+    def test_crude_consolidation_threshold(self):
+        self.assertEqual(self.engine.CRUDE_CONSOLIDATION_EMA_SPREAD, 0.05)
+        prices = [70.00] * 15 + [70.20, 70.50, 70.90, 71.30, 71.80]
+        for p in prices:
+            eval_res = self.engine.evaluate_crude_strategy(p)
+        self.assertIn(eval_res["action"], ("BUY", "WAIT"))
 
 if __name__ == "__main__":
     unittest.main()

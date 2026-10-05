@@ -168,6 +168,7 @@ class MudrexCrudePaperEngine:
         self.MAKER_FEE_RATE = 0.0002  # 0.02%
         self.GST_RATE = 0.18          # 18% GST on trading fee
         self.TOTAL_FEE_RATE = 0.00059 # 0.059% per side inclusive of GST
+        self.CRUDE_CONSOLIDATION_EMA_SPREAD = 0.05 # $0.05 USD EMA spread consolidation threshold
 
         # Load Persistent Risk Settings
         self.today_date = datetime.now().strftime("%Y-%m-%d")
@@ -403,7 +404,7 @@ class MudrexCrudePaperEngine:
         fee_threshold_usd = round(min_required_move_usd * 0.40, 4)
 
         # 1. Sideways range / consolidation check
-        if ema_spread < 0.20 or (48.0 <= rsi <= 52.0):
+        if ema_spread < self.CRUDE_CONSOLIDATION_EMA_SPREAD or (48.0 <= rsi <= 52.0):
             self._consecutive_buy_ticks = 0
             self._consecutive_sell_ticks = 0
             return {
