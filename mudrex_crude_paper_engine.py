@@ -171,7 +171,7 @@ class MudrexCrudePaperEngine:
         self.CRUDE_CONSOLIDATION_EMA_SPREAD = 0.015 # $0.015 USD EMA spread consolidation threshold
 
         # Load Persistent Risk Settings
-        self.today_date = datetime.now().strftime("%Y-%m-%d")
+        self.today_date = datetime.now(timezone(timedelta(hours=5, minutes=30))).strftime("%Y-%m-%d")
         saved_date = self.db.load_mudrex_crude_paper_setting("today_date", self.today_date)
         if saved_date != self.today_date:
             self.db.save_mudrex_crude_paper_setting("today_date", self.today_date)
@@ -628,7 +628,7 @@ class MudrexCrudePaperEngine:
             self.db.save_mudrex_crude_paper_trade(position.to_dict())
             return None
 
-        now_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        now_str = datetime.now(timezone(timedelta(hours=5, minutes=30))).strftime("%Y-%m-%d %H:%M:%S")
         _, gross_inr, entry_fee, exit_fee, total_charges, net_inr = self.calculate_position_pnl(
             position, exit_price, position.hedge_rate
         )
@@ -708,7 +708,7 @@ class MudrexCrudePaperEngine:
             side, curr_price, qty, hedge_rate, self.per_trade_profit_target_inr, self.per_trade_loss_limit_inr
         )
 
-        now_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        now_str = datetime.now(timezone(timedelta(hours=5, minutes=30))).strftime("%Y-%m-%d %H:%M:%S")
         trade_id = f"CRUDE_PAPER_{int(time.time())}"
         v_entry = curr_price * qty * hedge_rate
         f_entry = round(v_entry * self.TOTAL_FEE_RATE, 2)
@@ -793,7 +793,7 @@ class MudrexCrudePaperEngine:
     def recalculate_realized_pnl(self):
         """Recalculates today's realized NET P&L for Mudrex Crude paper engine excluding invalid records."""
         all_trades = self.db.load_all_mudrex_crude_paper_trades()
-        today_str = datetime.now().strftime("%Y-%m-%d")
+        today_str = datetime.now(timezone(timedelta(hours=5, minutes=30))).strftime("%Y-%m-%d")
         today_sum = 0.0
         for t in all_trades:
             if self._is_valid_closed_trade(t):

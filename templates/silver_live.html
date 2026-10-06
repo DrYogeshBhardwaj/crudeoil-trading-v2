@@ -760,24 +760,27 @@
                 }
             }
 
-            // Completed Trade History Table
-            if (state.trade_history && state.trade_history.length > 0) {
-                const tbody = document.getElementById('trade_history_tbody');
-                if (tbody) {
-                    tbody.innerHTML = state.trade_history.map((t, idx) => `
+            // Completed Trade History Table (Filter only CLOSED trades)
+            const tbody = document.getElementById('trade_history_tbody');
+            if (tbody) {
+                const closedTrades = (state.trade_history || []).filter(t => t.status === 'CLOSED');
+                if (closedTrades.length > 0) {
+                    tbody.innerHTML = closedTrades.map((t, idx) => `
                         <tr>
                             <td>#${idx + 1}</td>
                             <td style="font-size:0.7rem; color:#cbd5e1; white-space:nowrap; font-family:'JetBrains Mono', monospace;">${t.exit_timestamp || t.entry_timestamp || t.timestamp || '-'}</td>
                             <td><span class="badge-status ${t.side === 'LONG' || t.direction === 'BUY' ? 'badge-green' : 'badge-red'}">${t.side || t.direction}</span></td>
-                            <td style="font-family:'JetBrains Mono',monospace;">₹${Number(t.entry_price||0).toLocaleString('en-IN')}</td>
-                            <td>${t.quantity || 100}</td>
-                            <td style="font-family:'JetBrains Mono',monospace;">₹${Number(t.exit_price||0).toLocaleString('en-IN')}</td>
+                            <td style="font-family:'JetBrains Mono',monospace;">$${Number(t.entry_price||0).toFixed(2)}</td>
+                            <td>${t.quantity || 10}</td>
+                            <td style="font-family:'JetBrains Mono',monospace;">$${Number(t.exit_price||0).toFixed(2)}</td>
                             <td style="color:${(t.gross_pnl||0)>=0?'#10b981':'#ef4444'};">₹${Number(t.gross_pnl||0).toFixed(2)}</td>
                             <td style="color:#ef4444;">₹${Number(t.total_charges||t.estimated_fee||0).toFixed(2)}</td>
                             <td style="font-weight:800; color:${(t.net_pnl||0)>=0?'#10b981':'#ef4444'};">₹${Number(t.net_pnl||0).toFixed(2)}</td>
                             <td style="font-size:0.72rem; color:#f59e0b;">${t.exit_reason || 'CLOSED'}</td>
                         </tr>
                     `).join('');
+                } else {
+                    tbody.innerHTML = '<tr><td colspan="10" style="text-align:center; color:#94a3b8; font-size:0.8rem; padding:12px;">No completed paper trades yet today</td></tr>';
                 }
             }
 
