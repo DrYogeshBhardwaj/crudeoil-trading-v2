@@ -669,7 +669,7 @@ class BitcoinLiveEngine:
             DB.save_bitcoin_live_setting("today_realized_pnl", "0.0")
 
         self.per_trade_loss_limit_inr = float(DB.load_bitcoin_live_setting("per_trade_loss_limit_inr", "200.0"))
-        self.per_trade_profit_target_inr = float(DB.load_bitcoin_live_setting("per_trade_profit_target_inr", "100.0"))
+        self.per_trade_profit_target_inr = float(DB.load_bitcoin_live_setting("per_trade_profit_target_inr", "450.0"))
         self.daily_loss_limit_inr = float(DB.load_bitcoin_live_setting("daily_loss_limit_inr", "1000.0"))
 
         DB.save_bitcoin_live_setting("per_trade_loss_limit_inr", str(self.per_trade_loss_limit_inr))
@@ -857,6 +857,7 @@ class BitcoinLiveEngine:
     def save_settings(self):
         """Persists settings & state flags to SQLite DB."""
         DB.save_bitcoin_live_setting("per_trade_loss_limit_inr", str(self.per_trade_loss_limit_inr))
+        DB.save_bitcoin_live_setting("per_trade_profit_target_inr", str(self.per_trade_profit_target_inr))
         DB.save_bitcoin_live_setting("daily_loss_limit_inr", str(self.daily_loss_limit_inr))
         DB.save_bitcoin_live_setting("circuit_breaker_tripped", "TRUE" if self.circuit_breaker_tripped else "FALSE")
         DB.save_bitcoin_live_setting("circuit_breaker_reason", self.circuit_breaker_reason)
@@ -996,6 +997,8 @@ class BitcoinLiveEngine:
         """
         raw_db_pos = DB.load_active_bitcoin_live_position()
         m_positions = self.adapter.fetch_open_positions()
+        if m_positions is None:
+            return raw_db_pos
 
         m_pos = m_positions[0] if (isinstance(m_positions, list) and len(m_positions) > 0) else {}
         m_pos_id = m_pos.get("position_id") or m_pos.get("id")
@@ -1277,7 +1280,7 @@ class BitcoinLiveEngine:
                     close_success = True
                     if m_pos_id and self.live_trading_enabled:
                         # REQUIREMENT 8: Verify position exists on exchange before sending close request
-                        open_positions = self.adapter.fetch_open_positions()
+                        open_positions = self.adapter.fetch_open_positions() or []
                         is_open_on_exchange = any(
                             (str(p.get("position_id") or p.get("id")) == str(m_pos_id))
                             for p in open_positions

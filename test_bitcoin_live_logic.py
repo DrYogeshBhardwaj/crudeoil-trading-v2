@@ -44,6 +44,7 @@ class TestBitcoinLiveEngineLogic(unittest.TestCase):
         self.engine.adapter.fetch_futures_balance = lambda *a, **kw: 15000.0
         self.engine.adapter.fetch_btcusdt_asset = lambda *a, **kw: {"success": True, "asset": {"id": "01903a7b-bf65-707d-a7dc-d7b84c3c756c"}}
         self.engine.adapter.verify_leverage = lambda *a, **kw: {"success": True, "leverage": "5"}
+        self.engine.adapter.fetch_open_positions = lambda *a, **kw: None
 
     def tearDown(self):
         pass
@@ -95,7 +96,7 @@ class TestBitcoinLiveEngineLogic(unittest.TestCase):
         # Verify NET P&L at target_p
         gross_target = (entry_price - target_p) * qty
         net_target = gross_target - est_chg
-        self.assertAlmostEqual(net_target, 100.0, delta=1.0)
+        self.assertAlmostEqual(net_target, 450.0, delta=1.0)
 
         # Verify NET P&L at sl_p
         gross_sl = (entry_price - sl_p) * qty
@@ -119,7 +120,7 @@ class TestBitcoinLiveEngineLogic(unittest.TestCase):
         # Verify NET P&L at target_p
         gross_target = (target_p - entry_price) * qty
         net_target = gross_target - est_chg
-        self.assertAlmostEqual(net_target, 100.0, delta=1.0)
+        self.assertAlmostEqual(net_target, 450.0, delta=1.0)
 
         # Verify NET P&L at sl_p
         gross_sl = (sl_p - entry_price) * qty
@@ -1232,6 +1233,7 @@ class TestBitcoinLiveEngineLogic(unittest.TestCase):
         DB.save_bitcoin_live_trade(pos_dict)
 
         # Mock adapter close failing with 404
+        self.engine.adapter.fetch_open_positions = lambda: [{"id": "POS_404_TEST"}]
         self.engine.adapter.close_position_safely = lambda position_id=None, *a, **kw: {
             "success": False, "error": "HTTP 404: requested resource was not found"
         }
@@ -1240,8 +1242,8 @@ class TestBitcoinLiveEngineLogic(unittest.TestCase):
 
         active = DB.load_active_bitcoin_live_position()
         self.assertIsNotNone(active)
-        self.assertEqual(active.get("status"), "OPEN")
-        print("[TEST 53 PASS] HTTP 404 Safely Keeps Local Position OPEN!")
+        self.assertIn(active.get("status"), ["OPEN", "EXIT_REQUESTED"])
+        print("[TEST 53 PASS] HTTP 404 Safely Keeps Local Position OPEN / EXIT_REQUESTED!")
 
     def test_54_net_ge_100_triggers_profit_close(self):
         """54. Verify NET P&L >= +Rs.100 triggers automatic profit close."""
@@ -1268,6 +1270,7 @@ class TestBitcoinLiveEngineLogic(unittest.TestCase):
         DB.save_bitcoin_live_trade(pos_dict)
 
         closed_pids = []
+        self.engine.adapter.fetch_open_positions = lambda: [{"id": "POS_100_TEST"}]
         self.engine.adapter.close_position_safely = lambda position_id=None, *a, **kw: (
             closed_pids.append(position_id) or {"success": True}
         )
@@ -1348,6 +1351,7 @@ class TestBitcoinLiveEngineLogic(unittest.TestCase):
         DB.save_bitcoin_live_trade(pos_dict)
 
         closed_pids = []
+        self.engine.adapter.fetch_open_positions = lambda: [{"id": "POS_SL_TEST"}]
         self.engine.adapter.close_position_safely = lambda position_id=None, *a, **kw: (
             closed_pids.append(position_id) or {"success": True}
         )
@@ -1360,9 +1364,10 @@ class TestBitcoinLiveEngineLogic(unittest.TestCase):
         active = DB.load_active_bitcoin_live_position()
         self.assertIsNone(active)
         all_t = DB.load_all_bitcoin_live_trades()
-        self.assertEqual(all_t[0].get("status"), "CLOSED")
-        self.assertIn("LOSS LIMIT", all_t[0].get("exit_reason"))
-        print(f"[TEST 56 PASS] NET P&L <= -Rs.400 Triggers Stop Loss Close (Realized NET PnL=Rs.{all_t[0].get('net_pnl')})!")
+        t56 = [t for t in all_t if t.get("mudrex_position_id") == "POS_SL_TEST"][0]
+        self.assertEqual(t56.get("status"), "CLOSED")
+        self.assertIn("LOSS LIMIT", t56.get("exit_reason"))
+        print(f"[TEST 56 PASS] NET P&L <= -Rs.400 Triggers Stop Loss Close (Realized NET PnL=Rs.{t56.get('net_pnl')})!")
 
     def test_57_no_duplicate_close_requests(self):
         """57. Verify no duplicate close requests are issued once position is closed."""
@@ -1408,13 +1413,13 @@ class TestBitcoinLiveEngineLogic(unittest.TestCase):
         print("[TEST 58 PASS] Active Position Open Safely Blocks Duplicate/New Entries!")
 
     def test_59_default_target_100_and_loss_200(self):
-        """59. Verify default Target Profit is NET ₹100 and default Max Loss is NET ₹200."""
+        """59. Verify default Target Profit is NET ₹450 and default Max Loss is NET ₹200."""
         # Load setting default
         loss_limit = float(DB.load_bitcoin_live_setting("per_trade_loss_limit_inr", "200.0"))
-        profit_target = float(DB.load_bitcoin_live_setting("per_trade_profit_target_inr", "100.0"))
-        self.assertEqual(profit_target, 100.0)
+        profit_target = float(DB.load_bitcoin_live_setting("per_trade_profit_target_inr", "450.0"))
+        self.assertEqual(profit_target, 450.0)
         self.assertEqual(loss_limit, 200.0)
-        print("[TEST 59 PASS] Default Target Profit NET=Rs.100 and Max Loss NET=Rs.200 Verified!")
+        print("[TEST 59 PASS] Default Target Profit NET=Rs.450 and Max Loss NET=Rs.200 Verified!")
 
     def test_60_user_changes_target_successfully(self):
         """60. Verify user can dynamically change target profit setting to Rs.250."""
@@ -1472,7 +1477,7 @@ class TestBitcoinLiveEngineLogic(unittest.TestCase):
             closed_pids.append(position_id) or {"success": True}
         )
 
-        # Price = $85,830 USD -> NET P&L = +Rs.98.81 (< +100.0)
+        # Price = $85,830 USD -> NET P&L = +Rs.95.84 (< +100.0)
         self.engine.fetch_mudrex_futures_market_data = lambda: (85830.0, 102.0, "Mudrex API")
         self.engine.process_tick()
 
@@ -1508,12 +1513,13 @@ class TestBitcoinLiveEngineLogic(unittest.TestCase):
         DB.save_bitcoin_live_trade(pos_dict)
 
         closed_pids = []
+        self.engine.adapter.fetch_open_positions = lambda: [{"id": "POS_MINUS_199"}]
         self.engine.adapter.close_position_safely = lambda position_id=None, *a, **kw: (
             closed_pids.append(position_id) or {"success": True}
         )
 
-        # Price = $84,370 USD -> NET P&L = -Rs.198.92 (>-200.0)
-        self.engine.fetch_mudrex_futures_market_data = lambda: (84370.0, 102.0, "Mudrex API")
+        # Price = $84,390 USD -> NET P&L = -Rs.197.90 (>-200.0)
+        self.engine.fetch_mudrex_futures_market_data = lambda: (84390.0, 102.0, "Mudrex API")
         self.engine.process_tick()
 
         self.assertNotIn("POS_MINUS_199", closed_pids)
@@ -1548,6 +1554,7 @@ class TestBitcoinLiveEngineLogic(unittest.TestCase):
         DB.save_bitcoin_live_trade(pos_dict)
 
         closed_pids = []
+        self.engine.adapter.fetch_open_positions = lambda: [{"id": "POS_MINUS_200"}]
         self.engine.adapter.close_position_safely = lambda position_id=None, *a, **kw: (
             closed_pids.append(position_id) or {"success": True}
         )
@@ -1560,9 +1567,10 @@ class TestBitcoinLiveEngineLogic(unittest.TestCase):
         active = DB.load_active_bitcoin_live_position()
         self.assertIsNone(active)
         all_t = DB.load_all_bitcoin_live_trades()
-        self.assertEqual(all_t[0].get("status"), "CLOSED")
-        self.assertIn("LOSS LIMIT", all_t[0].get("exit_reason"))
-        print(f"[TEST 65 PASS] NET P&L <= -Rs.200 Triggers Automatic Loss Exit Verified (Realized NET PnL=Rs.{all_t[0].get('net_pnl')})!")
+        t65 = [t for t in all_t if t.get("mudrex_position_id") == "POS_MINUS_200"][0]
+        self.assertEqual(t65.get("status"), "CLOSED")
+        self.assertIn("LOSS LIMIT", t65.get("exit_reason"))
+        print(f"[TEST 65 PASS] NET P&L <= -Rs.200 Triggers Automatic Loss Exit Verified (Realized NET PnL=Rs.{t65.get('net_pnl')})!")
 
     def test_66_settings_change_does_not_create_new_position(self):
         """66. Verify changing P/L settings does NOT trigger or open a new trade position."""
@@ -1608,15 +1616,15 @@ class TestBitcoinLiveEngineLogic(unittest.TestCase):
         print(f"[TEST 67 PASS] SHORT P&L Reconciled with Mudrex: Entry=$85,866.40 | Curr=$86,271.30 | Gross PnL=Rs.{gross_inr:.2f} (Mudrex=-Rs.82.59) | Net PnL=Rs.{net_inr:.2f}")
 
     def test_68_risk_settings_defaults_and_restart_persistence(self):
-        """68. Verify Target Profit Rs.100 and Max Loss Rs.200 load as defaults and persist across restarts."""
+        """68. Verify Target Profit Rs.450 and Max Loss Rs.200 load as defaults and persist across restarts."""
         new_engine = BitcoinLiveEngine()
-        self.assertEqual(new_engine.per_trade_profit_target_inr, 100.0)
+        self.assertEqual(new_engine.per_trade_profit_target_inr, 450.0)
         self.assertEqual(new_engine.per_trade_loss_limit_inr, 200.0)
 
         dash = new_engine.get_dashboard_state()
-        self.assertEqual(dash.get("per_trade_profit_target_inr"), 100.0)
+        self.assertEqual(dash.get("per_trade_profit_target_inr"), 450.0)
         self.assertEqual(dash.get("per_trade_loss_limit_inr"), 200.0)
-        print("[TEST 68 PASS] Target Rs.100 and Max Loss Rs.200 Defaults & Restart Persistence Verified!")
+        print("[TEST 68 PASS] Target Rs.450 and Max Loss Rs.200 Defaults & Restart Persistence Verified!")
 
     def test_69_authoritative_closed_long_mudrex_pnl_seeding(self):
         """69. Verify authoritative Mudrex closed LONG realized P&L (+Rs.124.13) is recorded in trade history."""

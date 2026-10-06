@@ -165,27 +165,44 @@ class BitcoinStrategyEvaluator:
         sl_price = 0.0
         target_price = 0.0
 
-        if score >= 4:
+        ema_spread = abs(ema9 - ema21)
+        # Fee-Aware Move Check: Require EMA spread >= ₹2,500 INR (~$25 USD) to cover Mudrex fees
+        if ema_spread < 2500.0:
+            return {
+                "action": "WAIT",
+                "trend": "NEUTRAL",
+                "confidence": 50,
+                "reasons": [f"WAIT — BTC momentum move too small after fees (Need EMA spread > ₹2,500, current: ₹{ema_spread:,.0f})"],
+                "sl_price": 0.0,
+                "target_price": 0.0,
+                "ema9": ema9,
+                "ema21": ema21,
+                "ema50": ema50,
+                "rsi": rsi,
+                "atr": atr
+            }
+
+        if score >= 6:
             trend = "BULLISH"
             action = "BUY"
-            confidence = min(95, 65 + (score * 5))
-            sl_distance = max(15000.0, round(1.5 * atr, 2))
-            target_distance = max(30000.0, round(3.0 * atr, 2))
+            confidence = min(95, 70 + (score * 4))
+            sl_distance = max(18000.0, round(1.5 * atr, 2))
+            target_distance = max(45000.0, round(3.5 * atr, 2))
             sl_price = round(current_price - sl_distance, 2)
             target_price = round(current_price + target_distance, 2)
-        elif score <= -4:
+        elif score <= -6:
             trend = "BEARISH"
             action = "SELL"
-            confidence = min(95, 65 + (abs(score) * 5))
-            sl_distance = max(15000.0, round(1.5 * atr, 2))
-            target_distance = max(30000.0, round(3.0 * atr, 2))
+            confidence = min(95, 70 + (abs(score) * 4))
+            sl_distance = max(18000.0, round(1.5 * atr, 2))
+            target_distance = max(45000.0, round(3.5 * atr, 2))
             sl_price = round(current_price + sl_distance, 2)
             target_price = round(current_price - target_distance, 2)
         else:
             trend = "NEUTRAL"
             action = "WAIT"
             confidence = 50
-            reasons.append("Crypto market in exact neutral balance / no directional bias")
+            reasons.append("Crypto market in exact neutral balance / awaiting signal confirmation")
 
         return {
             "action": action,
