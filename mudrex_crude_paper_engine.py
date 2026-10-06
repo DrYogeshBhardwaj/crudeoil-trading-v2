@@ -178,7 +178,10 @@ class MudrexCrudePaperEngine:
             self.db.save_mudrex_crude_paper_setting("today_realized_pnl", "0.0")
 
         self.per_trade_loss_limit_inr = float(self.db.load_mudrex_crude_paper_setting("per_trade_loss_limit_inr", "200.0"))
-        self.per_trade_profit_target_inr = float(self.db.load_mudrex_crude_paper_setting("per_trade_profit_target_inr", "100.0"))
+        saved_target = float(self.db.load_mudrex_crude_paper_setting("per_trade_profit_target_inr", "450.0"))
+        if saved_target < 450.0:
+            saved_target = 450.0
+        self.per_trade_profit_target_inr = saved_target
         self.daily_loss_limit_inr = float(self.db.load_mudrex_crude_paper_setting("daily_loss_limit_inr", "1000.0"))
         self.today_realized_pnl = float(self.db.load_mudrex_crude_paper_setting("today_realized_pnl", "0.0"))
 
