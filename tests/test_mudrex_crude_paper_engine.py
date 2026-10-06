@@ -285,7 +285,7 @@ class TestMudrexCrudePaperEngine(unittest.TestCase):
 
     # 31. Crude consolidation EMA spread constant verification
     def test_crude_consolidation_threshold(self):
-        self.assertEqual(self.engine.CRUDE_CONSOLIDATION_EMA_SPREAD, 0.05)
+        self.assertEqual(self.engine.CRUDE_CONSOLIDATION_EMA_SPREAD, 0.015)
         prices = [70.00] * 15 + [70.20, 70.50, 70.90, 71.30, 71.80]
         for p in prices:
             eval_res = self.engine.evaluate_crude_strategy(p)

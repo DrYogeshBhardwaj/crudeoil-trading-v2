@@ -286,7 +286,7 @@ class TestSilverPaperEngine(unittest.TestCase):
 
     # 31. Silver consolidation EMA spread constant verification
     def test_silver_consolidation_threshold(self):
-        self.assertEqual(self.engine.SILVER_CONSOLIDATION_EMA_SPREAD, 0.01)
+        self.assertEqual(self.engine.SILVER_CONSOLIDATION_EMA_SPREAD, 0.005)
         prices = [61.00] * 15 + [61.05, 61.12, 61.20, 61.30, 61.40]
         for p in prices:
             eval_res = self.engine.evaluate_silver_strategy(p)

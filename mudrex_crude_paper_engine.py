@@ -168,7 +168,7 @@ class MudrexCrudePaperEngine:
         self.MAKER_FEE_RATE = 0.0002  # 0.02%
         self.GST_RATE = 0.18          # 18% GST on trading fee
         self.TOTAL_FEE_RATE = 0.00059 # 0.059% per side inclusive of GST
-        self.CRUDE_CONSOLIDATION_EMA_SPREAD = 0.05 # $0.05 USD EMA spread consolidation threshold
+        self.CRUDE_CONSOLIDATION_EMA_SPREAD = 0.015 # $0.015 USD EMA spread consolidation threshold
 
         # Load Persistent Risk Settings
         self.today_date = datetime.now().strftime("%Y-%m-%d")
@@ -401,10 +401,10 @@ class MudrexCrudePaperEngine:
         min_required_move_usd = (self.per_trade_profit_target_inr + round_trip_fee_inr) / (qty * hedge_rate)
 
         ema_spread = abs(ema9 - ema21)
-        fee_threshold_usd = round(min_required_move_usd * 0.40, 4)
+        fee_threshold_usd = round(min_required_move_usd * 0.008, 4)
 
         # 1. Sideways range / consolidation check
-        if ema_spread < self.CRUDE_CONSOLIDATION_EMA_SPREAD or (48.0 <= rsi <= 52.0):
+        if ema_spread < self.CRUDE_CONSOLIDATION_EMA_SPREAD:
             self._consecutive_buy_ticks = 0
             self._consecutive_sell_ticks = 0
             return {
@@ -435,7 +435,7 @@ class MudrexCrudePaperEngine:
         if ema9 > ema21:
             self._consecutive_sell_ticks = 0
             self._consecutive_buy_ticks += 1
-            if rsi > 52.0 and rsi < 75.0 and self._consecutive_buy_ticks >= 2:
+            if rsi >= 52.0 and self._consecutive_buy_ticks >= 2:
                 return {
                     "action": "BUY",
                     "trend": "BULLISH",
@@ -461,7 +461,7 @@ class MudrexCrudePaperEngine:
         elif ema9 < ema21:
             self._consecutive_buy_ticks = 0
             self._consecutive_sell_ticks += 1
-            if rsi < 48.0 and rsi > 25.0 and self._consecutive_sell_ticks >= 2:
+            if rsi <= 48.0 and self._consecutive_sell_ticks >= 2:
                 return {
                     "action": "SELL",
                     "trend": "BEARISH",
