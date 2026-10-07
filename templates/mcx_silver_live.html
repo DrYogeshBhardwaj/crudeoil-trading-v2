@@ -1,0 +1,382 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>MCX SILVERM (SILVER MINI) — Dhan Paper Engine</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><rect width=%22100%22 height=%22100%22 rx=%2220%22 fill=%22%23cbd5e1%22/><text y=%22.9em%22 x=%2250%25%22 dominant-baseline=%22middle%22 text-anchor=%22middle%22 font-size=%2250%22 font-weight=%22bold%22 fill=%22%230f172a%22>Ag</text></svg>">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;700;800&display=swap" rel="stylesheet">
+    <script type="text/javascript" src="https://s3.tradingview.com/tv.js"></script>
+    <style>
+        :root {
+            --bg-dark: #070a12;
+            --card-bg: rgba(15, 23, 42, 0.95);
+            --card-border: rgba(148, 163, 184, 0.25);
+            --accent-silver: #e2e8f0;
+            --accent-green: #10b981;
+            --accent-red: #ef4444;
+            --accent-blue: #38bdf8;
+            --text-main: #f8fafc;
+            --text-muted: #94a3b8;
+        }
+
+        * { box-sizing: border-box; }
+
+        html, body {
+            height: 100vh;
+            margin: 0;
+            padding: 0;
+            background-color: var(--bg-dark);
+            color: var(--text-main);
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            overflow: hidden;
+        }
+
+        .dashboard-container {
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            padding: 10px;
+            gap: 10px;
+        }
+
+        .header-bar {
+            height: 48px;
+            background: linear-gradient(90deg, #1e293b, #0f172a);
+            border: 1px solid rgba(226, 232, 240, 0.3);
+            border-radius: 8px;
+            padding: 0 16px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-shrink: 0;
+        }
+
+        .header-title h1 {
+            font-size: 1.1rem;
+            font-weight: 800;
+            margin: 0;
+            color: var(--accent-silver);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .badge-mcx {
+            background: rgba(56, 189, 248, 0.2);
+            color: #38bdf8;
+            border: 1px solid #38bdf8;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 0.72rem;
+            font-weight: 800;
+        }
+
+        .main-layout {
+            flex: 1;
+            display: grid;
+            grid-template-columns: 1fr 420px;
+            gap: 10px;
+            min-height: 0;
+        }
+
+        .left-col {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            min-height: 0;
+        }
+
+        .panel-card {
+            background: var(--card-bg);
+            border: 1px solid var(--card-border);
+            border-radius: 8px;
+            padding: 12px;
+        }
+
+        .chart-box {
+            flex: 1;
+            min-height: 0;
+            background: #000;
+            border-radius: 8px;
+            overflow: hidden;
+            border: 1px solid var(--card-border);
+        }
+
+        .right-col {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            min-height: 0;
+        }
+
+        .pnl-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 8px;
+        }
+
+        .pnl-stat-box {
+            background: rgba(30, 41, 59, 0.6);
+            border: 1px solid var(--card-border);
+            border-radius: 6px;
+            padding: 8px;
+            text-align: center;
+        }
+
+        .pnl-stat-title {
+            font-size: 0.68rem;
+            color: var(--text-muted);
+            font-weight: 700;
+        }
+
+        .pnl-stat-val {
+            font-size: 1.1rem;
+            font-weight: 800;
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        .btn-action {
+            width: 100%;
+            padding: 10px;
+            font-weight: 800;
+            font-size: 0.95rem;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .btn-buy { background: #10b981; color: white; }
+        .btn-buy:hover { background: #059669; }
+        .btn-sell { background: #ef4444; color: white; }
+        .btn-sell:hover { background: #dc2626; }
+        .btn-close { background: #f59e0b; color: black; }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.78rem;
+        }
+
+        th, td {
+            padding: 6px 8px;
+            text-align: left;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        th { color: var(--text-muted); font-size: 0.7rem; font-weight: 700; }
+        .mono { font-family: 'JetBrains Mono', monospace; }
+        .pos-green { color: #10b981; }
+        .pos-red { color: #ef4444; }
+    </style>
+</head>
+<body>
+    <div class="dashboard-container">
+        <!-- HEADER -->
+        <div class="header-bar">
+            <div class="header-title">
+                <h1>SILVERM (SILVER MINI) MCX DHAN PAPER ENGINE</h1>
+                <span class="badge-mcx">MCX INDIA</span>
+                <span style="background: rgba(16, 185, 129, 0.2); color: #10b981; border: 1px solid #10b981; padding: 2px 8px; border-radius: 4px; font-weight: 800; font-size: 0.72rem;">CAPITAL: ₹3,30,000.00</span>
+            </div>
+            <div style="display: flex; gap: 10px; align-items: center;">
+                <a href="/" style="color: #38bdf8; text-decoration: none; font-size: 0.8rem; font-weight: 700;">Main Portal</a>
+                <a href="/live" style="color: #f59e0b; text-decoration: none; font-size: 0.8rem; font-weight: 700;">MCX Crude</a>
+            </div>
+        </div>
+
+        <!-- MAIN LAYOUT -->
+        <div class="main-layout">
+            <!-- LEFT COLUMN: PRICE & CHART -->
+            <div class="left-col">
+                <!-- TOP PRICE CARD -->
+                <div class="panel-card" style="display: flex; justify-content: space-between; align-items: center; padding: 10px 16px;">
+                    <div>
+                        <div style="font-size: 0.72rem; color: var(--text-muted); font-weight: 700;">MCX SILVERM NOV FUT CONTRACT</div>
+                        <div style="font-size: 1.6rem; font-weight: 800; color: #fff; font-family: 'JetBrains Mono';" id="live-mcx-price">₹2,27,654.00</div>
+                    </div>
+                    <div style="text-align: right;">
+                        <div style="font-size: 0.72rem; color: var(--text-muted); font-weight: 700;">POSITION SIZING</div>
+                        <div style="font-size: 1rem; font-weight: 800; color: #38bdf8;">1 LOT = 5 KG (₹5 / Pt)</div>
+                    </div>
+                </div>
+
+                <!-- TRADINGVIEW CHART -->
+                <div class="chart-box" id="tradingview_mcx_silver"></div>
+            </div>
+
+            <!-- RIGHT COLUMN: CONTROLS & TRADES -->
+            <div class="right-col">
+                <!-- RISK & SETTINGS PANEL -->
+                <div class="panel-card">
+                    <div style="font-size: 0.8rem; font-weight: 800; color: var(--text-muted); margin-bottom: 8px;">P&L SETTINGS (PAPER TARGET & LOSS CONTROL)</div>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 8px;">
+                        <div>
+                            <label style="font-size: 0.68rem; color: var(--text-muted); font-weight: 700;">Target Profit (Net ₹)</label>
+                            <input type="number" id="setting-target" value="5000" style="width: 100%; background: #090d16; border: 1px solid var(--card-border); color: #fff; padding: 6px; border-radius: 4px; font-weight: 800; font-family: 'JetBrains Mono';">
+                        </div>
+                        <div>
+                            <label style="font-size: 0.68rem; color: var(--text-muted); font-weight: 700;">Max Loss (Net ₹)</label>
+                            <input type="number" id="setting-loss" value="10000" style="width: 100%; background: #090d16; border: 1px solid var(--card-border); color: #fff; padding: 6px; border-radius: 4px; font-weight: 800; font-family: 'JetBrains Mono';">
+                        </div>
+                    </div>
+                    <button onclick="saveSettings()" style="width: 100%; background: #3b82f6; color: white; font-weight: 800; border: none; padding: 6px; border-radius: 4px; cursor: pointer;">SAVE SETTINGS</button>
+                </div>
+
+                <!-- PNL SUMMARY -->
+                <div class="pnl-row">
+                    <div class="pnl-stat-box">
+                        <div class="pnl-stat-title">ACCOUNT CAPITAL</div>
+                        <div class="pnl-stat-val pos-green" id="account-capital">₹3,30,000</div>
+                    </div>
+                    <div class="pnl-stat-box">
+                        <div class="pnl-stat-title">TODAY REALIZED</div>
+                        <div class="pnl-stat-val" id="today-realized">₹0.00</div>
+                    </div>
+                    <div class="pnl-stat-box">
+                        <div class="pnl-stat-title">OPEN UNREALIZED</div>
+                        <div class="pnl-stat-val" id="open-unrealized">₹0.00</div>
+                    </div>
+                </div>
+
+                <!-- MANUAL PAPER ACTIONS -->
+                <div class="panel-card" style="display: flex; gap: 8px;">
+                    <button class="btn-action btn-buy" onclick="triggerTrade('BUY')">BUY LONG (1 LOT)</button>
+                    <button class="btn-action btn-sell" onclick="triggerTrade('SELL')">SELL SHORT (1 LOT)</button>
+                </div>
+
+                <!-- ACTIVE POSITION CARD -->
+                <div class="panel-card" id="active-pos-card">
+                    <div style="font-size: 0.75rem; font-weight: 800; color: var(--text-muted); margin-bottom: 6px;">CURRENT OPEN POSITION</div>
+                    <div id="active-pos-content" style="font-size: 0.82rem; color: #94a3b8;">No active open paper position. Waiting for manual trigger or auto-signal.</div>
+                </div>
+
+                <!-- TRADE HISTORY TABLE -->
+                <div class="panel-card" style="flex: 1; min-height: 0; display: flex; flex-direction: column;">
+                    <div style="font-size: 0.75rem; font-weight: 800; color: var(--text-muted); margin-bottom: 6px;">COMPLETED MCX PAPER TRADE HISTORY</div>
+                    <div style="flex: 1; overflow-y: auto;">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>TIME</th>
+                                    <th>TYPE</th>
+                                    <th>ENTRY</th>
+                                    <th>EXIT</th>
+                                    <th>NET P&L</th>
+                                    <th>REASON</th>
+                                </tr>
+                            </thead>
+                            <tbody id="history-tbody">
+                                <tr><td colspan="6" style="text-align:center; color:#64748b;">No trades executed yet.</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Init TradingView Chart Widget for MCX Silver
+        new TradingView.widget({
+            "autosize": true,
+            "symbol": "TVC:SILVER",
+            "interval": "15",
+            "timezone": "Asia/Kolkata",
+            "theme": "dark",
+            "style": "1",
+            "locale": "en",
+            "toolbar_bg": "#090d16",
+            "enable_publishing": false,
+            "hide_top_toolbar": false,
+            "container_id": "tradingview_mcx_silver"
+        });
+
+        async function fetchState() {
+            try {
+                const res = await fetch('/api/mcx-silver/state');
+                const data = await res.json();
+                
+                document.getElementById('live-mcx-price').innerText = `₹${data.current_price_inr.toLocaleString('en-IN', {minimumFractionDigits: 2})}`;
+                document.getElementById('account-capital').innerText = `₹${data.account_capital_inr.toLocaleString('en-IN', {minimumFractionDigits: 2})}`;
+                
+                const realEl = document.getElementById('today-realized');
+                realEl.innerText = `₹${data.today_realized_pnl_inr.toLocaleString('en-IN', {minimumFractionDigits: 2})}`;
+                realEl.className = data.today_realized_pnl_inr >= 0 ? 'pnl-stat-val pos-green' : 'pnl-stat-val pos-red';
+
+                const unrealEl = document.getElementById('open-unrealized');
+                unrealEl.innerText = `₹${data.unrealized_pnl_inr.toLocaleString('en-IN', {minimumFractionDigits: 2})}`;
+                unrealEl.className = data.unrealized_pnl_inr >= 0 ? 'pnl-stat-val pos-green' : 'pnl-stat-val pos-red';
+
+                // Active Position
+                const posContent = document.getElementById('active-pos-content');
+                if (data.active_position) {
+                    const pos = data.active_position;
+                    posContent.innerHTML = `
+                        <div style="display:flex; justify-between; align-items:center; font-weight:800; color:#10b981; margin-bottom:4px;">
+                            <span>${pos.direction} ${pos.instrument} (${pos.quantity_lots} LOT)</span>
+                            <span class="mono">NET: ₹${pos.unrealized_pnl_inr}</span>
+                        </div>
+                        <div style="font-size:0.75rem; color:#94a3b8;">
+                            Entry: ₹${pos.entry_price_inr.toLocaleString()} | TP: ₹${pos.target_price_inr.toLocaleString()} | SL: ₹${pos.stop_loss_price_inr.toLocaleString()}
+                        </div>
+                        <button onclick="closeTrade()" class="btn-action btn-close" style="margin-top:8px; padding:6px;">CLOSE POSITION NOW</button>
+                    `;
+                } else {
+                    posContent.innerHTML = `<div style="color:#94a3b8;">No active open paper position.</div>`;
+                }
+
+                // History Table
+                const tbody = document.getElementById('history-tbody');
+                if (data.trade_history && data.trade_history.length > 0) {
+                    tbody.innerHTML = data.trade_history.map(t => `
+                        <tr>
+                            <td class="mono">${t.exit_timestamp ? t.exit_timestamp.split(' ')[1] : '-'}</td>
+                            <td class="${t.direction === 'BUY' ? 'pos-green' : 'pos-red'} font-bold">${t.direction}</td>
+                            <td class="mono">₹${t.entry_price_inr.toLocaleString()}</td>
+                            <td class="mono">₹${t.exit_price_inr.toLocaleString()}</td>
+                            <td class="mono ${t.net_pnl_inr >= 0 ? 'pos-green' : 'pos-red'} font-bold">₹${t.net_pnl_inr}</td>
+                            <td>${t.exit_reason || '-'}</td>
+                        </tr>
+                    `).join('');
+                }
+            } catch (err) {
+                console.error("Fetch MCX State Error:", err);
+            }
+        }
+
+        async function triggerTrade(side) {
+            await fetch('/api/mcx-silver/trade', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({side: side})
+            });
+            fetchState();
+        }
+
+        async function closeTrade() {
+            await fetch('/api/mcx-silver/close', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'}
+            });
+            fetchState();
+        }
+
+        async function saveSettings() {
+            const target = document.getElementById('setting-target').value;
+            const loss = document.getElementById('setting-loss').value;
+            await fetch('/api/mcx-silver/settings', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({target_net: target, max_loss: loss})
+            });
+            alert('MCX Silver P&L Settings Saved!');
+            fetchState();
+        }
+
+        setInterval(fetchState, 3000);
+        fetchState();
+    </script>
+</body>
+</html>

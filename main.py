@@ -25,6 +25,7 @@ from bitcoin_live_engine import BITCOIN_LIVE_ENGINE
 from bitcoin_live5_engine import BITCOIN_LIVE5_ENGINE
 from silver_paper_engine import SILVER_PAPER_ENGINE
 from mudrex_crude_paper_engine import MUDREX_CRUDE_PAPER_ENGINE
+from mcx_silver_paper_engine import MCX_SILVER_ENGINE
 
 app = FastAPI(
     title="AI Trend Detector & Paper Trading Engine V1",
@@ -430,6 +431,49 @@ async def reset_silver_paper_stats():
     """Resets paper trading statistics and history for Silver."""
     SILVER_PAPER_ENGINE.reset_statistics()
     return JSONResponse({"success": True, "message": "Silver Paper Engine statistics reset successfully."})
+
+
+# --- MCX SILVERM PAPER ENGINE (DHAN / INR) ENDPOINTS ---
+
+@app.get("/mcx-silver/live", response_class=HTMLResponse)
+async def serve_mcx_silver_live_dashboard():
+    """Serves the dedicated MCX Silver Mini Paper Trading Dashboard (/mcx-silver/live)."""
+    mcx_path = os.path.join(os.path.dirname(__file__), "templates", "mcx_silver_live.html")
+    if os.path.exists(mcx_path):
+        with open(mcx_path, "r", encoding="utf-8") as f:
+            return HTMLResponse(content=f.read())
+    return HTMLResponse("<h2>MCX Silver Mini (SILVERM) Paper Trading Dashboard</h2>")
+
+@app.get("/api/mcx-silver/state")
+async def get_mcx_silver_state():
+    """Returns state for MCX Silver Paper Engine."""
+    return JSONResponse(MCX_SILVER_ENGINE.get_dashboard_state())
+
+@app.post("/api/mcx-silver/trade")
+async def execute_mcx_silver_trade(payload: dict):
+    """Executes manual paper trade for MCX Silver."""
+    side = payload.get("side", "").upper()
+    pos = MCX_SILVER_ENGINE.manual_entry(direction=side)
+    if pos:
+        return JSONResponse({"success": True, "position": pos.to_dict()})
+    return JSONResponse({"success": False, "error": "Unable to execute paper trade"}, status_code=400)
+
+@app.post("/api/mcx-silver/close")
+async def close_mcx_silver_trade(payload: dict = {}):
+    """Closes active MCX Silver paper position."""
+    reason = payload.get("reason", "MANUAL_CLOSE")
+    closed = MCX_SILVER_ENGINE.manual_close(reason=reason)
+    if closed:
+        return JSONResponse({"success": True, "trade": closed})
+    return JSONResponse({"success":False, "error": "No active position"}, status_code=400)
+
+@app.post("/api/mcx-silver/settings")
+async def update_mcx_silver_settings(payload: dict):
+    """Updates P&L settings for MCX Silver."""
+    target = payload.get("target_net", 5000.0)
+    loss = payload.get("max_loss", 10000.0)
+    MCX_SILVER_ENGINE.update_settings(target_net=target, max_loss=loss)
+    return JSONResponse({"success": True, "message": "Settings updated"})
 
 
 # --- MUDREX CRUDE PAPER ENGINE (CL/USDT) ENDPOINTS ---
