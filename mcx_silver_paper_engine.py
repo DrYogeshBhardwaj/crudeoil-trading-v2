@@ -1,5 +1,5 @@
 """
-MCX SILVERM (Silver Mini) Paper Trading Engine
+MCX SILVERM (Silver Mini) Paper Trading Engine with Auto-Trading Loop
 STRICTLY PAPER TRADING ONLY — NO REAL ORDERS ARE PLACED.
 
 Implements MCX Silver Mini Specifications:
@@ -18,8 +18,6 @@ import requests
 from datetime import datetime, timedelta
 from typing import Dict, Any, Optional, List
 from dataclasses import dataclass, field, asdict
-
-from database import DB
 
 
 @dataclass
@@ -60,23 +58,37 @@ class MCXSilverPaperEngine:
         self.current_price_inr = 227654.0
         self.active_position: Optional[MCXSilverPaperTrade] = None
         self.trade_history: List[Dict[str, Any]] = []
-        self.evaluations_log: List[Dict[str, Any]] = []
-        self.system_status = "PAPER SCANNING ACTIVE"
+        self.system_status = "AUTOMATED PAPER SCANNING ACTIVE"
         self.today_realized_pnl = 0.0
-        self._init_history()
+        self.auto_paper_trading_enabled = True
+        
+        # Start initial active paper position for immediate visual feedback
+        self._init_demo_active_position()
 
-    def _init_history(self):
-        # Sample realistic initial state for MCX Silver
-        pass
+    def _init_demo_active_position(self):
+        now_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S IST")
+        pos = MCXSilverPaperTrade(
+            trade_id=f"MCX_AG_{int(time.time())}",
+            instrument="SILVERM NOV FUT",
+            exchange="MCX",
+            direction="BUY",
+            quantity_lots=1,
+            lot_size_kg=5,
+            entry_price_inr=227654.0,
+            entry_timestamp=now_str,
+            target_net_inr=5000.0,
+            max_loss_net_inr=10000.0,
+            target_price_inr=228654.0,  # +1000 pts
+            stop_loss_price_inr=225654.0, # -2000 pts
+            status="OPEN"
+        )
+        self.active_position = pos
 
     def get_latest_price(self) -> float:
-        # Fetch live price or return fallback
         try:
-            # Check Dhan WebSocket or Binance XAGUSDT conversion fallback
             r = requests.get("https://api.binance.com/api/3/ticker/price?symbol=XAGUSDT", timeout=3)
             if r.status_code == 200:
                 val = float(r.json().get("price", 60.5))
-                # Convert USD/oz to INR/kg approx: val * 32.1507 * 102.0
                 calc_inr = round(val * 32.1507 * 102.0, 2)
                 if calc_inr > 100000:
                     self.current_price_inr = calc_inr
@@ -92,10 +104,8 @@ class MCXSilverPaperEngine:
         trade_id = f"MCX_AG_{int(time.time())}"
         now_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S IST")
         
-        # Calculate target & stop loss prices
-        # 1 Lot = 5 kg -> 1 Rupee = Rs.5 P&L
-        target_pts = self.target_net_inr / self.lot_size  # +1000 Pts for Rs.5,000
-        stop_pts = self.max_loss_net_inr / self.lot_size    # -2000 Pts for Rs.10,000
+        target_pts = self.target_net_inr / self.lot_size  # +1000 Pts
+        stop_pts = self.max_loss_net_inr / self.lot_size    # -2000 Pts
         
         if direction.upper() in ("BUY", "LONG"):
             t_price = entry + target_pts
@@ -135,7 +145,7 @@ class MCXSilverPaperEngine:
         else:
             gross = (pos.entry_price_inr - eprice) * pos.lot_size_kg
             
-        charges = 85.0  # Brokerage + STT + GST
+        charges = 85.0
         net = gross - charges
         
         pos.status = "CLOSED"
@@ -184,17 +194,20 @@ class MCXSilverPaperEngine:
             active_pos_dict = pos.to_dict()
             active_pos_dict["unrealized_pnl_inr"] = round(unrealized_pnl, 2)
             
-            # Check TP / SL auto triggers
+            # Auto TP / SL triggers
             if pos.direction == "BUY":
                 if curr_price >= pos.target_price_inr:
-                    self.manual_close(exit_price=pos.target_price_inr, reason="PROFIT TARGET EXIT")
+                    self.manual_close(exit_price=pos.target_price_inr, reason="TARGET PROFIT HIT (+Rs.5,000 NET)")
                 elif curr_price <= pos.stop_loss_price_inr:
-                    self.manual_close(exit_price=pos.stop_loss_price_inr, reason="LOSS LIMIT EXIT")
+                    self.manual_close(exit_price=pos.stop_loss_price_inr, reason="STOP LOSS HIT (-Rs.10,000 NET)")
             else:
                 if curr_price <= pos.target_price_inr:
-                    self.manual_close(exit_price=pos.target_price_inr, reason="PROFIT TARGET EXIT")
+                    self.manual_close(exit_price=pos.target_price_inr, reason="TARGET PROFIT HIT (+Rs.5,000 NET)")
                 elif curr_price >= pos.stop_loss_price_inr:
-                    self.manual_close(exit_price=pos.stop_loss_price_inr, reason="LOSS LIMIT EXIT")
+                    self.manual_close(exit_price=pos.stop_loss_price_inr, reason="STOP LOSS HIT (-Rs.10,000 NET)")
+        elif self.auto_paper_trading_enabled:
+            # Auto re-open new paper position when previous finishes
+            self.manual_entry("BUY")
 
         return {
             "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S IST"),
