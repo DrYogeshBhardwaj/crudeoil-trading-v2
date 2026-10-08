@@ -475,6 +475,13 @@ async def update_mcx_silver_settings(payload: dict):
     MCX_SILVER_ENGINE.update_settings(target_net=target, max_loss=loss)
     return JSONResponse({"success": True, "message": "Settings updated"})
 
+@app.post("/api/mcx-silver/reset")
+async def reset_mcx_silver_stats():
+    """Resets paper trading statistics and history for MCX Silver."""
+    MCX_SILVER_ENGINE.reset_statistics()
+    return JSONResponse({"success": True, "message": "MCX Silver Paper Engine statistics reset successfully."})
+
+
 
 # --- MUDREX CRUDE PAPER ENGINE (CL/USDT) ENDPOINTS ---
 
@@ -1278,6 +1285,9 @@ async def startup_event():
 
     print(f"[{datetime.now()}] [STARTUP] Spawning MUDREX_CRUDE_PAPER_ENGINE.start_feed_loop background task...")
     asyncio.create_task(MUDREX_CRUDE_PAPER_ENGINE.start_feed_loop())
+
+    print(f"[{datetime.now()}] [STARTUP] Spawning MCX_SILVER_ENGINE.start_feed_loop background task...")
+    asyncio.create_task(MCX_SILVER_ENGINE.start_feed_loop())
 
 if __name__ == "__main__":
     import uvicorn

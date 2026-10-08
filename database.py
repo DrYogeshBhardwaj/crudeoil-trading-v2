@@ -557,6 +557,38 @@ class DatabaseEngine:
                 )
             """)
 
+            # MCX Silver Paper Trading Engine Tables (100% Dedicated Paper Test Namespace)
+            cursor.execute("""
+                CREATE TABLE IF NOT EXISTS mcx_silver_paper_trades (
+                    trade_id TEXT PRIMARY KEY,
+                    instrument TEXT NOT NULL,
+                    exchange TEXT NOT NULL DEFAULT 'MCX',
+                    direction TEXT NOT NULL,
+                    quantity_lots INTEGER NOT NULL DEFAULT 1,
+                    lot_size_kg INTEGER NOT NULL DEFAULT 5,
+                    entry_price_inr REAL NOT NULL,
+                    entry_timestamp TEXT NOT NULL,
+                    target_net_inr REAL NOT NULL DEFAULT 5000.0,
+                    max_loss_net_inr REAL NOT NULL DEFAULT 10000.0,
+                    target_price_inr REAL NOT NULL DEFAULT 0.0,
+                    stop_loss_price_inr REAL NOT NULL DEFAULT 0.0,
+                    status TEXT NOT NULL DEFAULT 'OPEN',
+                    exit_timestamp TEXT,
+                    exit_price_inr REAL,
+                    exit_reason TEXT,
+                    gross_pnl_inr REAL DEFAULT 0.0,
+                    estimated_charges_inr REAL DEFAULT 85.0,
+                    net_pnl_inr REAL DEFAULT 0.0
+                )
+            """)
+
+            cursor.execute("""
+                CREATE TABLE IF NOT EXISTS mcx_silver_paper_settings (
+                    key TEXT PRIMARY KEY,
+                    value TEXT NOT NULL
+                )
+            """)
+
             conn.commit()
 
         self.seed_historical_bitcoin_live_trades()
@@ -1374,4 +1406,74 @@ class DatabaseEngine:
                 trades.append(t)
             return trades
 
+    # --- MCX SILVER PAPER TRADING DATABASE METHODS ---
+
+    def save_mcx_silver_paper_setting(self, key: str, value: str):
+        with self._get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute("INSERT OR REPLACE INTO mcx_silver_paper_settings (key, value) VALUES (?, ?)", (key, str(value)))
+            conn.commit()
+
+    def load_mcx_silver_paper_setting(self, key: str, default: str = "") -> str:
+        with self._get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute("SELECT value FROM mcx_silver_paper_settings WHERE key = ?", (key,))
+            row = cursor.fetchone()
+            return row["value"] if row else default
+
+    def save_mcx_silver_paper_trade(self, pos_dict: Dict[str, Any]):
+        with self._get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute("""
+                INSERT OR REPLACE INTO mcx_silver_paper_trades (
+                    trade_id, instrument, exchange, direction, quantity_lots, lot_size_kg,
+                    entry_price_inr, entry_timestamp, target_net_inr, max_loss_net_inr,
+                    target_price_inr, stop_loss_price_inr, status, exit_timestamp, exit_price_inr,
+                    exit_reason, gross_pnl_inr, estimated_charges_inr, net_pnl_inr
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """, (
+                pos_dict["trade_id"],
+                pos_dict.get("instrument", "SILVERM NOV FUT"),
+                pos_dict.get("exchange", "MCX"),
+                pos_dict["direction"],
+                pos_dict.get("quantity_lots", 1),
+                pos_dict.get("lot_size_kg", 5),
+                pos_dict["entry_price_inr"],
+                pos_dict["entry_timestamp"],
+                pos_dict.get("target_net_inr", 5000.0),
+                pos_dict.get("max_loss_net_inr", 10000.0),
+                pos_dict.get("target_price_inr", 0.0),
+                pos_dict.get("stop_loss_price_inr", 0.0),
+                pos_dict["status"],
+                pos_dict.get("exit_timestamp"),
+                pos_dict.get("exit_price_inr"),
+                pos_dict.get("exit_reason"),
+                pos_dict.get("gross_pnl_inr", 0.0),
+                pos_dict.get("estimated_charges_inr", 85.0),
+                pos_dict.get("net_pnl_inr", 0.0)
+            ))
+            conn.commit()
+
+    def load_active_mcx_silver_paper_position(self) -> Optional[Dict[str, Any]]:
+        with self._get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute("SELECT * FROM mcx_silver_paper_trades WHERE status = 'OPEN' ORDER BY entry_timestamp DESC LIMIT 1")
+            row = cursor.fetchone()
+            return dict(row) if row else None
+
+    def load_all_mcx_silver_paper_trades(self) -> List[Dict[str, Any]]:
+        with self._get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute("SELECT * FROM mcx_silver_paper_trades ORDER BY entry_timestamp DESC")
+            rows = cursor.fetchall()
+            return [dict(r) for r in rows]
+
+    def reset_mcx_silver_paper_account(self):
+        with self._get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute("DELETE FROM mcx_silver_paper_trades")
+            cursor.execute("DELETE FROM mcx_silver_paper_settings")
+            conn.commit()
+
 DB = DatabaseEngine()
+
