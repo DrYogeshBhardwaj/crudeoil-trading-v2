@@ -5,19 +5,19 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>MCX SILVERM (SILVER MINI) — Dhan Paper Engine</title>
     <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><rect width=%22100%22 height=%22100%22 rx=%2220%22 fill=%22%23cbd5e1%22/><text y=%22.9em%22 x=%2250%25%22 dominant-baseline=%22middle%22 text-anchor=%22middle%22 font-size=%2250%22 font-weight=%22bold%22 fill=%22%230f172a%22>Ag</text></svg>">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;700;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@500;700;800&display=swap" rel="stylesheet">
     <script type="text/javascript" src="https://s3.tradingview.com/tv.js"></script>
     <style>
         :root {
             --bg-dark: #070a12;
             --card-bg: rgba(15, 23, 42, 0.95);
-            --card-border: rgba(148, 163, 184, 0.25);
-            --accent-silver: #e2e8f0;
+            --card-border: rgba(148, 163, 184, 0.3);
+            --accent-silver: #f1f5f9;
             --accent-green: #10b981;
             --accent-red: #ef4444;
             --accent-blue: #38bdf8;
             --text-main: #f8fafc;
-            --text-muted: #94a3b8;
+            --text-muted: #cbd5e1;
         }
 
         * { box-sizing: border-box; }
@@ -36,16 +36,16 @@
             height: 100vh;
             display: flex;
             flex-direction: column;
-            padding: 10px;
-            gap: 10px;
+            padding: 12px;
+            gap: 12px;
         }
 
         .header-bar {
-            height: 48px;
+            height: 52px;
             background: linear-gradient(90deg, #1e293b, #0f172a);
             border: 1px solid rgba(226, 232, 240, 0.3);
             border-radius: 8px;
-            padding: 0 16px;
+            padding: 0 18px;
             display: flex;
             justify-content: space-between;
             align-items: center;
@@ -53,96 +53,99 @@
         }
 
         .header-title h1 {
-            font-size: 1.1rem;
-            font-weight: 800;
+            font-size: 1.25rem;
+            font-weight: 900;
             margin: 0;
             color: var(--accent-silver);
             display: flex;
             align-items: center;
-            gap: 8px;
+            gap: 10px;
         }
 
         .badge-mcx {
             background: rgba(56, 189, 248, 0.2);
             color: #38bdf8;
             border: 1px solid #38bdf8;
-            padding: 2px 8px;
+            padding: 3px 10px;
             border-radius: 4px;
-            font-size: 0.72rem;
+            font-size: 0.78rem;
             font-weight: 800;
         }
 
+        /* SWAPPED LAYOUT: LEFT COLUMN FOR CONTROLS & STATS (520px), RIGHT COLUMN FOR CHART (1fr) */
         .main-layout {
             flex: 1;
             display: grid;
-            grid-template-columns: 1fr 420px;
-            gap: 10px;
+            grid-template-columns: 520px 1fr;
+            gap: 12px;
             min-height: 0;
         }
 
         .left-col {
             display: flex;
             flex-direction: column;
-            gap: 10px;
+            gap: 12px;
+            min-height: 0;
+        }
+
+        .right-col {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
             min-height: 0;
         }
 
         .panel-card {
             background: var(--card-bg);
             border: 1px solid var(--card-border);
-            border-radius: 8px;
-            padding: 12px;
+            border-radius: 10px;
+            padding: 16px;
         }
 
         .chart-box {
             flex: 1;
             min-height: 0;
             background: #000;
-            border-radius: 8px;
+            border-radius: 10px;
             overflow: hidden;
             border: 1px solid var(--card-border);
-        }
-
-        .right-col {
-            display: flex;
-            flex-direction: column;
-            gap: 10px;
-            min-height: 0;
         }
 
         .pnl-row {
             display: grid;
             grid-template-columns: 1fr 1fr 1fr;
-            gap: 8px;
+            gap: 10px;
         }
 
         .pnl-stat-box {
-            background: rgba(30, 41, 59, 0.6);
+            background: rgba(30, 41, 59, 0.8);
             border: 1px solid var(--card-border);
-            border-radius: 6px;
-            padding: 8px;
+            border-radius: 8px;
+            padding: 10px;
             text-align: center;
         }
 
         .pnl-stat-title {
-            font-size: 0.68rem;
-            color: var(--text-muted);
-            font-weight: 700;
+            font-size: 0.78rem;
+            color: #94a3b8;
+            font-weight: 800;
+            letter-spacing: 0.5px;
         }
 
         .pnl-stat-val {
-            font-size: 1.1rem;
-            font-weight: 800;
+            font-size: 1.35rem;
+            font-weight: 900;
             font-family: 'JetBrains Mono', monospace;
+            margin-top: 2px;
         }
 
         .btn-action {
             width: 100%;
-            padding: 10px;
-            font-weight: 800;
-            font-size: 0.95rem;
+            padding: 12px;
+            font-weight: 900;
+            font-size: 1.05rem;
             border: none;
-            border-radius: 6px;
+            border-radius: 8px;
             cursor: pointer;
             transition: all 0.2s;
         }
@@ -151,24 +154,44 @@
         .btn-buy:hover { background: #059669; }
         .btn-sell { background: #ef4444; color: white; }
         .btn-sell:hover { background: #dc2626; }
-        .btn-close { background: #f59e0b; color: black; }
+        .btn-close { background: #f59e0b; color: #0f172a; font-size: 1rem; }
 
         table {
             width: 100%;
             border-collapse: collapse;
-            font-size: 0.78rem;
+            font-size: 0.88rem;
         }
 
         th, td {
-            padding: 6px 8px;
+            padding: 8px 10px;
             text-align: left;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.08);
         }
 
-        th { color: var(--text-muted); font-size: 0.7rem; font-weight: 700; }
+        th { color: #94a3b8; font-size: 0.78rem; font-weight: 800; text-transform: uppercase; }
         .mono { font-family: 'JetBrains Mono', monospace; }
         .pos-green { color: #10b981; }
         .pos-red { color: #ef4444; }
+
+        .setting-label {
+            font-size: 0.88rem;
+            color: #e2e8f0;
+            font-weight: 800;
+            margin-bottom: 6px;
+            display: block;
+        }
+
+        .setting-input {
+            width: 100%;
+            background: #090d16;
+            border: 1.5px solid #38bdf8;
+            color: #ffffff;
+            padding: 10px 12px;
+            border-radius: 6px;
+            font-weight: 900;
+            font-size: 1.2rem;
+            font-family: 'JetBrains Mono', monospace;
+        }
     </style>
 </head>
 <body>
@@ -178,53 +201,39 @@
             <div class="header-title">
                 <h1>SILVERM (SILVER MINI) MCX DHAN PAPER ENGINE</h1>
                 <span class="badge-mcx">MCX INDIA</span>
-                <span id="market-status-badge" style="background: rgba(16, 185, 129, 0.2); color: #10b981; border: 1px solid #10b981; padding: 2px 8px; border-radius: 4px; font-weight: 800; font-size: 0.72rem;">🟢 MCX MARKET OPEN</span>
+                <span id="market-status-badge" style="background: rgba(16, 185, 129, 0.2); color: #10b981; border: 1px solid #10b981; padding: 4px 10px; border-radius: 6px; font-weight: 800; font-size: 0.8rem;">🟢 MCX MARKET OPEN</span>
             </div>
-            <div style="display: flex; gap: 10px; align-items: center;">
-                <a href="/" style="color: #38bdf8; text-decoration: none; font-size: 0.8rem; font-weight: 700;">Main Portal</a>
-                <a href="/live" style="color: #f59e0b; text-decoration: none; font-size: 0.8rem; font-weight: 700;">MCX Crude</a>
+            <div style="display: flex; gap: 12px; align-items: center;">
+                <a href="/" style="color: #38bdf8; text-decoration: none; font-size: 0.88rem; font-weight: 800;">Main Portal</a>
+                <a href="/live" style="color: #f59e0b; text-decoration: none; font-size: 0.88rem; font-weight: 800;">MCX Crude</a>
             </div>
         </div>
 
-        <!-- MAIN LAYOUT -->
+        <!-- MAIN LAYOUT (LEFT: CONTROLS & STATS, RIGHT: CHART) -->
         <div class="main-layout">
-            <!-- LEFT COLUMN: PRICE & CHART -->
+            <!-- LEFT COLUMN: ALL CONTROLS, P&L SETTINGS & STATS -->
             <div class="left-col">
-                <!-- TOP PRICE CARD -->
-                <div class="panel-card" style="display: flex; justify-content: space-between; align-items: center; padding: 10px 16px;">
-                    <div>
-                        <div style="font-size: 0.72rem; color: var(--text-muted); font-weight: 700;">MCX SILVERM NOV FUT CONTRACT</div>
-                        <div style="font-size: 1.6rem; font-weight: 800; color: #fff; font-family: 'JetBrains Mono';" id="live-mcx-price">₹2,27,654.00</div>
+                <!-- RISK & P&L SETTINGS PANEL (BIG CLEAR TEXT ON LEFT) -->
+                <div class="panel-card" style="border: 2px solid #38bdf8; background: linear-gradient(135deg, rgba(15,23,42,0.98), rgba(30,41,59,0.95));">
+                    <div style="font-size: 1.15rem; font-weight: 900; color: #38bdf8; margin-bottom: 12px; letter-spacing: 0.5px; display: flex; align-items: center; gap: 8px;">
+                        <span>⚙️ P&L SETTINGS (PAPER TARGET & LOSS CONTROL)</span>
                     </div>
-                    <div style="text-align: right;">
-                        <div style="font-size: 0.72rem; color: var(--text-muted); font-weight: 700;">POSITION SIZING</div>
-                        <div style="font-size: 1rem; font-weight: 800; color: #38bdf8;">1 LOT = 5 KG (₹5 / Pt)</div>
-                    </div>
-                </div>
-
-                <!-- TRADINGVIEW CHART -->
-                <div class="chart-box" id="tradingview_mcx_silver"></div>
-            </div>
-
-            <!-- RIGHT COLUMN: CONTROLS & TRADES -->
-            <div class="right-col">
-                <!-- RISK & SETTINGS PANEL -->
-                <div class="panel-card">
-                    <div style="font-size: 0.8rem; font-weight: 800; color: var(--text-muted); margin-bottom: 8px;">P&L SETTINGS (PAPER TARGET & LOSS CONTROL)</div>
-                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 8px;">
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px;">
                         <div>
-                            <label style="font-size: 0.68rem; color: var(--text-muted); font-weight: 700;">Target Profit (Net ₹)</label>
-                            <input type="number" id="setting-target" value="5000" style="width: 100%; background: #090d16; border: 1px solid var(--card-border); color: #fff; padding: 6px; border-radius: 4px; font-weight: 800; font-family: 'JetBrains Mono';">
+                            <label class="setting-label">Target Profit (Net ₹)</label>
+                            <input type="number" id="setting-target" value="5000" class="setting-input">
                         </div>
                         <div>
-                            <label style="font-size: 0.68rem; color: var(--text-muted); font-weight: 700;">Max Loss (Net ₹)</label>
-                            <input type="number" id="setting-loss" value="10000" style="width: 100%; background: #090d16; border: 1px solid var(--card-border); color: #fff; padding: 6px; border-radius: 4px; font-weight: 800; font-family: 'JetBrains Mono';">
+                            <label class="setting-label">Max Loss (Net ₹)</label>
+                            <input type="number" id="setting-loss" value="10000" class="setting-input" style="border-color: #ef4444;">
                         </div>
                     </div>
-                    <button onclick="saveSettings()" style="width: 100%; background: #3b82f6; color: white; font-weight: 800; border: none; padding: 6px; border-radius: 4px; cursor: pointer;">SAVE SETTINGS</button>
+                    <button onclick="saveSettings()" style="width: 100%; background: #2563eb; color: white; font-weight: 900; font-size: 1.05rem; border: none; padding: 10px; border-radius: 6px; cursor: pointer; transition: background 0.2s;">
+                        💾 SAVE P&L SETTINGS
+                    </button>
                 </div>
 
-                <!-- PNL SUMMARY -->
+                <!-- PNL SUMMARY STAT BOXES -->
                 <div class="pnl-row">
                     <div class="pnl-stat-box">
                         <div class="pnl-stat-title">ACCOUNT CAPITAL</div>
@@ -241,20 +250,20 @@
                 </div>
 
                 <!-- MANUAL PAPER ACTIONS -->
-                <div class="panel-card" style="display: flex; gap: 8px;">
-                    <button class="btn-action btn-buy" onclick="triggerTrade('BUY')">BUY LONG (1 LOT)</button>
-                    <button class="btn-action btn-sell" onclick="triggerTrade('SELL')">SELL SHORT (1 LOT)</button>
+                <div class="panel-card" style="display: flex; gap: 10px; padding: 12px;">
+                    <button class="btn-action btn-buy" onclick="triggerTrade('BUY')">🚀 BUY LONG (1 LOT)</button>
+                    <button class="btn-action btn-sell" onclick="triggerTrade('SELL')">🔻 SELL SHORT (1 LOT)</button>
                 </div>
 
-                <!-- ACTIVE POSITION CARD -->
+                <!-- CURRENT OPEN POSITION CARD -->
                 <div class="panel-card" id="active-pos-card">
-                    <div style="font-size: 0.75rem; font-weight: 800; color: var(--text-muted); margin-bottom: 6px;">CURRENT OPEN POSITION</div>
-                    <div id="active-pos-content" style="font-size: 0.82rem; color: #94a3b8;">No active open paper position. Waiting for manual trigger or auto-signal.</div>
+                    <div style="font-size: 0.95rem; font-weight: 900; color: #e2e8f0; margin-bottom: 8px;">CURRENT OPEN POSITION</div>
+                    <div id="active-pos-content" style="font-size: 0.95rem; color: #cbd5e1;">No active open paper position. Waiting for manual trigger or auto-signal.</div>
                 </div>
 
                 <!-- TRADE HISTORY TABLE -->
                 <div class="panel-card" style="flex: 1; min-height: 0; display: flex; flex-direction: column;">
-                    <div style="font-size: 0.75rem; font-weight: 800; color: var(--text-muted); margin-bottom: 6px;">COMPLETED MCX PAPER TRADE HISTORY</div>
+                    <div style="font-size: 0.95rem; font-weight: 900; color: #e2e8f0; margin-bottom: 8px;">COMPLETED MCX PAPER TRADE HISTORY</div>
                     <div style="flex: 1; overflow-y: auto;">
                         <table>
                             <thead>
@@ -273,6 +282,24 @@
                         </table>
                     </div>
                 </div>
+            </div>
+
+            <!-- RIGHT COLUMN: PRICE BANNER & TRADINGVIEW CHART -->
+            <div class="right-col">
+                <!-- TOP PRICE BANNER CARD -->
+                <div class="panel-card" style="display: flex; justify-content: space-between; align-items: center; padding: 12px 18px;">
+                    <div>
+                        <div style="font-size: 0.8rem; color: #94a3b8; font-weight: 800;">MCX SILVERM NOV FUT CONTRACT</div>
+                        <div style="font-size: 1.8rem; font-weight: 900; color: #fff; font-family: 'JetBrains Mono';" id="live-mcx-price">₹2,27,654.00</div>
+                    </div>
+                    <div style="text-align: right;">
+                        <div style="font-size: 0.8rem; color: #94a3b8; font-weight: 800;">POSITION SIZING</div>
+                        <div style="font-size: 1.1rem; font-weight: 900; color: #38bdf8;">1 LOT = 5 KG (₹5 / Pt)</div>
+                    </div>
+                </div>
+
+                <!-- TRADINGVIEW CHART BOX (RIGHT SIDE) -->
+                <div class="chart-box" id="tradingview_mcx_silver"></div>
             </div>
         </div>
     </div>
@@ -328,18 +355,19 @@
                 const posContent = document.getElementById('active-pos-content');
                 if (data.active_position) {
                     const pos = data.active_position;
+                    const pnlColor = pos.unrealized_pnl_inr >= 0 ? '#10b981' : '#ef4444';
                     posContent.innerHTML = `
-                        <div style="display:flex; justify-between; align-items:center; font-weight:800; color:#10b981; margin-bottom:4px;">
+                        <div style="display:flex; justify-content:space-between; align-items:center; font-weight:900; color:#10b981; font-size:1.05rem; margin-bottom:6px;">
                             <span>${pos.direction} ${pos.instrument} (${pos.quantity_lots} LOT)</span>
-                            <span class="mono">NET: ₹${pos.unrealized_pnl_inr}</span>
+                            <span class="mono" style="color:${pnlColor}; font-size:1.15rem;">NET: ₹${pos.unrealized_pnl_inr}</span>
                         </div>
-                        <div style="font-size:0.75rem; color:#94a3b8;">
+                        <div style="font-size:0.88rem; color:#cbd5e1; font-weight:700; margin-bottom:8px;">
                             Entry: ₹${pos.entry_price_inr.toLocaleString()} | TP: ₹${pos.target_price_inr.toLocaleString()} | SL: ₹${pos.stop_loss_price_inr.toLocaleString()}
                         </div>
-                        <button onclick="closeTrade()" class="btn-action btn-close" style="margin-top:8px; padding:6px;">CLOSE POSITION NOW</button>
+                        <button onclick="closeTrade()" class="btn-action btn-close" style="padding:10px; font-weight:900;">⚡ CLOSE POSITION NOW</button>
                     `;
                 } else {
-                    posContent.innerHTML = `<div style="color:#94a3b8;">No active open paper position.</div>`;
+                    posContent.innerHTML = `<div style="color:#94a3b8; font-size:0.95rem;">No active open paper position.</div>`;
                 }
 
                 // History Table
