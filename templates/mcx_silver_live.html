@@ -178,7 +178,7 @@
             <div class="header-title">
                 <h1>SILVERM (SILVER MINI) MCX DHAN PAPER ENGINE</h1>
                 <span class="badge-mcx">MCX INDIA</span>
-                <span style="background: rgba(16, 185, 129, 0.2); color: #10b981; border: 1px solid #10b981; padding: 2px 8px; border-radius: 4px; font-weight: 800; font-size: 0.72rem;">CAPITAL: ₹3,30,000.00</span>
+                <span id="market-status-badge" style="background: rgba(16, 185, 129, 0.2); color: #10b981; border: 1px solid #10b981; padding: 2px 8px; border-radius: 4px; font-weight: 800; font-size: 0.72rem;">🟢 MCX MARKET OPEN</span>
             </div>
             <div style="display: flex; gap: 10px; align-items: center;">
                 <a href="/" style="color: #38bdf8; text-decoration: none; font-size: 0.8rem; font-weight: 700;">Main Portal</a>
@@ -300,6 +300,21 @@
                 
                 document.getElementById('live-mcx-price').innerText = `₹${data.current_price_inr.toLocaleString('en-IN', {minimumFractionDigits: 2})}`;
                 document.getElementById('account-capital').innerText = `₹${data.account_capital_inr.toLocaleString('en-IN', {minimumFractionDigits: 2})}`;
+                
+                const badge = document.getElementById('market-status-badge');
+                if (badge) {
+                    if (data.market_open) {
+                        badge.style.background = 'rgba(16, 185, 129, 0.2)';
+                        badge.style.color = '#10b981';
+                        badge.style.borderColor = '#10b981';
+                        badge.innerText = '🟢 MCX MARKET OPEN (09:00 AM - 11:30 PM IST)';
+                    } else {
+                        badge.style.background = 'rgba(239, 68, 68, 0.2)';
+                        badge.style.color = '#ef4444';
+                        badge.style.borderColor = '#ef4444';
+                        badge.innerText = `🔴 ${data.system_status || 'MCX MARKET CLOSED'}`;
+                    }
+                }
                 
                 const realEl = document.getElementById('today-realized');
                 realEl.innerText = `₹${data.today_realized_pnl_inr.toLocaleString('en-IN', {minimumFractionDigits: 2})}`;

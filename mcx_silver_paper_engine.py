@@ -1,5 +1,5 @@
 """
-MCX SILVERM (Silver Mini) Paper Trading Engine with Auto-Trading Loop & SQLite Persistence
+MCX SILVERM (Silver Mini) Paper Trading Engine with Auto-Trading Loop, Market Timing Control & SQLite Persistence
 STRICTLY PAPER TRADING ONLY — NO REAL ORDERS ARE PLACED.
 
 Implements MCX Silver Mini Specifications:
@@ -8,6 +8,7 @@ Implements MCX Silver Mini Specifications:
 - Target Profit (Net): +Rs. 5,000.00 NET
 - Max Loss (Net): -Rs. 10,000.00 NET
 - Prices in: INR (Rs.)
+- MCX Market Schedule: Monday - Friday 09:00 AM to 11:30 PM IST (Closed Sat/Sun)
 - SQLite Persistent Storage across Server Restarts & Railway Redeployments
 """
 
@@ -16,8 +17,8 @@ import time
 import json
 import asyncio
 import requests
-from datetime import datetime, timedelta
-from typing import Dict, Any, Optional, List
+from datetime import datetime, timedelta, timezone
+from typing import Dict, Any, Optional, List, Tuple
 from dataclasses import dataclass, field, asdict
 
 from database import DB
@@ -95,10 +96,33 @@ class MCXSilverPaperEngine:
         # Load active position & history from database
         self._load_state_from_db()
 
-        # If no active position in DB, initialize open position
+        # If no active position in DB and market is open, initialize open position
         if not self.active_position:
-            initial_price = self.fetch_market_price() or 226500.0
-            self.manual_entry(direction="BUY", price=initial_price)
+            m_open, _ = self.check_mcx_market_status()
+            if m_open:
+                initial_price = self.fetch_market_price() or 226500.0
+                self.manual_entry(direction="BUY", price=initial_price)
+
+    def check_mcx_market_status(self) -> Tuple[bool, str]:
+        """Checks if MCX India market is currently open (Mon-Fri 09:00 AM - 11:30 PM IST)."""
+        ist = timezone(timedelta(hours=5, minutes=30))
+        now = datetime.now(ist)
+        weekday = now.weekday()  # 0 = Mon, 5 = Sat, 6 = Sun
+        time_val = now.time()
+
+        if weekday in (5, 6):
+            day_name = now.strftime("%A")
+            return False, f"MCX MARKET CLOSED (WEEKEND: {day_name})"
+
+        open_time = datetime.strptime("09:00:00", "%H:%M:%S").time()
+        close_time = datetime.strptime("23:30:00", "%H:%M:%S").time()
+
+        if time_val < open_time:
+            return False, "MCX MARKET CLOSED (Opens Mon-Fri at 09:00 AM IST)"
+        if time_val >= close_time:
+            return False, "MCX MARKET CLOSED (Closes at 11:30 PM IST)"
+
+        return True, "AUTOMATED PAPER SCANNING ACTIVE (MCX MARKET OPEN)"
 
     def _load_state_from_db(self):
         raw_pos = self.db.load_active_mcx_silver_paper_position()
@@ -114,7 +138,7 @@ class MCXSilverPaperEngine:
         total_pnl = sum(t.get("net_pnl_inr", 0.0) for t in self.trade_history)
         self.capital = self.starting_capital + total_pnl
 
-        today_prefix = datetime.now().strftime("%Y-%m-%d")
+        today_prefix = datetime.now(timezone(timedelta(hours=5, minutes=30))).strftime("%Y-%m-%d")
         self.today_realized_pnl = sum(
             t.get("net_pnl_inr", 0.0) for t in self.trade_history
             if t.get("exit_timestamp") and t.get("exit_timestamp").startswith(today_prefix)
@@ -177,9 +201,13 @@ class MCXSilverPaperEngine:
             return "SELL"
 
     def process_tick(self) -> Optional[Dict[str, Any]]:
-        """Processes live market price tick and updates/evaluates active paper position."""
+        """Processes live market price tick with MCX schedule enforcement."""
+        market_open, status_msg = self.check_mcx_market_status()
+        self.system_status = status_msg
+
         curr_price = self.fetch_market_price()
 
+        # If active position exists, evaluate TP/SL triggers
         if self.active_position:
             pos = self.active_position
             if pos.direction == "BUY":
@@ -201,8 +229,8 @@ class MCXSilverPaperEngine:
                 elif curr_price >= pos.stop_loss_price_inr:
                     return self.manual_close(exit_price=pos.stop_loss_price_inr, reason="STOP LOSS HIT (-Rs.10,000 NET)")
 
-        elif self.auto_paper_trading_enabled:
-            # Auto-open new position if no active position
+        elif self.auto_paper_trading_enabled and market_open:
+            # Auto-open new position ONLY when MCX market is OPEN
             signal = self.evaluate_strategy_signal(curr_price)
             self.manual_entry(direction=signal, price=curr_price)
 
@@ -227,7 +255,7 @@ class MCXSilverPaperEngine:
 
         entry = price or self.fetch_market_price() or 226500.0
         trade_id = f"MCX_AG_{int(time.time())}"
-        now_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S IST")
+        now_str = datetime.now(timezone(timedelta(hours=5, minutes=30))).strftime("%Y-%m-%d %H:%M:%S IST")
 
         target_pts = (self.target_net_inr + 85.0) / self.lot_size
         stop_pts = (self.max_loss_net_inr - 85.0) / self.lot_size
@@ -266,7 +294,7 @@ class MCXSilverPaperEngine:
 
         pos = self.active_position
         eprice = exit_price or self.fetch_market_price() or pos.entry_price_inr
-        now_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S IST")
+        now_str = datetime.now(timezone(timedelta(hours=5, minutes=30))).strftime("%Y-%m-%d %H:%M:%S IST")
 
         if pos.direction == "BUY":
             gross = (eprice - pos.entry_price_inr) * pos.lot_size_kg
@@ -314,10 +342,13 @@ class MCXSilverPaperEngine:
         self.db.reset_mcx_silver_paper_account()
         self.active_position = None
         self._load_state_from_db()
-        curr = self.fetch_market_price() or 226500.0
-        self.manual_entry("BUY", price=curr)
+        m_open, _ = self.check_mcx_market_status()
+        if m_open:
+            curr = self.fetch_market_price() or 226500.0
+            self.manual_entry("BUY", price=curr)
 
     def get_dashboard_state(self) -> Dict[str, Any]:
+        market_open, status_msg = self.check_mcx_market_status()
         curr_price = self.fetch_market_price()
         unrealized_pnl = 0.0
         active_pos_dict = None
@@ -334,10 +365,12 @@ class MCXSilverPaperEngine:
             active_pos_dict["unrealized_pnl_inr"] = round(unrealized_pnl, 2)
 
         return {
-            "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S IST"),
+            "timestamp": datetime.now(timezone(timedelta(hours=5, minutes=30))).strftime("%Y-%m-%d %H:%M:%S IST"),
             "instrument": "SILVERM NOV FUT",
             "exchange": "MCX",
             "currency": "INR",
+            "market_open": market_open,
+            "market_schedule": "Mon-Fri 09:00 AM - 11:30 PM IST",
             "current_price_inr": curr_price,
             "starting_capital_inr": self.starting_capital,
             "account_capital_inr": round(self.capital, 2),
@@ -347,7 +380,7 @@ class MCXSilverPaperEngine:
             "unrealized_pnl_inr": round(unrealized_pnl, 2),
             "active_position": active_pos_dict,
             "trade_history": self.trade_history,
-            "system_status": self.system_status
+            "system_status": status_msg
         }
 
 
