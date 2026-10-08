@@ -487,7 +487,9 @@ class MudrexLiveAdapter:
             return {"success": False, "error": str(e)}
 
     def place_futures_order(self, symbol: str, side: str, quantity: float, order_type: str = "MARKET", price: Optional[float] = None, stoploss_price: Optional[float] = None) -> Dict[str, Any]:
-        """Places a live futures order on Mudrex API."""
+        """Places a live futures order on Mudrex API (HARDCODED SAFETY BLOCKED)."""
+        print(f"[{datetime.now()}] [SAFETY GUARD] Real live Mudrex order placement is BLOCKED by user directive.")
+        return {"success": False, "error": "REAL LIVE MUDREX ORDER PLACEMENT IS HARDCODED DISABLED BY USER"}
         headers = self._get_headers()
 
         # Step 1: Set leverage
@@ -656,9 +658,9 @@ class BitcoinLiveEngine:
         self.GST_RATE = 0.18          # 18% GST on fee
         self.TOTAL_FEE_RATE = 0.00059 # 0.059% per side inclusive of GST
 
-        # Load Trading Enable Lock (Live Trading Active)
-        saved_enable = DB.load_bitcoin_live_setting("live_trading_enabled", "TRUE")
-        self.live_trading_enabled = (saved_enable.upper() == "TRUE")
+        # STRICT LOCK: Live Trading is PERMANENTLY DISABLED by user instruction
+        self.live_trading_enabled = False
+        DB.save_bitcoin_live_setting("live_trading_enabled", "FALSE")
 
         # Load Persistent Risk Settings
         self.today_date = datetime.now().strftime("%Y-%m-%d")
@@ -884,9 +886,9 @@ class BitcoinLiveEngine:
         DB.save_bitcoin_live_setting("today_realized_pnl", str(self.today_realized_pnl))
 
     def set_live_trading_enabled(self, enabled: bool):
-        """Enables or disables live trading execution."""
-        self.live_trading_enabled = enabled
-        self.save_settings()
+        """Enables or disables live trading execution (PERMANENTLY DISABLED)."""
+        self.live_trading_enabled = False
+        DB.save_bitcoin_live_setting("live_trading_enabled", "FALSE")
 
     def update_risk_settings(self, per_trade_limit: Optional[float] = None, profit_target: Optional[float] = None, daily_limit: Optional[float] = None):
         """Updates target and loss limits."""
