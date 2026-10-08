@@ -356,13 +356,18 @@
                 if (data.active_position) {
                     const pos = data.active_position;
                     const pnlColor = pos.unrealized_pnl_inr >= 0 ? '#10b981' : '#ef4444';
+                    const chg = data.dhan_charges_breakdown || {};
+                    const chgStr = chg.total_charges ? `₹${chg.total_charges} (Brokerage ₹${chg.brokerage} | STT ₹${chg.stt} | MCX Fee ₹${chg.mcx_fee} | GST ₹${chg.gst} | Stamp Duty ₹${chg.stamp_duty})` : `₹${pos.estimated_charges_inr}`;
                     posContent.innerHTML = `
                         <div style="display:flex; justify-content:space-between; align-items:center; font-weight:900; color:#10b981; font-size:1.05rem; margin-bottom:6px;">
                             <span>${pos.direction} ${pos.instrument} (${pos.quantity_lots} LOT)</span>
                             <span class="mono" style="color:${pnlColor}; font-size:1.15rem;">NET: ₹${pos.unrealized_pnl_inr}</span>
                         </div>
-                        <div style="font-size:0.88rem; color:#cbd5e1; font-weight:700; margin-bottom:8px;">
+                        <div style="font-size:0.88rem; color:#cbd5e1; font-weight:700; margin-bottom:6px;">
                             Entry: ₹${pos.entry_price_inr.toLocaleString()} | TP: ₹${pos.target_price_inr.toLocaleString()} | SL: ₹${pos.stop_loss_price_inr.toLocaleString()}
+                        </div>
+                        <div style="font-size:0.78rem; color:#94a3b8; font-weight:700; background:rgba(0,0,0,0.3); padding:6px 8px; border-radius:4px; margin-bottom:8px;">
+                            🧾 Dhan Charges: ${chgStr}
                         </div>
                         <button onclick="closeTrade()" class="btn-action btn-close" style="padding:10px; font-weight:900;">⚡ CLOSE POSITION NOW</button>
                     `;

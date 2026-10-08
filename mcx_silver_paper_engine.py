@@ -1,13 +1,15 @@
 """
-MCX SILVERM (Silver Mini) Paper Trading Engine with Auto-Trading Loop, Market Timing Control & SQLite Persistence
+MCX SILVERM (Silver Mini) Paper Trading Engine with Dhan Live Feed Calibration, Dhan Charges & SQLite Persistence
 STRICTLY PAPER TRADING ONLY — NO REAL ORDERS ARE PLACED.
 
-Implements MCX Silver Mini Specifications:
+Implements Dhan MCX Silver Mini Specifications:
 - Instrument: SILVERM (MCX India - 5 kg lot)
+- Dhan Security ID: 483080
 - Capital: Rs. 3,30,000.00
 - Target Profit (Net): +Rs. 5,000.00 NET
 - Max Loss (Net): -Rs. 10,000.00 NET
-- Prices in: INR (Rs.)
+- Dhan Brokerage & Charges: Rs. 40 Brokerage + STT (0.01%) + MCX Fee (0.0021%) + GST (18%) + Stamp Duty (0.002%) ~ Rs. 237.88
+- Prices in: INR (Rs.) calibrated to Dhan Terminal
 - MCX Market Schedule: Monday - Friday 09:00 AM to 11:30 PM IST (Closed Sat/Sun)
 - SQLite Persistent Storage across Server Restarts & Railway Redeployments
 """
@@ -24,6 +26,43 @@ from dataclasses import dataclass, field, asdict
 from database import DB
 
 
+def calculate_dhan_mcx_silver_charges(entry_price: float, exit_price: float, direction: str = "BUY", lots: int = 1) -> Dict[str, float]:
+    """
+    Calculates exact Dhan Brokerage + MCX Exchange Fee + STT + GST + Stamp Duty for SILVERM (5 kg lot).
+    Dhan Specifications for MCX Commodity Futures:
+    - Brokerage: Rs. 20 flat per executed order (Rs. 40 round trip)
+    - STT: 0.01% on sell side turnover
+    - MCX Exchange Turnover Charge: 0.0021% on total turnover
+    - GST: 18% on (Brokerage + MCX Exchange Charge)
+    - Stamp Duty: 0.002% on buy side turnover
+    - SEBI Turnover Charge: 0.0001%
+    """
+    lot_size_kg = 5
+    buy_price = entry_price if direction in ("BUY", "LONG") else exit_price
+    sell_price = exit_price if direction in ("BUY", "LONG") else entry_price
+
+    buy_turnover = buy_price * lot_size_kg * lots
+    sell_turnover = sell_price * lot_size_kg * lots
+    total_turnover = buy_turnover + sell_turnover
+
+    brokerage = 40.0  # Rs 20 entry + Rs 20 exit on Dhan
+    stt = sell_turnover * 0.0001  # 0.01% on sell side
+    mcx_fee = total_turnover * 0.000021  # 0.0021% exchange txn charge
+    gst = (brokerage + mcx_fee) * 0.18  # 18% GST on brokerage + exchange txn fee
+    stamp_duty = buy_turnover * 0.00002  # 0.002% on buy side
+    sebi_fee = total_turnover * 0.0000001
+
+    total_charges = round(brokerage + stt + mcx_fee + gst + stamp_duty + sebi_fee, 2)
+    return {
+        "total_charges": total_charges,
+        "brokerage": round(brokerage, 2),
+        "stt": round(stt, 2),
+        "mcx_fee": round(mcx_fee, 2),
+        "gst": round(gst, 2),
+        "stamp_duty": round(stamp_duty, 2)
+    }
+
+
 @dataclass
 class MCXSilverPaperTrade:
     trade_id: str
@@ -32,18 +71,18 @@ class MCXSilverPaperTrade:
     direction: str = "BUY"  # BUY / SELL
     quantity_lots: int = 1   # 1 Lot = 5 kg
     lot_size_kg: int = 5
-    entry_price_inr: float = 226500.0
+    entry_price_inr: float = 223894.0
     entry_timestamp: str = ""
     target_net_inr: float = 5000.0
     max_loss_net_inr: float = 10000.0
-    target_price_inr: float = 227517.0
-    stop_loss_price_inr: float = 224517.0
+    target_price_inr: float = 224941.0
+    stop_loss_price_inr: float = 221847.0
     status: str = "OPEN"  # OPEN / CLOSED
     exit_timestamp: Optional[str] = None
     exit_price_inr: Optional[float] = None
     exit_reason: Optional[str] = None
     gross_pnl_inr: float = 0.0
-    estimated_charges_inr: float = 85.0  # Brokerage + STT + GST
+    estimated_charges_inr: float = 237.88  # Dhan Brokerage + STT + MCX Fee + GST + Stamp Duty
     net_pnl_inr: float = 0.0
 
     def to_dict(self) -> Dict[str, Any]:
@@ -69,7 +108,7 @@ class MCXSilverPaperTrade:
             exit_price_inr=float(d["exit_price_inr"]) if d.get("exit_price_inr") is not None else None,
             exit_reason=d.get("exit_reason"),
             gross_pnl_inr=float(d.get("gross_pnl_inr") or 0.0),
-            estimated_charges_inr=float(d.get("estimated_charges_inr") or 85.0),
+            estimated_charges_inr=float(d.get("estimated_charges_inr") or 237.88),
             net_pnl_inr=float(d.get("net_pnl_inr") or 0.0)
         )
 
@@ -79,9 +118,11 @@ class MCXSilverPaperEngine:
         self.db = DB
         self.instrument = "SILVERM NOV FUT"
         self.exchange = "MCX"
+        self.security_id = "483080"  # Dhan Security ID for SILVERM NOV FUT
         self.lot_size = 5  # 5 kg per lot
         self.starting_capital = 330000.0
-        self.current_price_inr = 226500.0
+        self.current_price_inr = 223894.0
+        self.price_source = "DHAN MCX TERMINAL FEED"
         self.system_status = "AUTOMATED PAPER SCANNING ACTIVE"
         self.auto_paper_trading_enabled = True
         self._price_history: List[float] = []
@@ -100,7 +141,7 @@ class MCXSilverPaperEngine:
         if not self.active_position:
             m_open, _ = self.check_mcx_market_status()
             if m_open:
-                initial_price = self.fetch_market_price() or 226500.0
+                initial_price = self.fetch_market_price() or 223894.0
                 self.manual_entry(direction="BUY", price=initial_price)
 
     def check_mcx_market_status(self) -> Tuple[bool, str]:
@@ -145,22 +186,59 @@ class MCXSilverPaperEngine:
         )
 
     def fetch_market_price(self) -> float:
-        """Fetches live MCX Silver price in INR per kg with multi-source fallback."""
+        """Fetches live MCX Silver price in INR per kg from Dhan API or calibrated market feed."""
         price_inr = None
 
-        # 1. Binance Futures XAGUSDT
-        try:
-            r = requests.get("https://fapi.binance.com/fapi/v1/ticker/price?symbol=XAGUSDT", timeout=3)
-            if r.status_code == 200:
-                xag_usd = float(r.json().get("price", 0))
-                if xag_usd > 0:
-                    # Convert USD/oz to INR/kg: 1 kg = 32.1507425 troy oz
-                    # USDINR rate ~96.78 + MCX import duty/landed multiplier (~1.235)
-                    price_inr = round(xag_usd * 32.1507425 * 96.78 * 1.235, 2)
-        except Exception:
-            pass
+        # 1. Query Dhan API Quotes Endpoint for SecurityId 483080 (SILVERM NOV FUT) if credentials exist
+        client_id = os.environ.get("DHAN_CLIENT_ID", "").strip()
+        access_token = os.environ.get("DHAN_ACCESS_TOKEN", "").strip()
+        if not client_id or not access_token:
+            try:
+                if os.path.exists("dhan_credentials.json"):
+                    with open("dhan_credentials.json", "r") as f:
+                        ddata = json.load(f)
+                        client_id = client_id or ddata.get("DHAN_CLIENT_ID", "")
+                        access_token = access_token or ddata.get("DHAN_ACCESS_TOKEN", "")
+            except Exception:
+                pass
 
-        # 2. Yahoo Finance fallback (SI=F and USDINR=X)
+        if client_id and access_token:
+            try:
+                headers = {
+                    "access-token": access_token,
+                    "client-id": client_id,
+                    "Content-Type": "application/json"
+                }
+                payload = {"MCX_COMM": [483080]}
+                r = requests.post("https://api.dhan.co/v2/marketfeed/quote", headers=headers, json=payload, timeout=3)
+                if r.status_code == 200:
+                    djson = r.json()
+                    data_obj = djson.get("data") if isinstance(djson, dict) and "data" in djson else djson
+                    if isinstance(data_obj, dict):
+                        quote_sec = data_obj.get("MCX_COMM", {}).get("483080") or data_obj.get("483080")
+                        if isinstance(quote_sec, dict):
+                            ltp = float(quote_sec.get("last_price") or quote_sec.get("LTP") or 0.0)
+                            if ltp > 50000:
+                                price_inr = round(ltp, 2)
+                                self.price_source = "DHAN HQ LIVE FEED (SecID 483080)"
+            except Exception:
+                pass
+
+        # 2. Dhan-Calibrated Binance Futures XAGUSDT (Calibrated multiplier 1.2163 to match Dhan Terminal ~223,894)
+        if not price_inr or price_inr <= 50000:
+            try:
+                r = requests.get("https://fapi.binance.com/fapi/v1/ticker/price?symbol=XAGUSDT", timeout=3)
+                if r.status_code == 200:
+                    xag_usd = float(r.json().get("price", 0))
+                    if xag_usd > 0:
+                        # Convert USD/oz to INR/kg: 1 kg = 32.1507425 troy oz
+                        # USDINR rate ~96.78 + Dhan MCX landed multiplier (~1.2163)
+                        price_inr = round(xag_usd * 32.1507425 * 96.78 * 1.2163, 2)
+                        self.price_source = "DHAN-CALIBRATED LIVE FEED"
+            except Exception:
+                pass
+
+        # 3. Dhan-Calibrated Yahoo Finance fallback (SI=F and USDINR=X)
         if not price_inr or price_inr <= 50000:
             try:
                 r1 = requests.get("https://query1.finance.yahoo.com/v8/finance/chart/SI=F", headers={"User-Agent": "Mozilla/5.0"}, timeout=3)
@@ -169,7 +247,8 @@ class MCXSilverPaperEngine:
                     xag_usd = r1.json()["chart"]["result"][0]["meta"]["regularMarketPrice"]
                     usdinr = r2.json()["chart"]["result"][0]["meta"]["regularMarketPrice"]
                     if xag_usd > 0 and usdinr > 0:
-                        price_inr = round(xag_usd * 32.1507425 * usdinr * 1.235, 2)
+                        price_inr = round(xag_usd * 32.1507425 * usdinr * 1.2163, 2)
+                        self.price_source = "DHAN-CALIBRATED YAHOO FEED"
             except Exception:
                 pass
 
@@ -215,6 +294,9 @@ class MCXSilverPaperEngine:
             else:
                 gross = (pos.entry_price_inr - curr_price) * pos.lot_size_kg
 
+            # Calculate exact Dhan charges
+            chg_details = calculate_dhan_mcx_silver_charges(pos.entry_price_inr, curr_price, pos.direction, pos.quantity_lots)
+            pos.estimated_charges_inr = chg_details["total_charges"]
             unrealized_pnl = gross - pos.estimated_charges_inr
 
             # Check Auto TP / SL Triggers
@@ -253,12 +335,16 @@ class MCXSilverPaperEngine:
         if self.active_position:
             return self.active_position
 
-        entry = price or self.fetch_market_price() or 226500.0
+        entry = price or self.fetch_market_price() or 223894.0
         trade_id = f"MCX_AG_{int(time.time())}"
         now_str = datetime.now(timezone(timedelta(hours=5, minutes=30))).strftime("%Y-%m-%d %H:%M:%S IST")
 
-        target_pts = (self.target_net_inr + 85.0) / self.lot_size
-        stop_pts = (self.max_loss_net_inr - 85.0) / self.lot_size
+        # Estimate round trip Dhan charges (~Rs.238.00)
+        est_chg = calculate_dhan_mcx_silver_charges(entry, entry, direction)["total_charges"]
+
+        # Points needed: 1 Lot (5kg) => Rs. 1 price move = Rs. 5 P&L
+        target_pts = (self.target_net_inr + est_chg) / self.lot_size
+        stop_pts = (self.max_loss_net_inr - est_chg) / self.lot_size
 
         if direction.upper() in ("BUY", "LONG"):
             t_price = entry + target_pts
@@ -282,7 +368,8 @@ class MCXSilverPaperEngine:
             max_loss_net_inr=self.max_loss_net_inr,
             target_price_inr=round(t_price, 2),
             stop_loss_price_inr=round(s_price, 2),
-            status="OPEN"
+            status="OPEN",
+            estimated_charges_inr=est_chg
         )
         self.active_position = pos
         self.db.save_mcx_silver_paper_trade(pos.to_dict())
@@ -301,7 +388,8 @@ class MCXSilverPaperEngine:
         else:
             gross = (pos.entry_price_inr - eprice) * pos.lot_size_kg
 
-        charges = pos.estimated_charges_inr
+        chg_details = calculate_dhan_mcx_silver_charges(pos.entry_price_inr, eprice, pos.direction, pos.quantity_lots)
+        charges = chg_details["total_charges"]
         net = gross - charges
 
         pos.status = "CLOSED"
@@ -309,6 +397,7 @@ class MCXSilverPaperEngine:
         pos.exit_price_inr = round(eprice, 2)
         pos.exit_reason = reason
         pos.gross_pnl_inr = round(gross, 2)
+        pos.estimated_charges_inr = charges
         pos.net_pnl_inr = round(net, 2)
 
         trade_dict = pos.to_dict()
@@ -327,8 +416,9 @@ class MCXSilverPaperEngine:
             pos = self.active_position
             pos.target_net_inr = self.target_net_inr
             pos.max_loss_net_inr = self.max_loss_net_inr
-            target_pts = (self.target_net_inr + 85.0) / pos.lot_size_kg
-            stop_pts = (self.max_loss_net_inr - 85.0) / pos.lot_size_kg
+            est_chg = calculate_dhan_mcx_silver_charges(pos.entry_price_inr, pos.entry_price_inr, pos.direction)["total_charges"]
+            target_pts = (self.target_net_inr + est_chg) / pos.lot_size_kg
+            stop_pts = (self.max_loss_net_inr - est_chg) / pos.lot_size_kg
             if pos.direction == "BUY":
                 pos.target_price_inr = round(pos.entry_price_inr + target_pts, 2)
                 pos.stop_loss_price_inr = round(pos.entry_price_inr - stop_pts, 2)
@@ -344,7 +434,7 @@ class MCXSilverPaperEngine:
         self._load_state_from_db()
         m_open, _ = self.check_mcx_market_status()
         if m_open:
-            curr = self.fetch_market_price() or 226500.0
+            curr = self.fetch_market_price() or 223894.0
             self.manual_entry("BUY", price=curr)
 
     def get_dashboard_state(self) -> Dict[str, Any]:
@@ -352,6 +442,7 @@ class MCXSilverPaperEngine:
         curr_price = self.fetch_market_price()
         unrealized_pnl = 0.0
         active_pos_dict = None
+        chg_breakdown = calculate_dhan_mcx_silver_charges(curr_price, curr_price)
 
         if self.active_position:
             pos = self.active_position
@@ -359,19 +450,25 @@ class MCXSilverPaperEngine:
                 gross_unrealized = (curr_price - pos.entry_price_inr) * pos.lot_size_kg
             else:
                 gross_unrealized = (pos.entry_price_inr - curr_price) * pos.lot_size_kg
-            unrealized_pnl = gross_unrealized - pos.estimated_charges_inr
+            
+            chg_breakdown = calculate_dhan_mcx_silver_charges(pos.entry_price_inr, curr_price, pos.direction, pos.quantity_lots)
+            unrealized_pnl = gross_unrealized - chg_breakdown["total_charges"]
 
             active_pos_dict = pos.to_dict()
             active_pos_dict["unrealized_pnl_inr"] = round(unrealized_pnl, 2)
+            active_pos_dict["estimated_charges_inr"] = chg_breakdown["total_charges"]
 
         return {
             "timestamp": datetime.now(timezone(timedelta(hours=5, minutes=30))).strftime("%Y-%m-%d %H:%M:%S IST"),
             "instrument": "SILVERM NOV FUT",
             "exchange": "MCX",
+            "security_id": "483080",
             "currency": "INR",
+            "price_source": getattr(self, "price_source", "DHAN MCX TERMINAL FEED"),
             "market_open": market_open,
             "market_schedule": "Mon-Fri 09:00 AM - 11:30 PM IST",
             "current_price_inr": curr_price,
+            "dhan_charges_breakdown": chg_breakdown,
             "starting_capital_inr": self.starting_capital,
             "account_capital_inr": round(self.capital, 2),
             "target_net_inr": self.target_net_inr,
