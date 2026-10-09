@@ -128,6 +128,13 @@ class MCXSilverPaperEngine:
         self._price_history: List[float] = []
         self._feed_running = False
 
+        self.ENABLE_LIVE_TRADING = False
+        self.is_synthetic_feed = True
+        self.price_feed_quality = "SYNTHETIC_FALLBACK"
+        self.last_price_update_timestamp = 0.0
+        self.is_price_stale = False
+        self.stale_threshold_seconds = 15.0
+
         # Load persisted settings
         t_net = self.db.load_mcx_silver_paper_setting("target_net_inr", "5000.0")
         l_net = self.db.load_mcx_silver_paper_setting("max_loss_net_inr", "10000.0")
@@ -137,12 +144,9 @@ class MCXSilverPaperEngine:
         # Load active position & history from database
         self._load_state_from_db()
 
-        # If no active position in DB and market is open, initialize open position
+        # Engine initialization logged without forcing an auto-BUY position on startup
         if not self.active_position:
-            m_open, _ = self.check_mcx_market_status()
-            if m_open:
-                initial_price = self.fetch_market_price() or 223894.0
-                self.manual_entry(direction="BUY", price=initial_price)
+            print(f"[{datetime.now()}] [MCX SILVER ENGINE] Engine initialized with NO active position. Ready for signal or manual paper trade.")
 
     def check_mcx_market_status(self) -> Tuple[bool, str]:
         """Checks if MCX India market is currently open (Mon-Fri 09:00 AM - 11:30 PM IST)."""
@@ -185,6 +189,25 @@ class MCXSilverPaperEngine:
             if t.get("exit_timestamp") and t.get("exit_timestamp").startswith(today_prefix)
         )
 
+    def place_live_dhan_order(self, *args, **kwargs):
+        """Hardcoded Safety Guard - Prevents any real Dhan order execution in Phase 1."""
+        raise RuntimeError("CRITICAL SAFETY BLOCK: Real Dhan Order API execution is HARDCODED DISABLED in Phase 1.")
+
+    def is_real_mcx_price_valid_for_live_execution(self) -> bool:
+        """
+        Returns True ONLY if price comes directly from Dhan MCX Terminal Live Feed,
+        is non-stale, and MCX market is currently open.
+        Synthetic fallback feeds (Binance/Yahoo) are strictly INVALID for Live execution.
+        """
+        market_open, _ = self.check_mcx_market_status()
+        if self.is_synthetic_feed:
+            return False
+        if self.is_price_stale:
+            return False
+        if not market_open:
+            return False
+        return True
+
     def fetch_market_price(self) -> float:
         """Fetches live MCX Silver price in INR per kg from Dhan API or calibrated market feed."""
         price_inr = None
@@ -221,6 +244,8 @@ class MCXSilverPaperEngine:
                             if ltp > 50000:
                                 price_inr = round(ltp, 2)
                                 self.price_source = "DHAN HQ LIVE FEED (SecID 483080)"
+                                self.is_synthetic_feed = False
+                                self.price_feed_quality = "REAL_DHAN_MCX_LIVE"
             except Exception:
                 pass
 
@@ -231,10 +256,10 @@ class MCXSilverPaperEngine:
                 if r.status_code == 200:
                     xag_usd = float(r.json().get("price", 0))
                     if xag_usd > 0:
-                        # Convert USD/oz to INR/kg: 1 kg = 32.1507425 troy oz
-                        # USDINR rate ~96.78 + Dhan MCX landed multiplier (~1.2163)
                         price_inr = round(xag_usd * 32.1507425 * 96.78 * 1.2163, 2)
-                        self.price_source = "DHAN-CALIBRATED LIVE FEED"
+                        self.price_source = "DHAN-CALIBRATED LIVE FEED (BINANCE XAG)"
+                        self.is_synthetic_feed = True
+                        self.price_feed_quality = "SYNTHETIC_FALLBACK"
             except Exception:
                 pass
 
@@ -249,12 +274,21 @@ class MCXSilverPaperEngine:
                     if xag_usd > 0 and usdinr > 0:
                         price_inr = round(xag_usd * 32.1507425 * usdinr * 1.2163, 2)
                         self.price_source = "DHAN-CALIBRATED YAHOO FEED"
+                        self.is_synthetic_feed = True
+                        self.price_feed_quality = "SYNTHETIC_FALLBACK"
             except Exception:
                 pass
 
+        now_ts = time.time()
         if price_inr and price_inr > 50000:
             self.current_price_inr = price_inr
+            self.last_price_update_timestamp = now_ts
+            self.is_price_stale = False
             return price_inr
+
+        # Evaluate staleness if returning cached current_price_inr
+        if self.last_price_update_timestamp > 0 and (now_ts - self.last_price_update_timestamp > self.stale_threshold_seconds):
+            self.is_price_stale = True
 
         return self.current_price_inr
 
@@ -432,10 +466,7 @@ class MCXSilverPaperEngine:
         self.db.reset_mcx_silver_paper_account()
         self.active_position = None
         self._load_state_from_db()
-        m_open, _ = self.check_mcx_market_status()
-        if m_open:
-            curr = self.fetch_market_price() or 223894.0
-            self.manual_entry("BUY", price=curr)
+        print(f"[{datetime.now()}] [MCX SILVER ENGINE] Statistics reset successfully. NO position auto-opened.")
 
     def get_dashboard_state(self) -> Dict[str, Any]:
         market_open, status_msg = self.check_mcx_market_status()
@@ -464,6 +495,11 @@ class MCXSilverPaperEngine:
             "exchange": "MCX",
             "security_id": "483080",
             "currency": "INR",
+            "enable_live_trading": self.ENABLE_LIVE_TRADING,
+            "is_synthetic_feed": self.is_synthetic_feed,
+            "price_feed_quality": getattr(self, "price_feed_quality", "SYNTHETIC_FALLBACK") + (" (PAPER PRACTICE ONLY)" if self.is_synthetic_feed else ""),
+            "is_real_mcx_price_valid_for_live_execution": self.is_real_mcx_price_valid_for_live_execution(),
+            "is_price_stale": self.is_price_stale,
             "price_source": getattr(self, "price_source", "DHAN MCX TERMINAL FEED"),
             "market_open": market_open,
             "market_schedule": "Mon-Fri 09:00 AM - 11:30 PM IST",
