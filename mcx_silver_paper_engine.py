@@ -219,22 +219,24 @@ class MCXSilverPaperEngine:
             return False
         return True
 
-    def fetch_dhan_live_margin(self) -> Tuple[Optional[float], str]:
-        """Fetches real-time available margin balance directly from Dhan API (GET /v2/fundlimit)."""
-        client_id = os.environ.get("DHAN_CLIENT_ID", "").strip()
-        access_token = os.environ.get("DHAN_ACCESS_TOKEN", "").strip()
+    def _get_dhan_credentials(self) -> Tuple[str, str]:
+        """Loads Dhan Client ID and Access Token checking SILVER specific env vars first."""
+        client_id = (os.environ.get("DHAN_CLIENT_ID_SILVER") or os.environ.get("DHAN_CLIENT_ID") or "").strip()
+        access_token = (os.environ.get("DHAN_ACCESS_TOKEN_SILVER") or os.environ.get("DHAN_ACCESS_TOKEN") or "").strip()
         if not client_id or not access_token:
             try:
                 if os.path.exists("dhan_credentials.json"):
                     with open("dhan_credentials.json", "r") as f:
                         ddata = json.load(f)
-                        client_id = client_id or ddata.get("DHAN_CLIENT_ID", "").strip()
-                        access_token = access_token or ddata.get("DHAN_ACCESS_TOKEN", "").strip()
+                        client_id = client_id or ddata.get("DHAN_CLIENT_ID_SILVER") or ddata.get("DHAN_CLIENT_ID", "")
+                        access_token = access_token or ddata.get("DHAN_ACCESS_TOKEN_SILVER") or ddata.get("DHAN_ACCESS_TOKEN", "")
             except Exception:
                 pass
+        return str(client_id).strip().strip('"').strip("'"), str(access_token).strip().strip('"').strip("'")
 
-        client_id = str(client_id).strip().strip('"').strip("'")
-        access_token = str(access_token).strip().strip('"').strip("'")
+    def fetch_dhan_live_margin(self) -> Tuple[Optional[float], str]:
+        """Fetches real-time available margin balance directly from Dhan API (GET /v2/fundlimit)."""
+        client_id, access_token = self._get_dhan_credentials()
 
         if not client_id or not access_token:
             return None, "DHAN CREDENTIALS MISSING"
@@ -262,20 +264,7 @@ class MCXSilverPaperEngine:
         price_inr = None
 
         # 1. Query Dhan API Quotes Endpoint for SecurityId 483080 (SILVERM NOV FUT) if credentials exist
-        client_id = os.environ.get("DHAN_CLIENT_ID", "").strip()
-        access_token = os.environ.get("DHAN_ACCESS_TOKEN", "").strip()
-        if not client_id or not access_token:
-            try:
-                if os.path.exists("dhan_credentials.json"):
-                    with open("dhan_credentials.json", "r") as f:
-                        ddata = json.load(f)
-                        client_id = client_id or ddata.get("DHAN_CLIENT_ID", "")
-                        access_token = access_token or ddata.get("DHAN_ACCESS_TOKEN", "")
-            except Exception:
-                pass
-
-        client_id = str(client_id).strip().strip('"').strip("'")
-        access_token = str(access_token).strip().strip('"').strip("'")
+        client_id, access_token = self._get_dhan_credentials()
 
         if client_id and access_token:
             try:
