@@ -222,6 +222,9 @@ class MCXSilverPaperEngine:
             except Exception:
                 pass
 
+        client_id = str(client_id).strip().strip('"').strip("'")
+        access_token = str(access_token).strip().strip('"').strip("'")
+
         if not client_id or not access_token:
             return None, "DHAN CREDENTIALS MISSING"
 
@@ -239,7 +242,7 @@ class MCXSilverPaperEngine:
             elif r.status_code == 401:
                 return None, "DHAN TOKEN EXPIRED (HTTP 401)"
             else:
-                return None, f"DHAN MARGIN ERROR (HTTP {r.status_code})"
+                return None, f"DHAN MARGIN ERROR (HTTP {r.status_code}): {r.text[:80]}"
         except Exception as e:
             return None, f"DHAN MARGIN FETCH ERROR: {e}"
 
@@ -259,6 +262,9 @@ class MCXSilverPaperEngine:
                         access_token = access_token or ddata.get("DHAN_ACCESS_TOKEN", "")
             except Exception:
                 pass
+
+        client_id = str(client_id).strip().strip('"').strip("'")
+        access_token = str(access_token).strip().strip('"').strip("'")
 
         if client_id and access_token:
             try:
