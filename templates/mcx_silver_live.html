@@ -213,10 +213,25 @@
         <div class="main-layout">
             <!-- LEFT COLUMN: ALL CONTROLS, P&L SETTINGS & STATS -->
             <div class="left-col">
+                <!-- AUTOMATED STRATEGY TRADING ENGINE PANEL -->
+                <div class="panel-card" style="border: 2px solid #10b981; background: linear-gradient(135deg, rgba(6,78,59,0.4), rgba(15,23,42,0.95)); padding: 14px; margin-bottom: 4px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                        <span style="font-size: 1rem; font-weight: 900; color: #10b981; letter-spacing: 0.5px;">⚡ AUTOMATED STRATEGY ENGINE</span>
+                        <span id="autotrade-status-badge" style="background: rgba(16,185,129,0.2); color: #10b981; border: 1px solid #10b981; padding: 2px 8px; border-radius: 4px; font-size: 0.78rem; font-weight: 900;">ACTIVE</span>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; align-items: center; font-size: 0.85rem; color: #cbd5e1; font-weight: 700; margin-bottom: 10px;">
+                        <span>Signal Detector: <strong style="color: #38bdf8;">EMA 9/21 Crossover</strong></span>
+                        <span>Latest Signal: <strong id="latest-signal-badge" style="color: #10b981;">WAITING</strong></span>
+                    </div>
+                    <button onclick="toggleAutoTrade()" id="btn-toggle-autotrade" style="width: 100%; background: #10b981; color: white; font-weight: 900; font-size: 0.95rem; border: none; padding: 8px 12px; border-radius: 6px; cursor: pointer; transition: background 0.2s;">
+                        🤖 TOGGLE AUTOMATED TRADING (ON)
+                    </button>
+                </div>
+
                 <!-- RISK & P&L SETTINGS PANEL (BIG CLEAR TEXT ON LEFT) -->
                 <div class="panel-card" style="border: 2px solid #38bdf8; background: linear-gradient(135deg, rgba(15,23,42,0.98), rgba(30,41,59,0.95));">
                     <div style="font-size: 1.15rem; font-weight: 900; color: #38bdf8; margin-bottom: 12px; letter-spacing: 0.5px; display: flex; align-items: center; gap: 8px;">
-                        <span>⚙️ P&L SETTINGS (PAPER TARGET & LOSS CONTROL)</span>
+                        <span>⚙️ P&L SETTINGS (TARGET & LOSS CONTROL)</span>
                     </div>
                     <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px;">
                         <div>
@@ -347,6 +362,39 @@
                     }
                 }
                 
+                const autoBadge = document.getElementById('autotrade-status-badge');
+                const signalBadge = document.getElementById('latest-signal-badge');
+                const btnToggle = document.getElementById('btn-toggle-autotrade');
+                
+                if (data.auto_paper_trading_enabled) {
+                    if (autoBadge) {
+                        autoBadge.style.background = 'rgba(16, 185, 129, 0.2)';
+                        autoBadge.style.color = '#10b981';
+                        autoBadge.style.borderColor = '#10b981';
+                        autoBadge.innerText = 'ACTIVE';
+                    }
+                    if (btnToggle) {
+                        btnToggle.innerText = '🤖 AUTOMATED STRATEGY TRADING (ACTIVE - CLICK TO PAUSE)';
+                        btnToggle.style.background = '#10b981';
+                    }
+                } else {
+                    if (autoBadge) {
+                        autoBadge.style.background = 'rgba(245, 158, 11, 0.2)';
+                        autoBadge.style.color = '#f59e0b';
+                        autoBadge.style.borderColor = '#f59e0b';
+                        autoBadge.innerText = 'PAUSED';
+                    }
+                    if (btnToggle) {
+                        btnToggle.innerText = '⏸️ AUTOMATED TRADING (PAUSED - CLICK TO ENABLE)';
+                        btnToggle.style.background = '#64748b';
+                    }
+                }
+
+                if (signalBadge) {
+                    signalBadge.innerText = data.latest_signal || 'WAITING';
+                    signalBadge.style.color = data.latest_signal === 'BUY' ? '#10b981' : (data.latest_signal === 'SELL' ? '#ef4444' : '#38bdf8');
+                }
+
                 const realEl = document.getElementById('today-realized');
                 realEl.innerText = `₹${data.today_realized_pnl_inr.toLocaleString('en-IN', {minimumFractionDigits: 2})}`;
                 realEl.className = data.today_realized_pnl_inr >= 0 ? 'pnl-stat-val pos-green' : 'pnl-stat-val pos-red';
@@ -409,6 +457,14 @@
 
         async function closeTrade() {
             await fetch('/api/mcx-silver/close', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'}
+            });
+            fetchState();
+        }
+
+        async function toggleAutoTrade() {
+            await fetch('/api/mcx-silver/toggle-autotrade', {
                 method: 'POST',
                 headers: {'Content-Type': 'application/json'}
             });

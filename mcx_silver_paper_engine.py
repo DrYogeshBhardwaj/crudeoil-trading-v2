@@ -123,8 +123,10 @@ class MCXSilverPaperEngine:
         self.starting_capital = 330000.0
         self.current_price_inr = 223894.0
         self.price_source = "DHAN MCX TERMINAL FEED"
-        self.system_status = "PAPER SCANNING STANDBY"
-        self.auto_paper_trading_enabled = False
+        self.system_status = "AUTOMATED STRATEGY SCANNING ACTIVE (EMA 9/21)"
+        self.auto_paper_trading_enabled = True
+        self.latest_signal = "WAITING"
+        self._last_auto_trade_time = 0.0
         self._price_history: List[float] = []
         self._feed_running = False
 
@@ -147,6 +149,15 @@ class MCXSilverPaperEngine:
         # Engine initialization logged without forcing an auto-BUY position on startup
         if not self.active_position:
             print(f"[{datetime.now()}] [MCX SILVER ENGINE] Engine initialized with NO active position. Ready for signal or manual paper trade.")
+
+    def toggle_auto_trading(self) -> bool:
+        """Toggles automated strategy signal trading ON/OFF."""
+        self.auto_paper_trading_enabled = not self.auto_paper_trading_enabled
+        if self.auto_paper_trading_enabled:
+            self.system_status = "AUTOMATED STRATEGY SCANNING ACTIVE (EMA 9/21)"
+        else:
+            self.system_status = "AUTOMATED STRATEGY PAUSED (MANUAL MODE ONLY)"
+        return self.auto_paper_trading_enabled
 
     def check_mcx_market_status(self) -> Tuple[bool, str]:
         """Checks if MCX India market is currently open (Mon-Fri 09:00 AM - 11:30 PM IST)."""
@@ -343,6 +354,7 @@ class MCXSilverPaperEngine:
             self._price_history = self._price_history[-50:]
 
         if len(self._price_history) < 5:
+            self.latest_signal = "BUY"
             return "BUY"
 
         prices = self._price_history
@@ -350,14 +362,21 @@ class MCXSilverPaperEngine:
         ema21 = sum(prices[-21:]) / float(len(prices[-21:]))
 
         if ema9 >= ema21:
+            self.latest_signal = "BUY"
             return "BUY"
         else:
+            self.latest_signal = "SELL"
             return "SELL"
 
     def process_tick(self) -> Optional[Dict[str, Any]]:
         """Processes live market price tick with MCX schedule enforcement."""
         market_open, status_msg = self.check_mcx_market_status()
-        self.system_status = status_msg
+        if self.auto_paper_trading_enabled and market_open:
+            self.system_status = "AUTOMATED STRATEGY SCANNING ACTIVE (EMA 9/21)"
+        elif not self.auto_paper_trading_enabled:
+            self.system_status = "AUTOMATED STRATEGY PAUSED (MANUAL MODE ONLY)"
+        else:
+            self.system_status = status_msg
 
         curr_price = self.fetch_market_price()
 
@@ -386,7 +405,14 @@ class MCXSilverPaperEngine:
                 elif curr_price >= pos.stop_loss_price_inr:
                     return self.manual_close(exit_price=pos.stop_loss_price_inr, reason="STOP LOSS HIT (-Rs.10,000 NET)")
 
-        # Evaluate TP/SL on active position if present
+        elif self.auto_paper_trading_enabled and market_open:
+            now_ts = time.time()
+            if now_ts - self._last_auto_trade_time > 10.0:  # Cool-down of 10 seconds between auto-trades
+                signal = self.evaluate_strategy_signal(curr_price)
+                if signal in ("BUY", "SELL"):
+                    self._last_auto_trade_time = now_ts
+                    self.manual_entry(direction=signal, price=curr_price)
+
         return None
 
     async def start_feed_loop(self):
@@ -543,6 +569,8 @@ class MCXSilverPaperEngine:
             "security_id": "483080",
             "currency": "INR",
             "enable_live_trading": self.ENABLE_LIVE_TRADING,
+            "auto_paper_trading_enabled": self.auto_paper_trading_enabled,
+            "latest_signal": getattr(self, "latest_signal", "WAITING"),
             "is_synthetic_feed": self.is_synthetic_feed,
             "price_feed_quality": getattr(self, "price_feed_quality", "SYNTHETIC_FALLBACK") + (" (PAPER PRACTICE ONLY)" if self.is_synthetic_feed else ""),
             "is_real_mcx_price_valid_for_live_execution": self.is_real_mcx_price_valid_for_live_execution(),

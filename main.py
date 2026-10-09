@@ -481,6 +481,12 @@ async def reset_mcx_silver_stats():
     MCX_SILVER_ENGINE.reset_statistics()
     return JSONResponse({"success": True, "message": "MCX Silver Paper Engine statistics reset successfully."})
 
+@app.post("/api/mcx-silver/toggle-autotrade")
+async def toggle_mcx_silver_autotrade():
+    """Toggles automated strategy signal trading ON/OFF for MCX Silver."""
+    new_state = MCX_SILVER_ENGINE.toggle_auto_trading()
+    return JSONResponse({"success": True, "auto_trading_enabled": new_state})
+
 
 
 # --- MUDREX CRUDE PAPER ENGINE (CL/USDT) ENDPOINTS ---
