@@ -123,8 +123,8 @@ class MCXSilverPaperEngine:
         self.starting_capital = 330000.0
         self.current_price_inr = 223894.0
         self.price_source = "DHAN MCX TERMINAL FEED"
-        self.system_status = "AUTOMATED PAPER SCANNING ACTIVE"
-        self.auto_paper_trading_enabled = True
+        self.system_status = "PAPER SCANNING STANDBY"
+        self.auto_paper_trading_enabled = False
         self._price_history: List[float] = []
         self._feed_running = False
 
@@ -380,11 +380,7 @@ class MCXSilverPaperEngine:
                 elif curr_price >= pos.stop_loss_price_inr:
                     return self.manual_close(exit_price=pos.stop_loss_price_inr, reason="STOP LOSS HIT (-Rs.10,000 NET)")
 
-        elif self.auto_paper_trading_enabled and market_open:
-            # Auto-open new position ONLY when MCX market is OPEN
-            signal = self.evaluate_strategy_signal(curr_price)
-            self.manual_entry(direction=signal, price=curr_price)
-
+        # Evaluate TP/SL on active position if present
         return None
 
     async def start_feed_loop(self):
@@ -526,7 +522,13 @@ class MCXSilverPaperEngine:
             active_pos_dict["unrealized_pnl_inr"] = round(unrealized_pnl, 2)
             active_pos_dict["estimated_charges_inr"] = chg_breakdown["total_charges"]
 
-        capital_display = dhan_margin if dhan_margin is not None else round(self.capital, 2)
+        if dhan_margin is not None and dhan_margin > 0:
+            capital_display = dhan_margin
+            margin_status = "LIVE DHAN MARGIN"
+        else:
+            capital_display = round(self.capital, 2)
+            if margin_status == "LIVE DHAN MARGIN" or not margin_status:
+                margin_status = "VIRTUAL CAPITAL (DHAN UNCONNECTED / TOKEN EXPIRED)"
 
         return {
             "timestamp": datetime.now(timezone(timedelta(hours=5, minutes=30))).strftime("%Y-%m-%d %H:%M:%S IST"),
