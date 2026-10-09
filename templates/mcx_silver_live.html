@@ -236,7 +236,7 @@
                 <!-- PNL SUMMARY STAT BOXES -->
                 <div class="pnl-row">
                     <div class="pnl-stat-box">
-                        <div class="pnl-stat-title">ACCOUNT CAPITAL</div>
+                        <div class="pnl-stat-title">ACCOUNT CAPITAL <span id="capital-source-tag" style="font-size:0.65rem; color:#38bdf8;">(LIVE DHAN MARGIN)</span></div>
                         <div class="pnl-stat-val pos-green" id="account-capital">₹3,30,000</div>
                     </div>
                     <div class="pnl-stat-box">
@@ -327,6 +327,10 @@
                 
                 document.getElementById('live-mcx-price').innerText = `₹${data.current_price_inr.toLocaleString('en-IN', {minimumFractionDigits: 2})}`;
                 document.getElementById('account-capital').innerText = `₹${data.account_capital_inr.toLocaleString('en-IN', {minimumFractionDigits: 2})}`;
+                const tagEl = document.getElementById('capital-source-tag');
+                if (tagEl) {
+                    tagEl.innerText = `(${data.dhan_margin_status || 'VIRTUAL CAPITAL'})`;
+                }
                 
                 const badge = document.getElementById('market-status-badge');
                 if (badge) {

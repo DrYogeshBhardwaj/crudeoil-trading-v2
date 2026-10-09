@@ -208,6 +208,41 @@ class MCXSilverPaperEngine:
             return False
         return True
 
+    def fetch_dhan_live_margin(self) -> Tuple[Optional[float], str]:
+        """Fetches real-time available margin balance directly from Dhan API (GET /v2/fundlimit)."""
+        client_id = os.environ.get("DHAN_CLIENT_ID", "").strip()
+        access_token = os.environ.get("DHAN_ACCESS_TOKEN", "").strip()
+        if not client_id or not access_token:
+            try:
+                if os.path.exists("dhan_credentials.json"):
+                    with open("dhan_credentials.json", "r") as f:
+                        ddata = json.load(f)
+                        client_id = client_id or ddata.get("DHAN_CLIENT_ID", "").strip()
+                        access_token = access_token or ddata.get("DHAN_ACCESS_TOKEN", "").strip()
+            except Exception:
+                pass
+
+        if not client_id or not access_token:
+            return None, "DHAN CREDENTIALS MISSING"
+
+        try:
+            headers = {
+                "access-token": access_token,
+                "client-id": client_id,
+                "Content-Type": "application/json"
+            }
+            r = requests.get("https://api.dhan.co/v2/fundlimit", headers=headers, timeout=4)
+            if r.status_code == 200:
+                fdata = r.json().get("data", {})
+                margin = float(fdata.get("availabelBalance") or fdata.get("availableBalance") or fdata.get("sodLimit") or 0.0)
+                return round(margin, 2), "LIVE DHAN MARGIN"
+            elif r.status_code == 401:
+                return None, "DHAN TOKEN EXPIRED (HTTP 401)"
+            else:
+                return None, f"DHAN MARGIN ERROR (HTTP {r.status_code})"
+        except Exception as e:
+            return None, f"DHAN MARGIN FETCH ERROR: {e}"
+
     def fetch_market_price(self) -> float:
         """Fetches live MCX Silver price in INR per kg from Dhan API or calibrated market feed."""
         price_inr = None
@@ -471,6 +506,8 @@ class MCXSilverPaperEngine:
     def get_dashboard_state(self) -> Dict[str, Any]:
         market_open, status_msg = self.check_mcx_market_status()
         curr_price = self.fetch_market_price()
+        dhan_margin, margin_status = self.fetch_dhan_live_margin()
+        
         unrealized_pnl = 0.0
         active_pos_dict = None
         chg_breakdown = calculate_dhan_mcx_silver_charges(curr_price, curr_price)
@@ -489,6 +526,8 @@ class MCXSilverPaperEngine:
             active_pos_dict["unrealized_pnl_inr"] = round(unrealized_pnl, 2)
             active_pos_dict["estimated_charges_inr"] = chg_breakdown["total_charges"]
 
+        capital_display = dhan_margin if dhan_margin is not None else round(self.capital, 2)
+
         return {
             "timestamp": datetime.now(timezone(timedelta(hours=5, minutes=30))).strftime("%Y-%m-%d %H:%M:%S IST"),
             "instrument": "SILVERM NOV FUT",
@@ -501,12 +540,14 @@ class MCXSilverPaperEngine:
             "is_real_mcx_price_valid_for_live_execution": self.is_real_mcx_price_valid_for_live_execution(),
             "is_price_stale": self.is_price_stale,
             "price_source": getattr(self, "price_source", "DHAN MCX TERMINAL FEED"),
+            "dhan_margin_balance_inr": dhan_margin,
+            "dhan_margin_status": margin_status,
             "market_open": market_open,
             "market_schedule": "Mon-Fri 09:00 AM - 11:30 PM IST",
             "current_price_inr": curr_price,
             "dhan_charges_breakdown": chg_breakdown,
             "starting_capital_inr": self.starting_capital,
-            "account_capital_inr": round(self.capital, 2),
+            "account_capital_inr": capital_display,
             "target_net_inr": self.target_net_inr,
             "max_loss_net_inr": self.max_loss_net_inr,
             "today_realized_pnl_inr": round(self.today_realized_pnl, 2),
