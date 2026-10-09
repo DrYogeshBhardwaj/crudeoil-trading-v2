@@ -130,7 +130,6 @@ class MCXSilverPaperEngine:
         self._price_history: List[float] = []
         self._feed_running = False
 
-        self.ENABLE_LIVE_TRADING = False
         self.is_synthetic_feed = True
         self.price_feed_quality = "SYNTHETIC_FALLBACK"
         self.last_price_update_timestamp = 0.0
@@ -149,6 +148,15 @@ class MCXSilverPaperEngine:
         # Engine initialization logged without forcing an auto-BUY position on startup
         if not self.active_position:
             print(f"[{datetime.now()}] [MCX SILVER ENGINE] Engine initialized with NO active position. Ready for signal or manual paper trade.")
+
+    @property
+    def ENABLE_LIVE_TRADING(self) -> bool:
+        """
+        Dynamically checks env vars ENABLE_LIVE_TRADING_SILVER or ENABLE_LIVE_TRADING.
+        Set ENABLE_LIVE_TRADING_SILVER=true in Railway environment variables to enable live execution.
+        """
+        val = os.environ.get("ENABLE_LIVE_TRADING_SILVER") or os.environ.get("ENABLE_LIVE_TRADING") or "false"
+        return str(val).strip().lower() in ("true", "1", "yes", "enabled")
 
     def toggle_auto_trading(self) -> bool:
         """Toggles automated strategy signal trading ON/OFF."""
@@ -200,9 +208,55 @@ class MCXSilverPaperEngine:
             if t.get("exit_timestamp") and t.get("exit_timestamp").startswith(today_prefix)
         )
 
-    def place_live_dhan_order(self, *args, **kwargs):
-        """Hardcoded Safety Guard - Prevents any real Dhan order execution in Phase 1."""
-        raise RuntimeError("CRITICAL SAFETY BLOCK: Real Dhan Order API execution is HARDCODED DISABLED in Phase 1.")
+    def place_live_dhan_order(self, direction: str = "BUY", quantity_lots: int = 1, *args, **kwargs) -> Dict[str, Any]:
+        """
+        Transmits real order to Dhan HQ REST API (/v2/orders) if ENABLE_LIVE_TRADING is True
+        and all safety pre-flight checks pass.
+        """
+        if not self.ENABLE_LIVE_TRADING:
+            raise RuntimeError("CRITICAL SAFETY BLOCK: Real Dhan Order API execution is disabled because ENABLE_LIVE_TRADING is False.")
+
+        if not self.is_real_mcx_price_valid_for_live_execution():
+            raise RuntimeError("SAFETY GUARD TRIGGERED: Cannot execute live Dhan order on synthetic/stale/closed market price feed.")
+
+        client_id, access_token = self._get_dhan_credentials()
+        if not client_id or not access_token:
+            raise RuntimeError("DHAN CREDENTIALS MISSING: Cannot execute live Dhan order.")
+
+        url = "https://api.dhan.co/v2/orders"
+        headers = {
+            "client-id": client_id,
+            "access-token": access_token,
+            "Content-Type": "application/json"
+        }
+        payload = {
+            "dhanClientId": client_id,
+            "correlationId": f"AG-SILVER-{int(time.time())}",
+            "transactionType": direction.upper(),
+            "exchangeSegment": "MCX_COMM",
+            "productType": "MARGIN",
+            "orderType": "MARKET",
+            "validity": "DAY",
+            "tradingSymbol": "SILVERM NOV FUT",
+            "securityId": self.security_id,
+            "quantity": int(quantity_lots),
+            "disclosedQuantity": 0,
+            "price": 0.0,
+            "triggerPrice": 0.0,
+            "afterMarketOrder": False,
+            "amoTime": "OPEN"
+        }
+
+        r = requests.post(url, headers=headers, json=payload, timeout=5)
+        if r.status_code == 200:
+            resp_data = r.json()
+            return {
+                "status": "SUCCESS",
+                "order_id": resp_data.get("orderId") or resp_data.get("dhanOrderId"),
+                "data": resp_data
+            }
+        else:
+            raise RuntimeError(f"Dhan Order API Error (HTTP {r.status_code}): {r.text}")
 
     def is_real_mcx_price_valid_for_live_execution(self) -> bool:
         """
