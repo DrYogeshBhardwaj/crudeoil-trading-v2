@@ -202,6 +202,7 @@
                 <h1>SILVERM (SILVER MINI) MCX DHAN LIVE DASHBOARD</h1>
                 <span class="badge-mcx">MCX INDIA</span>
                 <span id="market-status-badge" style="background: rgba(16, 185, 129, 0.2); color: #10b981; border: 1px solid #10b981; padding: 4px 10px; border-radius: 6px; font-weight: 800; font-size: 0.8rem;">🟢 MCX MARKET OPEN</span>
+                <span id="auto-refresh-badge" style="background: rgba(56, 189, 248, 0.15); color: #38bdf8; border: 1px solid rgba(56, 189, 248, 0.4); padding: 4px 10px; border-radius: 6px; font-weight: 800; font-size: 0.78rem;">⚡ AUTO-REFRESH LIVE (2s)</span>
             </div>
             <div style="display: flex; gap: 12px; align-items: center;">
                 <a href="/" style="color: #38bdf8; text-decoration: none; font-size: 0.88rem; font-weight: 800;">Main Portal</a>
@@ -483,7 +484,17 @@
             fetchState();
         }
 
-        setInterval(fetchState, 3000);
+        // Real-time state refresh every 2 seconds via AJAX
+        setInterval(fetchState, 2000);
+        
+        // Full page auto-reload safety refresh every 3 minutes (180 seconds)
+        setInterval(() => {
+            if (!document.activeElement || (document.activeElement.tagName !== 'INPUT' && document.activeElement.tagName !== 'TEXTAREA')) {
+                console.log("Executing periodic 3-min page auto-refresh...");
+                location.reload();
+            }
+        }, 180000);
+
         fetchState();
     </script>
 </body>
