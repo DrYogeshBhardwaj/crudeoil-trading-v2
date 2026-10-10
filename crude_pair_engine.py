@@ -871,6 +871,28 @@ class CrudePairEngine:
                 }
             }
 
+    def record_hourly_snapshot(self):
+        """Captures an hourly snapshot of dashboard state and saves it to DB for the 24-hour audit."""
+        with self._lock:
+            state = self.get_dashboard_state()
+            summary = state.get("summary", {})
+            snap_dict = {
+                "timestamp": self.get_now_ist_str(),
+                "current_price": state.get("current_price", 0.0),
+                "open_positions": summary.get("total_open_positions", 0),
+                "closed_positions": summary.get("total_closed_positions", 0),
+                "gross_realized_pnl": summary.get("realized_gross_pnl", 0.0),
+                "trading_fees": summary.get("total_trading_fees", 0.0),
+                "funding_costs": summary.get("total_funding_costs", 0.0),
+                "realized_net_pnl": summary.get("realized_net_pnl", 0.0),
+                "current_unrealized_pnl": summary.get("current_unrealized_pnl", 0.0),
+                "combined_net_equity": summary.get("combined_net_equity", 0.0),
+                "max_adverse_usd": summary.get("highest_adverse_usd", 0.0),
+                "feed_status": state.get("feed_status", "CONNECTED")
+            }
+            DB.save_crude_pair_snapshot(snap_dict)
+            print(f"[CRUDE SNAPSHOT] Recorded hourly snapshot at {snap_dict['timestamp']}")
+
     def generate_csv_export(self) -> str:
         """Generates a full CSV string of the main P/L ledger for independent auditing."""
         output = io.StringIO()
@@ -926,10 +948,12 @@ CRUDE_PAIR_ENGINE = CrudePairEngine()
 
 
 async def crude_pair_engine_background_loop():
-    """Background task to stream market tick and evaluate open positions."""
+    """Background task to stream market tick and evaluate open positions continuously."""
     print("[CRUDE PAIR ENGINE] Background market tick monitoring loop initiated.")
+    last_snapshot_time = 0.0
     while True:
         try:
+            now = time.time()
             if CRUDE_PAIR_ENGINE.is_running:
                 tick_meta = CRUDE_PAIR_ENGINE.fetch_live_market_price()
                 price = tick_meta.get("price")
@@ -937,6 +961,11 @@ async def crude_pair_engine_background_loop():
                 if price_valid and price and price > 0:
                     now_str = CRUDE_PAIR_ENGINE.get_now_ist_str()
                     CRUDE_PAIR_ENGINE.process_tick(price, now_str)
+
+                # Record hourly snapshot every 3600s
+                if now - last_snapshot_time >= 3600 or last_snapshot_time == 0.0:
+                    CRUDE_PAIR_ENGINE.record_hourly_snapshot()
+                    last_snapshot_time = now
         except Exception as e:
             print(f"[CRUDE PAIR ENGINE LOOP ERROR] {e}")
         await asyncio.sleep(2)

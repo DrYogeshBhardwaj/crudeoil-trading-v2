@@ -313,6 +313,24 @@ class DatabaseEngine:
                 )
             """)
 
+            cursor.execute("""
+                CREATE TABLE IF NOT EXISTS crude_pair_snapshots (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    timestamp TEXT NOT NULL,
+                    current_price REAL NOT NULL,
+                    open_positions INTEGER NOT NULL,
+                    closed_positions INTEGER NOT NULL,
+                    gross_realized_pnl REAL NOT NULL,
+                    trading_fees REAL NOT NULL,
+                    funding_costs REAL NOT NULL,
+                    realized_net_pnl REAL NOT NULL,
+                    current_unrealized_pnl REAL NOT NULL,
+                    combined_net_equity REAL NOT NULL,
+                    max_adverse_usd REAL NOT NULL,
+                    feed_status TEXT NOT NULL
+                )
+            """)
+
             # Bitcoin Paper Trades Table (Dedicated Namespace for BTC-INR)
             cursor.execute("""
                 CREATE TABLE IF NOT EXISTS bitcoin_paper_trades (
@@ -1612,12 +1630,45 @@ class DatabaseEngine:
             rows = cursor.fetchall()
             return [dict(r) for r in rows]
 
+    def save_crude_pair_snapshot(self, snap_dict: Dict[str, Any]):
+        with self._get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute("""
+                INSERT INTO crude_pair_snapshots (
+                    timestamp, current_price, open_positions, closed_positions,
+                    gross_realized_pnl, trading_fees, funding_costs, realized_net_pnl,
+                    current_unrealized_pnl, combined_net_equity, max_adverse_usd, feed_status
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """, (
+                str(snap_dict["timestamp"]),
+                float(snap_dict.get("current_price", 0.0)),
+                int(snap_dict.get("open_positions", 0)),
+                int(snap_dict.get("closed_positions", 0)),
+                float(snap_dict.get("gross_realized_pnl", 0.0)),
+                float(snap_dict.get("trading_fees", 0.0)),
+                float(snap_dict.get("funding_costs", 0.0)),
+                float(snap_dict.get("realized_net_pnl", 0.0)),
+                float(snap_dict.get("current_unrealized_pnl", 0.0)),
+                float(snap_dict.get("combined_net_equity", 0.0)),
+                float(snap_dict.get("max_adverse_usd", 0.0)),
+                str(snap_dict.get("feed_status", "CONNECTED"))
+            ))
+            conn.commit()
+
+    def load_crude_pair_snapshots(self, limit: int = 100) -> List[Dict[str, Any]]:
+        with self._get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute("SELECT * FROM crude_pair_snapshots ORDER BY id DESC LIMIT ?", (limit,))
+            rows = cursor.fetchall()
+            return [dict(r) for r in rows]
+
     def reset_crude_pair_account(self):
         with self._get_connection() as conn:
             cursor = conn.cursor()
             cursor.execute("DELETE FROM crude_pair_trades")
             cursor.execute("DELETE FROM crude_pair_settings")
             cursor.execute("DELETE FROM crude_pair_movements")
+            cursor.execute("DELETE FROM crude_pair_snapshots")
             conn.commit()
 
 DB = DatabaseEngine()
