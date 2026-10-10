@@ -7,8 +7,8 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <!-- TradingView Lightweight Charts Library (Version 3.8.0 Stable) -->
-    <script src="https://unpkg.com/lightweight-charts@3.8.0/dist/lightweight-charts.standalone.production.js"></script>
+    <!-- TradingView Lightweight Charts Library (Version 3.8.0 Stable jsDelivr) -->
+    <script src="https://cdn.jsdelivr.net/npm/lightweight-charts@3.8.0/dist/lightweight-charts.standalone.production.js"></script>
     <style>
         :root {
             --bg-dark: #090d16;
@@ -768,13 +768,21 @@
                 }
             });
 
-            candleSeries = chart.addCandlestickSeries({
+            const candleOpts = {
                 upColor: '#00e676',
                 downColor: '#ff2a6d',
                 borderVisible: false,
                 wickUpColor: '#00e676',
                 wickDownColor: '#ff2a6d'
-            });
+            };
+
+            if (typeof chart.addCandlestickSeries === 'function') {
+                candleSeries = chart.addCandlestickSeries(candleOpts);
+            } else if (typeof chart.addSeries === 'function' && LightweightCharts.CandlestickSeries) {
+                candleSeries = chart.addSeries(LightweightCharts.CandlestickSeries, candleOpts);
+            } else if (typeof chart.addSeries === 'function') {
+                candleSeries = chart.addSeries('Candlestick', candleOpts);
+            }
 
             window.addEventListener('resize', () => {
                 if (chart && container) {
