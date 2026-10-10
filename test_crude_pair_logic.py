@@ -194,6 +194,60 @@ class TestCrudePairLogic(unittest.TestCase):
         self.assertIn("RULE_1_BOOKING_THRESHOLD", rule_ids)
         self.assertIn("RULE_4_LOSS_MANAGEMENT", rule_ids)
 
+    def test_10_controlled_price_sequence_movement_observation(self):
+        """10. Verify controlled price sequence 90.68 -> 90.64 -> 90.70 updates counts, direction, delta, and reversals accurately."""
+        self.engine.booking_enabled = False  # Observation test only
+
+        # Tick 1: Initial baseline @ $90.68
+        self.engine.record_price_movement_observation(90.68, "2026-10-10 10:00:00 IST")
+        state1 = self.engine.get_dashboard_state()
+        obs1 = state1["movement_observation"]
+        self.assertEqual(obs1["latest_price"], 90.68)
+        self.assertIsNone(obs1["previous_price"])
+        self.assertEqual(obs1["last_change"], 0.0)
+        self.assertEqual(obs1["direction"], "UNCHANGED")
+        self.assertEqual(obs1["total_up_observations"], 0)
+        self.assertEqual(obs1["total_down_observations"], 0)
+        self.assertEqual(obs1["total_reversals"], 0)
+
+        # Tick 2: Price drops to $90.64 (Delta -$0.04, DOWN)
+        self.engine.record_price_movement_observation(90.64, "2026-10-10 10:00:02 IST")
+        state2 = self.engine.get_dashboard_state()
+        obs2 = state2["movement_observation"]
+        self.assertEqual(obs2["previous_price"], 90.68)
+        self.assertEqual(obs2["latest_price"], 90.64)
+        self.assertEqual(obs2["last_change"], -0.04)
+        self.assertEqual(obs2["direction"], "DOWN")
+        self.assertEqual(obs2["total_up_observations"], 0)
+        self.assertEqual(obs2["total_down_observations"], 1)
+        self.assertEqual(obs2["total_reversals"], 0)
+        self.assertEqual(obs2["threshold_hits"]["$0.01"], 1)
+        self.assertEqual(obs2["threshold_hits"]["$0.02"], 1)
+        self.assertEqual(obs2["threshold_hits"]["$0.05"], 0)
+
+        # Tick 3: Duplicate polling of $90.64 must NOT increment observations
+        self.engine.record_price_movement_observation(90.64, "2026-10-10 10:00:04 IST")
+        state3 = self.engine.get_dashboard_state()
+        obs3 = state3["movement_observation"]
+        self.assertEqual(obs3["total_down_observations"], 1)  # Stays 1, no duplicate counting!
+
+        # Tick 4: Price rises to $90.70 (Delta +$0.06, UP, Reversal DOWN -> UP)
+        self.engine.record_price_movement_observation(90.70, "2026-10-10 10:00:06 IST")
+        state4 = self.engine.get_dashboard_state()
+        obs4 = state4["movement_observation"]
+        self.assertEqual(obs4["previous_price"], 90.64)
+        self.assertEqual(obs4["latest_price"], 90.70)
+        self.assertEqual(obs4["last_change"], 0.06)
+        self.assertEqual(obs4["direction"], "UP")
+        self.assertEqual(obs4["total_up_observations"], 1)
+        self.assertEqual(obs4["total_down_observations"], 1)
+        self.assertEqual(obs4["total_reversals"], 1)
+        self.assertEqual(obs4["threshold_hits"]["$0.01"], 2)
+        self.assertEqual(obs4["threshold_hits"]["$0.02"], 2)
+        self.assertEqual(obs4["threshold_hits"]["$0.05"], 1)
+        self.assertEqual(obs4["threshold_hits"]["$0.10"], 0)
+
 
 if __name__ == "__main__":
     unittest.main()
+

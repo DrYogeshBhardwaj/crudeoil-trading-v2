@@ -89,13 +89,14 @@ class CrudePairEngine:
         self.last_tick_time: Optional[str] = None
         self.feed_status: str = "INITIALIZING"
         self.feed_source: str = "Mudrex CL • USDT Futures Feed (CLUSDT)"
-        
-        # Persistent Movement Observation Tracker
+             # Persistent Movement Observation Tracker
+        self.previous_price: Optional[float] = None
+        self.current_price: Optional[float] = None
+        self.last_delta: float = 0.0
         self.total_up_count: int = 0
         self.total_down_count: int = 0
         self.reversal_count: int = 0
         self.last_direction: str = "UNCHANGED"
-        self.last_observed_price: Optional[float] = None
         self.last_observed_time: Optional[str] = None
         self.threshold_hits: Dict[str, int] = {f"${t:.2f}": 0 for t in ALL_OBSERVATION_THRESHOLDS}
 
@@ -130,8 +131,18 @@ class CrudePairEngine:
             self.reversal_count = int(DB.load_crude_pair_setting("reversal_count", "0"))
             self.last_direction = DB.load_crude_pair_setting("last_direction", "UNCHANGED")
             
-            p_obs = DB.load_crude_pair_setting("last_observed_price", "")
-            self.last_observed_price = float(p_obs) if p_obs else None
+            p_prev = DB.load_crude_pair_setting("previous_price", "")
+            self.previous_price = float(p_prev) if p_prev else None
+
+            p_curr = DB.load_crude_pair_setting("current_price", "")
+            self.current_price = float(p_curr) if p_curr else None
+
+            p_delta = DB.load_crude_pair_setting("last_delta", "0.0")
+            try:
+                self.last_delta = float(p_delta)
+            except ValueError:
+                self.last_delta = 0.0
+
             self.last_observed_time = DB.load_crude_pair_setting("last_observed_time", "")
 
             for t in ALL_OBSERVATION_THRESHOLDS:
@@ -470,32 +481,42 @@ class CrudePairEngine:
 
         return pos
 
-    def record_price_movement_observation(self, current_price: float, timestamp_str: str):
+    def record_price_movement_observation(self, new_price: float, timestamp_str: str):
         """
-        Observes and records every new valid price update:
-        - Direction (UP / DOWN / UNCHANGED)
-        - Reversals count
-        - Hit counts for all 11 thresholds ($0.01 to $3.00)
-        - PERSISTENT ONLY (Observation only, NO order execution triggered)
+        Observes and records every genuine price tick change:
+        - Filters out duplicate polling of the exact same price.
+        - Updates previous_price, current_price, signed last_delta, direction (UP/DOWN/UNCHANGED).
+        - Increments total_up_count / total_down_count / reversal_count on genuine changes.
+        - Increments 11 threshold hit counts for any threshold <= abs(last_delta).
+        - Persists state atomically in DB.
         """
-        if current_price <= 0:
+        if new_price <= 0:
             return
 
         # Avoid counting identical tick prices repeatedly
-        if self.last_observed_price is not None and abs(current_price - self.last_observed_price) < 1e-6:
+        if self.current_price is not None and abs(new_price - self.current_price) < 1e-5:
             return
 
-        prev_p = self.last_observed_price
-        self.last_observed_price = current_price
+        prev_p = self.current_price if self.current_price is not None else self.previous_price
+        self.previous_price = prev_p
+        self.current_price = new_price
         self.last_observed_time = timestamp_str
-        self._save_setting("last_observed_price", str(current_price))
+
+        self._save_setting("previous_price", str(prev_p) if prev_p is not None else "")
+        self._save_setting("current_price", str(new_price))
         self._save_setting("last_observed_time", timestamp_str)
 
         if prev_p is None:
+            self.last_delta = 0.0
+            self.last_direction = "UNCHANGED"
+            self._save_setting("last_delta", "0.0")
+            self._save_setting("last_direction", "UNCHANGED")
             return
 
-        delta = current_price - prev_p
+        delta = round(new_price - prev_p, 4)
         abs_delta = abs(delta)
+        self.last_delta = delta
+        self._save_setting("last_delta", str(delta))
 
         if delta > 0:
             dir_str = "UP"
@@ -508,7 +529,7 @@ class CrudePairEngine:
         else:
             dir_str = "UNCHANGED"
 
-        # Reversal detection
+        # Reversal detection (UP -> DOWN or DOWN -> UP)
         if dir_str in ("UP", "DOWN"):
             if self.last_direction in ("UP", "DOWN") and dir_str != self.last_direction:
                 self.reversal_count += 1
@@ -516,7 +537,7 @@ class CrudePairEngine:
             self.last_direction = dir_str
             self._save_setting("last_direction", dir_str)
 
-        # Check all 11 observation level hits
+        # Check all 11 observation level hits for single-tick movement
         for t in ALL_OBSERVATION_THRESHOLDS:
             k = f"${t:.2f}"
             if abs_delta >= t:
@@ -529,9 +550,9 @@ class CrudePairEngine:
             "pair_id": "OBSERVATION",
             "position_id": f"TICK-{int(time.time()*1000)}",
             "direction": dir_str,
-            "price": current_price,
-            "price_change": round(delta, 4),
-            "threshold_usd": round(abs_delta, 4),
+            "price": new_price,
+            "price_change": delta,
+            "threshold_usd": abs_delta,
             "position_pnl": 0.0,
             "event_type": f"PRICE_OBSERVATION ({dir_str} ${abs_delta:.2f})"
         }
@@ -602,17 +623,10 @@ class CrudePairEngine:
         """Calculates full reconciled dashboard summary, observation panel, and main ledger."""
         with self._lock:
             tick_meta = self.fetch_live_market_price()
-            curr_price = tick_meta.get("price") or self.last_tick_price or self.reference_price or 90.65
+            curr_price = tick_meta.get("price") or self.current_price or self.last_tick_price or self.reference_price or 90.65
             conn_status = tick_meta.get("connection_status", "DISCONNECTED")
             f_status = tick_meta.get("feed_status", "DISCONNECTED")
             price_valid = tick_meta.get("price_valid", False)
-
-            # Record observation tick if state fetched directly
-            if price_valid and curr_price > 0:
-                self.record_price_movement_observation(curr_price, tick_meta.get("timestamp_ist") or self.get_now_ist_str())
-
-            prev_p = self.last_observed_price or curr_price
-            delta = curr_price - prev_p if prev_p else 0.0
 
             # Calculate ledger rows and unrealized P/L
             ledger_rows = []
@@ -647,18 +661,13 @@ class CrudePairEngine:
 
                 if status == "OPEN":
                     total_open += 1
-                    # calculate unrealized
-                    if direction == "BUY":
-                        diff = curr_price - entry_p
-                    else:
-                        diff = entry_p - float(entry_p)
                     u_gross = (curr_price - entry_p) * qty if direction == "BUY" else (entry_p - curr_price) * qty
                     approx_fees = (entry_p + curr_price) * qty * self.fee_rate
                     u_net = u_gross - approx_fees - float(p.get("funding_costs", 0.0))
                     p["unrealized_pnl"] = round(u_net, 4)
                     total_unrealized += u_net
 
-                    # Adverse movement
+                    diff = curr_price - entry_p if direction == "BUY" else entry_p - curr_price
                     adverse = abs(diff) if diff < 0 else 0.0
                     if adverse > highest_adverse_usd:
                         highest_adverse_usd = adverse
@@ -705,16 +714,27 @@ class CrudePairEngine:
 
             # Live Movement Observation Panel Payload
             movement_observation_panel = {
-                "latest_price": curr_price,
-                "previous_price": prev_p,
-                "last_change": round(delta, 4),
-                "last_change_abs": round(abs(delta), 4),
+                "latest_price": self.current_price or curr_price,
+                "previous_price": self.previous_price,
+                "last_change": round(self.last_delta, 4),
+                "last_change_abs": round(abs(self.last_delta), 4),
                 "direction": self.last_direction,
-                "timestamp_ist": tick_meta.get("timestamp_ist") or self.get_now_ist_str(),
+                "timestamp_ist": self.last_observed_time or tick_meta.get("timestamp_ist") or self.get_now_ist_str(),
                 "total_up_observations": self.total_up_count,
                 "total_down_observations": self.total_down_count,
                 "total_reversals": self.reversal_count,
                 "threshold_hits": {f"${t:.2f}": self.threshold_hits.get(f"${t:.2f}", 0) for t in ALL_OBSERVATION_THRESHOLDS}
+            }
+
+            diagnostics = {
+                "previous_price": self.previous_price,
+                "latest_price": self.current_price or curr_price,
+                "last_delta": round(self.last_delta, 4),
+                "last_tick_timestamp": self.last_observed_time or tick_meta.get("timestamp_ist") or self.get_now_ist_str(),
+                "panel_update_timestamp": self.get_now_ist_str(),
+                "feed_status": f_status,
+                "feed_source": tick_meta.get("feed_source", "Mudrex CL • USDT Market Feed (CLUSDT)"),
+                "is_running": self.is_running
             }
 
             # Instrument validation info
@@ -794,6 +814,7 @@ class CrudePairEngine:
                 },
                 "threshold_breakdown": threshold_breakdown,
                 "movement_observation": movement_observation_panel,
+                "diagnostics": diagnostics,
                 "ledger": ledger_rows,
                 "movements": self.movements[:50],
                 "instrument_validation": instrument_validation,
@@ -866,10 +887,13 @@ async def crude_pair_engine_background_loop():
     while True:
         try:
             if CRUDE_PAIR_ENGINE.is_running:
-                price, status = CRUDE_PAIR_ENGINE.fetch_live_market_price()
-                if price and price > 0:
+                tick_meta = CRUDE_PAIR_ENGINE.fetch_live_market_price()
+                price = tick_meta.get("price")
+                price_valid = tick_meta.get("price_valid", False)
+                if price_valid and price and price > 0:
                     now_str = CRUDE_PAIR_ENGINE.get_now_ist_str()
                     CRUDE_PAIR_ENGINE.process_tick(price, now_str)
         except Exception as e:
             print(f"[CRUDE PAIR ENGINE LOOP ERROR] {e}")
         await asyncio.sleep(2)
+
