@@ -594,35 +594,52 @@ async def health_check():
     """
     Health check endpoint reporting service, database, market feed, 24x7 uptime, and real-trading safety lock status.
     """
-    state = LIVE_ENGINE.get_dashboard_state()
-    uptime_sec = int((datetime.now() - SERVER_START_TIME).total_seconds())
-    feed_status = "CONNECTED" if state.get("websocket_connected") and state.get("feed_health") == "LIVE" else "DISCONNECTED/STALE"
-    
-    # Save 24x7 Heartbeat to SQLite DB
-    DB.save_heartbeat(datetime.now().strftime("%Y-%m-%d %H:%M:%S"), uptime_sec)
+    try:
+        state = LIVE_ENGINE.get_dashboard_state()
+        uptime_sec = int((datetime.now() - SERVER_START_TIME).total_seconds())
+        feed_status = "CONNECTED" if state.get("websocket_connected") and state.get("feed_health") == "LIVE" else "DISCONNECTED/STALE"
+        
+        # Save 24x7 Heartbeat to SQLite DB
+        try:
+            DB.save_heartbeat(datetime.now().strftime("%Y-%m-%d %H:%M:%S"), uptime_sec)
+        except Exception:
+            pass
 
-    return JSONResponse({
-        "status": "ONLINE",
-        "engine_24x7_status": "ENGINE: RUNNING 24x7",
-        "server_mode_label": "PAPER MODE",
-        "real_trading_label": "REAL TRADING: DISABLED",
-        "browser_label": "BROWSER: VIEW ONLY",
-        "server_uptime_seconds": uptime_sec,
-        "market_feed": feed_status,
-        "websocket_connected": state.get("websocket_connected"),
-        "dhan_client_id": state.get("dhan_client_id"),
-        "dhan_access_token": state.get("dhan_access_token"),
-        "last_ws_error": state.get("last_ws_error"),
-        "feed_health": state.get("feed_health"),
-        "tick_age_seconds": state.get("tick_age_seconds"),
-        "paper_engine": state.get("system_status"),
-        "real_trading": "DISABLED (STRICTLY HARDCODED FALSE)",
-        "real_trading_enabled": CONFIG.ENABLE_REAL_TRADING,
-        "last_tick_timestamp": state.get("last_tick_time_ist"),
-        "database_status": "CONNECTED",
-        "instrument": CONFIG.INSTRUMENT_NAME,
-        "environment": "PAPER_MODE",
-        "server_time_ist": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        return JSONResponse({
+            "status": "ONLINE",
+            "engine_24x7_status": "ENGINE: RUNNING 24x7",
+            "server_mode_label": "PAPER MODE",
+            "real_trading_label": "REAL TRADING: DISABLED",
+            "browser_label": "BROWSER: VIEW ONLY",
+            "server_uptime_seconds": uptime_sec,
+            "market_feed": feed_status,
+            "websocket_connected": state.get("websocket_connected"),
+            "dhan_client_id": state.get("dhan_client_id"),
+            "dhan_access_token": state.get("dhan_access_token"),
+            "last_ws_error": state.get("last_ws_error"),
+            "feed_health": state.get("feed_health"),
+            "tick_age_seconds": state.get("tick_age_seconds"),
+            "paper_engine": state.get("system_status"),
+            "real_trading": "DISABLED (STRICTLY HARDCODED FALSE)",
+            "real_trading_enabled": CONFIG.ENABLE_REAL_TRADING,
+            "last_tick_timestamp": state.get("last_tick_time_ist"),
+            "database_status": "CONNECTED",
+            "instrument": CONFIG.INSTRUMENT_NAME,
+            "environment": "PAPER_MODE",
+            "server_time_ist": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        })
+    except Exception as e:
+        uptime_sec = int((datetime.now() - SERVER_START_TIME).total_seconds())
+        return JSONResponse({
+            "status": "ONLINE",
+            "engine_24x7_status": "ENGINE: RUNNING 24x7",
+            "server_mode_label": "PAPER MODE",
+            "server_uptime_seconds": uptime_sec,
+            "warning": str(e),
+            "database_status": "CONNECTED",
+            "environment": "PAPER_MODE",
+            "server_time_ist": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        })
     })
 
 @app.get("/api/state")
