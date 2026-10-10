@@ -251,8 +251,8 @@
 
         .threshold-grid {
             display: grid;
-            grid-template-columns: repeat(6, 1fr);
-            gap: 12px;
+            grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+            gap: 10px;
         }
 
         .t-card {
@@ -551,39 +551,90 @@
         </div>
     </div>
 
-    <!-- 3. Six Movement Threshold Indicators (Directly Below Chart) -->
+    <!-- 3. Live Movement & Reversal Observation Panel (Priority Observation Output) -->
     <div class="movement-section">
-        <div class="section-label">🎯 6 Independent Movement Level Observations</div>
+        <div class="section-label">⚡ Live Mudrex CL • USDT UP/DOWN Movement & Reversal Panel</div>
+        
+        <!-- Summary metrics bar for Movement Observations -->
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 10px; margin-bottom: 14px;">
+            <div class="card" style="background: rgba(15, 23, 42, 0.9); border: 1px solid var(--card-border);">
+                <div class="card-title">Total UP Observations</div>
+                <div class="card-value val-positive" id="obs-up-count">0</div>
+                <div class="card-subtext">Upward price updates</div>
+            </div>
+            <div class="card" style="background: rgba(15, 23, 42, 0.9); border: 1px solid var(--card-border);">
+                <div class="card-title">Total DOWN Observations</div>
+                <div class="card-value val-negative" id="obs-down-count">0</div>
+                <div class="card-subtext">Downward price updates</div>
+            </div>
+            <div class="card" style="background: rgba(15, 23, 42, 0.9); border: 1px solid var(--card-border);">
+                <div class="card-title">Direction Reversals</div>
+                <div class="card-value val-amber" id="obs-reversal-count">0</div>
+                <div class="card-subtext">UP ↔ DOWN direction flips</div>
+            </div>
+            <div class="card" style="background: rgba(15, 23, 42, 0.9); border: 1px solid var(--card-border);">
+                <div class="card-title">Last Observed Change</div>
+                <div class="card-value val-neutral" id="obs-last-change">$0.00</div>
+                <div class="card-subtext" id="obs-last-dir">UNCHANGED</div>
+            </div>
+        </div>
+
+        <div class="section-label">🎯 11 Independent Movement Threshold Observations</div>
         <div class="threshold-grid">
+            <div class="t-card">
+                <div class="t-val">$0.01 Level</div>
+                <div class="t-count" id="th-001">0 Hits</div>
+                <div class="t-sub">Delta ≥ $0.01</div>
+            </div>
+            <div class="t-card">
+                <div class="t-val">$0.02 Level</div>
+                <div class="t-count" id="th-002">0 Hits</div>
+                <div class="t-sub">Delta ≥ $0.02</div>
+            </div>
+            <div class="t-card">
+                <div class="t-val">$0.05 Level</div>
+                <div class="t-count" id="th-005">0 Hits</div>
+                <div class="t-sub">Delta ≥ $0.05</div>
+            </div>
+            <div class="t-card">
+                <div class="t-val">$0.10 Level</div>
+                <div class="t-count" id="th-010">0 Hits</div>
+                <div class="t-sub">Delta ≥ $0.10</div>
+            </div>
+            <div class="t-card">
+                <div class="t-val">$0.15 Level</div>
+                <div class="t-count" id="th-015">0 Hits</div>
+                <div class="t-sub">Delta ≥ $0.15</div>
+            </div>
             <div class="t-card">
                 <div class="t-val">$0.25 Level</div>
                 <div class="t-count" id="th-025">0 Hits</div>
-                <div class="t-sub">Price delta ≥ $0.25</div>
+                <div class="t-sub">Delta ≥ $0.25</div>
             </div>
             <div class="t-card">
                 <div class="t-val">$0.50 Level</div>
                 <div class="t-count" id="th-050">0 Hits</div>
-                <div class="t-sub">Price delta ≥ $0.50</div>
+                <div class="t-sub">Delta ≥ $0.50</div>
             </div>
             <div class="t-card">
                 <div class="t-val">$1.00 Level</div>
                 <div class="t-count" id="th-100">0 Hits</div>
-                <div class="t-sub">Price delta ≥ $1.00</div>
+                <div class="t-sub">Delta ≥ $1.00</div>
             </div>
             <div class="t-card">
                 <div class="t-val">$1.50 Level</div>
                 <div class="t-count" id="th-150">0 Hits</div>
-                <div class="t-sub">Price delta ≥ $1.50</div>
+                <div class="t-sub">Delta ≥ $1.50</div>
             </div>
             <div class="t-card">
                 <div class="t-val">$2.00 Level</div>
                 <div class="t-count" id="th-200">0 Hits</div>
-                <div class="t-sub">Price delta ≥ $2.00</div>
+                <div class="t-sub">Delta ≥ $2.00</div>
             </div>
             <div class="t-card">
                 <div class="t-val">$3.00 Level</div>
                 <div class="t-count" id="th-300">0 Hits</div>
-                <div class="t-sub">Price delta ≥ $3.00</div>
+                <div class="t-sub">Delta ≥ $3.00</div>
             </div>
         </div>
     </div>
@@ -952,14 +1003,53 @@
         document.getElementById('sum-max-adverse').innerText = '-$' + Number(s.highest_adverse_usd || 0).toFixed(2);
         document.getElementById('sum-adverse-pct').innerText = Number(s.highest_adverse_pct || 0).toFixed(2) + '%';
 
-        // 6 Threshold Breakdown
+        // Update Movement Observations Panel
+        const obs = data.movement_observation || {};
+        document.getElementById('obs-up-count').innerText = obs.total_up_observations || 0;
+        document.getElementById('obs-down-count').innerText = obs.total_down_observations || 0;
+        document.getElementById('obs-reversal-count').innerText = obs.total_reversals || 0;
+
+        const lastChg = Number(obs.last_change || 0);
+        const lastChgEl = document.getElementById('obs-last-change');
+        if (lastChg > 0) {
+            lastChgEl.innerText = '+$' + lastChg.toFixed(2);
+            lastChgEl.className = 'card-value val-positive';
+        } else if (lastChg < 0) {
+            lastChgEl.innerText = '-$' + Math.abs(lastChg).toFixed(2);
+            lastChgEl.className = 'card-value val-negative';
+        } else {
+            lastChgEl.innerText = '$0.00';
+            lastChgEl.className = 'card-value val-neutral';
+        }
+        document.getElementById('obs-last-dir').innerText = (obs.direction || 'UNCHANGED') + ' (' + (obs.timestamp_ist || '') + ')';
+
+        // 11 Threshold Hits Breakdown
+        const thHits = obs.threshold_hits || {};
         const tb = data.threshold_breakdown || {};
-        if (tb['$0.25']) document.getElementById('th-025').innerText = tb['$0.25'].total_hits + ' Hits';
-        if (tb['$0.50']) document.getElementById('th-050').innerText = tb['$0.50'].total_hits + ' Hits';
-        if (tb['$1.00']) document.getElementById('th-100').innerText = tb['$1.00'].total_hits + ' Hits';
-        if (tb['$1.50']) document.getElementById('th-150').innerText = tb['$1.50'].total_hits + ' Hits';
-        if (tb['$2.00']) document.getElementById('th-200').innerText = tb['$2.00'].total_hits + ' Hits';
-        if (tb['$3.00']) document.getElementById('th-300').innerText = tb['$3.00'].total_hits + ' Hits';
+        const thKeys = [
+            ['$0.01', 'th-001'],
+            ['$0.02', 'th-002'],
+            ['$0.05', 'th-005'],
+            ['$0.10', 'th-010'],
+            ['$0.15', 'th-015'],
+            ['$0.25', 'th-025'],
+            ['$0.50', 'th-050'],
+            ['$1.00', 'th-100'],
+            ['$1.50', 'th-150'],
+            ['$2.00', 'th-200'],
+            ['$3.00', 'th-300']
+        ];
+
+        thKeys.forEach(([k, elId]) => {
+            let hitVal = 0;
+            if (thHits[k] !== undefined) {
+                hitVal = thHits[k];
+            } else if (tb[k] !== undefined) {
+                hitVal = tb[k].total_hits || 0;
+            }
+            const el = document.getElementById(elId);
+            if (el) el.innerText = hitVal + ' Hits';
+        });
 
         fullLedgerData = Array.isArray(data.ledger) ? data.ledger : [];
         renderLedger();

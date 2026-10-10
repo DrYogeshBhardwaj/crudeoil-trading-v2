@@ -35,8 +35,9 @@ from database import DB
 from wti_feed import WTI_FEED
 from mudrex_cl_feed import MUDREX_CL_FEED
 
-# Threshold values in USD
-MOVEMENT_THRESHOLDS = [0.25, 0.50, 1.00, 1.50, 2.00, 3.00]
+# 11 Movement Threshold Observation Levels (in USD)
+ALL_OBSERVATION_THRESHOLDS = [0.01, 0.02, 0.05, 0.10, 0.15, 0.25, 0.50, 1.00, 1.50, 2.00, 3.00]
+MOVEMENT_THRESHOLDS = ALL_OBSERVATION_THRESHOLDS
 
 
 @dataclass
@@ -89,6 +90,15 @@ class CrudePairEngine:
         self.feed_status: str = "INITIALIZING"
         self.feed_source: str = "Mudrex CL • USDT Futures Feed (CLUSDT)"
         
+        # Persistent Movement Observation Tracker
+        self.total_up_count: int = 0
+        self.total_down_count: int = 0
+        self.reversal_count: int = 0
+        self.last_direction: str = "UNCHANGED"
+        self.last_observed_price: Optional[float] = None
+        self.last_observed_time: Optional[str] = None
+        self.threshold_hits: Dict[str, int] = {f"${t:.2f}": 0 for t in ALL_OBSERVATION_THRESHOLDS}
+
         # In-memory tracking
         self.positions: List[Dict[str, Any]] = []
         self.movements: List[Dict[str, Any]] = []
@@ -113,6 +123,20 @@ class CrudePairEngine:
                 self.booking_threshold_usd = float(thresh_val)
             except ValueError:
                 self.booking_threshold_usd = 1.00
+
+            # Load persistent movement observations
+            self.total_up_count = int(DB.load_crude_pair_setting("total_up_count", "0"))
+            self.total_down_count = int(DB.load_crude_pair_setting("total_down_count", "0"))
+            self.reversal_count = int(DB.load_crude_pair_setting("reversal_count", "0"))
+            self.last_direction = DB.load_crude_pair_setting("last_direction", "UNCHANGED")
+            
+            p_obs = DB.load_crude_pair_setting("last_observed_price", "")
+            self.last_observed_price = float(p_obs) if p_obs else None
+            self.last_observed_time = DB.load_crude_pair_setting("last_observed_time", "")
+
+            for t in ALL_OBSERVATION_THRESHOLDS:
+                k = f"${t:.2f}"
+                self.threshold_hits[k] = int(DB.load_crude_pair_setting(f"th_hits_{k}", "0"))
 
             # Load positions from DB
             self.positions = DB.load_all_crude_pair_trades()
@@ -446,16 +470,89 @@ class CrudePairEngine:
 
         return pos
 
+    def record_price_movement_observation(self, current_price: float, timestamp_str: str):
+        """
+        Observes and records every new valid price update:
+        - Direction (UP / DOWN / UNCHANGED)
+        - Reversals count
+        - Hit counts for all 11 thresholds ($0.01 to $3.00)
+        - PERSISTENT ONLY (Observation only, NO order execution triggered)
+        """
+        if current_price <= 0:
+            return
+
+        # Avoid counting identical tick prices repeatedly
+        if self.last_observed_price is not None and abs(current_price - self.last_observed_price) < 1e-6:
+            return
+
+        prev_p = self.last_observed_price
+        self.last_observed_price = current_price
+        self.last_observed_time = timestamp_str
+        self._save_setting("last_observed_price", str(current_price))
+        self._save_setting("last_observed_time", timestamp_str)
+
+        if prev_p is None:
+            return
+
+        delta = current_price - prev_p
+        abs_delta = abs(delta)
+
+        if delta > 0:
+            dir_str = "UP"
+            self.total_up_count += 1
+            self._save_setting("total_up_count", str(self.total_up_count))
+        elif delta < 0:
+            dir_str = "DOWN"
+            self.total_down_count += 1
+            self._save_setting("total_down_count", str(self.total_down_count))
+        else:
+            dir_str = "UNCHANGED"
+
+        # Reversal detection
+        if dir_str in ("UP", "DOWN"):
+            if self.last_direction in ("UP", "DOWN") and dir_str != self.last_direction:
+                self.reversal_count += 1
+                self._save_setting("reversal_count", str(self.reversal_count))
+            self.last_direction = dir_str
+            self._save_setting("last_direction", dir_str)
+
+        # Check all 11 observation level hits
+        for t in ALL_OBSERVATION_THRESHOLDS:
+            k = f"${t:.2f}"
+            if abs_delta >= t:
+                self.threshold_hits[k] = self.threshold_hits.get(k, 0) + 1
+                self._save_setting(f"th_hits_{k}", str(self.threshold_hits[k]))
+
+        # Log observation event to movement table
+        mv_event = {
+            "timestamp": timestamp_str,
+            "pair_id": "OBSERVATION",
+            "position_id": f"TICK-{int(time.time()*1000)}",
+            "direction": dir_str,
+            "price": current_price,
+            "price_change": round(delta, 4),
+            "threshold_usd": round(abs_delta, 4),
+            "position_pnl": 0.0,
+            "event_type": f"PRICE_OBSERVATION ({dir_str} ${abs_delta:.2f})"
+        }
+        DB.save_crude_pair_movement(mv_event)
+        self.movements.insert(0, mv_event)
+        if len(self.movements) > 200:
+            self.movements = self.movements[:200]
+
     def process_tick(self, current_price: float, timestamp_str: str) -> List[Dict[str, Any]]:
         """
         Evaluates open positions against current market tick:
-        1. Updates unrealized P/L, max adverse, max favorable.
-        2. Logs threshold crossings across the 6 levels ($0.25, $0.50, $1.00, $1.50, $2.00, $3.00).
+        1. Records persistent UP/DOWN direction, reversals, and 11 threshold hit observations.
+        2. Updates unrealized P/L, max adverse, max favorable for active paper positions.
         3. Evaluates profit booking rule if engine is active.
         """
         with self._lock:
             self.last_tick_price = current_price
             self.last_tick_time = timestamp_str
+
+            # 1. RECORD PERSISTENT OBSERVATION FIRST
+            self.record_price_movement_observation(current_price, timestamp_str)
 
             open_positions = [p for p in self.positions if p["status"] == "OPEN"]
             closed_triggered: List[Dict[str, Any]] = []
@@ -502,13 +599,20 @@ class CrudePairEngine:
             return closed_triggered
 
     def get_dashboard_state(self) -> Dict[str, Any]:
-        """Calculates full reconciled dashboard summary and main ledger."""
+        """Calculates full reconciled dashboard summary, observation panel, and main ledger."""
         with self._lock:
             tick_meta = self.fetch_live_market_price()
-            curr_price = tick_meta.get("price") or self.last_tick_price or self.reference_price or 80.00
+            curr_price = tick_meta.get("price") or self.last_tick_price or self.reference_price or 90.65
             conn_status = tick_meta.get("connection_status", "DISCONNECTED")
             f_status = tick_meta.get("feed_status", "DISCONNECTED")
             price_valid = tick_meta.get("price_valid", False)
+
+            # Record observation tick if state fetched directly
+            if price_valid and curr_price > 0:
+                self.record_price_movement_observation(curr_price, tick_meta.get("timestamp_ist") or self.get_now_ist_str())
+
+            prev_p = self.last_observed_price or curr_price
+            delta = curr_price - prev_p if prev_p else 0.0
 
             # Calculate ledger rows and unrealized P/L
             ledger_rows = []
@@ -547,8 +651,8 @@ class CrudePairEngine:
                     if direction == "BUY":
                         diff = curr_price - entry_p
                     else:
-                        diff = entry_p - curr_price
-                    u_gross = diff * qty
+                        diff = entry_p - float(entry_p)
+                    u_gross = (curr_price - entry_p) * qty if direction == "BUY" else (entry_p - curr_price) * qty
                     approx_fees = (entry_p + curr_price) * qty * self.fee_rate
                     u_net = u_gross - approx_fees - float(p.get("funding_costs", 0.0))
                     p["unrealized_pnl"] = round(u_net, 4)
@@ -581,27 +685,37 @@ class CrudePairEngine:
             total_costs = total_fees + total_funding
             combined_net_equity = realized_net + total_unrealized
 
-            # Calculate breakdown per threshold
+            # Calculate breakdown per threshold for all 11 observation levels
             threshold_breakdown = {}
-            for t in MOVEMENT_THRESHOLDS:
+            for t in ALL_OBSERVATION_THRESHOLDS:
                 t_key = f"${t:.2f}"
-                hits = 0
+                hits = self.threshold_hits.get(t_key, 0)
                 booked_pnl = 0.0
                 for p in self.positions:
                     entry_p = float(p["entry_price"])
                     if p["status"] == "CLOSED":
                         exit_p = float(p.get("exit_price", entry_p))
                         if abs(exit_p - entry_p) >= t:
-                            hits += 1
                             booked_pnl += float(p.get("net_pnl", 0.0))
-                    elif p["status"] == "OPEN":
-                        if abs(curr_price - entry_p) >= t:
-                            hits += 1
                 threshold_breakdown[t_key] = {
                     "threshold": t,
                     "total_hits": hits,
                     "booked_pnl": round(booked_pnl, 2)
                 }
+
+            # Live Movement Observation Panel Payload
+            movement_observation_panel = {
+                "latest_price": curr_price,
+                "previous_price": prev_p,
+                "last_change": round(delta, 4),
+                "last_change_abs": round(abs(delta), 4),
+                "direction": self.last_direction,
+                "timestamp_ist": tick_meta.get("timestamp_ist") or self.get_now_ist_str(),
+                "total_up_observations": self.total_up_count,
+                "total_down_observations": self.total_down_count,
+                "total_reversals": self.reversal_count,
+                "threshold_hits": {f"${t:.2f}": self.threshold_hits.get(f"${t:.2f}", 0) for t in ALL_OBSERVATION_THRESHOLDS}
+            }
 
             # Instrument validation info
             instrument_validation = {
@@ -679,6 +793,7 @@ class CrudePairEngine:
                     "highest_adverse_pct": round(highest_adverse_pct, 2)
                 },
                 "threshold_breakdown": threshold_breakdown,
+                "movement_observation": movement_observation_panel,
                 "ledger": ledger_rows,
                 "movements": self.movements[:50],
                 "instrument_validation": instrument_validation,
