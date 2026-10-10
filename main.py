@@ -640,7 +640,6 @@ async def health_check():
             "environment": "PAPER_MODE",
             "server_time_ist": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         })
-    })
 
 @app.get("/api/state")
 async def get_state():
