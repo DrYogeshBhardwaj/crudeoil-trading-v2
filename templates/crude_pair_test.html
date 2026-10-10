@@ -728,50 +728,89 @@
 <script>
     let fullLedgerData = [];
     let lastPrice = 0.0;
-    let chart, candleSeries;
+    let chart = null;
+    let candleSeries = null;
     let currentTf = '1m';
 
-    // Initialize Lightweight Chart
+    // 1. Independent & Safe Chart Initialization
     function initChart() {
-        const container = document.getElementById('chart-container');
-        chart = LightweightCharts.createChart(container, {
-            width: container.clientWidth,
-            height: 380,
-            layout: {
-                backgroundColor: '#0d1322',
-                textColor: '#94a3b8',
-                fontSize: 12,
-            },
-            grid: {
-                vertLines: { color: 'rgba(255, 255, 255, 0.04)' },
-                horzLines: { color: 'rgba(255, 255, 255, 0.04)' }
-            },
-            crosshair: {
-                mode: LightweightCharts.CrosshairMode.Normal,
-            },
-            rightPriceScale: {
-                borderColor: 'rgba(255, 255, 255, 0.1)',
-            },
-            timeScale: {
-                borderColor: 'rgba(255, 255, 255, 0.1)',
-                timeVisible: true,
-                secondsVisible: false
+        try {
+            const container = document.getElementById('chart-container');
+            if (!container || typeof LightweightCharts === 'undefined') {
+                showChartOverlay('Chart library initializing / loading...');
+                return;
             }
-        });
 
-        candleSeries = chart.addCandlestickSeries({
-            upColor: '#00e676',
-            downColor: '#ff2a6d',
-            borderVisible: false,
-            wickUpColor: '#00e676',
-            wickDownColor: '#ff2a6d'
-        });
+            container.innerHTML = '<div id="chart-overlay" class="chart-overlay" style="display: none;"><span id="overlay-msg">Connecting...</span></div>';
 
-        window.addEventListener('resize', () => {
-            chart.applyOptions({ width: container.clientWidth });
-        });
+            chart = LightweightCharts.createChart(container, {
+                width: container.clientWidth,
+                height: 380,
+                layout: {
+                    backgroundColor: '#0d1322',
+                    textColor: '#94a3b8',
+                    fontSize: 12,
+                },
+                grid: {
+                    vertLines: { color: 'rgba(255, 255, 255, 0.04)' },
+                    horzLines: { color: 'rgba(255, 255, 255, 0.04)' }
+                },
+                crosshair: {
+                    mode: LightweightCharts.CrosshairMode.Normal,
+                },
+                rightPriceScale: {
+                    borderColor: 'rgba(255, 255, 255, 0.1)',
+                },
+                timeScale: {
+                    borderColor: 'rgba(255, 255, 255, 0.1)',
+                    timeVisible: true,
+                    secondsVisible: false
+                }
+            });
 
-        loadCandles('1m');
+            candleSeries = chart.addCandlestickSeries({
+                upColor: '#00e676',
+                downColor: '#ff2a6d',
+                borderVisible: false,
+                wickUpColor: '#00e676',
+                wickDownColor: '#ff2a6d'
+            });
+
+            window.addEventListener('resize', () => {
+                if (chart && container) {
+                    chart.applyOptions({ width: container.clientWidth });
+                }
+            });
+
+            loadCandles('1m');
+        } catch (e) {
+            console.warn('LightweightCharts init notice:', e);
+            showChartOverlay('Live Chart initializing (WTI Feed Connected)');
+        }
+    }
+
+    // Process & deduplicate candles to ensure strictly increasing timestamps
+    function processCandlesData(data) {
+        if (!Array.isArray(data) || data.length === 0) return [];
+        let sorted = data.slice().sort((a, b) => Number(a.timestamp) - Number(b.timestamp));
+        let result = [];
+        let lastTime = 0;
+
+        for (let c of sorted) {
+            const t = Math.floor(Number(c.timestamp));
+            const o = Number(c.open);
+            const h = Number(c.high);
+            const l = Number(c.low);
+            const cl = Number(c.close);
+
+            if (isNaN(t) || isNaN(o) || isNaN(h) || isNaN(l) || isNaN(cl)) continue;
+            if (t <= lastTime) continue; // Skip non-increasing timestamps
+
+            result.push({ time: t, open: o, high: h, low: l, close: cl });
+            lastTime = t;
+        }
+
+        return result;
     }
 
     async function loadCandles(tf) {
@@ -779,19 +818,18 @@
             const resp = await fetch(`/api/crude/pair-test/candles?tf=${tf}`);
             if (resp.ok) {
                 const data = await resp.json();
-                if (data && data.length > 0) {
-                    const formatted = data.map(c => ({
-                        time: c.timestamp,
-                        open: c.open,
-                        high: c.high,
-                        low: c.low,
-                        close: c.close
-                    }));
-                    candleSeries.setData(formatted);
-                    document.getElementById('chart-overlay').style.display = 'none';
+                const cleaned = processCandlesData(data);
+                if (cleaned.length > 0) {
+                    if (candleSeries) {
+                        candleSeries.setData(cleaned);
+                    }
+                    const overlay = document.getElementById('chart-overlay');
+                    if (overlay) overlay.style.display = 'none';
                 } else {
-                    showChartOverlay('No chart data available for timeframe ' + tf);
+                    showChartOverlay('No chart candles returned for timeframe ' + tf);
                 }
+            } else {
+                showChartOverlay('Candles API returned status ' + resp.status);
             }
         } catch (e) {
             console.error('Error loading chart candles:', e);
@@ -808,57 +846,79 @@
 
     function showChartOverlay(msg) {
         const overlay = document.getElementById('chart-overlay');
-        document.getElementById('overlay-msg').innerText = msg;
-        overlay.style.display = 'flex';
+        const msgEl = document.getElementById('overlay-msg');
+        if (msgEl) msgEl.innerText = msg;
+        if (overlay) overlay.style.display = 'flex';
     }
 
+    // 2. Resilient Main State Fetcher
     async function fetchState() {
         try {
             const resp = await fetch('/api/crude/pair-test/state');
             if (resp.ok) {
                 const data = await resp.json();
                 updateUI(data);
+            } else {
+                setConnectionStatus('DISCONNECTED', `HTTP ${resp.status}`);
+                showLedgerError(`Server returned HTTP ${resp.status}`);
             }
         } catch (e) {
             console.error('Error fetching state:', e);
-            setConnectionStatus('DISCONNECTED', 'FEED ERROR');
+            setConnectionStatus('DISCONNECTED', 'NETWORK ERROR');
+            showLedgerError(`Network connection error: ${e.message}`);
+        }
+    }
+
+    function showLedgerError(msg) {
+        const tbody = document.getElementById('ledger-body');
+        if (tbody && fullLedgerData.length === 0) {
+            tbody.innerHTML = `<tr><td colspan="17" style="text-align: center; color: var(--accent-red); padding: 25px;">⚠️ ${msg}. Retrying connection...</td></tr>`;
         }
     }
 
     function updateUI(data) {
-        const currPrice = data.current_price || 0.0;
+        const currPrice = Number(data.current_price || 0.0);
+        const priceValid = Boolean(data.price_valid && currPrice > 0);
         const livePriceEl = document.getElementById('live-price');
-        livePriceEl.innerText = '$' + currPrice.toFixed(2);
+
+        if (priceValid) {
+            livePriceEl.innerText = '$' + currPrice.toFixed(2);
+        } else {
+            livePriceEl.innerText = '$0.00 (Unavailable)';
+        }
 
         // Direction UP / DOWN calculation
         const dirBadge = document.getElementById('dir-badge');
         const priceChangeEl = document.getElementById('price-change-str');
 
-        if (lastPrice > 0 && currPrice !== lastPrice) {
-            const diff = currPrice - lastPrice;
-            const pct = (diff / lastPrice) * 100;
-            if (diff > 0) {
-                dirBadge.className = 'direction-badge dir-up';
-                dirBadge.innerText = 'UP ▲';
-                priceChangeEl.innerText = `+$${diff.toFixed(2)} (+${pct.toFixed(2)}%)`;
-            } else {
-                dirBadge.className = 'direction-badge dir-down';
-                dirBadge.innerText = 'DOWN ▼';
-                priceChangeEl.innerText = `-$${Math.abs(diff).toFixed(2)} (${pct.toFixed(2)}%)`;
-            }
-        } else if (lastPrice === 0) {
-            dirBadge.innerText = 'LIVE';
+        const chg = Number(data.price_change || 0.0);
+        const chgPct = Number(data.price_change_pct || 0.0);
+
+        if (chg > 0) {
+            dirBadge.className = 'direction-badge dir-up';
+            dirBadge.innerText = 'UP ▲';
+            priceChangeEl.innerText = `+$${chg.toFixed(2)} (+${chgPct.toFixed(2)}%)`;
+        } else if (chg < 0) {
+            dirBadge.className = 'direction-badge dir-down';
+            dirBadge.innerText = 'DOWN ▼';
+            priceChangeEl.innerText = `-$${Math.abs(chg).toFixed(2)} (${chgPct.toFixed(2)}%)`;
+        } else {
+            dirBadge.className = 'direction-badge dir-up';
+            dirBadge.innerText = 'FLAT --';
+            priceChangeEl.innerText = '$0.00 (0.00%)';
         }
         lastPrice = currPrice;
 
-        // Connection Status
-        const fStatus = data.feed_status || 'UNKNOWN';
-        if (fStatus.includes('CONNECTED')) {
+        // Strict Connection Status
+        const connState = data.connection_status || 'DISCONNECTED';
+        const fStatusText = data.feed_status || connState;
+
+        if (connState === 'CONNECTED' && priceValid) {
             setConnectionStatus('CONNECTED', 'CONNECTED');
-        } else if (fStatus.includes('DISCONNECTED') || fStatus.includes('ERROR')) {
-            setConnectionStatus('DISCONNECTED', fStatus);
+        } else if (connState === 'STALE') {
+            setConnectionStatus('STALE', fStatusText);
         } else {
-            setConnectionStatus('STALE', fStatus);
+            setConnectionStatus('DISCONNECTED', fStatusText);
         }
 
         // IST Timestamp
@@ -873,13 +933,13 @@
         document.getElementById('sum-win-loss').innerText = (s.winning_closed_positions || 0) + ' W / ' + (s.losing_closed_positions || 0) + ' L';
 
         setPnLElement('sum-gross-pnl', s.realized_gross_pnl);
-        document.getElementById('sum-costs').innerText = '-$' + (s.total_trading_costs || 0).toFixed(2);
+        document.getElementById('sum-costs').innerText = '-$' + Number(s.total_trading_costs || 0).toFixed(2);
         setPnLElement('sum-net-pnl', s.realized_net_pnl);
         setPnLElement('sum-unrealized-pnl', s.current_unrealized_pnl);
         setPnLElement('sum-combined-pnl', s.combined_net_equity);
 
-        document.getElementById('sum-max-adverse').innerText = '-$' + (s.highest_adverse_usd || 0).toFixed(2);
-        document.getElementById('sum-adverse-pct').innerText = (s.highest_adverse_pct || 0).toFixed(2) + '%';
+        document.getElementById('sum-max-adverse').innerText = '-$' + Number(s.highest_adverse_usd || 0).toFixed(2);
+        document.getElementById('sum-adverse-pct').innerText = Number(s.highest_adverse_pct || 0).toFixed(2) + '%';
 
         // 6 Threshold Breakdown
         const tb = data.threshold_breakdown || {};
@@ -890,46 +950,54 @@
         if (tb['$2.00']) document.getElementById('th-200').innerText = tb['$2.00'].total_hits + ' Hits';
         if (tb['$3.00']) document.getElementById('th-300').innerText = tb['$3.00'].total_hits + ' Hits';
 
-        fullLedgerData = data.ledger || [];
+        fullLedgerData = Array.isArray(data.ledger) ? data.ledger : [];
         renderLedger();
     }
 
     function setConnectionStatus(statusType, labelText) {
         const dot = document.getElementById('status-dot');
         const text = document.getElementById('conn-text');
+        if (!dot || !text) return;
         
         if (statusType === 'CONNECTED') {
             dot.className = 'status-dot dot-connected';
             text.innerText = 'CONNECTED';
         } else if (statusType === 'STALE') {
             dot.className = 'status-dot dot-stale';
-            text.innerText = 'STALE';
+            text.innerText = labelText || 'STALE';
         } else {
             dot.className = 'status-dot dot-disconnected';
-            text.innerText = 'DISCONNECTED';
+            text.innerText = labelText || 'DISCONNECTED';
         }
     }
 
     function setPnLElement(id, val) {
         const el = document.getElementById(id);
         if (!el) return;
-        const num = val || 0;
+        const num = Number(val || 0);
         const prefix = num >= 0 ? '+$' : '-$';
         el.innerText = prefix + Math.abs(num).toFixed(2);
         el.className = 'card-value ' + (num >= 0 ? 'val-positive' : 'val-negative');
     }
 
     function renderLedger() {
-        const search = (document.getElementById('flt-search').value || '').toLowerCase();
-        const dirFlt = document.getElementById('flt-direction').value;
-        const statusFlt = document.getElementById('flt-status').value;
-
         const tbody = document.getElementById('ledger-body');
+        if (!tbody) return;
+
+        const search = (document.getElementById('flt-search')?.value || '').toLowerCase();
+        const dirFlt = document.getElementById('flt-direction')?.value || 'ALL';
+        const statusFlt = document.getElementById('flt-status')?.value || 'ALL';
+
         tbody.innerHTML = '';
+
+        if (!Array.isArray(fullLedgerData) || fullLedgerData.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="17" style="text-align: center; color: var(--text-muted); padding: 25px;">No active or closed paper positions in ledger.</td></tr>';
+            return;
+        }
 
         const filtered = fullLedgerData.filter(r => {
             if (search) {
-                const text = (r.pair_id + ' ' + r.position_id + ' ' + r.reason).toLowerCase();
+                const text = ((r.pair_id || '') + ' ' + (r.position_id || '') + ' ' + (r.reason || '')).toLowerCase();
                 if (!text.includes(search)) return false;
             }
             if (dirFlt !== 'ALL' && r.direction !== dirFlt) return false;
@@ -946,9 +1014,9 @@
             const tr = document.createElement('tr');
             
             const exitP = r.exit_price !== null && r.exit_price !== undefined ? '$' + Number(r.exit_price).toFixed(2) : 'N/A';
-            const grossP = r.gross_pnl !== undefined ? (r.gross_pnl >= 0 ? '+$' : '-$') + Math.abs(r.gross_pnl).toFixed(2) : '$0.00';
-            const netP = r.net_pnl !== undefined ? (r.net_pnl >= 0 ? '+$' : '-$') + Math.abs(r.net_pnl).toFixed(2) : '$0.00';
-            const uPnl = r.status === 'OPEN' ? (r.unrealized_pnl >= 0 ? '+$' : '-$') + Math.abs(r.unrealized_pnl).toFixed(2) : 'N/A';
+            const grossP = r.gross_pnl !== undefined ? (Number(r.gross_pnl) >= 0 ? '+$' : '-$') + Math.abs(Number(r.gross_pnl)).toFixed(2) : '$0.00';
+            const netP = r.net_pnl !== undefined ? (Number(r.net_pnl) >= 0 ? '+$' : '-$') + Math.abs(Number(r.net_pnl)).toFixed(2) : '$0.00';
+            const uPnl = r.status === 'OPEN' ? (Number(r.unrealized_pnl) >= 0 ? '+$' : '-$') + Math.abs(Number(r.unrealized_pnl)).toFixed(2) : 'N/A';
 
             let actionCell = r.reason || '';
             if (r.status === 'OPEN') {
@@ -966,12 +1034,12 @@
                 <td>$${Number(r.threshold_usd || 1.0).toFixed(2)}</td>
                 <td>${r.entry_timestamp}</td>
                 <td>${r.exit_timestamp || 'N/A'}</td>
-                <td class="${r.gross_pnl >= 0 ? 'val-positive' : 'val-negative'}">${grossP}</td>
+                <td class="${Number(r.gross_pnl || 0) >= 0 ? 'val-positive' : 'val-negative'}">${grossP}</td>
                 <td>$${Number(r.trading_fees || 0).toFixed(2)}</td>
                 <td>$${Number(r.funding_costs || 0).toFixed(2)}</td>
-                <td class="${r.net_pnl >= 0 ? 'val-positive' : 'val-negative'}">${netP}</td>
+                <td class="${Number(r.net_pnl || 0) >= 0 ? 'val-positive' : 'val-negative'}">${netP}</td>
                 <td><span class="${r.status === 'OPEN' ? 'status-open' : 'status-closed'}">${r.status}</span></td>
-                <td class="${r.unrealized_pnl >= 0 ? 'val-positive' : 'val-negative'}">${uPnl}</td>
+                <td class="${Number(r.unrealized_pnl || 0) >= 0 ? 'val-positive' : 'val-negative'}">${uPnl}</td>
                 <td>${actionCell}</td>
             `;
             tbody.appendChild(tr);
@@ -1018,13 +1086,16 @@
         window.location.href = '/api/crude/pair-test/export_csv';
     }
 
-    // Auto Initializer
+    // Execute state fetch IMMEDIATELY on script load
+    fetchState();
+
     window.addEventListener('DOMContentLoaded', () => {
-        initChart();
         fetchState();
+        initChart();
         setInterval(fetchState, 2000);
         setInterval(() => loadCandles(currentTf), 15000); // refresh candles every 15s
     });
 </script>
+
 </body>
 </html>

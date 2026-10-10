@@ -152,23 +152,70 @@ class CrudePairEngine:
         ist_tz = timezone(timedelta(hours=5, minutes=30))
         return datetime.now(ist_tz).strftime("%Y-%m-%d %H:%M:%S IST")
 
-    def fetch_live_market_price(self) -> Tuple[Optional[float], str]:
-        """Fetches live WTI crude price tick from WTI_FEED (Yahoo NYMEX feed)."""
+    def fetch_live_market_price(self) -> Dict[str, Any]:
+        """
+        Fetches live WTI crude price tick and metadata from WTI_FEED (Yahoo NYMEX feed).
+        Ensures feed is marked CONNECTED ONLY when a valid positive WTI price > 0 is present.
+        """
         try:
             tick = WTI_FEED.fetch_latest_tick()
             price = tick.get("price")
-            status = tick.get("market_status", "UNKNOWN")
-            if price and price > 0:
-                self.last_tick_price = float(price)
-                self.last_tick_time = tick.get("timestamp_ist", self.get_now_ist_str())
-                self.feed_status = f"CONNECTED ({status})"
-                return float(price), self.feed_status
+            mkt_status = tick.get("market_status", "UNKNOWN")
+            raw_conn = tick.get("connection_status", "DISCONNECTED")
+            reg_time = tick.get("last_tick_epoch")
+            ts_ist = tick.get("last_tick_timestamp_ist") or tick.get("last_update_time_ist") or self.get_now_ist_str()
+
+            if price is not None and float(price) > 0 and reg_time and reg_time > 0:
+                p_val = round(float(price), 2)
+                self.last_tick_price = p_val
+                self.last_tick_time = ts_ist
+
+                # Determine strict connection state
+                if mkt_status == "CLOSED":
+                    conn_state = "STALE"
+                    f_status = f"STALE (CME NYMEX Closed @ ${p_val:.2f})"
+                elif raw_conn == "STALE":
+                    conn_state = "STALE"
+                    f_status = f"STALE (Feed Delayed @ ${p_val:.2f})"
+                else:
+                    conn_state = "CONNECTED"
+                    f_status = f"CONNECTED (${p_val:.2f})"
+
+                self.feed_status = f_status
+                return {
+                    "price": p_val,
+                    "change": round(float(tick.get("change", 0.0)), 2),
+                    "change_pct": round(float(tick.get("change_pct", 0.0)), 2),
+                    "timestamp_ist": ts_ist,
+                    "connection_status": conn_state,
+                    "feed_status": f_status,
+                    "market_status": mkt_status,
+                    "price_valid": True
+                }
             else:
-                self.feed_status = "FEED_DISCONNECTED (Price unavailable)"
-                return self.last_tick_price, self.feed_status
+                self.feed_status = "DISCONNECTED (Price unavailable)"
+                return {
+                    "price": self.last_tick_price or 0.0,
+                    "change": 0.0,
+                    "change_pct": 0.0,
+                    "timestamp_ist": self.get_now_ist_str(),
+                    "connection_status": "DISCONNECTED",
+                    "feed_status": self.feed_status,
+                    "market_status": mkt_status,
+                    "price_valid": False
+                }
         except Exception as e:
-            self.feed_status = f"FEED_ERROR ({str(e)})"
-            return self.last_tick_price, self.feed_status
+            self.feed_status = f"DISCONNECTED ({str(e)})"
+            return {
+                "price": self.last_tick_price or 0.0,
+                "change": 0.0,
+                "change_pct": 0.0,
+                "timestamp_ist": self.get_now_ist_str(),
+                "connection_status": "DISCONNECTED",
+                "feed_status": self.feed_status,
+                "market_status": "ERROR",
+                "price_valid": False
+            }
 
     def start_simulation(self, initial_price: Optional[float] = None) -> Dict[str, Any]:
         """Starts the paper test simulation and initializes Pair #1 if empty."""
@@ -176,8 +223,9 @@ class CrudePairEngine:
             self.is_running = True
             self._save_setting("is_running", "true")
 
-            live_price, _ = self.fetch_live_market_price()
-            start_price = initial_price or live_price or self.reference_price or 80.00
+            tick_meta = self.fetch_live_market_price()
+            live_p = tick_meta.get("price") if tick_meta.get("price_valid") else None
+            start_price = initial_price or live_p or self.reference_price or 80.00
             self.reference_price = start_price
             self._save_setting("reference_price", str(start_price))
 
@@ -256,8 +304,9 @@ class CrudePairEngine:
     def create_manual_pair(self) -> Dict[str, Any]:
         """Manually opens a new BUY + SELL pair at current market price."""
         with self._lock:
-            live_price, _ = self.fetch_live_market_price()
-            price = live_price or self.last_tick_price or self.reference_price or 80.00
+            tick_meta = self.fetch_live_market_price()
+            live_p = tick_meta.get("price") if tick_meta.get("price_valid") else None
+            price = live_p or self.last_tick_price or self.reference_price or 80.00
             pair_id, buy_pos, sell_pos = self._create_pair_unlocked(entry_price=price, reason="MANUAL USER PAIR CREATION")
             return {
                 "success": True,
@@ -334,8 +383,9 @@ class CrudePairEngine:
             if not pos:
                 return {"success": False, "error": f"Active position '{position_id}' not found."}
 
-            live_price, _ = self.fetch_live_market_price()
-            close_price = exit_price or live_price or self.last_tick_price or pos["entry_price"]
+            tick_meta = self.fetch_live_market_price()
+            live_p = tick_meta.get("price") if tick_meta.get("price_valid") else None
+            close_price = exit_price or live_p or self.last_tick_price or pos["entry_price"]
             self._close_position_unlocked(pos, exit_price=close_price, exit_reason=exit_reason, trigger_reentry=False)
             return {
                 "success": True,
@@ -454,8 +504,11 @@ class CrudePairEngine:
     def get_dashboard_state(self) -> Dict[str, Any]:
         """Calculates full reconciled dashboard summary and main ledger."""
         with self._lock:
-            live_price, f_status = self.fetch_live_market_price()
-            curr_price = live_price or self.last_tick_price or self.reference_price or 80.00
+            tick_meta = self.fetch_live_market_price()
+            curr_price = tick_meta.get("price") or self.last_tick_price or self.reference_price or 80.00
+            conn_status = tick_meta.get("connection_status", "DISCONNECTED")
+            f_status = tick_meta.get("feed_status", "DISCONNECTED")
+            price_valid = tick_meta.get("price_valid", False)
 
             # Calculate ledger rows and unrealized P/L
             ledger_rows = []
@@ -597,11 +650,15 @@ class CrudePairEngine:
             ]
 
             return {
-                "timestamp_ist": self.get_now_ist_str(),
+                "timestamp_ist": tick_meta.get("timestamp_ist") or self.get_now_ist_str(),
                 "is_running": self.is_running,
                 "current_price": curr_price,
+                "price_change": tick_meta.get("change", 0.0),
+                "price_change_pct": tick_meta.get("change_pct", 0.0),
+                "connection_status": conn_status,
+                "feed_status": f_status,
+                "price_valid": price_valid,
                 "reference_price": self.reference_price,
-                "feed_status": self.feed_status,
                 "summary": {
                     "total_pairs_created": len(pair_ids_set),
                     "total_positions_created": len(self.positions),
