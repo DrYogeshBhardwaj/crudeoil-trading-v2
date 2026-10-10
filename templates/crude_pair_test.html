@@ -538,10 +538,10 @@
                 📈 Live Mudrex CL • USDT (CLUSDT) Candlestick Chart
             </div>
             <div class="tf-selector">
-                <button class="tf-btn active" onclick="setChartTimeframe('1m', this)">1M</button>
-                <button class="tf-btn" onclick="setChartTimeframe('5m', this)">5M</button>
-                <button class="tf-btn" onclick="setChartTimeframe('15m', this)">15M</button>
-                <button class="tf-btn" onclick="setChartTimeframe('1h', this)">1H</button>
+                <button class="tf-btn" data-tf="1m" onclick="setChartTimeframe('1m', this)">1M</button>
+                <button class="tf-btn" data-tf="5m" onclick="setChartTimeframe('5m', this)">5M</button>
+                <button class="tf-btn" data-tf="15m" onclick="setChartTimeframe('15m', this)">15M</button>
+                <button class="tf-btn" data-tf="1h" onclick="setChartTimeframe('1h', this)">1H</button>
             </div>
         </div>
         <div id="chart-container">
@@ -781,7 +781,19 @@
     let lastPrice = 0.0;
     let chart = null;
     let candleSeries = null;
-    let currentTf = '1m';
+    let currentTf = localStorage.getItem('crude_chart_tf') || '1m';
+    let isFirstCandleLoad = true;
+    let isUpdatingCandles = false;
+
+    function syncTimeframeButtons(tf) {
+        document.querySelectorAll('.tf-btn').forEach(b => {
+            if (b.getAttribute('data-tf') === tf) {
+                b.classList.add('active');
+            } else {
+                b.classList.remove('active');
+            }
+        });
+    }
 
     // 1. Independent & Safe Chart Initialization
     function initChart() {
@@ -835,13 +847,25 @@
                 candleSeries = chart.addSeries('Candlestick', candleOpts);
             }
 
+            // Persist user zoom / pan range when user zooms or scrolls chart
+            if (chart.timeScale() && typeof chart.timeScale().subscribeVisibleLogicalRangeChange === 'function') {
+                chart.timeScale().subscribeVisibleLogicalRangeChange((range) => {
+                    if (range && !isUpdatingCandles) {
+                        try {
+                            localStorage.setItem('crude_chart_range_' + currentTf, JSON.stringify(range));
+                        } catch (e) {}
+                    }
+                });
+            }
+
             window.addEventListener('resize', () => {
                 if (chart && container) {
                     chart.applyOptions({ width: container.clientWidth });
                 }
             });
 
-            loadCandles('1m');
+            syncTimeframeButtons(currentTf);
+            loadCandles(currentTf, false);
         } catch (e) {
             console.warn('LightweightCharts init notice:', e);
             showChartOverlay('Live Chart initializing (WTI Feed Connected)');
@@ -872,18 +896,45 @@
         return result;
     }
 
-    async function loadCandles(tf) {
+    async function loadCandles(tf, forceFit = false) {
         try {
             const resp = await fetch(`/api/crude/pair-test/candles?tf=${tf}`);
             if (resp.ok) {
                 const data = await resp.json();
                 const cleaned = processCandlesData(data);
                 if (cleaned.length > 0) {
-                    if (candleSeries) {
+                    if (candleSeries && chart) {
+                        isUpdatingCandles = true;
+                        let existingRange = null;
+                        try {
+                            existingRange = chart.timeScale().getVisibleLogicalRange();
+                        } catch (e) {}
+
                         candleSeries.setData(cleaned);
-                        if (chart) {
+
+                        if (forceFit) {
                             chart.timeScale().fitContent();
+                            try { localStorage.removeItem('crude_chart_range_' + tf); } catch (e) {}
+                        } else {
+                            let rangeToRestore = existingRange;
+                            if (isFirstCandleLoad) {
+                                const saved = localStorage.getItem('crude_chart_range_' + tf);
+                                if (saved) {
+                                    try { rangeToRestore = JSON.parse(saved); } catch (e) {}
+                                }
+                            }
+                            if (rangeToRestore && typeof rangeToRestore.from === 'number' && typeof rangeToRestore.to === 'number') {
+                                try {
+                                    chart.timeScale().setVisibleLogicalRange(rangeToRestore);
+                                } catch (e) {
+                                    chart.timeScale().fitContent();
+                                }
+                            } else {
+                                chart.timeScale().fitContent();
+                            }
                         }
+                        isFirstCandleLoad = false;
+                        setTimeout(() => { isUpdatingCandles = false; }, 150);
                     }
                     const overlay = document.getElementById('chart-overlay');
                     if (overlay) overlay.style.display = 'none';
@@ -901,9 +952,9 @@
 
     function setChartTimeframe(tf, btn) {
         currentTf = tf;
-        document.querySelectorAll('.tf-btn').forEach(b => b.classList.remove('active'));
-        if (btn) btn.classList.add('active');
-        loadCandles(tf);
+        localStorage.setItem('crude_chart_tf', tf);
+        syncTimeframeButtons(tf);
+        loadCandles(tf, true);
     }
 
     function showChartOverlay(msg) {
