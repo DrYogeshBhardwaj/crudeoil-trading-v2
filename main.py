@@ -1289,6 +1289,19 @@ async def get_crude_pair_test_state():
         }
     )
 
+@app.get("/api/crude/pair-test/candles")
+async def get_crude_pair_test_candles(tf: str = "1m"):
+    """Returns historical OHLCV candles for WTI Crude Oil chart (1m, 5m, 15m, 1h)."""
+    valid_tf_map = {
+        "1m": ("1m", "1d"),
+        "5m": ("5m", "5d"),
+        "15m": ("15m", "5d"),
+        "1h": ("60m", "1mo")
+    }
+    interval, rng = valid_tf_map.get(tf, ("1m", "1d"))
+    candles = WTI_FEED.fetch_historical_candles(interval, rng)
+    return JSONResponse(candles)
+
 @app.post("/api/crude/pair-test/start")
 async def start_crude_pair_test(payload: dict = None):
     """Starts the paper simulation and creates initial pair #1 if empty."""

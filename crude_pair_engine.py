@@ -96,9 +96,10 @@ class CrudePairEngine:
 
     def _load_state_from_db(self):
         with self._lock:
-            # Load settings
-            run_val = DB.load_crude_pair_setting("is_running", "false")
+            # Load settings — DEFAULT TO AUTO-RUN SIMULATION (True)
+            run_val = DB.load_crude_pair_setting("is_running", "true")
             self.is_running = (run_val.lower() == "true")
+            self._save_setting("is_running", "true" if self.is_running else "false")
             
             ref_val = DB.load_crude_pair_setting("reference_price", "80.00")
             try:
@@ -115,6 +116,11 @@ class CrudePairEngine:
             # Load positions from DB
             self.positions = DB.load_all_crude_pair_trades()
             self.movements = DB.load_crude_pair_movements(limit=200)
+
+            # Auto-initialize Pair #1 if empty
+            if not self.positions:
+                start_price = self.reference_price or 80.00
+                self._create_pair_unlocked(entry_price=start_price, reason="AUTO-START INITIAL PAIR ENTRY")
 
     def _save_setting(self, key: str, value: str):
         DB.save_crude_pair_setting(key, str(value))
