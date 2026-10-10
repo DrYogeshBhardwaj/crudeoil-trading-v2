@@ -7,8 +7,8 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <!-- TradingView Lightweight Charts Library -->
-    <script src="https://unpkg.com/lightweight-charts/dist/lightweight-charts.standalone.production.js"></script>
+    <!-- TradingView Lightweight Charts Library (Version 3.8.0 Stable) -->
+    <script src="https://unpkg.com/lightweight-charts@3.8.0/dist/lightweight-charts.standalone.production.js"></script>
     <style>
         :root {
             --bg-dark: #090d16;
@@ -822,6 +822,9 @@
                 if (cleaned.length > 0) {
                     if (candleSeries) {
                         candleSeries.setData(cleaned);
+                        if (chart) {
+                            chart.timeScale().fitContent();
+                        }
                     }
                     const overlay = document.getElementById('chart-overlay');
                     if (overlay) overlay.style.display = 'none';
