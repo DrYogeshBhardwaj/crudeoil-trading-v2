@@ -103,6 +103,8 @@ def migrate_if_needed(target_db_path: str):
     except Exception as e:
         print(f"[{datetime.now()}] MIGRATION ERROR: {e}")
 
+import contextlib
+
 class DatabaseEngine:
 
     def __init__(self, db_path: str = DB_FILE):
@@ -110,10 +112,18 @@ class DatabaseEngine:
         self._init_db()
         migrate_if_needed(self.db_path)
 
+    @contextlib.contextmanager
     def _get_connection(self):
-        conn = sqlite3.connect(self.db_path)
+        conn = sqlite3.connect(self.db_path, timeout=15.0)
         conn.row_factory = sqlite3.Row
-        return conn
+        try:
+            yield conn
+            conn.commit()
+        except Exception:
+            conn.rollback()
+            raise
+        finally:
+            conn.close()
 
     def _init_db(self):
         with self._get_connection() as conn:
