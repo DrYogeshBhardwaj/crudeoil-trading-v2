@@ -1,25 +1,25 @@
 import sqlite3
-import glob
+import os
 import json
 
-print("=== DB INSPECTION ===")
-for db_file in glob.glob("*.db"):
-    print(f"\n--- Checking DB: {db_file} ---")
-    try:
-        conn = sqlite3.connect(db_file)
-        conn.row_factory = sqlite3.Row
-        c = conn.cursor()
-        tables = [r[0] for r in c.execute("SELECT name FROM sqlite_master WHERE type='table'").fetchall()]
-        print("Tables:", tables)
-        for t in tables:
-            try:
-                rows = c.execute(f"SELECT * FROM {t}").fetchall()
-                print(f"Table {t} ({len(rows)} rows)")
-                for r in rows:
-                    row_dict = dict(r)
-                    if row_dict.get("status") == "OPEN" or "trade" in t or "setting" in t:
-                        print(f"   {t} row:", row_dict)
-            except Exception as e:
-                print(f"   Error querying {t}: {e}")
-    except Exception as e:
-        print(f" Error connecting to {db_file}: {e}")
+db_path = "trading.db"
+print("DB Exists:", os.path.exists(db_path))
+
+conn = sqlite3.connect(db_path)
+conn.row_factory = sqlite3.Row
+cursor = conn.cursor()
+
+cursor.execute("SELECT name FROM sqlite_master WHERE type='table';")
+tables = [r[0] for r in cursor.fetchall()]
+print("Tables in trading.db:", tables)
+
+for tbl in tables:
+    cursor.execute(f"SELECT COUNT(*) FROM {tbl}")
+    count = cursor.fetchone()[0]
+    print(f"Table '{tbl}': {count} rows")
+    if "silver" in tbl or "trade" in tbl or "position" in tbl or "setting" in tbl:
+        cursor.execute(f"SELECT * FROM {tbl} LIMIT 5")
+        rows = [dict(r) for r in cursor.fetchall()]
+        print(f"  Sample from '{tbl}':", json.dumps(rows, indent=2, default=str))
+
+conn.close()

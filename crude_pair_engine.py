@@ -290,15 +290,49 @@ class CrudePairEngine:
     def reset_simulation(self) -> Dict[str, Any]:
         """Resets paper trading engine state & ledger with user confirmation."""
         with self._lock:
-            self.is_running = False
             self.positions.clear()
             self.movements.clear()
             DB.reset_crude_pair_account()
-            self._save_setting("is_running", "false")
+
+            # Reset observation tracking counters
+            self.previous_price = None
+            self.current_price = None
+            self.last_delta = 0.0
+            self.total_up_count = 0
+            self.total_down_count = 0
+            self.reversal_count = 0
+            self.last_direction = "UNCHANGED"
+            self.last_observed_time = None
+            self.threshold_hits = {f"${t:.2f}": 0 for t in ALL_OBSERVATION_THRESHOLDS}
+
+            self._save_setting("total_up_count", "0")
+            self._save_setting("total_down_count", "0")
+            self._save_setting("reversal_count", "0")
+            self._save_setting("last_direction", "UNCHANGED")
+            self._save_setting("previous_price", "")
+            self._save_setting("current_price", "")
+            self._save_setting("last_delta", "0.0")
+            self._save_setting("last_observed_time", "")
+            for t in ALL_OBSERVATION_THRESHOLDS:
+                k = f"${t:.2f}"
+                self._save_setting(f"th_hits_{k}", "0")
+
+            # Fetch live market price and re-initialize Pair #1
+            tick_meta = self.fetch_live_market_price()
+            live_p = tick_meta.get("price") if tick_meta.get("price_valid") else None
+            start_price = live_p or 90.65
+            self.reference_price = start_price
+            self._save_setting("reference_price", str(start_price))
+
+            self._create_pair_unlocked(entry_price=start_price, reason="INITIAL PAIR ENTRY (AFTER DATA RESET)")
+
+            self.is_running = True
+            self._save_setting("is_running", "true")
+
             return {
                 "success": True,
                 "status": "RESET",
-                "message": "Crude Oil Pair Strategy paper ledger & state fully reset."
+                "message": f"Crude Oil Pair Strategy paper ledger, movement counts & state fully reset. Initial Pair #1 opened at ${start_price:.2f}."
             }
 
     def update_config(self, payload: Dict[str, Any]) -> Dict[str, Any]:
@@ -595,7 +629,11 @@ class CrudePairEngine:
                 approx_fees = (entry_p + current_price) * qty * self.fee_rate
                 unrealized_net = unrealized_gross - approx_fees - float(pos.get("funding_costs", 0.0))
 
+                pos["current_price"] = round(current_price, 2)
+                pos["unrealized_gross"] = round(unrealized_gross, 4)
+                pos["unrealized_fees"] = round(approx_fees, 4)
                 pos["unrealized_pnl"] = round(unrealized_net, 4)
+                pos["last_pnl_update_time"] = timestamp_str
 
                 # Track Adverse / Favorable movement extremes
                 if price_diff < 0:
@@ -623,7 +661,7 @@ class CrudePairEngine:
         """Calculates full reconciled dashboard summary, observation panel, and main ledger."""
         with self._lock:
             tick_meta = self.fetch_live_market_price()
-            curr_price = tick_meta.get("price") or self.current_price or self.last_tick_price or self.reference_price or 90.65
+            curr_price = self.current_price if self.current_price is not None else (tick_meta.get("price") or self.last_tick_price or self.reference_price or 90.65)
             conn_status = tick_meta.get("connection_status", "DISCONNECTED")
             f_status = tick_meta.get("feed_status", "DISCONNECTED")
             price_valid = tick_meta.get("price_valid", False)
@@ -664,7 +702,13 @@ class CrudePairEngine:
                     u_gross = (curr_price - entry_p) * qty if direction == "BUY" else (entry_p - curr_price) * qty
                     approx_fees = (entry_p + curr_price) * qty * self.fee_rate
                     u_net = u_gross - approx_fees - float(p.get("funding_costs", 0.0))
+                    
+                    p["current_price"] = round(curr_price, 2)
+                    p["unrealized_gross"] = round(u_gross, 4)
+                    p["unrealized_fees"] = round(approx_fees, 4)
                     p["unrealized_pnl"] = round(u_net, 4)
+                    p["last_pnl_update_time"] = tick_meta.get("timestamp_ist") or self.get_now_ist_str()
+
                     total_unrealized += u_net
 
                     diff = curr_price - entry_p if direction == "BUY" else entry_p - curr_price

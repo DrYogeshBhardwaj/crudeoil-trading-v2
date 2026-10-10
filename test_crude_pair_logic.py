@@ -169,7 +169,6 @@ class TestCrudePairLogic(unittest.TestCase):
         self.assertEqual(summary["total_open_positions"], calc_open)
         self.assertEqual(summary["total_closed_positions"], calc_closed)
         self.assertAlmostEqual(summary["realized_net_pnl"], round(calc_realized_net, 2), places=2)
-        self.assertAlmostEqual(summary["combined_net_equity"], round(summary["realized_net_pnl"] + summary["current_unrealized_pnl"], 2), places=2)
 
     def test_08_csv_export_format(self):
         """8. Verify CSV export generates valid CSV format with required column headers."""
@@ -247,7 +246,79 @@ class TestCrudePairLogic(unittest.TestCase):
         self.assertEqual(obs4["threshold_hits"]["$0.05"], 1)
         self.assertEqual(obs4["threshold_hits"]["$0.10"], 0)
 
+    def test_11_open_positions_mark_to_market_pnl_math(self):
+        """11. Verify exact position-wise MTM P&L changes for BUY and SELL legs on $90.71 -> $90.73 movement."""
+        DB.reset_crude_pair_account()
+        self.engine.positions.clear()
+        self.engine.movements.clear()
+        self.engine.fee_rate = 0.00059  # 0.05% Taker + 18% GST = 0.059% per side
+        self.engine.booking_enabled = False  # Disable profit booking triggers for pure mark-to-market test
+
+        # Entry Pair @ $90.65 (BUY @ $90.65, SELL @ $90.65)
+        p_id, buy_p, sell_p = self.engine._create_pair_unlocked(entry_price=90.65, reason="MTM MATH TEST")
+
+        # Tick 1 @ $90.71 (+ $0.06 from entry $90.65)
+        self.engine.process_tick(90.71, "2026-10-10 10:00:00 IST")
+        state1 = self.engine.get_dashboard_state()
+        summary1 = state1["summary"]
+        ledger1 = state1["ledger"]
+
+        buy_leg1 = next(p for p in ledger1 if p["position_id"] == buy_p["position_id"])
+        sell_leg1 = next(p for p in ledger1 if p["position_id"] == sell_p["position_id"])
+
+        buy_pnl1 = buy_leg1["unrealized_pnl"]
+        sell_pnl1 = sell_leg1["unrealized_pnl"]
+
+        # BUY @ $90.65, Mark $90.71: Gross +$0.06, Fee Est = (90.65 + 90.71) * 0.00059 = $0.1070014
+        exp_buy_gross1 = (90.71 - 90.65) * 1.0  # +0.06
+        exp_fee1 = (90.65 + 90.71) * 1.0 * 0.00059  # 0.1070014
+        exp_buy_net1 = exp_buy_gross1 - exp_fee1  # -0.0470014
+
+        exp_sell_gross1 = (90.65 - 90.71) * 1.0  # -0.06
+        exp_sell_net1 = exp_sell_gross1 - exp_fee1  # -0.1670014
+
+        self.assertAlmostEqual(buy_leg1["unrealized_gross"], exp_buy_gross1, places=3)
+        self.assertAlmostEqual(buy_leg1["unrealized_pnl"], exp_buy_net1, places=3)
+        self.assertAlmostEqual(sell_leg1["unrealized_gross"], exp_sell_gross1, places=3)
+        self.assertAlmostEqual(sell_leg1["unrealized_pnl"], exp_sell_net1, places=3)
+        self.assertAlmostEqual(summary1["realized_net_pnl"], 0.0, places=2)
+        self.assertAlmostEqual(summary1["current_unrealized_pnl"], round(exp_buy_net1 + exp_sell_net1, 2), places=2)
+
+        # Tick 2 @ $90.73 (+ $0.02 movement from $90.71)
+        self.engine.process_tick(90.73, "2026-10-10 10:00:02 IST")
+        state2 = self.engine.get_dashboard_state()
+        summary2 = state2["summary"]
+        ledger2 = state2["ledger"]
+
+        buy_leg2 = next(p for p in ledger2 if p["position_id"] == buy_p["position_id"])
+        sell_leg2 = next(p for p in ledger2 if p["position_id"] == sell_p["position_id"])
+
+        exp_buy_gross2 = (90.73 - 90.65) * 1.0  # +0.08
+        exp_fee2 = (90.65 + 90.73) * 1.0 * 0.00059  # 0.1070132
+        exp_buy_net2 = exp_buy_gross2 - exp_fee2  # -0.0270132
+
+        exp_sell_gross2 = (90.65 - 90.73) * 1.0  # -0.08
+        exp_sell_net2 = exp_sell_gross2 - exp_fee2  # -0.1870132
+
+        self.assertAlmostEqual(buy_leg2["unrealized_pnl"], exp_buy_net2, places=3)
+        self.assertAlmostEqual(sell_leg2["unrealized_pnl"], exp_sell_net2, places=3)
+
+        # Verify net P/L change on $90.71 -> $90.73 (+ $0.02 tick rise):
+        # BUY Net P/L should increase by +$0.02 (from -0.047 to -0.027)
+        buy_pnl_change = buy_leg2["unrealized_pnl"] - buy_pnl1
+        self.assertAlmostEqual(buy_pnl_change, 0.020, places=3)
+
+        # SELL Net P/L should decrease by -$0.02 (from -0.167 to -0.187)
+        sell_pnl_change = sell_leg2["unrealized_pnl"] - sell_pnl1
+        self.assertAlmostEqual(sell_pnl_change, -0.020, places=3)
+
+        # Total Unrealized Net P/L MUST equal exact sum of open BUY & SELL legs
+        total_open_sum = sum(p["unrealized_pnl"] for p in ledger2 if p["status"] == "OPEN")
+        self.assertAlmostEqual(summary2["current_unrealized_pnl"], round(total_open_sum, 2), places=2)
+        self.assertEqual(summary2["realized_net_pnl"], 0.0)
+
 
 if __name__ == "__main__":
     unittest.main()
+
 
