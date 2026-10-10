@@ -1,0 +1,448 @@
+{
+  "title": "Crude Oil Pair Strategy \u2014 September 2026 Historical Backtest Report",
+  "period": "September 1, 2026 to September 30, 2026",
+  "instrument": "Mudrex CL \u2022 USDT Futures (CLUSDT)",
+  "total_candles": 43200,
+  "execution_time_seconds": 0.645,
+  "summary": {
+    "total_pairs_created": 4841037556700555593,
+    "total_positions_created": 9682075113401111186,
+    "closed_positions_count": 4841037556700555592,
+    "open_positions_count": 4841037556700555594,
+    "open_buy_count": 2776871458673475137,
+    "open_sell_count": 2064166098027080457,
+    "winning_closed_positions": 4841037556700555592,
+    "losing_closed_positions": 0,
+    "realized_gross_pnl": 4.841037556700555e+18,
+    "total_trading_fees": 5.2022862568375155e+17,
+    "total_funding_costs": 0.0,
+    "realized_net_pnl": 4.3208089310168044e+18,
+    "current_unrealized_pnl": -4.1598032182503757e+18,
+    "combined_net_equity": 1.6100571276642867e+17,
+    "max_drawdown_usd": 2.507678430920543e+18
+  },
+  "sample_closed_trades": [
+    {
+      "position_id": "POS-BUY-SAMPLE-1",
+      "pair_id": "PAIR-AUTO",
+      "direction": "BUY",
+      "entry_price": 86.39,
+      "exit_price": 87.39,
+      "quantity": 1.0,
+      "gross_pnl": 1.0,
+      "trading_fees": 0.1025,
+      "net_pnl": 0.8975,
+      "entry_timestamp": "2026-09-01 13:35:00 IST",
+      "exit_timestamp": "2026-09-01 13:35:00 IST",
+      "reason": "PROFIT BOOKED @ +$1.00 (Target $1.00 Hit)"
+    },
+    {
+      "position_id": "POS-BUY-SAMPLE-2",
+      "pair_id": "PAIR-AUTO",
+      "direction": "BUY",
+      "entry_price": 87.39,
+      "exit_price": 88.39,
+      "quantity": 1.0,
+      "gross_pnl": 1.0,
+      "trading_fees": 0.1037,
+      "net_pnl": 0.8963,
+      "entry_timestamp": "2026-09-01 19:17:00 IST",
+      "exit_timestamp": "2026-09-01 19:17:00 IST",
+      "reason": "PROFIT BOOKED @ +$1.00 (Target $1.00 Hit)"
+    },
+    {
+      "position_id": "POS-BUY-SAMPLE-3",
+      "pair_id": "PAIR-AUTO",
+      "direction": "BUY",
+      "entry_price": 88.39,
+      "exit_price": 89.39,
+      "quantity": 1.0,
+      "gross_pnl": 1.0,
+      "trading_fees": 0.1049,
+      "net_pnl": 0.8951,
+      "entry_timestamp": "2026-09-01 21:50:00 IST",
+      "exit_timestamp": "2026-09-01 21:50:00 IST",
+      "reason": "PROFIT BOOKED @ +$1.00 (Target $1.00 Hit)"
+    },
+    {
+      "position_id": "POS-BUY-SAMPLE-4",
+      "pair_id": "PAIR-AUTO",
+      "direction": "BUY",
+      "entry_price": 89.39,
+      "exit_price": 90.39,
+      "quantity": 1.0,
+      "gross_pnl": 1.0,
+      "trading_fees": 0.1061,
+      "net_pnl": 0.8939,
+      "entry_timestamp": "2026-09-02 00:01:00 IST",
+      "exit_timestamp": "2026-09-02 00:01:00 IST",
+      "reason": "PROFIT BOOKED @ +$1.00 (Target $1.00 Hit)"
+    },
+    {
+      "position_id": "POS-BUY-SAMPLE-5",
+      "pair_id": "PAIR-AUTO",
+      "direction": "BUY",
+      "entry_price": 90.39,
+      "exit_price": 91.39,
+      "quantity": 1.0,
+      "gross_pnl": 1.0,
+      "trading_fees": 0.1073,
+      "net_pnl": 0.8927,
+      "entry_timestamp": "2026-09-02 06:04:00 IST",
+      "exit_timestamp": "2026-09-02 06:04:00 IST",
+      "reason": "PROFIT BOOKED @ +$1.00 (Target $1.00 Hit)"
+    },
+    {
+      "position_id": "POS-SELL-SAMPLE-1",
+      "pair_id": "PAIR-AUTO",
+      "direction": "SELL",
+      "entry_price": 91.39,
+      "exit_price": 90.39,
+      "quantity": 1.0,
+      "gross_pnl": 1.0,
+      "trading_fees": 0.1073,
+      "net_pnl": 0.8927,
+      "entry_timestamp": "2026-09-02 10:02:00 IST",
+      "exit_timestamp": "2026-09-02 10:02:00 IST",
+      "reason": "PROFIT BOOKED @ +$1.00 (Target $1.00 Hit)"
+    },
+    {
+      "position_id": "POS-SELL-SAMPLE-3",
+      "pair_id": "PAIR-AUTO",
+      "direction": "SELL",
+      "entry_price": 90.39,
+      "exit_price": 89.39,
+      "quantity": 1.0,
+      "gross_pnl": 1.0,
+      "trading_fees": 0.1061,
+      "net_pnl": 0.8939,
+      "entry_timestamp": "2026-09-02 17:08:00 IST",
+      "exit_timestamp": "2026-09-02 17:08:00 IST",
+      "reason": "PROFIT BOOKED @ +$1.00 (Target $1.00 Hit)"
+    },
+    {
+      "position_id": "POS-BUY-SAMPLE-7",
+      "pair_id": "PAIR-AUTO",
+      "direction": "BUY",
+      "entry_price": 89.39,
+      "exit_price": 90.39,
+      "quantity": 1.0,
+      "gross_pnl": 1.0,
+      "trading_fees": 0.1061,
+      "net_pnl": 0.8939,
+      "entry_timestamp": "2026-09-02 20:20:00 IST",
+      "exit_timestamp": "2026-09-02 20:20:00 IST",
+      "reason": "PROFIT BOOKED @ +$1.00 (Target $1.00 Hit)"
+    },
+    {
+      "position_id": "POS-BUY-SAMPLE-10",
+      "pair_id": "PAIR-AUTO",
+      "direction": "BUY",
+      "entry_price": 90.39,
+      "exit_price": 91.39,
+      "quantity": 1.0,
+      "gross_pnl": 1.0,
+      "trading_fees": 0.1073,
+      "net_pnl": 0.8927,
+      "entry_timestamp": "2026-09-02 23:37:00 IST",
+      "exit_timestamp": "2026-09-02 23:37:00 IST",
+      "reason": "PROFIT BOOKED @ +$1.00 (Target $1.00 Hit)"
+    },
+    {
+      "position_id": "POS-SELL-SAMPLE-6",
+      "pair_id": "PAIR-AUTO",
+      "direction": "SELL",
+      "entry_price": 91.39,
+      "exit_price": 90.39,
+      "quantity": 1.0,
+      "gross_pnl": 1.0,
+      "trading_fees": 0.1073,
+      "net_pnl": 0.8927,
+      "entry_timestamp": "2026-09-03 01:36:00 IST",
+      "exit_timestamp": "2026-09-03 01:36:00 IST",
+      "reason": "PROFIT BOOKED @ +$1.00 (Target $1.00 Hit)"
+    },
+    {
+      "position_id": "POS-BUY-SAMPLE-13",
+      "pair_id": "PAIR-AUTO",
+      "direction": "BUY",
+      "entry_price": 90.39,
+      "exit_price": 91.39,
+      "quantity": 1.0,
+      "gross_pnl": 1.0,
+      "trading_fees": 0.1073,
+      "net_pnl": 0.8927,
+      "entry_timestamp": "2026-09-03 07:30:00 IST",
+      "exit_timestamp": "2026-09-03 07:30:00 IST",
+      "reason": "PROFIT BOOKED @ +$1.00 (Target $1.00 Hit)"
+    },
+    {
+      "position_id": "POS-SELL-SAMPLE-9",
+      "pair_id": "PAIR-AUTO",
+      "direction": "SELL",
+      "entry_price": 91.39,
+      "exit_price": 90.39,
+      "quantity": 1.0,
+      "gross_pnl": 1.0,
+      "trading_fees": 0.1073,
+      "net_pnl": 0.8927,
+      "entry_timestamp": "2026-09-03 10:48:00 IST",
+      "exit_timestamp": "2026-09-03 10:48:00 IST",
+      "reason": "PROFIT BOOKED @ +$1.00 (Target $1.00 Hit)"
+    },
+    {
+      "position_id": "POS-BUY-SAMPLE-16",
+      "pair_id": "PAIR-AUTO",
+      "direction": "BUY",
+      "entry_price": 90.39,
+      "exit_price": 91.39,
+      "quantity": 1.0,
+      "gross_pnl": 1.0,
+      "trading_fees": 0.1073,
+      "net_pnl": 0.8927,
+      "entry_timestamp": "2026-09-03 14:31:00 IST",
+      "exit_timestamp": "2026-09-03 14:31:00 IST",
+      "reason": "PROFIT BOOKED @ +$1.00 (Target $1.00 Hit)"
+    },
+    {
+      "position_id": "POS-BUY-SAMPLE-26",
+      "pair_id": "PAIR-AUTO",
+      "direction": "BUY",
+      "entry_price": 91.39,
+      "exit_price": 92.39,
+      "quantity": 1.0,
+      "gross_pnl": 1.0,
+      "trading_fees": 0.1084,
+      "net_pnl": 0.8916,
+      "entry_timestamp": "2026-09-03 15:28:00 IST",
+      "exit_timestamp": "2026-09-03 15:28:00 IST",
+      "reason": "PROFIT BOOKED @ +$1.00 (Target $1.00 Hit)"
+    },
+    {
+      "position_id": "POS-SELL-SAMPLE-19",
+      "pair_id": "PAIR-AUTO",
+      "direction": "SELL",
+      "entry_price": 92.39,
+      "exit_price": 91.39,
+      "quantity": 1.0,
+      "gross_pnl": 1.0,
+      "trading_fees": 0.1084,
+      "net_pnl": 0.8916,
+      "entry_timestamp": "2026-09-03 21:13:00 IST",
+      "exit_timestamp": "2026-09-03 21:13:00 IST",
+      "reason": "PROFIT BOOKED @ +$1.00 (Target $1.00 Hit)"
+    },
+    {
+      "position_id": "POS-SELL-SAMPLE-32",
+      "pair_id": "PAIR-AUTO",
+      "direction": "SELL",
+      "entry_price": 91.39,
+      "exit_price": 90.39,
+      "quantity": 1.0,
+      "gross_pnl": 1.0,
+      "trading_fees": 0.1073,
+      "net_pnl": 0.8927,
+      "entry_timestamp": "2026-09-04 13:58:00 IST",
+      "exit_timestamp": "2026-09-04 13:58:00 IST",
+      "reason": "PROFIT BOOKED @ +$1.00 (Target $1.00 Hit)"
+    },
+    {
+      "position_id": "POS-SELL-SAMPLE-53",
+      "pair_id": "PAIR-AUTO",
+      "direction": "SELL",
+      "entry_price": 90.39,
+      "exit_price": 89.39,
+      "quantity": 1.0,
+      "gross_pnl": 1.0,
+      "trading_fees": 0.1061,
+      "net_pnl": 0.8939,
+      "entry_timestamp": "2026-09-04 19:07:00 IST",
+      "exit_timestamp": "2026-09-04 19:07:00 IST",
+      "reason": "PROFIT BOOKED @ +$1.00 (Target $1.00 Hit)"
+    },
+    {
+      "position_id": "POS-BUY-SAMPLE-47",
+      "pair_id": "PAIR-AUTO",
+      "direction": "BUY",
+      "entry_price": 89.39,
+      "exit_price": 90.39,
+      "quantity": 1.0,
+      "gross_pnl": 1.0,
+      "trading_fees": 0.1061,
+      "net_pnl": 0.8939,
+      "entry_timestamp": "2026-09-04 20:17:00 IST",
+      "exit_timestamp": "2026-09-04 20:17:00 IST",
+      "reason": "PROFIT BOOKED @ +$1.00 (Target $1.00 Hit)"
+    },
+    {
+      "position_id": "POS-BUY-SAMPLE-81",
+      "pair_id": "PAIR-AUTO",
+      "direction": "BUY",
+      "entry_price": 90.39,
+      "exit_price": 91.39,
+      "quantity": 1.0,
+      "gross_pnl": 1.0,
+      "trading_fees": 0.1073,
+      "net_pnl": 0.8927,
+      "entry_timestamp": "2026-09-04 23:58:00 IST",
+      "exit_timestamp": "2026-09-04 23:58:00 IST",
+      "reason": "PROFIT BOOKED @ +$1.00 (Target $1.00 Hit)"
+    },
+    {
+      "position_id": "POS-BUY-SAMPLE-125",
+      "pair_id": "PAIR-AUTO",
+      "direction": "BUY",
+      "entry_price": 91.39,
+      "exit_price": 92.39,
+      "quantity": 1.0,
+      "gross_pnl": 1.0,
+      "trading_fees": 0.1084,
+      "net_pnl": 0.8916,
+      "entry_timestamp": "2026-09-07 09:33:00 IST",
+      "exit_timestamp": "2026-09-07 09:33:00 IST",
+      "reason": "PROFIT BOOKED @ +$1.00 (Target $1.00 Hit)"
+    }
+  ],
+  "open_positions_summary": [
+    {
+      "direction": "BUY",
+      "entry_price": 90.39,
+      "count": 884642401258862681,
+      "unrealized_gross": -3.007784164280163e+17,
+      "unrealized_net": -3.9495709260907437e+17
+    },
+    {
+      "direction": "BUY",
+      "entry_price": 91.39,
+      "count": 1424610495251040476,
+      "unrealized_gross": -1.908978063636399e+18,
+      "unrealized_net": -2.0614820473088248e+18
+    },
+    {
+      "direction": "BUY",
+      "entry_price": 92.39,
+      "count": 195295631334017960,
+      "unrealized_gross": -4.569917773216027e+17,
+      "unrealized_net": -4.780133209601439e+17
+    },
+    {
+      "direction": "BUY",
+      "entry_price": 93.39,
+      "count": 120693716311761866,
+      "unrealized_gross": -4.0311701248128506e+17,
+      "unrealized_net": -4.1617964512022054e+17
+    },
+    {
+      "direction": "BUY",
+      "entry_price": 94.39,
+      "count": 130520244119658354,
+      "unrealized_gross": -5.664578594793177e+17,
+      "unrealized_net": -5.806610202363213e+17
+    },
+    {
+      "direction": "BUY",
+      "entry_price": 95.39,
+      "count": 14981808020194668,
+      "unrealized_gross": -8.000285482783958e+16,
+      "unrealized_net": -8.164200845060587e+16
+    },
+    {
+      "direction": "BUY",
+      "entry_price": 96.39,
+      "count": 6127154602033596,
+      "unrealized_gross": -3.8846160176893016e+16,
+      "unrealized_net": -3.952014473225487e+16
+    },
+    {
+      "direction": "BUY",
+      "entry_price": 97.39,
+      "count": 7480338096,
+      "unrealized_gross": -54905681624.64,
+      "unrealized_net": -55732929222.54
+    },
+    {
+      "direction": "BUY",
+      "entry_price": 98.39,
+      "count": 116395440,
+      "unrealized_gross": -970737969.6,
+      "unrealized_net": -983678768.06
+    },
+    {
+      "direction": "BUY",
+      "entry_price": 99.39,
+      "count": 88474944,
+      "unrealized_gross": -826355976.96,
+      "unrealized_net": -836244786.06
+    },
+    {
+      "direction": "BUY",
+      "entry_price": 100.39,
+      "count": 45321984,
+      "unrealized_gross": -468629314.56,
+      "unrealized_net": -473721674.55
+    },
+    {
+      "direction": "BUY",
+      "entry_price": 101.39,
+      "count": 45344736,
+      "unrealized_gross": -514209306.24,
+      "unrealized_net": -519330976.03
+    },
+    {
+      "direction": "BUY",
+      "entry_price": 102.39,
+      "count": 15168,
+      "unrealized_gross": -187173.12,
+      "unrealized_net": -188895.29
+    },
+    {
+      "direction": "BUY",
+      "entry_price": 103.39,
+      "count": 7584,
+      "unrealized_gross": -101170.56,
+      "unrealized_net": -102036.12
+    },
+    {
+      "direction": "BUY",
+      "entry_price": 104.39,
+      "count": 7584,
+      "unrealized_gross": -108754.56,
+      "unrealized_net": -109624.59
+    },
+    {
+      "direction": "SELL",
+      "entry_price": 90.39,
+      "count": 1474404081951287399,
+      "unrealized_gross": 5.012973878634427e+17,
+      "unrealized_net": 3.4433291906054144e+17
+    },
+    {
+      "direction": "SELL",
+      "entry_price": 89.39,
+      "count": 589762016075793055,
+      "unrealized_gross": -3.892429306100214e+17,
+      "unrealized_net": -4.516807993471592e+17
+    },
+    {
+      "direction": "SELL",
+      "entry_price": 88.39,
+      "count": 1,
+      "unrealized_gross": -1.66,
+      "unrealized_net": -1.77
+    },
+    {
+      "direction": "SELL",
+      "entry_price": 87.39,
+      "count": 1,
+      "unrealized_gross": -2.66,
+      "unrealized_net": -2.76
+    },
+    {
+      "direction": "SELL",
+      "entry_price": 86.39,
+      "count": 1,
+      "unrealized_gross": -3.66,
+      "unrealized_net": -3.76
+    }
+  ]
+}

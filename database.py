@@ -110,11 +110,14 @@ class DatabaseEngine:
     def __init__(self, db_path: str = DB_FILE):
         self.db_path = db_path
         self._init_db()
-        migrate_if_needed(self.db_path)
+        try:
+            migrate_if_needed(self.db_path)
+        except Exception as e:
+            print(f"[{datetime.now()}] MIGRATION NOTICE: {e}")
 
     @contextlib.contextmanager
     def _get_connection(self):
-        conn = sqlite3.connect(self.db_path, timeout=15.0)
+        conn = sqlite3.connect(self.db_path, timeout=30.0)
         conn.row_factory = sqlite3.Row
         try:
             yield conn
@@ -128,6 +131,11 @@ class DatabaseEngine:
     def _init_db(self):
         with self._get_connection() as conn:
             cursor = conn.cursor()
+            try:
+                cursor.execute("PRAGMA journal_mode=WAL;")
+                cursor.execute("PRAGMA busy_timeout=30000;")
+            except Exception:
+                pass
             
             # Paper Trades Table
             cursor.execute("""
