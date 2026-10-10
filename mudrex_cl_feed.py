@@ -59,7 +59,7 @@ class MudrexCLFeed:
                 headers["X-Api-Key"] = api_key
 
             if api_secret:
-                resp = requests.get(f"{self.mudrex_base_url}/futures/CLUSDT?is_symbol", headers=headers, timeout=3)
+                resp = requests.get(f"{self.mudrex_base_url}/futures/CLUSDT?is_symbol", headers=headers, timeout=2)
                 if resp.status_code in (200, 201):
                     data = resp.json()
                     ast = data.get("data") if isinstance(data, dict) and "data" in data else data
@@ -72,7 +72,7 @@ class MudrexCLFeed:
 
         # 2. Query Underlying Binance Futures Stream (CLUSDT) for ticker & funding rate
         try:
-            r_ticker = requests.get(f"{self.base_url}/ticker/24hr?symbol=CLUSDT", timeout=3)
+            r_ticker = requests.get(f"{self.base_url}/ticker/24hr?symbol=CLUSDT", timeout=2)
             if r_ticker.status_code == 200:
                 data_t = r_ticker.json()
                 if price_usd is None or price_usd <= 0:
@@ -81,7 +81,7 @@ class MudrexCLFeed:
                 change_pct = float(data_t.get("priceChangePercent", 0.0))
                 conn_status = "CONNECTED"
 
-            r_prem = requests.get(f"{self.base_url}/premiumIndex?symbol=CLUSDT", timeout=3)
+            r_prem = requests.get(f"{self.base_url}/premiumIndex?symbol=CLUSDT", timeout=2)
             if r_prem.status_code == 200:
                 data_p = r_prem.json()
                 funding_rate = float(data_p.get("lastFundingRate", 0.0001))

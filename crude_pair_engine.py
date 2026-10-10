@@ -950,12 +950,13 @@ CRUDE_PAIR_ENGINE = CrudePairEngine()
 async def crude_pair_engine_background_loop():
     """Background task to stream market tick and evaluate open positions continuously."""
     print("[CRUDE PAIR ENGINE] Background market tick monitoring loop initiated.")
-    last_snapshot_time = 0.0
+    last_snapshot_time = time.time()
     while True:
         try:
             now = time.time()
             if CRUDE_PAIR_ENGINE.is_running:
-                tick_meta = CRUDE_PAIR_ENGINE.fetch_live_market_price()
+                # Offload synchronous HTTP calls to threadpool executor to keep asyncio loop 100% responsive
+                tick_meta = await asyncio.to_thread(CRUDE_PAIR_ENGINE.fetch_live_market_price)
                 price = tick_meta.get("price")
                 price_valid = tick_meta.get("price_valid", False)
                 if price_valid and price and price > 0:
@@ -963,10 +964,10 @@ async def crude_pair_engine_background_loop():
                     CRUDE_PAIR_ENGINE.process_tick(price, now_str)
 
                 # Record hourly snapshot every 3600s
-                if now - last_snapshot_time >= 3600 or last_snapshot_time == 0.0:
-                    CRUDE_PAIR_ENGINE.record_hourly_snapshot()
+                if now - last_snapshot_time >= 3600:
+                    await asyncio.to_thread(CRUDE_PAIR_ENGINE.record_hourly_snapshot)
                     last_snapshot_time = now
         except Exception as e:
             print(f"[CRUDE PAIR ENGINE LOOP ERROR] {e}")
-        await asyncio.sleep(2)
+        await asyncio.sleep(3)
 
