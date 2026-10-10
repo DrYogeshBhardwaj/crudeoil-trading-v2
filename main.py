@@ -27,6 +27,7 @@ from silver_paper_engine import SILVER_PAPER_ENGINE
 from mudrex_crude_paper_engine import MUDREX_CRUDE_PAPER_ENGINE
 from mcx_silver_paper_engine import MCX_SILVER_ENGINE
 from crude_pair_engine import CRUDE_PAIR_ENGINE, crude_pair_engine_background_loop
+from mudrex_cl_feed import MUDREX_CL_FEED
 
 app = FastAPI(
     title="AI Trend Detector & Paper Trading Engine V1",
@@ -1291,15 +1292,8 @@ async def get_crude_pair_test_state():
 
 @app.get("/api/crude/pair-test/candles")
 async def get_crude_pair_test_candles(tf: str = "1m"):
-    """Returns historical OHLCV candles for WTI Crude Oil chart (1m, 5m, 15m, 1h)."""
-    valid_tf_map = {
-        "1m": ("1m", "1d"),
-        "5m": ("5m", "5d"),
-        "15m": ("15m", "5d"),
-        "1h": ("60m", "1mo")
-    }
-    interval, rng = valid_tf_map.get(tf, ("1m", "1d"))
-    candles = WTI_FEED.fetch_historical_candles(interval, rng)
+    """Returns historical OHLCV candles for Mudrex CL • USDT chart (1m, 5m, 15m, 1h)."""
+    candles = MUDREX_CL_FEED.fetch_klines(timeframe=tf, limit=500)
     return JSONResponse(candles)
 
 @app.post("/api/crude/pair-test/start")

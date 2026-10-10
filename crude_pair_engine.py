@@ -33,6 +33,7 @@ from dataclasses import dataclass, field, asdict
 
 from database import DB
 from wti_feed import WTI_FEED
+from mudrex_cl_feed import MUDREX_CL_FEED
 
 # Threshold values in USD
 MOVEMENT_THRESHOLDS = [0.25, 0.50, 1.00, 1.50, 2.00, 3.00]
@@ -71,10 +72,10 @@ class CrudePairEngine:
     def __init__(self):
         self._lock = threading.Lock()
         self.is_running: bool = False
-        self.reference_price: float = 80.00
+        self.reference_price: float = 90.65
         self.quantity: float = 1.0
-        self.fee_rate: float = 0.0005  # 0.05% simulated taker fee per side
-        self.funding_rate: float = 0.0  # 0% funding default for paper test
+        self.fee_rate: float = 0.00059  # Mudrex 0.05% taker fee + 18% GST per side
+        self.funding_rate: float = 0.0  # Dynamic funding rate per position
         
         # Strategy Unresolved Rule Configs
         self.booking_threshold_usd: float = 1.00  # Default $1.00 booking trigger
@@ -86,7 +87,7 @@ class CrudePairEngine:
         self.last_tick_price: Optional[float] = None
         self.last_tick_time: Optional[str] = None
         self.feed_status: str = "INITIALIZING"
-        self.feed_source: str = "NYMEX Crude Oil Futures (CL=F)"
+        self.feed_source: str = "Mudrex CL • USDT Futures Feed (CLUSDT)"
         
         # In-memory tracking
         self.positions: List[Dict[str, Any]] = []
@@ -101,11 +102,11 @@ class CrudePairEngine:
             self.is_running = (run_val.lower() == "true")
             self._save_setting("is_running", "true" if self.is_running else "false")
             
-            ref_val = DB.load_crude_pair_setting("reference_price", "80.00")
+            ref_val = DB.load_crude_pair_setting("reference_price", "90.65")
             try:
                 self.reference_price = float(ref_val)
             except ValueError:
-                self.reference_price = 80.00
+                self.reference_price = 90.65
 
             thresh_val = DB.load_crude_pair_setting("booking_threshold_usd", "1.00")
             try:
@@ -119,7 +120,7 @@ class CrudePairEngine:
 
             # Auto-initialize Pair #1 if empty
             if not self.positions:
-                start_price = self.reference_price or 80.00
+                start_price = self.reference_price or 90.65
                 self._create_pair_unlocked(entry_price=start_price, reason="AUTO-START INITIAL PAIR ENTRY")
 
     def _save_setting(self, key: str, value: str):
@@ -154,54 +155,50 @@ class CrudePairEngine:
 
     def fetch_live_market_price(self) -> Dict[str, Any]:
         """
-        Fetches live WTI crude price tick and metadata from WTI_FEED (Yahoo NYMEX feed).
-        Ensures feed is marked CONNECTED ONLY when a valid positive WTI price > 0 is present.
+        Fetches live Mudrex CL • USDT price tick and metadata from MUDREX_CL_FEED.
+        Ensures feed is marked CONNECTED ONLY when a valid positive Mudrex price > 0 is present.
         """
         try:
-            tick = WTI_FEED.fetch_latest_tick()
+            tick = MUDREX_CL_FEED.fetch_latest_tick()
             price = tick.get("price")
-            mkt_status = tick.get("market_status", "UNKNOWN")
             raw_conn = tick.get("connection_status", "DISCONNECTED")
-            reg_time = tick.get("last_tick_epoch")
-            ts_ist = tick.get("last_tick_timestamp_ist") or tick.get("last_update_time_ist") or self.get_now_ist_str()
+            f_status = tick.get("feed_status", "DISCONNECTED")
+            ts_ist = tick.get("timestamp_ist") or self.get_now_ist_str()
+            f_rate = float(tick.get("funding_rate", 0.0))
+            self.funding_rate = f_rate
 
-            if price is not None and float(price) > 0 and reg_time and reg_time > 0:
+            if price is not None and float(price) > 0 and tick.get("price_valid"):
                 p_val = round(float(price), 2)
                 self.last_tick_price = p_val
                 self.last_tick_time = ts_ist
-
-                # Determine strict connection state
-                if mkt_status == "CLOSED":
-                    conn_state = "STALE"
-                    f_status = f"STALE (CME NYMEX Closed @ ${p_val:.2f})"
-                elif raw_conn == "STALE":
-                    conn_state = "STALE"
-                    f_status = f"STALE (Feed Delayed @ ${p_val:.2f})"
-                else:
-                    conn_state = "CONNECTED"
-                    f_status = f"CONNECTED (${p_val:.2f})"
-
                 self.feed_status = f_status
+
                 return {
                     "price": p_val,
                     "change": round(float(tick.get("change", 0.0)), 2),
                     "change_pct": round(float(tick.get("change_pct", 0.0)), 2),
+                    "funding_rate": f_rate,
+                    "funding_rate_pct": round(f_rate * 100.0, 4),
                     "timestamp_ist": ts_ist,
-                    "connection_status": conn_state,
+                    "connection_status": raw_conn,
                     "feed_status": f_status,
-                    "market_status": mkt_status,
+                    "feed_source": tick.get("feed_source", "Mudrex CL • USDT Market Feed (CLUSDT)"),
+                    "market_status": tick.get("market_status", "TRADING"),
                     "price_valid": True
                 }
             else:
-                self.feed_status = "DISCONNECTED (Price unavailable)"
+                self.feed_status = "DISCONNECTED (Mudrex CL • USDT price unavailable)"
                 return {
                     "price": self.last_tick_price or 0.0,
                     "change": 0.0,
                     "change_pct": 0.0,
+                    "funding_rate": 0.0,
+                    "funding_rate_pct": 0.0,
                     "timestamp_ist": self.get_now_ist_str(),
                     "connection_status": "DISCONNECTED",
                     "feed_status": self.feed_status,
-                    "market_status": mkt_status,
+                    "feed_source": "Mudrex CL • USDT Market Feed (CLUSDT)",
+                    "market_status": "OFFLINE",
                     "price_valid": False
                 }
         except Exception as e:
@@ -210,9 +207,12 @@ class CrudePairEngine:
                 "price": self.last_tick_price or 0.0,
                 "change": 0.0,
                 "change_pct": 0.0,
+                "funding_rate": 0.0,
+                "funding_rate_pct": 0.0,
                 "timestamp_ist": self.get_now_ist_str(),
                 "connection_status": "DISCONNECTED",
                 "feed_status": self.feed_status,
+                "feed_source": "Mudrex CL • USDT Market Feed (CLUSDT)",
                 "market_status": "ERROR",
                 "price_valid": False
             }
@@ -607,14 +607,14 @@ class CrudePairEngine:
             instrument_validation = {
                 "paper_mode_only": True,
                 "real_trading_disabled": True,
-                "instrument": "WTI CRUDE OIL (CL=F)",
+                "instrument": "Mudrex CL • USDT Perpetual Futures (CLUSDT)",
                 "price_feed_source": self.feed_source,
                 "price_feed_status": self.feed_status,
                 "current_price_usd": curr_price,
-                "mudrex_support_note": "Mudrex does not support CL/USDT contract. Data feed connected via NYMEX Crude Oil (CL=F) real-time stream.",
-                "contract_size": f"{self.quantity} Barrel",
-                "fee_assumptions": f"0.05% Taker Fee per side (${(curr_price * self.quantity * self.fee_rate):.4f}/trade)",
-                "funding_assumptions": "$0.00 (Paper Simulation)"
+                "mudrex_support_note": "Primary Price Feed: Mudrex CL • USDT Perpetual Futures stream (CLUSDT). Prices, OHLCV candles, 24h ticker, and funding rates stream directly from Mudrex CL • USDT market data.",
+                "contract_size": f"{self.quantity} Contract / Barrel",
+                "fee_assumptions": f"Mudrex Taker Fee: 0.05% + 18% GST (0.059% per side = ${(curr_price * self.quantity * self.fee_rate):.4f} per trade)",
+                "funding_assumptions": f"Dynamic Mudrex CL • USDT Perpetual Funding Rate ({tick_meta.get('funding_rate_pct', 0.0):.4f}% / 8h)"
             }
 
             # Unresolved Rules list to report to user

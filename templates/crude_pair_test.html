@@ -498,12 +498,12 @@
     <!-- 1. Header & Live Price Bar -->
     <header>
         <div class="title-group">
-            <h1>Crude Oil Pair Strategy — Paper Test</h1>
-            <div class="subtitle">Live WTI Market Feed & Continuous Paper Simulation Engine</div>
+            <h1>Mudrex Crude Oil (CL • USDT) Pair Strategy — Paper Test</h1>
+            <div class="subtitle">Mudrex CL • USDT Futures Live Feed & Continuous Paper Simulation Engine</div>
         </div>
         <div class="header-live-block">
             <div class="live-price-box">
-                <div style="font-size: 0.7rem; color: var(--text-muted); text-transform: uppercase;">WTI Crude Oil Price</div>
+                <div style="font-size: 0.7rem; color: var(--text-muted); text-transform: uppercase;">Mudrex CL • USDT Price</div>
                 <div class="live-price-val">
                     <span id="live-price">$0.00</span>
                     <span id="dir-badge" class="direction-badge dir-up">--</span>
@@ -523,8 +523,8 @@
     <!-- Feed Label Notice Banner -->
     <div class="feed-notice">
         <div>
-            <strong>Market Feed:</strong> NYMEX WTI Crude Oil Futures (<code>CL=F</code>) live market feed. 
-            <em>(Note: Mudrex does not support CL/USDT futures contracts. Feed connects to real NYMEX market data stream.)</em>
+            <strong>Market Feed:</strong> Mudrex <strong><code>CL • USDT</code></strong> Perpetual Futures (<code>CLUSDT</code>) live market feed. 
+            <em>(Mudrex Fee Specs: 0.05% Taker Fee + 18% GST = 0.059%/side | Funding Rate: Dynamic | Contract: 1 Barrel)</em>
         </div>
         <div>
             <strong>Mode:</strong> <span style="color: var(--accent-amber);">PAPER MODE ONLY — No Live Orders</span>
@@ -535,7 +535,7 @@
     <div class="chart-card">
         <div class="chart-header">
             <div class="chart-title">
-                📈 Live WTI Crude Oil (CL=F) Candlestick Chart
+                📈 Live Mudrex CL • USDT (CLUSDT) Candlestick Chart
             </div>
             <div class="tf-selector">
                 <button class="tf-btn active" onclick="setChartTimeframe('1m', this)">1M</button>
@@ -546,7 +546,7 @@
         </div>
         <div id="chart-container">
             <div id="chart-overlay" class="chart-overlay" style="display: none;">
-                <span id="overlay-msg">Connecting to NYMEX market feed...</span>
+                <span id="overlay-msg">Connecting to Mudrex CL • USDT market feed...</span>
             </div>
         </div>
     </div>
