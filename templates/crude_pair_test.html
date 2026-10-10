@@ -1,0 +1,903 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Crude Oil Pair Strategy — Paper Test Only</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-dark: #090d16;
+            --card-bg: rgba(18, 26, 43, 0.75);
+            --card-border: rgba(255, 255, 255, 0.08);
+            --text-main: #f1f5f9;
+            --text-muted: #94a3b8;
+            --accent-cyan: #00f2fe;
+            --accent-blue: #4facfe;
+            --accent-green: #00e676;
+            --accent-red: #ff2a6d;
+            --accent-amber: #ffb300;
+            --accent-purple: #9d4edd;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--bg-dark);
+            color: var(--text-main);
+            line-height: 1.5;
+            padding: 20px;
+            background-image: 
+                radial-gradient(circle at 10% 20%, rgba(0, 242, 254, 0.05) 0%, transparent 40%),
+                radial-gradient(circle at 90% 80%, rgba(157, 78, 221, 0.05) 0%, transparent 40%);
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 1600px;
+            margin: 0 auto;
+        }
+
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 16px 24px;
+            background: var(--card-bg);
+            border: 1px solid var(--card-border);
+            border-radius: 12px;
+            backdrop-filter: blur(10px);
+            margin-bottom: 20px;
+        }
+
+        .title-group h1 {
+            font-size: 1.5rem;
+            font-weight: 800;
+            background: linear-gradient(135deg, var(--accent-cyan), var(--accent-blue));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .badges {
+            display: flex;
+            gap: 8px;
+            margin-top: 6px;
+        }
+
+        .badge {
+            font-size: 0.75rem;
+            font-weight: 700;
+            padding: 4px 10px;
+            border-radius: 20px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .badge-paper {
+            background: rgba(255, 179, 0, 0.15);
+            color: var(--accent-amber);
+            border: 1px solid rgba(255, 179, 0, 0.3);
+        }
+
+        .badge-live {
+            background: rgba(0, 230, 118, 0.15);
+            color: var(--accent-green);
+            border: 1px solid rgba(0, 230, 118, 0.3);
+        }
+
+        .badge-mudrex {
+            background: rgba(79, 172, 254, 0.15);
+            color: var(--accent-blue);
+            border: 1px solid rgba(79, 172, 254, 0.3);
+        }
+
+        .header-stats {
+            display: flex;
+            gap: 24px;
+            align-items: center;
+        }
+
+        .stat-box {
+            text-align: right;
+        }
+
+        .stat-label {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            text-transform: uppercase;
+        }
+
+        .stat-value {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 1.25rem;
+            font-weight: 700;
+        }
+
+        .price-glow {
+            color: var(--accent-cyan);
+            text-shadow: 0 0 10px rgba(0, 242, 254, 0.4);
+        }
+
+        /* Banner */
+        .info-banner {
+            background: rgba(18, 26, 43, 0.9);
+            border-left: 4px solid var(--accent-cyan);
+            border-radius: 8px;
+            padding: 14px 20px;
+            margin-bottom: 20px;
+            font-size: 0.875rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .banner-text {
+            color: #cbd5e1;
+        }
+
+        .banner-text strong {
+            color: var(--text-main);
+        }
+
+        /* Action Controls */
+        .controls-bar {
+            display: flex;
+            gap: 12px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+
+        .btn {
+            font-family: inherit;
+            font-size: 0.875rem;
+            font-weight: 600;
+            padding: 10px 18px;
+            border-radius: 8px;
+            border: 1px solid transparent;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .btn-start {
+            background: linear-gradient(135deg, #00c853, #00e676);
+            color: #000;
+            box-shadow: 0 0 15px rgba(0, 230, 118, 0.3);
+        }
+
+        .btn-start:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 0 20px rgba(0, 230, 118, 0.5);
+        }
+
+        .btn-stop {
+            background: rgba(255, 179, 0, 0.2);
+            color: var(--accent-amber);
+            border-color: rgba(255, 179, 0, 0.4);
+        }
+
+        .btn-stop:hover {
+            background: rgba(255, 179, 0, 0.3);
+        }
+
+        .btn-pair {
+            background: rgba(0, 242, 254, 0.15);
+            color: var(--accent-cyan);
+            border-color: rgba(0, 242, 254, 0.3);
+        }
+
+        .btn-pair:hover {
+            background: rgba(0, 242, 254, 0.25);
+        }
+
+        .btn-reset {
+            background: rgba(255, 42, 109, 0.15);
+            color: var(--accent-red);
+            border-color: rgba(255, 42, 109, 0.3);
+        }
+
+        .btn-reset:hover {
+            background: rgba(255, 42, 109, 0.25);
+        }
+
+        .btn-csv {
+            background: rgba(79, 172, 254, 0.15);
+            color: var(--accent-blue);
+            border-color: rgba(79, 172, 254, 0.3);
+            margin-left: auto;
+        }
+
+        .btn-csv:hover {
+            background: rgba(79, 172, 254, 0.25);
+        }
+
+        /* Summary Dashboard Grid */
+        .dashboard-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 16px;
+            margin-bottom: 24px;
+        }
+
+        .card {
+            background: var(--card-bg);
+            border: 1px solid var(--card-border);
+            border-radius: 12px;
+            padding: 16px;
+            backdrop-filter: blur(10px);
+            transition: transform 0.2s ease, border-color 0.2s ease;
+        }
+
+        .card:hover {
+            border-color: rgba(255, 255, 255, 0.15);
+            transform: translateY(-2px);
+        }
+
+        .card-title {
+            font-size: 0.75rem;
+            font-weight: 600;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 8px;
+        }
+
+        .card-value {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 1.4rem;
+            font-weight: 700;
+        }
+
+        .card-subtext {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            margin-top: 4px;
+        }
+
+        .val-positive { color: var(--accent-green); }
+        .val-negative { color: var(--accent-red); }
+        .val-neutral  { color: var(--accent-cyan); }
+        .val-amber    { color: var(--accent-amber); }
+
+        /* Unresolved Rules Panel */
+        .rules-card {
+            background: var(--card-bg);
+            border: 1px solid rgba(255, 179, 0, 0.3);
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 24px;
+        }
+
+        .rules-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+        }
+
+        .rules-header h2 {
+            font-size: 1rem;
+            color: var(--accent-amber);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .rules-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+            gap: 16px;
+        }
+
+        .rule-box {
+            background: rgba(0, 0, 0, 0.25);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            border-radius: 8px;
+            padding: 12px 16px;
+        }
+
+        .rule-name {
+            font-size: 0.85rem;
+            font-weight: 700;
+            color: var(--text-main);
+            margin-bottom: 4px;
+        }
+
+        .rule-desc {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            margin-bottom: 8px;
+        }
+
+        .rule-control {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+        }
+
+        select, input[type="number"] {
+            background: #0f172a;
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            color: var(--text-main);
+            padding: 6px 12px;
+            border-radius: 6px;
+            font-family: inherit;
+            font-size: 0.8rem;
+        }
+
+        /* Filter Controls */
+        .filter-section {
+            background: var(--card-bg);
+            border: 1px solid var(--card-border);
+            border-radius: 12px 12px 0 0;
+            padding: 14px 20px;
+            display: flex;
+            gap: 12px;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+
+        .filter-group {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 0.8rem;
+            color: var(--text-muted);
+        }
+
+        /* Main Ledger Table */
+        .table-container {
+            background: var(--card-bg);
+            border: 1px solid var(--card-border);
+            border-top: none;
+            border-radius: 0 0 12px 12px;
+            overflow-x: auto;
+            margin-bottom: 24px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.825rem;
+            text-align: left;
+        }
+
+        th {
+            background: rgba(15, 23, 42, 0.9);
+            color: var(--text-muted);
+            font-weight: 600;
+            padding: 12px 14px;
+            border-bottom: 1px solid var(--card-border);
+            white-space: nowrap;
+            text-transform: uppercase;
+            font-size: 0.7rem;
+            letter-spacing: 0.5px;
+        }
+
+        td {
+            padding: 12px 14px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+            white-space: nowrap;
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        tr:hover td {
+            background: rgba(255, 255, 255, 0.02);
+        }
+
+        .side-buy {
+            color: var(--accent-green);
+            font-weight: 700;
+        }
+
+        .side-sell {
+            color: var(--accent-red);
+            font-weight: 700;
+        }
+
+        .status-open {
+            background: rgba(0, 242, 254, 0.15);
+            color: var(--accent-cyan);
+            padding: 3px 8px;
+            border-radius: 12px;
+            font-size: 0.7rem;
+            font-weight: 700;
+        }
+
+        .status-closed {
+            background: rgba(148, 163, 184, 0.15);
+            color: var(--text-muted);
+            padding: 3px 8px;
+            border-radius: 12px;
+            font-size: 0.7rem;
+            font-weight: 700;
+        }
+
+        .btn-close-sm {
+            background: rgba(255, 42, 109, 0.15);
+            color: var(--accent-red);
+            border: 1px solid rgba(255, 42, 109, 0.3);
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 0.7rem;
+            cursor: pointer;
+        }
+
+        .btn-close-sm:hover {
+            background: rgba(255, 42, 109, 0.3);
+        }
+
+        /* Threshold breakdown bar */
+        .threshold-bar {
+            display: grid;
+            grid-template-columns: repeat(6, 1fr);
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+
+        .t-box {
+            background: rgba(15, 23, 42, 0.6);
+            border: 1px solid var(--card-border);
+            border-radius: 8px;
+            padding: 10px;
+            text-align: center;
+        }
+
+        .t-label {
+            font-size: 0.75rem;
+            color: var(--accent-cyan);
+            font-weight: 700;
+        }
+
+        .t-hits {
+            font-size: 1.1rem;
+            font-weight: 700;
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        footer {
+            text-align: center;
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            padding: 20px 0;
+            border-top: 1px solid var(--card-border);
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <header>
+        <div class="title-group">
+            <h1>Crude Oil Pair Strategy — Paper Test Only</h1>
+            <div class="badges">
+                <span class="badge badge-paper">Paper Mode Only</span>
+                <span class="badge badge-live" id="badge-feed">NYMEX WTI Stream</span>
+                <span class="badge badge-mudrex">Mudrex Instrument Check</span>
+            </div>
+        </div>
+        <div class="header-stats">
+            <div class="stat-box">
+                <div class="stat-label">WTI Crude Price</div>
+                <div class="stat-value price-glow" id="live-price">$0.00</div>
+            </div>
+            <div class="stat-box">
+                <div class="stat-label">Ref Price</div>
+                <div class="stat-value" id="ref-price">$80.00</div>
+            </div>
+            <div class="stat-box">
+                <div class="stat-label">Engine Status</div>
+                <div class="stat-value" id="engine-status">STOPPED</div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Instrument Safety & Validation Banner -->
+    <div class="info-banner">
+        <div class="banner-text">
+            <strong>Safety & Instrument Status:</strong> 
+            <span id="banner-msg">Connected to NYMEX Crude Oil Futures (CL=F) real-time feed. Paper mode simulation active — no real orders placed.</span>
+        </div>
+        <div>
+            <span class="badge badge-paper" id="mudrex-note">Mudrex CL/USDT Note</span>
+        </div>
+    </div>
+
+    <!-- Controls Bar -->
+    <div class="controls-bar">
+        <button class="btn btn-start" onclick="startSimulation()">▶ Start Simulation</button>
+        <button class="btn btn-stop" onclick="stopSimulation()">⏸ Pause / Stop</button>
+        <button class="btn btn-pair" onclick="createManualPair()">+ Create Manual Pair</button>
+        <button class="btn btn-reset" onclick="resetSimulation()">🔄 Reset Ledger</button>
+        <button class="btn btn-csv" onclick="exportCSV()">📥 Export Ledger CSV</button>
+    </div>
+
+    <!-- 6 Threshold Movement Tracker Cards -->
+    <div class="threshold-bar">
+        <div class="t-box"><div class="t-label">$0.25 Threshold</div><div class="t-hits" id="th-025">0 Hits</div></div>
+        <div class="t-box"><div class="t-label">$0.50 Threshold</div><div class="t-hits" id="th-050">0 Hits</div></div>
+        <div class="t-box"><div class="t-label">$1.00 Threshold</div><div class="t-hits" id="th-100">0 Hits</div></div>
+        <div class="t-box"><div class="t-label">$1.50 Threshold</div><div class="t-hits" id="th-150">0 Hits</div></div>
+        <div class="t-box"><div class="t-label">$2.00 Threshold</div><div class="t-hits" id="th-200">0 Hits</div></div>
+        <div class="t-box"><div class="t-label">$3.00 Threshold</div><div class="t-hits" id="th-300">0 Hits</div></div>
+    </div>
+
+    <!-- Summary Dashboard Cards -->
+    <div class="dashboard-grid">
+        <div class="card">
+            <div class="card-title">Total Pairs Created</div>
+            <div class="card-value val-neutral" id="sum-pairs">0</div>
+            <div class="card-subtext" id="sum-pos-count">0 BUY / 0 SELL</div>
+        </div>
+        <div class="card">
+            <div class="card-title">Total Open Positions</div>
+            <div class="card-value val-amber" id="sum-open">0</div>
+            <div class="card-subtext">Active open legs</div>
+        </div>
+        <div class="card">
+            <div class="card-title">Total Closed Positions</div>
+            <div class="card-value" id="sum-closed">0</div>
+            <div class="card-subtext" id="sum-win-loss">0 W / 0 L</div>
+        </div>
+        <div class="card">
+            <div class="card-title">Realized Gross P/L</div>
+            <div class="card-value" id="sum-gross-pnl">$0.00</div>
+            <div class="card-subtext">Booked strategy P/L</div>
+        </div>
+        <div class="card">
+            <div class="card-title">Total Trading Costs</div>
+            <div class="card-value val-negative" id="sum-costs">$0.00</div>
+            <div class="card-subtext">Fees & Funding</div>
+        </div>
+        <div class="card">
+            <div class="card-title">Realized Net P/L</div>
+            <div class="card-value" id="sum-net-pnl">$0.00</div>
+            <div class="card-subtext">Net booked profit</div>
+        </div>
+        <div class="card">
+            <div class="card-title">Current Unrealized P/L</div>
+            <div class="card-value" id="sum-unrealized-pnl">$0.00</div>
+            <div class="card-subtext">Open positions floating</div>
+        </div>
+        <div class="card">
+            <div class="card-title">Combined Net Equity</div>
+            <div class="card-value" id="sum-combined-pnl">$0.00</div>
+            <div class="card-subtext">Realized + Unrealized</div>
+        </div>
+        <div class="card">
+            <div class="card-title">Max Adverse Movement</div>
+            <div class="card-value val-negative" id="sum-max-adverse">$0.00</div>
+            <div class="card-subtext" id="sum-adverse-pct">0.00%</div>
+        </div>
+    </div>
+
+    <!-- Strategy Unresolved Rules Config Panel -->
+    <div class="rules-card">
+        <div class="rules-header">
+            <h2>⚠️ Strategy Rules Configuration (Unresolved Strategy Rules Report)</h2>
+            <button class="btn btn-pair" style="padding: 4px 10px; font-size: 0.75rem;" onclick="updateStrategyConfig()">Save Strategy Config</button>
+        </div>
+        <div class="rules-grid">
+            <div class="rule-box">
+                <div class="rule-name">1. Profit Booking Trigger Threshold</div>
+                <div class="rule-desc">Which of the 6 movement levels triggers profit exit?</div>
+                <div class="rule-control">
+                    <select id="cfg-threshold">
+                        <option value="0.25">$0.25 Movement</option>
+                        <option value="0.50">$0.50 Movement</option>
+                        <option value="1.00" selected>$1.00 Movement (Default)</option>
+                        <option value="1.50">$1.50 Movement</option>
+                        <option value="2.00">$2.00 Movement</option>
+                        <option value="3.00">$3.00 Movement</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="rule-box">
+                <div class="rule-name">2. Threshold Reference Point</div>
+                <div class="rule-desc">Measured from each pair's entry price or initial ref price?</div>
+                <div class="rule-control">
+                    <select id="cfg-reference">
+                        <option value="PAIR_ENTRY" selected>PAIR_ENTRY (Each Pair Entry)</option>
+                        <option value="INITIAL_REF">INITIAL_REF ($80.00 Initial Price)</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="rule-box">
+                <div class="rule-name">3. Re-entry & New Pair Trigger</div>
+                <div class="rule-desc">Automatically create new BUY+SELL pair on profit booking?</div>
+                <div class="rule-control">
+                    <select id="cfg-reentry">
+                        <option value="AUTO_PAIR_ON_TP" selected>AUTO_PAIR_ON_TP (Auto create new pair)</option>
+                        <option value="MANUAL_PAIR">MANUAL_PAIR (User triggers pair)</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="rule-box">
+                <div class="rule-name">4. Opposing Leg Loss Rule</div>
+                <div class="rule-desc">Req 4 specifies keeping opposing older legs open indefinitely.</div>
+                <div class="rule-control">
+                    <select id="cfg-loss">
+                        <option value="KEEP_OPEN_INDEFINITELY" selected>KEEP_OPEN_INDEFINITELY (Req 4 Rule)</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Filter Bar for Ledger -->
+    <div class="filter-section">
+        <div class="filter-group">
+            <label>Search Pair/Position:</label>
+            <input type="text" id="flt-search" placeholder="PAIR-001 / POS-001..." oninput="renderLedger()">
+        </div>
+        <div class="filter-group">
+            <label>Direction:</label>
+            <select id="flt-direction" onchange="renderLedger()">
+                <option value="ALL">ALL</option>
+                <option value="BUY">BUY</option>
+                <option value="SELL">SELL</option>
+            </select>
+        </div>
+        <div class="filter-group">
+            <label>Status:</label>
+            <select id="flt-status" onchange="renderLedger()">
+                <option value="ALL">ALL</option>
+                <option value="OPEN">OPEN</option>
+                <option value="CLOSED">CLOSED</option>
+            </select>
+        </div>
+        <button class="btn btn-stop" style="padding: 4px 10px; font-size: 0.75rem;" onclick="resetFilters()">Clear Filters</button>
+    </div>
+
+    <!-- Main P/L Ledger Table -->
+    <div class="table-container">
+        <table>
+            <thead>
+                <tr>
+                    <th>Sl. No.</th>
+                    <th>Pair ID</th>
+                    <th>Position ID</th>
+                    <th>BUY / SELL</th>
+                    <th>Entry Price ($)</th>
+                    <th>Exit Price ($)</th>
+                    <th>Quantity</th>
+                    <th>Threshold ($)</th>
+                    <th>Entry Timestamp</th>
+                    <th>Exit Timestamp</th>
+                    <th>Gross Realized P/L ($)</th>
+                    <th>Trading Fees ($)</th>
+                    <th>Funding Costs ($)</th>
+                    <th>Net Realized P/L ($)</th>
+                    <th>Status</th>
+                    <th>Unrealized P/L ($)</th>
+                    <th>Reason / Actions</th>
+                </tr>
+            </thead>
+            <tbody id="ledger-body">
+                <tr>
+                    <td colspan="17" style="text-align: center; color: var(--text-muted); padding: 30px;">
+                        Loading paper trade ledger state...
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <footer>
+        Crude Oil Pair Strategy — Paper Test Engine & Real-Time Ledger Audit.
+    </footer>
+</div>
+
+<script>
+    let fullLedgerData = [];
+
+    async function fetchState() {
+        try {
+            const resp = await fetch('/api/crude/pair-test/state');
+            if (resp.ok) {
+                const data = await resp.json();
+                updateUI(data);
+            }
+        } catch (e) {
+            console.error('Error fetching state:', e);
+        }
+    }
+
+    function updateUI(data) {
+        // Price & Status
+        document.getElementById('live-price').innerText = '$' + (data.current_price || 0).toFixed(2);
+        document.getElementById('ref-price').innerText = '$' + (data.reference_price || 80.0).toFixed(2);
+        
+        const engStatus = document.getElementById('engine-status');
+        engStatus.innerText = data.is_running ? 'RUNNING' : 'STOPPED';
+        engStatus.className = 'stat-value ' + (data.is_running ? 'val-positive' : 'val-amber');
+
+        // Banner
+        if (data.instrument_validation) {
+            document.getElementById('banner-msg').innerText = data.instrument_validation.mudrex_support_note + " | Feed: " + data.instrument_validation.price_feed_status;
+        }
+
+        // Summary Cards
+        const s = data.summary || {};
+        document.getElementById('sum-pairs').innerText = s.total_pairs_created || 0;
+        document.getElementById('sum-pos-count').innerText = (s.total_buy_positions || 0) + ' BUY / ' + (s.total_sell_positions || 0) + ' SELL';
+        document.getElementById('sum-open').innerText = s.total_open_positions || 0;
+        document.getElementById('sum-closed').innerText = s.total_closed_positions || 0;
+        document.getElementById('sum-win-loss').innerText = (s.winning_closed_positions || 0) + ' W / ' + (s.losing_closed_positions || 0) + ' L';
+
+        setPnLElement('sum-gross-pnl', s.realized_gross_pnl);
+        document.getElementById('sum-costs').innerText = '-$' + (s.total_trading_costs || 0).toFixed(2);
+        setPnLElement('sum-net-pnl', s.realized_net_pnl);
+        setPnLElement('sum-unrealized-pnl', s.current_unrealized_pnl);
+        setPnLElement('sum-combined-pnl', s.combined_net_equity);
+
+        document.getElementById('sum-max-adverse').innerText = '-$' + (s.highest_adverse_usd || 0).toFixed(2);
+        document.getElementById('sum-adverse-pct').innerText = (s.highest_adverse_pct || 0).toFixed(2) + '%';
+
+        // 6 Threshold Breakdown
+        const tb = data.threshold_breakdown || {};
+        if (tb['$0.25']) document.getElementById('th-025').innerText = tb['$0.25'].total_hits + ' Hits';
+        if (tb['$0.50']) document.getElementById('th-050').innerText = tb['$0.50'].total_hits + ' Hits';
+        if (tb['$1.00']) document.getElementById('th-100').innerText = tb['$1.00'].total_hits + ' Hits';
+        if (tb['$1.50']) document.getElementById('th-150').innerText = tb['$1.50'].total_hits + ' Hits';
+        if (tb['$2.00']) document.getElementById('th-200').innerText = tb['$2.00'].total_hits + ' Hits';
+        if (tb['$3.00']) document.getElementById('th-300').innerText = tb['$3.00'].total_hits + ' Hits';
+
+        // Update Config selects if present
+        if (data.config) {
+            document.getElementById('cfg-threshold').value = (data.config.booking_threshold_usd || 1.0).toFixed(2);
+        }
+
+        fullLedgerData = data.ledger || [];
+        renderLedger();
+    }
+
+    function setPnLElement(id, val) {
+        const el = document.getElementById(id);
+        if (!el) return;
+        const num = val || 0;
+        const prefix = num >= 0 ? '+$' : '-$';
+        el.innerText = prefix + Math.abs(num).toFixed(2);
+        el.className = 'card-value ' + (num >= 0 ? 'val-positive' : 'val-negative');
+    }
+
+    function renderLedger() {
+        const search = (document.getElementById('flt-search').value || '').toLowerCase();
+        const dirFlt = document.getElementById('flt-direction').value;
+        const statusFlt = document.getElementById('flt-status').value;
+
+        const tbody = document.getElementById('ledger-body');
+        tbody.innerHTML = '';
+
+        const filtered = fullLedgerData.filter(r => {
+            if (search) {
+                const text = (r.pair_id + ' ' + r.position_id + ' ' + r.reason).toLowerCase();
+                if (!text.includes(search)) return false;
+            }
+            if (dirFlt !== 'ALL' && r.direction !== dirFlt) return false;
+            if (statusFlt !== 'ALL' && r.status !== statusFlt) return false;
+            return true;
+        });
+
+        if (filtered.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="17" style="text-align: center; color: var(--text-muted); padding: 30px;">No positions match current filter criteria.</td></tr>';
+            return;
+        }
+
+        filtered.forEach(r => {
+            const tr = document.createElement('tr');
+            
+            const exitP = r.exit_price !== null && r.exit_price !== undefined ? '$' + Number(r.exit_price).toFixed(2) : 'N/A';
+            const grossP = r.gross_pnl !== undefined ? (r.gross_pnl >= 0 ? '+$' : '-$') + Math.abs(r.gross_pnl).toFixed(2) : '$0.00';
+            const netP = r.net_pnl !== undefined ? (r.net_pnl >= 0 ? '+$' : '-$') + Math.abs(r.net_pnl).toFixed(2) : '$0.00';
+            const uPnl = r.status === 'OPEN' ? (r.unrealized_pnl >= 0 ? '+$' : '-$') + Math.abs(r.unrealized_pnl).toFixed(2) : 'N/A';
+
+            let actionCell = r.reason || '';
+            if (r.status === 'OPEN') {
+                actionCell += ` <button class="btn-close-sm" onclick="closePosition('${r.position_id}')">Close</button>`;
+            }
+
+            tr.innerHTML = `
+                <td>${r.sl_no}</td>
+                <td><strong>${r.pair_id}</strong></td>
+                <td>${r.position_id}</td>
+                <td class="${r.direction === 'BUY' ? 'side-buy' : 'side-sell'}">${r.direction}</td>
+                <td>$${Number(r.entry_price).toFixed(2)}</td>
+                <td>${exitP}</td>
+                <td>${r.quantity}</td>
+                <td>$${Number(r.threshold_usd || 1.0).toFixed(2)}</td>
+                <td>${r.entry_timestamp}</td>
+                <td>${r.exit_timestamp || 'N/A'}</td>
+                <td class="${r.gross_pnl >= 0 ? 'val-positive' : 'val-negative'}">${grossP}</td>
+                <td>$${Number(r.trading_fees || 0).toFixed(2)}</td>
+                <td>$${Number(r.funding_costs || 0).toFixed(2)}</td>
+                <td class="${r.net_pnl >= 0 ? 'val-positive' : 'val-negative'}">${netP}</td>
+                <td><span class="${r.status === 'OPEN' ? 'status-open' : 'status-closed'}">${r.status}</span></td>
+                <td class="${r.unrealized_pnl >= 0 ? 'val-positive' : 'val-negative'}">${uPnl}</td>
+                <td>${actionCell}</td>
+            `;
+            tbody.appendChild(tr);
+        });
+    }
+
+    function resetFilters() {
+        document.getElementById('flt-search').value = '';
+        document.getElementById('flt-direction').value = 'ALL';
+        document.getElementById('flt-status').value = 'ALL';
+        renderLedger();
+    }
+
+    async function startSimulation() {
+        await fetch('/api/crude/pair-test/start', { method: 'POST' });
+        fetchState();
+    }
+
+    async function stopSimulation() {
+        await fetch('/api/crude/pair-test/stop', { method: 'POST' });
+        fetchState();
+    }
+
+    async function createManualPair() {
+        await fetch('/api/crude/pair-test/manual_pair', { method: 'POST' });
+        fetchState();
+    }
+
+    async function resetSimulation() {
+        if (confirm("Are you sure you want to reset the Crude Oil Pair Simulation paper ledger? All trade records will be cleared.")) {
+            await fetch('/api/crude/pair-test/reset', { method: 'POST' });
+            fetchState();
+        }
+    }
+
+    async function closePosition(posId) {
+        await fetch('/api/crude/pair-test/close_position', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ position_id: posId })
+        });
+        fetchState();
+    }
+
+    async function updateStrategyConfig() {
+        const thresh = parseFloat(document.getElementById('cfg-threshold').value);
+        const ref = document.getElementById('cfg-reference').value;
+        const reentry = document.getElementById('cfg-reentry').value;
+
+        await fetch('/api/crude/pair-test/config', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                booking_threshold_usd: thresh,
+                reference_base: ref,
+                reentry_mode: reentry
+            })
+        });
+        alert("Strategy Configuration updated successfully!");
+        fetchState();
+    }
+
+    function exportCSV() {
+        window.location.href = '/api/crude/pair-test/export_csv';
+    }
+
+    // Auto Refresh every 2 seconds
+    fetchState();
+    setInterval(fetchState, 2000);
+</script>
+</body>
+</html>

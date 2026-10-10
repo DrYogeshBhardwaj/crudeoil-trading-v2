@@ -5,7 +5,7 @@ STRICTLY PAPER TRADING ONLY - REAL TRADING EXECUTION IS HARDCODED TO DISABLED.
 """
 
 from fastapi import FastAPI, HTTPException
-from fastapi.responses import HTMLResponse, JSONResponse
+from fastapi.responses import HTMLResponse, JSONResponse, Response
 from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
 import os
@@ -26,6 +26,7 @@ from bitcoin_live5_engine import BITCOIN_LIVE5_ENGINE
 from silver_paper_engine import SILVER_PAPER_ENGINE
 from mudrex_crude_paper_engine import MUDREX_CRUDE_PAPER_ENGINE
 from mcx_silver_paper_engine import MCX_SILVER_ENGINE
+from crude_pair_engine import CRUDE_PAIR_ENGINE, crude_pair_engine_background_loop
 
 app = FastAPI(
     title="AI Trend Detector & Paper Trading Engine V1",
@@ -1263,6 +1264,84 @@ async def audit_mudrex_full():
         return JSONResponse({"error": str(err), "traceback": traceback.format_exc()}, status_code=500)
 
 
+# ==============================================================================
+# CRUDE OIL PAIR STRATEGY — PAPER TEST ONLY ROUTES (/crude/pair-test)
+# ==============================================================================
+
+@app.get("/crude/pair-test", response_class=HTMLResponse)
+async def get_crude_pair_test_dashboard():
+    """Serves the Crude Oil Pair Strategy Paper Test Dashboard HTML interface."""
+    html_path = os.path.join(os.path.dirname(__file__), "templates", "crude_pair_test.html")
+    if os.path.exists(html_path):
+        with open(html_path, "r", encoding="utf-8") as f:
+            return HTMLResponse(content=f.read())
+    return HTMLResponse("<h2>Crude Oil Pair Strategy Paper Test Dashboard</h2>")
+
+@app.get("/api/crude/pair-test/state")
+async def get_crude_pair_test_state():
+    """Returns real-time JSON state payload for Crude Oil Pair Strategy paper engine."""
+    return JSONResponse(
+        content=CRUDE_PAIR_ENGINE.get_dashboard_state(),
+        headers={
+            "Cache-Control": "no-cache, no-store, must-revalidate",
+            "Pragma": "no-cache",
+            "Expires": "0"
+        }
+    )
+
+@app.post("/api/crude/pair-test/start")
+async def start_crude_pair_test(payload: dict = None):
+    """Starts the paper simulation and creates initial pair #1 if empty."""
+    initial_p = payload.get("initial_price") if payload else None
+    res = CRUDE_PAIR_ENGINE.start_simulation(initial_price=initial_p)
+    return JSONResponse(res)
+
+@app.post("/api/crude/pair-test/stop")
+async def stop_crude_pair_test():
+    """Stops/pauses the paper simulation engine."""
+    res = CRUDE_PAIR_ENGINE.stop_simulation()
+    return JSONResponse(res)
+
+@app.post("/api/crude/pair-test/reset")
+async def reset_crude_pair_test():
+    """Resets paper simulation state and trade ledger."""
+    res = CRUDE_PAIR_ENGINE.reset_simulation()
+    return JSONResponse(res)
+
+@app.post("/api/crude/pair-test/config")
+async def update_crude_pair_config(payload: dict):
+    """Updates configurable strategy trigger rules."""
+    res = CRUDE_PAIR_ENGINE.update_config(payload)
+    return JSONResponse(res)
+
+@app.post("/api/crude/pair-test/manual_pair")
+async def create_crude_manual_pair():
+    """Manually creates a new BUY + SELL pair at current market price."""
+    res = CRUDE_PAIR_ENGINE.create_manual_pair()
+    return JSONResponse(res)
+
+@app.post("/api/crude/pair-test/close_position")
+async def close_crude_pair_position(payload: dict):
+    """Manually closes a single position by position_id."""
+    pos_id = payload.get("position_id")
+    if not pos_id:
+        return JSONResponse({"success": False, "error": "Missing position_id"}, status_code=400)
+    res = CRUDE_PAIR_ENGINE.close_single_position(pos_id, exit_reason="MANUAL SINGLE POSITION CLOSE")
+    return JSONResponse(res)
+
+@app.get("/api/crude/pair-test/export_csv")
+async def export_crude_pair_csv():
+    """Downloads the full chronological ledger as CSV file for auditing."""
+    csv_data = CRUDE_PAIR_ENGINE.generate_csv_export()
+    now_str = datetime.now().strftime("%Y%m%d_%H%M%S")
+    filename = f"crude_pair_ledger_{now_str}.csv"
+    return Response(
+        content=csv_data,
+        media_type="text/csv",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'}
+    )
+
+
 
 
 
@@ -1294,6 +1373,9 @@ async def startup_event():
 
     print(f"[{datetime.now()}] [STARTUP] Spawning MCX_SILVER_ENGINE.start_feed_loop background task...")
     asyncio.create_task(MCX_SILVER_ENGINE.start_feed_loop())
+
+    print(f"[{datetime.now()}] [STARTUP] Spawning crude_pair_engine_background_loop task...")
+    asyncio.create_task(crude_pair_engine_background_loop())
 
 if __name__ == "__main__":
     import uvicorn

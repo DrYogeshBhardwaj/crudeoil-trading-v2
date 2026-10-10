@@ -266,6 +266,53 @@ class DatabaseEngine:
                 )
             """)
 
+            # CRUDE OIL PAIR STRATEGY TABLES (Dedicated Namespace for /crude/pair-test)
+            cursor.execute("""
+                CREATE TABLE IF NOT EXISTS crude_pair_trades (
+                    sl_no INTEGER NOT NULL,
+                    pair_id TEXT NOT NULL,
+                    position_id TEXT PRIMARY KEY,
+                    direction TEXT NOT NULL,
+                    entry_price REAL NOT NULL,
+                    exit_price REAL,
+                    quantity REAL NOT NULL DEFAULT 1.0,
+                    threshold_usd REAL NOT NULL DEFAULT 0.0,
+                    entry_timestamp TEXT NOT NULL,
+                    exit_timestamp TEXT,
+                    gross_pnl REAL DEFAULT 0.0,
+                    trading_fees REAL DEFAULT 0.0,
+                    funding_costs REAL DEFAULT 0.0,
+                    net_pnl REAL DEFAULT 0.0,
+                    status TEXT NOT NULL DEFAULT 'OPEN',
+                    unrealized_pnl REAL DEFAULT 0.0,
+                    reason TEXT NOT NULL,
+                    max_adverse_usd REAL DEFAULT 0.0,
+                    max_favorable_usd REAL DEFAULT 0.0
+                )
+            """)
+
+            cursor.execute("""
+                CREATE TABLE IF NOT EXISTS crude_pair_settings (
+                    key TEXT PRIMARY KEY,
+                    value TEXT NOT NULL
+                )
+            """)
+
+            cursor.execute("""
+                CREATE TABLE IF NOT EXISTS crude_pair_movements (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    timestamp TEXT NOT NULL,
+                    pair_id TEXT NOT NULL,
+                    position_id TEXT NOT NULL,
+                    direction TEXT NOT NULL,
+                    price REAL NOT NULL,
+                    price_change REAL NOT NULL,
+                    threshold_usd REAL NOT NULL,
+                    position_pnl REAL NOT NULL,
+                    event_type TEXT NOT NULL
+                )
+            """)
+
             # Bitcoin Paper Trades Table (Dedicated Namespace for BTC-INR)
             cursor.execute("""
                 CREATE TABLE IF NOT EXISTS bitcoin_paper_trades (
@@ -1473,6 +1520,104 @@ class DatabaseEngine:
             cursor = conn.cursor()
             cursor.execute("DELETE FROM mcx_silver_paper_trades")
             cursor.execute("DELETE FROM mcx_silver_paper_settings")
+            conn.commit()
+
+    # --- CRUDE OIL PAIR STRATEGY DATABASE METHODS (/crude/pair-test) ---
+
+    def save_crude_pair_trade(self, pos_dict: Dict[str, Any]):
+        with self._get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute("""
+                INSERT OR REPLACE INTO crude_pair_trades (
+                    sl_no, pair_id, position_id, direction, entry_price, exit_price,
+                    quantity, threshold_usd, entry_timestamp, exit_timestamp,
+                    gross_pnl, trading_fees, funding_costs, net_pnl, status,
+                    unrealized_pnl, reason, max_adverse_usd, max_favorable_usd
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """, (
+                int(pos_dict["sl_no"]),
+                str(pos_dict["pair_id"]),
+                str(pos_dict["position_id"]),
+                str(pos_dict["direction"]).upper(),
+                float(pos_dict["entry_price"]),
+                float(pos_dict["exit_price"]) if pos_dict.get("exit_price") is not None else None,
+                float(pos_dict.get("quantity", 1.0)),
+                float(pos_dict.get("threshold_usd", 0.0)),
+                str(pos_dict["entry_timestamp"]),
+                str(pos_dict["exit_timestamp"]) if pos_dict.get("exit_timestamp") else None,
+                float(pos_dict.get("gross_pnl", 0.0)),
+                float(pos_dict.get("trading_fees", 0.0)),
+                float(pos_dict.get("funding_costs", 0.0)),
+                float(pos_dict.get("net_pnl", 0.0)),
+                str(pos_dict.get("status", "OPEN")).upper(),
+                float(pos_dict.get("unrealized_pnl", 0.0)),
+                str(pos_dict.get("reason", "")),
+                float(pos_dict.get("max_adverse_usd", 0.0)),
+                float(pos_dict.get("max_favorable_usd", 0.0))
+            ))
+            conn.commit()
+
+    def load_all_crude_pair_trades(self) -> List[Dict[str, Any]]:
+        with self._get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute("SELECT * FROM crude_pair_trades ORDER BY sl_no ASC")
+            rows = cursor.fetchall()
+            return [dict(r) for r in rows]
+
+    def load_active_crude_pair_positions(self) -> List[Dict[str, Any]]:
+        with self._get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute("SELECT * FROM crude_pair_trades WHERE status = 'OPEN' ORDER BY sl_no ASC")
+            rows = cursor.fetchall()
+            return [dict(r) for r in rows]
+
+    def save_crude_pair_setting(self, key: str, value: str):
+        with self._get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute("INSERT OR REPLACE INTO crude_pair_settings (key, value) VALUES (?, ?)", (key, str(value)))
+            conn.commit()
+
+    def load_crude_pair_setting(self, key: str, default: str = "") -> str:
+        with self._get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute("SELECT value FROM crude_pair_settings WHERE key = ?", (key,))
+            row = cursor.fetchone()
+            return row["value"] if row else default
+
+    def save_crude_pair_movement(self, movement_dict: Dict[str, Any]):
+        with self._get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute("""
+                INSERT INTO crude_pair_movements (
+                    timestamp, pair_id, position_id, direction, price, price_change,
+                    threshold_usd, position_pnl, event_type
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """, (
+                str(movement_dict["timestamp"]),
+                str(movement_dict["pair_id"]),
+                str(movement_dict["position_id"]),
+                str(movement_dict["direction"]),
+                float(movement_dict["price"]),
+                float(movement_dict["price_change"]),
+                float(movement_dict["threshold_usd"]),
+                float(movement_dict["position_pnl"]),
+                str(movement_dict["event_type"])
+            ))
+            conn.commit()
+
+    def load_crude_pair_movements(self, limit: int = 200) -> List[Dict[str, Any]]:
+        with self._get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute("SELECT * FROM crude_pair_movements ORDER BY id DESC LIMIT ?", (limit,))
+            rows = cursor.fetchall()
+            return [dict(r) for r in rows]
+
+    def reset_crude_pair_account(self):
+        with self._get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute("DELETE FROM crude_pair_trades")
+            cursor.execute("DELETE FROM crude_pair_settings")
+            cursor.execute("DELETE FROM crude_pair_movements")
             conn.commit()
 
 DB = DatabaseEngine()
