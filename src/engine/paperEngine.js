@@ -45,9 +45,9 @@ class PaperEngine {
       realizedNetProfitINR: 0
     };
 
-    this.isEngineRunning = false;
-    this.engineStatus = 'PAUSED';
-    this.pauseReason = 'ENGINE PAUSED — CLICK "START ENGINE" TO BEGIN TRADING';
+    this.isEngineRunning = true;
+    this.engineStatus = 'RUNNING';
+    this.pauseReason = '';
 
     // Load persisted state if exists
     this.initFromStorage();
@@ -80,7 +80,11 @@ class PaperEngine {
       if (saved.closedPositions) this.closedPositions = saved.closedPositions;
       if (saved.auditLogs) this.auditLogs = saved.auditLogs.slice(-500);
       if (saved.dailyTracker) this.dailyTracker = saved.dailyTracker;
-      if (typeof saved.isEngineRunning === 'boolean') this.isEngineRunning = saved.isEngineRunning;
+      this.isEngineRunning = typeof saved.isEngineRunning === 'boolean' ? saved.isEngineRunning : true;
+      if (this.isEngineRunning) {
+        this.engineStatus = 'RUNNING';
+        this.pauseReason = '';
+      }
       if (saved.lastProcessedRate !== undefined) this.lastProcessedRate = saved.lastProcessedRate;
 
       if (saved.processedRates) {
