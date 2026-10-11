@@ -296,6 +296,10 @@ function renderDashboard(data) {
   if (heroBal) {
     heroBal.innerText = `₹${summary.startingCapitalINR.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
   }
+  const heroSub = document.getElementById('heroWalletSubtext');
+  if (heroSub) {
+    heroSub.innerText = `Locked Margin: ₹${summary.marginUsedINR.toFixed(2)} (Held by Exchange)`;
+  }
 
   document.getElementById('kpiTotalEquity').innerText = `₹${summary.totalEquityINR.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
   document.getElementById('kpiEquitySubtext').innerText = `Virtual Capital: ₹${summary.startingCapitalINR.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
@@ -316,7 +320,7 @@ function renderDashboard(data) {
   document.getElementById('kpiUniqueRatesCount').innerText = `Processed Rates: ${processedRatesCount} unique`;
 
   document.getElementById('kpiAvailableMargin').innerText = `₹${summary.availableMarginINR.toLocaleString('en-IN', { minimumFractionDigits: 2 })}`;
-  document.getElementById('kpiMarginUsed').innerText = `Simulated Margin Used: ₹${summary.marginUsedINR.toFixed(2)} (${settings.leverage}x)`;
+  document.getElementById('kpiMarginUsed').innerText = `Locked Position Margin: ₹${summary.marginUsedINR.toFixed(2)} (${settings.leverage}x)`;
 
   document.getElementById('kpiWinRate').innerText = `${summary.winRate}%`;
   document.getElementById('kpiTradesCount').innerText = `Total: ${summary.closedPositionsCount} | Wins: ${summary.winCount} | Losses: ${summary.lossCount}`;
