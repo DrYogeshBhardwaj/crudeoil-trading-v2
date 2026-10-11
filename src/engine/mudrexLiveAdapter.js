@@ -344,6 +344,12 @@ class MudrexLiveAdapter {
   }
 
   async createRealOrder({ symbol, side, quantity, leverage, targetPrice }) {
+    const paperEngine = require('./paperEngine');
+    if (paperEngine.settings.realOrdersDisabled || process.env.ENABLE_REAL_MUDREX_ORDERS !== 'true') {
+      console.log('[Mudrex Live Adapter] REAL ORDERS DISABLED BY SAFETY GUARD. Skipping real order placement.');
+      return { success: false, error: 'REAL_ORDERS_DISABLED_BY_SAFETY_GUARD' };
+    }
+
     const symb = (symbol || 'CLUSDT').toUpperCase();
     const sideUpper = (side || 'BUY').toUpperCase();
     const orderType = (sideUpper === 'BUY' || sideUpper === 'LONG') ? 'LONG' : 'SHORT';
@@ -380,6 +386,12 @@ class MudrexLiveAdapter {
   }
 
   async closeRealPosition(positionId, symbol = 'CLUSDT') {
+    const paperEngine = require('./paperEngine');
+    if (paperEngine.settings.realOrdersDisabled || process.env.ENABLE_REAL_MUDREX_ORDERS !== 'true') {
+      console.log('[Mudrex Live Adapter] REAL ORDERS DISABLED BY SAFETY GUARD. Skipping real position close.');
+      return { success: false, error: 'REAL_ORDERS_DISABLED_BY_SAFETY_GUARD' };
+    }
+
     const url = `${this.baseUrl}/futures/positions/${encodeURIComponent(positionId)}/close`;
     console.log(`[Mudrex Live Adapter] Closing Real Position via POST ${url}`);
     let res = await this.request('POST', url, { symbol, trade_currency: 'INR' });
