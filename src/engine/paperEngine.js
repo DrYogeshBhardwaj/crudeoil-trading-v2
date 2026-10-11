@@ -880,6 +880,16 @@ class PaperEngine {
     this.isEngineRunning = true;
     this.engineStatus = 'RUNNING';
     this.pauseReason = '';
+
+    try {
+      const mudrexLive = require('./mudrexLiveAdapter');
+      mudrexLive.liveOpenPositions = [];
+      mudrexLive.liveClosedPositions = [];
+      mudrexLive.processedRates.clear();
+      mudrexLive.pairCounter = 1;
+    } catch (e) {}
+
+    storage.resetAll();
     this.logAudit('ENGINE_RESET', 'All engine paper positions, processed rates, and history reset to ₹1,00,000 capital.');
     this.saveState();
   }

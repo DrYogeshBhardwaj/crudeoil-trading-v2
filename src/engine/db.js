@@ -4,6 +4,7 @@ const path = require('path');
 const DATA_DIR = process.env.RAILWAY_VOLUME_MOUNT_PATH || process.env.DATA_DIR || path.join(__dirname, '../../data');
 const DB_FILE = path.join(DATA_DIR, 'trading_engine.db');
 const STATE_JSON_FILE = path.join(DATA_DIR, 'engine_state.json');
+const TMP_BACKUP_FILE = path.join('/tmp', 'engine_state_backup.json');
 
 class DatabaseManager {
   constructor() {
@@ -67,6 +68,7 @@ class DatabaseManager {
 
   loadState() {
     try {
+      let dbState = null;
       // 1. Try loading from SQLite Database first
       if (this.db) {
         const settingsRow = this.db.prepare("SELECT value FROM kv_store WHERE key = 'settings'").get();
@@ -74,17 +76,21 @@ class DatabaseManager {
         const processedRatesRow = this.db.prepare("SELECT value FROM kv_store WHERE key = 'processed_rates'").get();
         const lastRateRow = this.db.prepare("SELECT value FROM kv_store WHERE key = 'last_processed_rate'").get();
         const engineRunningRow = this.db.prepare("SELECT value FROM kv_store WHERE key = 'is_engine_running'").get();
+        const liveOpenRow = this.db.prepare("SELECT value FROM kv_store WHERE key = 'live_open_positions'").get();
+        const liveClosedRow = this.db.prepare("SELECT value FROM kv_store WHERE key = 'live_closed_positions'").get();
 
         const activePairRows = this.db.prepare("SELECT data FROM active_pairs WHERE status = 'ACTIVE'").all();
         const closedPosRows = this.db.prepare("SELECT data FROM closed_positions ORDER BY closed_timestamp ASC").all();
         const auditLogRows = this.db.prepare("SELECT timestamp, event, details FROM audit_logs ORDER BY timestamp ASC LIMIT 500").all();
 
-        if (settingsRow || activePairRows.length > 0) {
+        if (settingsRow || activePairRows.length > 0 || closedPosRows.length > 0) {
           const settings = settingsRow ? JSON.parse(settingsRow.value) : null;
           const dailyTracker = dailyTrackerRow ? JSON.parse(dailyTrackerRow.value) : null;
           const processedRates = processedRatesRow ? JSON.parse(processedRatesRow.value) : {};
           const lastProcessedRate = lastRateRow ? JSON.parse(lastRateRow.value) : null;
           const isEngineRunning = engineRunningRow ? JSON.parse(engineRunningRow.value) : true;
+          const liveOpenPositions = liveOpenRow ? JSON.parse(liveOpenRow.value) : [];
+          const liveClosedPositions = liveClosedRow ? JSON.parse(liveClosedRow.value) : [];
 
           const pairs = activePairRows.map(r => JSON.parse(r.data));
           const closedPositions = closedPosRows.map(r => JSON.parse(r.data));
@@ -97,10 +103,12 @@ class DatabaseManager {
 
           console.log(`[DBMS] Successfully loaded state from SQLite database (${pairs.length} active pairs, ${closedPositions.length} closed trades).`);
 
-          return {
+          dbState = {
             settings,
             pairs,
             closedPositions,
+            liveOpenPositions,
+            liveClosedPositions,
             auditLogs,
             processedRates,
             lastProcessedRate,
@@ -110,13 +118,44 @@ class DatabaseManager {
         }
       }
 
-      // 2. Fallback: Load from engine_state.json if SQLite has no records yet
-      if (fs.existsSync(STATE_JSON_FILE)) {
-        const raw = fs.readFileSync(STATE_JSON_FILE, 'utf8');
-        const state = JSON.parse(raw);
-        console.log(`[DBMS] Loaded state from JSON backup file (${state.pairs ? state.pairs.length : 0} pairs).`);
-        return state;
+      // 2. Load from JSON backups and merge if DB missing records
+      let jsonBackupState = null;
+      const jsonBackupPath = fs.existsSync(TMP_BACKUP_FILE) ? TMP_BACKUP_FILE : (fs.existsSync(STATE_JSON_FILE) ? STATE_JSON_FILE : null);
+      if (jsonBackupPath) {
+        try {
+          const raw = fs.readFileSync(jsonBackupPath, 'utf8');
+          jsonBackupState = JSON.parse(raw);
+          console.log(`[DBMS] Loaded state from JSON backup file (${jsonBackupState.closedPositions ? jsonBackupState.closedPositions.length : 0} closed positions).`);
+        } catch (e) {}
       }
+
+      if (jsonBackupState) {
+        if (!dbState) return jsonBackupState;
+
+        // Merge closedPositions from JSON backup if SQLite has fewer
+        if (Array.isArray(jsonBackupState.closedPositions) && jsonBackupState.closedPositions.length > dbState.closedPositions.length) {
+          console.log(`[DBMS] Merging ${jsonBackupState.closedPositions.length} closed positions from JSON backup.`);
+          const existingClosedIds = new Set(dbState.closedPositions.map(c => c.positionId));
+          for (const cp of jsonBackupState.closedPositions) {
+            if (!existingClosedIds.has(cp.positionId)) {
+              dbState.closedPositions.push(cp);
+              existingClosedIds.add(cp.positionId);
+            }
+          }
+        }
+        if (Array.isArray(jsonBackupState.liveClosedPositions) && (!dbState.liveClosedPositions || jsonBackupState.liveClosedPositions.length > dbState.liveClosedPositions.length)) {
+          const existingLiveClosedIds = new Set((dbState.liveClosedPositions || []).map(c => c.positionId));
+          dbState.liveClosedPositions = dbState.liveClosedPositions || [];
+          for (const cp of jsonBackupState.liveClosedPositions) {
+            if (!existingLiveClosedIds.has(cp.positionId)) {
+              dbState.liveClosedPositions.push(cp);
+              existingLiveClosedIds.add(cp.positionId);
+            }
+          }
+        }
+      }
+
+      if (dbState) return dbState;
     } catch (err) {
       console.error('[DBMS] Error loading state from DBMS:', err);
     }
@@ -138,6 +177,8 @@ class DatabaseManager {
         if (state.processedRates) upsertKv.run('processed_rates', JSON.stringify(state.processedRates));
         if (state.lastProcessedRate !== undefined) upsertKv.run('last_processed_rate', JSON.stringify(state.lastProcessedRate));
         if (state.isEngineRunning !== undefined) upsertKv.run('is_engine_running', JSON.stringify(state.isEngineRunning));
+        if (state.liveOpenPositions) upsertKv.run('live_open_positions', JSON.stringify(state.liveOpenPositions));
+        if (state.liveClosedPositions) upsertKv.run('live_closed_positions', JSON.stringify(state.liveClosedPositions));
 
         // Sync Active Pairs
         this.db.prepare('DELETE FROM active_pairs').run();
@@ -201,6 +242,7 @@ class DatabaseManager {
       const tmpPath = `${STATE_JSON_FILE}.tmp`;
       fs.writeFileSync(tmpPath, JSON.stringify(state, null, 2), 'utf8');
       fs.renameSync(tmpPath, STATE_JSON_FILE);
+      try { fs.writeFileSync(TMP_BACKUP_FILE, JSON.stringify(state, null, 2), 'utf8'); } catch (e) {}
     } catch (err) {
       console.error('[DBMS] JSON Backup Save Error:', err);
     }
@@ -221,6 +263,9 @@ class DatabaseManager {
     }
     if (fs.existsSync(STATE_JSON_FILE)) {
       try { fs.unlinkSync(STATE_JSON_FILE); } catch (e) {}
+    }
+    if (fs.existsSync(TMP_BACKUP_FILE)) {
+      try { fs.unlinkSync(TMP_BACKUP_FILE); } catch (e) {}
     }
   }
 }

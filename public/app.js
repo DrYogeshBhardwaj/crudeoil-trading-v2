@@ -680,7 +680,9 @@ function resetAllData() {
 }
 
 function resetAllDataConfirm() {
-  resetAllData();
+  if (confirm('⚠️ Are you SURE you want to reset all trading engine data and clear position history? This action cannot be undone!')) {
+    resetAllData();
+  }
 }
 
 function runBacktestSimulation() {

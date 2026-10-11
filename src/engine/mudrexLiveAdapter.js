@@ -10,6 +10,8 @@ class MudrexLiveAdapter {
     this.processedRates = new Set();
     this.pairCounter = 1;
 
+    this.initFromStorage();
+
     try {
       const rateFeed = require('./rateFeed');
       rateFeed.subscribe((type, data) => {
@@ -20,10 +22,68 @@ class MudrexLiveAdapter {
     } catch (e) {}
   }
 
+  initFromStorage() {
+    try {
+      const storage = require('./storage');
+      const saved = storage.loadState();
+      if (saved) {
+        if (Array.isArray(saved.liveOpenPositions)) {
+          this.liveOpenPositions = saved.liveOpenPositions;
+        }
+        if (Array.isArray(saved.liveClosedPositions)) {
+          this.liveClosedPositions = saved.liveClosedPositions;
+        }
+        if (Array.isArray(saved.closedPositions)) {
+          const existingClosedIds = new Set(this.liveClosedPositions.map(p => p.positionId));
+          for (const cp of saved.closedPositions) {
+            if (!existingClosedIds.has(cp.positionId)) {
+              this.liveClosedPositions.push(cp);
+              existingClosedIds.add(cp.positionId);
+            }
+          }
+        }
+        console.log(`[Mudrex Live Adapter] Restored state from storage: ${this.liveOpenPositions.length} open, ${this.liveClosedPositions.length} closed positions.`);
+      }
+    } catch (err) {
+      console.warn('[Mudrex Live Adapter] Storage init notice:', err.message);
+    }
+  }
+
+  saveState() {
+    try {
+      const storage = require('./storage');
+      const paperEngine = require('./paperEngine');
+      const currentState = storage.loadState() || {};
+
+      if (Array.isArray(paperEngine.closedPositions)) {
+        const existingPaperIds = new Set(paperEngine.closedPositions.map(c => c.positionId));
+        for (const lcp of this.liveClosedPositions) {
+          if (!existingPaperIds.has(lcp.positionId)) {
+            paperEngine.closedPositions.push(lcp);
+            existingPaperIds.add(lcp.positionId);
+          }
+        }
+      }
+
+      storage.saveState({
+        ...currentState,
+        settings: paperEngine.settings,
+        pairs: paperEngine.pairs,
+        closedPositions: paperEngine.closedPositions,
+        liveOpenPositions: this.liveOpenPositions,
+        liveClosedPositions: this.liveClosedPositions,
+        isEngineRunning: paperEngine.isEngineRunning
+      });
+    } catch (err) {
+      console.error('[Mudrex Live Adapter] Error saving state:', err.message);
+    }
+  }
+
   processLiveTick(tick) {
     try {
       const paperEngine = require('./paperEngine');
       if (!paperEngine.isEngineRunning) return;
+      if (paperEngine.settings.tradingMode !== 'LIVE') return;
 
       const symbol = tick.symbol || paperEngine.settings.instrument || 'CLUSDT';
       if (symbol !== paperEngine.settings.instrument) return;
@@ -73,6 +133,7 @@ class MudrexLiveAdapter {
 
           this.liveOpenPositions.splice(i, 1);
           this.liveClosedPositions.unshift(pos);
+          this.saveState();
 
           // Transmit Real Close Request to Mudrex Futures API
           if (pos.mudrexOrderId || pos.positionId) {
@@ -135,6 +196,7 @@ class MudrexLiveAdapter {
 
         this.liveOpenPositions.push(buyPos);
         this.liveOpenPositions.push(sellPos);
+        this.saveState();
 
         // Transmit Real BUY & SELL Orders to Mudrex Futures API (/fapi/v2/futures/order)
         const qty = paperEngine.settings.contractQuantity || 1.0;
@@ -447,6 +509,7 @@ class MudrexLiveAdapter {
 
         this.liveOpenPositions.splice(i, 1);
         this.liveClosedPositions.unshift(pos);
+        this.saveState();
         return true;
       }
     }
