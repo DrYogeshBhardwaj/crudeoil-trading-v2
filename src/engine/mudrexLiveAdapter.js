@@ -376,6 +376,13 @@ class MudrexLiveAdapter {
     return await this.request('GET', `${this.baseUrl}/futures/positions`);
   }
 
+  resetLiveEngine() {
+    this.liveOpenPositions = [];
+    this.liveClosedPositions = [];
+    this.processedRates.clear();
+    this.pairCounter = 1;
+  }
+
   async getLiveMetrics() {
     const rateFeed = require('./rateFeed');
     const paperEngine = require('./paperEngine');
@@ -391,6 +398,31 @@ class MudrexLiveAdapter {
 
     let liveOpenPositions = this.liveOpenPositions || [];
     let liveClosedPositions = this.liveClosedPositions || [];
+
+    // Auto-retry transmitting positions stuck with old API errors or unassigned Order IDs
+    for (const pos of liveOpenPositions) {
+      if (pos.status === 'OPEN' && (!pos.mudrexOrderId || pos.apiStatus?.includes('API_ERROR') || pos.apiStatus?.includes('SENDING'))) {
+        if (!pos.lastRetryTime || Date.now() - pos.lastRetryTime > 4000) {
+          pos.lastRetryTime = Date.now();
+          pos.apiStatus = 'SENDING_TO_MUDREX';
+          const qty = paperEngine.settings.contractQuantity || 1.0;
+          const lev = paperEngine.settings.leverage || 5;
+
+          this.createRealOrder({ symbol: pos.symbol || 'CLUSDT', side: pos.direction, quantity: qty, leverage: lev })
+            .then(res => {
+              if (res.success && res.data) {
+                pos.mudrexOrderId = res.data.order_id || res.data.id || (typeof res.data === 'string' ? res.data : null);
+                pos.apiStatus = 'TRANSMITTED_TO_MUDREX';
+              } else {
+                pos.apiStatus = 'API_ERROR: ' + (res.error || 'Failed');
+              }
+            })
+            .catch(err => {
+              pos.apiStatus = 'NETWORK_ERROR';
+            });
+        }
+      }
+    }
 
     try {
       const realPosRes = await this.fetchPositions();

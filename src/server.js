@@ -120,11 +120,13 @@ app.post('/api/manual-close', (req, res) => {
   }
 });
 
-// 6. Reset All Paper Trading Data
+// 6. Reset All Engine Data
 app.post('/api/reset-data', (req, res) => {
   try {
     paperEngine.resetAllData();
-    res.json({ success: true, message: 'All paper trading positions and history have been reset.' });
+    const mudrexLive = require('./engine/mudrexLiveAdapter');
+    mudrexLive.resetLiveEngine();
+    res.json({ success: true, message: 'All trading positions and history have been reset.' });
   } catch (err) {
     res.status(500).json({ success: false, error: err.message });
   }
