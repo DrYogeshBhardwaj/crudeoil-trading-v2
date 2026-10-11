@@ -286,13 +286,9 @@ function renderDashboard(data) {
     }
   }
 
-  // Engine Pause Alert Banner
+  // Engine Pause Alert Banner (Disabled per user request)
   const alertBanner = document.getElementById('engineAlertBanner');
-  const alertText = document.getElementById('engineAlertText');
-  if (engineStatus === 'PAUSED' || !isEngineRunning) {
-    alertBanner.style.display = 'flex';
-    alertText.innerText = `⚠️ ENGINE STATUS: ${pauseReason || (isEngineRunning ? 'PAUSED' : 'STOPPED')}`;
-  } else {
+  if (alertBanner) {
     alertBanner.style.display = 'none';
   }
 

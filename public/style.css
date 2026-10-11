@@ -232,18 +232,9 @@ header.app-header {
   gap: 20px;
 }
 
-/* Pause Alert Banner */
+/* Pause Alert Banner (Disabled) */
 .engine-alert-banner {
-  background: rgba(245, 158, 11, 0.1);
-  border: 1px solid rgba(245, 158, 11, 0.4);
-  color: #fef08a;
-  padding: 12px 18px;
-  border-radius: 8px;
-  font-size: 0.9rem;
-  font-weight: 700;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
+  display: none !important;
 }
 
 /* KPI Cards Grid */
