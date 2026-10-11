@@ -382,19 +382,27 @@ class MudrexLiveAdapter {
   async closeRealPosition(positionId, symbol = 'CLUSDT') {
     const url = `${this.baseUrl}/futures/positions/${encodeURIComponent(positionId)}/close`;
     console.log(`[Mudrex Live Adapter] Closing Real Position via POST ${url}`);
-    let res = await this.request('POST', url, { symbol });
+    let res = await this.request('POST', url, { symbol, trade_currency: 'INR' });
     if (!res.success) {
-      res = await this.request('POST', url);
+      res = await this.request('POST', url, { trade_currency: 'INR' });
     }
     return res;
   }
 
-  async fetchPositions() {
-    let res = await this.request('GET', `${this.baseUrl}/futures/positions?trade_currency=INR`);
-    if (!res.success) {
-      res = await this.request('GET', `${this.baseUrl}/futures/positions`);
+  async closeAllRealPositions() {
+    try {
+      const posRes = await this.fetchPositions();
+      if (posRes.success && Array.isArray(posRes.data)) {
+        for (const pos of posRes.data) {
+          const pid = pos.position_id || pos.id || pos.positionId;
+          if (pid) {
+            await this.closeRealPosition(pid, pos.symbol || 'CLUSDT');
+          }
+        }
+      }
+    } catch (e) {
+      console.error('Error in closeAllRealPositions:', e);
     }
-    return res;
   }
 
   resetLiveEngine() {
