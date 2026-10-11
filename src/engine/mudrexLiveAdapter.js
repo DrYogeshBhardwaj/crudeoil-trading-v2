@@ -143,11 +143,11 @@ class MudrexLiveAdapter {
         this.createRealOrder({ symbol, side: 'BUY', quantity: qty, leverage: lev })
           .then(res => {
             console.log(`[Mudrex Real BUY Order Response ${buyPos.positionId}]`, res);
-            if (res.success && res.data) {
-              buyPos.mudrexOrderId = res.data.order_id || res.data.id || (typeof res.data === 'string' ? res.data : null);
+            if (res.success) {
+              buyPos.mudrexOrderId = this.extractOrderId(res.data);
               buyPos.apiStatus = 'TRANSMITTED_TO_MUDREX';
             } else {
-              buyPos.apiStatus = 'API_ERROR: ' + (res.error || 'Failed');
+              buyPos.apiStatus = 'API_ERROR: ' + (typeof res.error === 'object' ? JSON.stringify(res.error) : (res.error || 'Failed'));
               buyPos.apiError = res.error;
             }
           })
@@ -159,11 +159,11 @@ class MudrexLiveAdapter {
         this.createRealOrder({ symbol, side: 'SELL', quantity: qty, leverage: lev })
           .then(res => {
             console.log(`[Mudrex Real SELL Order Response ${sellPos.positionId}]`, res);
-            if (res.success && res.data) {
-              sellPos.mudrexOrderId = res.data.order_id || res.data.id || (typeof res.data === 'string' ? res.data : null);
+            if (res.success) {
+              sellPos.mudrexOrderId = this.extractOrderId(res.data);
               sellPos.apiStatus = 'TRANSMITTED_TO_MUDREX';
             } else {
-              sellPos.apiStatus = 'API_ERROR: ' + (res.error || 'Failed');
+              sellPos.apiStatus = 'API_ERROR: ' + (typeof res.error === 'object' ? JSON.stringify(res.error) : (res.error || 'Failed'));
               sellPos.apiError = res.error;
             }
           })
@@ -262,6 +262,21 @@ class MudrexLiveAdapter {
     }
     if (typeof item === 'number') return item;
     return 0;
+  }
+
+  extractOrderId(resData) {
+    if (!resData) return 'EXECUTED';
+    if (typeof resData === 'string') return resData;
+    if (typeof resData === 'object') {
+      const d = resData.data !== undefined ? resData.data : resData;
+      if (Array.isArray(d) && d.length > 0) {
+        return d[0].order_id || d[0].id || d[0].position_id || 'EXECUTED';
+      }
+      if (typeof d === 'object' && d !== null) {
+        return d.order_id || d.id || d.position_id || d.orderId || 'EXECUTED';
+      }
+    }
+    return 'EXECUTED';
   }
 
   async testAuthentication() {
@@ -416,8 +431,8 @@ class MudrexLiveAdapter {
 
           this.createRealOrder({ symbol: pos.symbol || 'CLUSDT', side: pos.direction, quantity: qty, leverage: lev })
             .then(res => {
-              if (res.success && res.data) {
-                pos.mudrexOrderId = res.data.order_id || res.data.id || (typeof res.data === 'string' ? res.data : null);
+              if (res.success) {
+                pos.mudrexOrderId = this.extractOrderId(res.data);
                 pos.apiStatus = 'TRANSMITTED_TO_MUDREX';
               } else {
                 pos.apiStatus = 'API_ERROR: ' + (typeof res.error === 'object' ? JSON.stringify(res.error) : (res.error || 'Failed'));
