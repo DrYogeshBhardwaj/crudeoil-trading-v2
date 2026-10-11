@@ -336,6 +336,7 @@ class MudrexLiveAdapter {
     const lev = String(leverage || 5);
 
     const body = {
+      trade_currency: 'INR',
       symbol: symb,
       side: sideUpper === 'BUY' ? 'BUY' : 'SELL',
       order_type: orderType,
