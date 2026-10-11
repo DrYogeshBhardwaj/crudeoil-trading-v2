@@ -344,10 +344,10 @@ class MudrexLiveAdapter {
   }
 
   async createRealOrder({ symbol, side, quantity, leverage, targetPrice }) {
-    const paperEngine = require('./paperEngine');
-    if (paperEngine.settings.realOrdersDisabled || process.env.ENABLE_REAL_MUDREX_ORDERS !== 'true') {
-      console.log('[Mudrex Live Adapter] REAL ORDERS DISABLED BY SAFETY GUARD. Skipping real order placement.');
-      return { success: false, error: 'REAL_ORDERS_DISABLED_BY_SAFETY_GUARD' };
+    // HARD SAFETY LOCK: NEVER PLACE REAL ORDERS UNLESS EXPLICITLY PERMITTED BY ENV VARIABLE
+    if (process.env.ENABLE_REAL_MUDREX_ORDERS !== 'true') {
+      console.log('[Mudrex Live Adapter] HARD LOCK: Real order placement is strictly DISABLED. Pure paper mode active.');
+      return { success: false, error: 'REAL_ORDERS_DISABLED_PURE_PAPER_MODE' };
     }
 
     const symb = (symbol || 'CLUSDT').toUpperCase();
@@ -386,10 +386,10 @@ class MudrexLiveAdapter {
   }
 
   async closeRealPosition(positionId, symbol = 'CLUSDT') {
-    const paperEngine = require('./paperEngine');
-    if (paperEngine.settings.realOrdersDisabled || process.env.ENABLE_REAL_MUDREX_ORDERS !== 'true') {
-      console.log('[Mudrex Live Adapter] REAL ORDERS DISABLED BY SAFETY GUARD. Skipping real position close.');
-      return { success: false, error: 'REAL_ORDERS_DISABLED_BY_SAFETY_GUARD' };
+    // HARD SAFETY LOCK: NEVER CLOSE REAL POSITIONS UNLESS EXPLICITLY PERMITTED BY ENV VARIABLE
+    if (process.env.ENABLE_REAL_MUDREX_ORDERS !== 'true') {
+      console.log('[Mudrex Live Adapter] HARD LOCK: Real position closing is strictly DISABLED. Pure paper mode active.');
+      return { success: false, error: 'REAL_ORDERS_DISABLED_PURE_PAPER_MODE' };
     }
 
     const url = `${this.baseUrl}/futures/positions/${encodeURIComponent(positionId)}/close`;
