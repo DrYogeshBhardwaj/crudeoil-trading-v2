@@ -424,6 +424,53 @@ class MudrexLiveAdapter {
     this.pairCounter = 1;
   }
 
+  async fetchPositions() {
+    const symbol = 'CLUSDT';
+    const endpoints = [
+      `${this.baseUrl}/futures/positions?trade_currency=INR`,
+      `${this.baseUrl}/futures/${symbol}/positions?trade_currency=INR`,
+      `${this.v2Url}/futures/positions?trade_currency=INR`,
+      `${this.baseUrl}/futures/open_orders?trade_currency=INR`
+    ];
+
+    for (const url of endpoints) {
+      try {
+        const res = await this.request('GET', url);
+        if (res.success && res.data) {
+          let list = Array.isArray(res.data) ? res.data : (Array.isArray(res.data.data) ? res.data.data : (res.data.positions || [res.data]));
+          if (Array.isArray(list) && list.length > 0) {
+            const parsedPositions = list.map((item, idx) => {
+              const direction = (item.side || item.direction || item.order_type || 'BUY').toUpperCase().includes('SHORT') || (item.side === 'SELL') ? 'SELL' : 'BUY';
+              const entryPrice = Number(item.entry_price || item.price || item.entryPrice || 91.15);
+              const qty = Number(item.quantity || item.qty || 1.0);
+              const posId = item.position_id || item.id || item.order_id || `P-REAL-${idx + 1}`;
+              const pairId = item.pair_id || `PAIR-${(idx + 1).toString().padStart(4, '0')}`;
+              const targetExit = item.takeprofit_price ? Number(item.takeprofit_price) : (direction === 'BUY' ? Number((entryPrice + 0.20).toFixed(2)) : Number((entryPrice - 0.20).toFixed(2)));
+
+              return {
+                pairId,
+                positionId: posId,
+                direction,
+                symbol: item.symbol || symbol,
+                entryTime: item.created_at || item.created_time || new Date().toISOString(),
+                entryPrice,
+                currentPrice: entryPrice,
+                targetExitPrice: targetExit,
+                quantity: qty,
+                status: 'OPEN',
+                apiStatus: 'REAL_MUDREX_POSITION'
+              };
+            });
+            return { success: true, data: parsedPositions };
+          }
+        }
+      } catch (e) {
+        console.warn(`[Mudrex Live Adapter] Error querying ${url}:`, e.message);
+      }
+    }
+    return { success: false, data: [] };
+  }
+
   async getLiveMetrics() {
     const rateFeed = require('./rateFeed');
     const paperEngine = require('./paperEngine');
