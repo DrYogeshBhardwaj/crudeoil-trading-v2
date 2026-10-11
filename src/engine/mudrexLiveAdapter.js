@@ -73,6 +73,13 @@ class MudrexLiveAdapter {
 
           this.liveOpenPositions.splice(i, 1);
           this.liveClosedPositions.unshift(pos);
+
+          // Transmit Real Close Request to Mudrex Futures API
+          if (pos.mudrexOrderId || pos.positionId) {
+            this.closeRealPosition(pos.mudrexOrderId || pos.positionId, symbol)
+              .then(res => console.log(`[Mudrex Close Position Response ${pos.positionId}]`, res))
+              .catch(err => console.error(`[Mudrex Close Position Error ${pos.positionId}]`, err));
+          }
         }
       }
 
@@ -103,7 +110,8 @@ class MudrexLiveAdapter {
           floatingChargesINR: 0,
           floatingNetUSD: 0,
           floatingNetINR: 0,
-          status: 'OPEN'
+          status: 'OPEN',
+          apiStatus: 'SENDING_TO_MUDREX'
         };
 
         const sellPos = {
@@ -121,11 +129,48 @@ class MudrexLiveAdapter {
           floatingChargesINR: 0,
           floatingNetUSD: 0,
           floatingNetINR: 0,
-          status: 'OPEN'
+          status: 'OPEN',
+          apiStatus: 'SENDING_TO_MUDREX'
         };
 
         this.liveOpenPositions.push(buyPos);
         this.liveOpenPositions.push(sellPos);
+
+        // Transmit Real BUY & SELL Orders to Mudrex Futures API (/fapi/v2/futures/order)
+        const qty = paperEngine.settings.contractQuantity || 1.0;
+        const lev = paperEngine.settings.leverage || 5;
+
+        this.createRealOrder({ symbol, side: 'BUY', quantity: qty, leverage: lev })
+          .then(res => {
+            console.log(`[Mudrex Real BUY Order Response ${buyPos.positionId}]`, res);
+            if (res.success && res.data) {
+              buyPos.mudrexOrderId = res.data.order_id || res.data.id || (typeof res.data === 'string' ? res.data : null);
+              buyPos.apiStatus = 'TRANSMITTED_TO_MUDREX';
+            } else {
+              buyPos.apiStatus = 'API_ERROR: ' + (res.error || 'Failed');
+              buyPos.apiError = res.error;
+            }
+          })
+          .catch(err => {
+            buyPos.apiStatus = 'NETWORK_ERROR';
+            buyPos.apiError = err.message;
+          });
+
+        this.createRealOrder({ symbol, side: 'SELL', quantity: qty, leverage: lev })
+          .then(res => {
+            console.log(`[Mudrex Real SELL Order Response ${sellPos.positionId}]`, res);
+            if (res.success && res.data) {
+              sellPos.mudrexOrderId = res.data.order_id || res.data.id || (typeof res.data === 'string' ? res.data : null);
+              sellPos.apiStatus = 'TRANSMITTED_TO_MUDREX';
+            } else {
+              sellPos.apiStatus = 'API_ERROR: ' + (res.error || 'Failed');
+              sellPos.apiError = res.error;
+            }
+          })
+          .catch(err => {
+            sellPos.apiStatus = 'NETWORK_ERROR';
+            sellPos.apiError = err.message;
+          });
       }
     } catch (e) {
       console.error('Error in processLiveTick:', e);
@@ -297,18 +342,33 @@ class MudrexLiveAdapter {
     const body = {
       symbol: symbol || 'CLUSDT',
       side: side.toUpperCase(),
+      type: 'MARKET',
       quantity: Number(quantity) || 1.0,
-      leverage: Number(leverage) || 5,
-      target_price: targetPrice ? Number(targetPrice) : null
+      leverage: Number(leverage) || 5
     };
+    if (targetPrice) body.target_price = Number(targetPrice);
 
     const url = `${this.v2Url}/futures/order?symbol=${encodeURIComponent(body.symbol)}`;
-    return await this.request('POST', url, body);
+    console.log(`[Mudrex Live Adapter] Sending Real Order POST to ${url}:`, body);
+    let res = await this.request('POST', url, body);
+    if (!res.success) {
+      // Fallback to v1 endpoint if v2 returns error
+      const v1Url = `${this.baseUrl}/futures/order?symbol=${encodeURIComponent(body.symbol)}`;
+      console.log(`[Mudrex Live Adapter] Retrying via v1 ${v1Url}...`);
+      res = await this.request('POST', v1Url, body);
+    }
+    console.log(`[Mudrex Live Adapter] Real Order Result:`, res);
+    return res;
   }
 
   async closeRealPosition(positionId, symbol = 'CLUSDT') {
     const url = `${this.v2Url}/futures/positions/${encodeURIComponent(positionId)}/close`;
-    return await this.request('POST', url, { symbol });
+    let res = await this.request('POST', url, { symbol });
+    if (!res.success) {
+      const v1Url = `${this.baseUrl}/futures/positions/${encodeURIComponent(positionId)}/close`;
+      res = await this.request('POST', v1Url, { symbol });
+    }
+    return res;
   }
 
   async fetchPositions() {

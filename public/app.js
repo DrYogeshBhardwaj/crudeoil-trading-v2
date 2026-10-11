@@ -534,7 +534,11 @@ function renderActivePositions(positions, symbol) {
       html += `
         <tr>
           <td><strong>${pos.pairId || 'N/A'}</strong></td>
-          <td><code style="color:var(--accent-cyan);">${pos.positionId || 'N/A'}</code> <span style="font-size:0.65rem; color:var(--text-dim);">(${posSym})</span></td>
+          <td>
+            <code style="color:var(--accent-cyan);">${pos.positionId || 'N/A'}</code> 
+            <span style="font-size:0.65rem; color:var(--text-dim);">(${posSym})</span>
+            ${pos.apiStatus ? `<span style="display:block; font-size:0.62rem; color:${pos.apiStatus.includes('TRANSMITTED') ? '#a7f3d0' : (pos.apiStatus.includes('SENDING') ? '#38bdf8' : '#f87171')}; font-weight:700;">📡 ${pos.apiStatus}</span>` : ''}
+          </td>
           <td><span class="badge-direction ${isBuy ? 'buy' : 'sell'}">${pos.direction || 'BUY'}</span></td>
           <td>${pos.entryTime ? new Date(pos.entryTime).toLocaleTimeString() : 'N/A'}</td>
           <td>$${entryPrice.toFixed(priceDecimals)}</td>
