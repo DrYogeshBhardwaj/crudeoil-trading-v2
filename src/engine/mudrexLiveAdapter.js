@@ -227,7 +227,8 @@ class MudrexLiveAdapter {
             if (res.statusCode >= 200 && res.statusCode < 300) {
               resolve({ success: true, statusCode: res.statusCode, data: parsed });
             } else {
-              resolve({ success: false, statusCode: res.statusCode, error: parsed.message || rawData });
+              const errMsg = parsed.message || parsed.text || parsed.error || JSON.stringify(parsed);
+              resolve({ success: false, statusCode: res.statusCode, error: errMsg });
             }
           } catch (e) {
             if (res.statusCode >= 200 && res.statusCode < 300) {
@@ -328,41 +329,56 @@ class MudrexLiveAdapter {
   }
 
   async createRealOrder({ symbol, side, quantity, leverage, targetPrice }) {
-    const body = {
-      symbol: symbol || 'CLUSDT',
-      side: side.toUpperCase(),
-      type: 'MARKET',
-      quantity: Number(quantity) || 1.0,
-      leverage: Number(leverage) || 5
-    };
-    if (targetPrice) body.target_price = Number(targetPrice);
+    const symb = (symbol || 'CLUSDT').toUpperCase();
+    const sideUpper = (side || 'BUY').toUpperCase();
+    const orderType = (sideUpper === 'BUY' || sideUpper === 'LONG') ? 'LONG' : 'SHORT';
+    const qty = String(quantity || 1.0);
+    const lev = String(leverage || 5);
 
-    // Clean POST URL without query strings
-    const url = `${this.v2Url}/futures/order`;
+    const body = {
+      symbol: symb,
+      side: sideUpper === 'BUY' ? 'BUY' : 'SELL',
+      order_type: orderType,
+      trigger_type: 'MARKET',
+      type: 'MARKET',
+      quantity: qty,
+      leverage: lev,
+      reduce_only: false
+    };
+
+    if (targetPrice) {
+      body.takeprofit_price = String(targetPrice);
+      body.is_takeprofit = true;
+    }
+
+    const url = `${this.baseUrl}/futures/${symb}/order?trade_currency=INR`;
     console.log(`[Mudrex Live Adapter] Sending Real Order POST to ${url}:`, body);
     let res = await this.request('POST', url, body);
     if (!res.success) {
-      // Fallback to v1 endpoint if v2 returns error
-      const v1Url = `${this.baseUrl}/futures/order`;
-      console.log(`[Mudrex Live Adapter] Retrying via v1 ${v1Url}...`);
-      res = await this.request('POST', v1Url, body);
+      const altUrl = `${this.baseUrl}/futures/${symb}/order`;
+      console.log(`[Mudrex Live Adapter] Retrying via ${altUrl}...`);
+      res = await this.request('POST', altUrl, body);
     }
     console.log(`[Mudrex Live Adapter] Real Order Result:`, res);
     return res;
   }
 
   async closeRealPosition(positionId, symbol = 'CLUSDT') {
-    const url = `${this.v2Url}/futures/positions/${encodeURIComponent(positionId)}/close`;
+    const url = `${this.baseUrl}/futures/positions/${encodeURIComponent(positionId)}/close`;
+    console.log(`[Mudrex Live Adapter] Closing Real Position via POST ${url}`);
     let res = await this.request('POST', url, { symbol });
     if (!res.success) {
-      const v1Url = `${this.baseUrl}/futures/positions/${encodeURIComponent(positionId)}/close`;
-      res = await this.request('POST', v1Url, { symbol });
+      res = await this.request('POST', url);
     }
     return res;
   }
 
   async fetchPositions() {
-    return await this.request('GET', `${this.baseUrl}/futures/positions`);
+    let res = await this.request('GET', `${this.baseUrl}/futures/positions?trade_currency=INR`);
+    if (!res.success) {
+      res = await this.request('GET', `${this.baseUrl}/futures/positions`);
+    }
+    return res;
   }
 
   resetLiveEngine() {
@@ -403,7 +419,7 @@ class MudrexLiveAdapter {
                 pos.mudrexOrderId = res.data.order_id || res.data.id || (typeof res.data === 'string' ? res.data : null);
                 pos.apiStatus = 'TRANSMITTED_TO_MUDREX';
               } else {
-                pos.apiStatus = 'API_ERROR: ' + (res.error || 'Failed');
+                pos.apiStatus = 'API_ERROR: ' + (typeof res.error === 'object' ? JSON.stringify(res.error) : (res.error || 'Failed'));
               }
             })
             .catch(err => {
