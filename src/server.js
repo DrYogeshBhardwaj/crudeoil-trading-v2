@@ -113,8 +113,22 @@ app.post('/api/manual-close', (req, res) => {
   try {
     const { positionId } = req.body;
     if (!positionId) return res.status(400).json({ success: false, error: 'Position ID is required' });
-    paperEngine.manualClosePosition(positionId);
-    res.json({ success: true, message: `Position ${positionId} closed successfully.` });
+
+    let closed = false;
+    try {
+      closed = paperEngine.manualClosePosition(positionId);
+    } catch (e) {}
+
+    if (!closed) {
+      const mudrexLive = require('./engine/mudrexLiveAdapter');
+      closed = mudrexLive.manualCloseLivePosition(positionId);
+    }
+
+    if (closed) {
+      res.json({ success: true, message: `Position ${positionId} closed successfully.` });
+    } else {
+      res.status(400).json({ success: false, error: `Position ${positionId} not found.` });
+    }
   } catch (err) {
     res.status(400).json({ success: false, error: err.message });
   }

@@ -424,6 +424,35 @@ class MudrexLiveAdapter {
     this.pairCounter = 1;
   }
 
+  manualCloseLivePosition(positionId) {
+    const rateFeed = require('./rateFeed');
+    const paperEngine = require('./paperEngine');
+    const symbol = paperEngine.settings.instrument || 'CLUSDT';
+    const rateInfo = rateFeed.getCurrentRate(symbol);
+    const exitPrice = rateInfo.price || 90.61;
+    const usdInrRate = rateInfo.usdInrRate || 86.5;
+
+    for (let i = this.liveOpenPositions.length - 1; i >= 0; i--) {
+      const pos = this.liveOpenPositions[i];
+      if (pos.positionId === positionId || pos.id === positionId) {
+        pos.status = 'CLOSED';
+        pos.exitPrice = exitPrice;
+        pos.exitTime = new Date().toISOString();
+        const qty = pos.quantity || 1.0;
+        const pGrossUSD = pos.direction === 'BUY' ? (exitPrice - pos.entryPrice) * qty : (pos.entryPrice - exitPrice) * qty;
+        const pGrossINR = pGrossUSD * usdInrRate;
+        pos.grossProfitUSD = Number(pGrossUSD.toFixed(4));
+        pos.netProfitINR = Number(pGrossINR.toFixed(2));
+        pos.exitReason = 'MANUAL USER CLOSE';
+
+        this.liveOpenPositions.splice(i, 1);
+        this.liveClosedPositions.unshift(pos);
+        return true;
+      }
+    }
+    return false;
+  }
+
   async fetchPositions() {
     const symbol = 'CLUSDT';
     const endpoints = [
