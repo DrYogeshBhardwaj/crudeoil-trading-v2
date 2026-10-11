@@ -12,7 +12,7 @@ class RateFeedManager {
     this.activeSymbol = 'CLUSDT';
     this.usdInrRate = 86.50; // Configurable USD to INR rate
     this.usdInrLastUpdated = new Date().toISOString();
-    this.staleThresholdMs = 15000; // 15 seconds stale threshold
+    this.staleThresholdMs = 25000; // 25 seconds stale threshold
     this.wsConnections = {};
     this.listeners = [];
     this.isPollingFallbackActive = false;
@@ -132,8 +132,8 @@ class RateFeedManager {
   }
 
   fetchRestPrice(symbol) {
-    const url = `https://fapi.binance.com/fapi/v1/ticker/price?symbol=${symbol}`;
-    http.get(url, (res) => {
+    const futuresUrl = `https://fapi.binance.com/fapi/v1/ticker/price?symbol=${symbol}`;
+    http.get(futuresUrl, (res) => {
       let body = '';
       res.on('data', chunk => body += chunk);
       res.on('end', () => {
@@ -143,6 +143,28 @@ class RateFeedManager {
             const price = parseFloat(data.price);
             const time = data.time || Date.now();
             this.updateRate(symbol, price, time, 'BINANCE_FUTURES_REST');
+            return;
+          }
+        } catch (e) {}
+        this.fetchSpotRestPrice(symbol);
+      });
+    }).on('error', () => {
+      this.fetchSpotRestPrice(symbol);
+    });
+  }
+
+  fetchSpotRestPrice(symbol) {
+    const spotUrl = `https://api.binance.com/api/v3/ticker/price?symbol=${symbol}`;
+    http.get(spotUrl, (res) => {
+      let body = '';
+      res.on('data', chunk => body += chunk);
+      res.on('end', () => {
+        try {
+          const data = JSON.parse(body);
+          if (data.price) {
+            const price = parseFloat(data.price);
+            const time = Date.now();
+            this.updateRate(symbol, price, time, 'BINANCE_SPOT_REST');
           }
         } catch (e) {}
       });

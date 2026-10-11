@@ -79,13 +79,73 @@ function onInstrumentSelectChanged() {
 
 document.addEventListener('DOMContentLoaded', () => {
   const today = new Date().toISOString().split('T')[0];
-  document.getElementById('btDate').value = today;
-  document.getElementById('btFromDate').value = today;
-  document.getElementById('btToDate').value = today;
+  const btDate = document.getElementById('btDate');
+  if (btDate) btDate.value = today;
+  const btFromDate = document.getElementById('btFromDate');
+  if (btFromDate) btFromDate.value = today;
+  const btToDate = document.getElementById('btToDate');
+  if (btToDate) btToDate.value = today;
 
   updateTargetDropdownOptions('CLUSDT', '0.20');
+  makeDockDraggable();
   initRealtimeStream();
+  checkMudrexAuthStatus();
+
+  window.toggleEngineState = toggleEngineState;
+  const mainBtn = document.getElementById('mudrexStartEngineMainBtn');
+  if (mainBtn) mainBtn.addEventListener('click', toggleEngineState);
+  const toggleBtn = document.getElementById('toggleEngineBtn');
+  if (toggleBtn) toggleBtn.addEventListener('click', toggleEngineState);
 });
+
+function makeDockDraggable() {
+  const dock = document.getElementById('quickGlanceDock');
+  if (!dock) return;
+
+  let isDragging = false;
+  let offsetX = 0;
+  let offsetY = 0;
+
+  const onStart = (e) => {
+    isDragging = true;
+    const clientX = e.clientX || (e.touches && e.touches[0].clientX);
+    const clientY = e.clientY || (e.touches && e.touches[0].clientY);
+    const rect = dock.getBoundingClientRect();
+    offsetX = clientX - rect.left;
+    offsetY = clientY - rect.top;
+    dock.style.transition = 'none';
+  };
+
+  const onMove = (e) => {
+    if (!isDragging) return;
+    const clientX = e.clientX || (e.touches && e.touches[0].clientX);
+    const clientY = e.clientY || (e.touches && e.touches[0].clientY);
+    
+    let left = clientX - offsetX;
+    let top = clientY - offsetY;
+
+    // Constrain within window viewport
+    left = Math.max(10, Math.min(left, window.innerWidth - dock.offsetWidth - 10));
+    top = Math.max(10, Math.min(top, window.innerHeight - dock.offsetHeight - 10));
+
+    dock.style.left = `${left}px`;
+    dock.style.top = `${top}px`;
+    dock.style.bottom = 'auto';
+    dock.style.right = 'auto';
+  };
+
+  const onEnd = () => {
+    isDragging = false;
+  };
+
+  dock.addEventListener('mousedown', onStart);
+  document.addEventListener('mousemove', onMove);
+  document.addEventListener('mouseup', onEnd);
+
+  dock.addEventListener('touchstart', onStart, { passive: true });
+  document.addEventListener('touchmove', onMove, { passive: true });
+  document.addEventListener('touchend', onEnd);
+}
 
 function toggleBtModeDisplay() {
   const mode = document.getElementById('btMode').value;
@@ -104,35 +164,55 @@ function toggleBtModeDisplay() {
   }
 }
 
+let fallbackInterval = null;
+
 function initRealtimeStream() {
-  eventSource = new EventSource('/api/stream');
+  const isMudrexLivePage = window.location.pathname.includes('mudrex_live') || !!document.getElementById('mudrexStartEngineMainBtn');
+  const streamUrl = isMudrexLivePage ? '/api/stream?mode=mudrex_live' : '/api/stream';
 
-  eventSource.onmessage = (event) => {
-    try {
-      const data = JSON.parse(event.data);
-      currentMetrics = data;
-      renderDashboard(data);
-    } catch (e) {
-      console.error('Error parsing SSE message:', e);
+  // Fetch immediately on page load so UI is updated without waiting
+  fetchMetricsFallback();
+
+  try {
+    eventSource = new EventSource(streamUrl);
+
+    eventSource.onmessage = (event) => {
+      try {
+        const data = JSON.parse(event.data);
+        currentMetrics = data;
+        renderDashboard(data);
+      } catch (e) {
+        console.error('Error parsing SSE message:', e);
+      }
+    };
+
+    eventSource.onerror = (err) => {
+      console.warn('SSE Stream event warning, fallback polling active.');
+      if (!fallbackInterval) {
+        fallbackInterval = setInterval(fetchMetricsFallback, 2000);
+      }
+    };
+  } catch (e) {
+    console.warn('EventSource not supported or failed to init:', e);
+    if (!fallbackInterval) {
+      fallbackInterval = setInterval(fetchMetricsFallback, 2000);
     }
-  };
-
-  eventSource.onerror = (err) => {
-    console.warn('SSE Stream error. Reconnecting fallback polling...', err);
-    fetchMetricsFallback();
-  };
+  }
 }
 
 function fetchMetricsFallback() {
-  fetch('/api/metrics')
+  const isMudrexLivePage = window.location.pathname.includes('mudrex_live') || !!document.getElementById('mudrexStartEngineMainBtn');
+  const endpoint = isMudrexLivePage ? '/api/mudrex/metrics' : '/api/metrics';
+
+  fetch(endpoint)
     .then(r => r.json())
     .then(res => {
-      if (res.success) {
+      if (res && res.success && res.data) {
         currentMetrics = res.data;
         renderDashboard(res.data);
       }
     })
-    .catch(e => console.error('Fallback fetch error:', e));
+    .catch(e => console.error('Metrics fetch error:', e));
 }
 
 function renderDashboard(data) {
@@ -187,15 +267,23 @@ function renderDashboard(data) {
     feedText.innerText = statusStr;
   }
 
-  // Header Toggle Button
-  const toggleBtn = document.getElementById('toggleEngineBtn');
-  const toggleText = document.getElementById('toggleEngineBtnText');
+  // Main Engine Control Button
+  const mainStartBtn = document.getElementById('mudrexStartEngineMainBtn') || document.getElementById('mudrexLiveStartBtn');
+
   if (isEngineRunning) {
-    toggleBtn.className = 'btn btn-warning';
-    toggleText.innerText = 'PAUSE ENGINE';
+    if (mainStartBtn) {
+      mainStartBtn.innerHTML = '<span>⏸ PAUSE ENGINE</span>';
+      mainStartBtn.style.background = 'linear-gradient(135deg, #ef4444, #b91c1c)';
+      mainStartBtn.style.border = '1px solid #f87171';
+      mainStartBtn.style.boxShadow = '0 0 16px rgba(239, 68, 68, 0.5)';
+    }
   } else {
-    toggleBtn.className = 'btn btn-primary';
-    toggleText.innerText = 'START ENGINE';
+    if (mainStartBtn) {
+      mainStartBtn.innerHTML = '<span>🚀 START ENGINE</span>';
+      mainStartBtn.style.background = 'linear-gradient(135deg, #10b981, #047857)';
+      mainStartBtn.style.border = '1px solid #34d399';
+      mainStartBtn.style.boxShadow = '0 0 16px rgba(16, 185, 129, 0.5)';
+    }
   }
 
   // Engine Pause Alert Banner
@@ -208,9 +296,13 @@ function renderDashboard(data) {
     alertBanner.style.display = 'none';
   }
 
-  // KPI Cards
+  const heroBal = document.getElementById('heroWalletBal');
+  if (heroBal) {
+    heroBal.innerText = `₹${summary.startingCapitalINR.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  }
+
   document.getElementById('kpiTotalEquity').innerText = `₹${summary.totalEquityINR.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-  document.getElementById('kpiEquitySubtext').innerText = `Capital: ₹${summary.startingCapitalINR.toLocaleString('en-IN')}`;
+  document.getElementById('kpiEquitySubtext').innerText = `Virtual Capital: ₹${summary.startingCapitalINR.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
   document.getElementById('kpiRealizedBalance').innerText = `₹${summary.realizedBalanceINR.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
@@ -228,27 +320,116 @@ function renderDashboard(data) {
   document.getElementById('kpiUniqueRatesCount').innerText = `Processed Rates: ${processedRatesCount} unique`;
 
   document.getElementById('kpiAvailableMargin').innerText = `₹${summary.availableMarginINR.toLocaleString('en-IN', { minimumFractionDigits: 2 })}`;
-  document.getElementById('kpiMarginUsed').innerText = `Margin Used: ₹${summary.marginUsedINR.toFixed(2)} (${settings.leverage}x)`;
-
-  const dailyLossEl = document.getElementById('kpiDailyLoss');
-  dailyLossEl.innerText = `₹${summary.dailyRealizedLossINR.toFixed(2)}`;
-  dailyLossEl.className = `kpi-value ${summary.dailyRealizedLossINR >= summary.dailyLossLimitINR ? 'text-red' : 'text-yellow'}`;
-  document.getElementById('kpiDailyLimit').innerText = `Circuit Limit: ₹${summary.dailyLossLimitINR.toLocaleString('en-IN')}`;
+  document.getElementById('kpiMarginUsed').innerText = `Simulated Margin Used: ₹${summary.marginUsedINR.toFixed(2)} (${settings.leverage}x)`;
 
   document.getElementById('kpiWinRate').innerText = `${summary.winRate}%`;
   document.getElementById('kpiTradesCount').innerText = `Total: ${summary.closedPositionsCount} | Wins: ${summary.winCount} | Losses: ${summary.lossCount}`;
 
   // Controls sync
-  document.getElementById('settingInstrument').value = settings.instrument;
+  const instEl = document.getElementById('settingInstrument');
+  if (instEl) instEl.value = settings.instrument;
   const targetValStr = settings.targetDisabled ? 'DISABLED' : settings.profitTargetMove.toString();
   updateTargetDropdownOptions(settings.instrument, targetValStr);
-  document.getElementById('settingMaxPairs').value = settings.maxActivePairs;
-  document.getElementById('settingDailyLoss').value = settings.dailyLossCircuitBreakerINR;
-  document.getElementById('settingUsdInr').value = settings.usdInrRate || rateFeedInfo.usdInrRate;
+  const maxP = document.getElementById('settingMaxPairs');
+  if (maxP) maxP.value = settings.maxActivePairs;
+  const usdInrInput = document.getElementById('settingUsdInr');
+  if (usdInrInput) usdInrInput.value = settings.usdInrRate || rateFeedInfo.usdInrRate;
 
   // Tabs count badges
-  document.getElementById('tabActiveCount').innerText = openPositions.length;
-  document.getElementById('tabClosedCount').innerText = closedPositions.length;
+  const actTab = document.getElementById('tabActiveCount');
+  if (actTab) actTab.innerText = openPositions.length;
+  const clsTab = document.getElementById('tabClosedCount');
+  if (clsTab) clsTab.innerText = closedPositions.length;
+
+  // Calculate Next Exit Targets (Nearest BUY exit above market, Nearest SELL exit below market)
+  const livePrice = rateFeedInfo.price;
+  const priceDec = currentSymbol === 'BTCUSDT' ? 2 : (currentSymbol === 'XAGUSDT' ? 4 : 2);
+  
+  let nearestBuyTarget = null;
+  let nearestSellTarget = null;
+  let distBuy = null;
+  let distSell = null;
+
+  if (livePrice && openPositions && openPositions.length > 0) {
+    openPositions.forEach(pos => {
+      if (!pos.targetExitPrice) return;
+      if (pos.direction === 'BUY') {
+        if (pos.targetExitPrice > livePrice) {
+          if (nearestBuyTarget === null || pos.targetExitPrice < nearestBuyTarget) {
+            nearestBuyTarget = pos.targetExitPrice;
+          }
+        }
+      } else if (pos.direction === 'SELL') {
+        if (pos.targetExitPrice < livePrice) {
+          if (nearestSellTarget === null || pos.targetExitPrice > nearestSellTarget) {
+            nearestSellTarget = pos.targetExitPrice;
+          }
+        }
+      }
+    });
+
+    if (nearestBuyTarget !== null) distBuy = nearestBuyTarget - livePrice;
+    if (nearestSellTarget !== null) distSell = livePrice - nearestSellTarget;
+  }
+
+  const liveRateStr = livePrice ? `$${livePrice.toFixed(priceDec)}` : 'FETCHING...';
+  const buyTargetStr = nearestBuyTarget !== null ? `$${nearestBuyTarget.toFixed(priceDec)}` : 'No Target';
+  const buyDistStr = distBuy !== null ? `(Move +$${distBuy.toFixed(priceDec)} to exit)` : '';
+  const sellTargetStr = nearestSellTarget !== null ? `$${nearestSellTarget.toFixed(priceDec)}` : 'No Target';
+  const sellDistStr = distSell !== null ? `(Move -$${distSell.toFixed(priceDec)} to exit)` : '';
+  const floatNetStr = `₹${summary.floatingNetINR.toFixed(2)}`;
+  const floatNetClass = summary.floatingNetINR >= 0 ? 'text-green' : 'text-red';
+
+  // Active Tab Quick Bar & Mudrex Live Quick Bar
+  if (document.getElementById('quickRateVal')) document.getElementById('quickRateVal').innerText = liveRateStr;
+  if (document.getElementById('quickBuyTargetVal')) document.getElementById('quickBuyTargetVal').innerText = buyTargetStr;
+  if (document.getElementById('quickBuyDistVal')) document.getElementById('quickBuyDistVal').innerText = buyDistStr;
+  if (document.getElementById('quickSellTargetVal')) document.getElementById('quickSellTargetVal').innerText = sellTargetStr;
+  if (document.getElementById('quickSellDistVal')) document.getElementById('quickSellDistVal').innerText = sellDistStr;
+  const qFloatEl = document.getElementById('quickFloatingNetVal');
+  if (qFloatEl) {
+    qFloatEl.innerText = floatNetStr;
+    qFloatEl.className = `quick-tracker-val ${floatNetClass}`;
+  }
+
+  // Mudrex Live Terminal Tab Quick Bar
+  if (document.getElementById('mudrexLiveRateVal')) document.getElementById('mudrexLiveRateVal').innerText = liveRateStr;
+  if (document.getElementById('mudrexLiveBuyTargetVal')) document.getElementById('mudrexLiveBuyTargetVal').innerText = buyTargetStr;
+  if (document.getElementById('mudrexLiveBuyDistVal')) document.getElementById('mudrexLiveBuyDistVal').innerText = buyDistStr;
+  if (document.getElementById('mudrexLiveSellTargetVal')) document.getElementById('mudrexLiveSellTargetVal').innerText = sellTargetStr;
+  if (document.getElementById('mudrexLiveSellDistVal')) document.getElementById('mudrexLiveSellDistVal').innerText = sellDistStr;
+  const mLFloatEl = document.getElementById('mudrexLiveFloatNetVal');
+  if (mLFloatEl) {
+    mLFloatEl.innerText = floatNetStr;
+    mLFloatEl.className = `quick-tracker-val ${floatNetClass}`;
+  }
+
+  // Sticky Bottom Dock
+  if (document.getElementById('dockMarketRate')) document.getElementById('dockMarketRate').innerText = liveRateStr;
+  if (document.getElementById('dockBuyTarget')) document.getElementById('dockBuyTarget').innerText = buyTargetStr;
+  if (document.getElementById('dockBuyDist')) document.getElementById('dockBuyDist').innerText = buyDistStr;
+  if (document.getElementById('dockSellTarget')) document.getElementById('dockSellTarget').innerText = sellTargetStr;
+  if (document.getElementById('dockSellDist')) document.getElementById('dockSellDist').innerText = sellDistStr;
+  const dFloatEl = document.getElementById('dockFloatingNet');
+  if (dFloatEl) {
+    dFloatEl.innerText = floatNetStr;
+    dFloatEl.className = `dock-val ${floatNetClass}`;
+  }
+
+  // Closed Positions History Top Summary Bar
+  if (document.getElementById('closedSummaryCount')) document.getElementById('closedSummaryCount').innerText = `${summary.closedPositionsCount}`;
+  if (document.getElementById('closedSummaryWinLoss')) document.getElementById('closedSummaryWinLoss').innerText = `Wins: ${summary.winCount} | Losses: ${summary.lossCount} | Win Rate: ${summary.winRate}%`;
+  if (document.getElementById('closedSummaryGrossINR')) document.getElementById('closedSummaryGrossINR').innerText = `₹${summary.realizedGrossINR.toLocaleString('en-IN', { minimumFractionDigits: 2 })}`;
+  if (document.getElementById('closedSummaryGrossUSD')) document.getElementById('closedSummaryGrossUSD').innerText = `$${summary.realizedGrossUSD.toFixed(4)} Gross`;
+  if (document.getElementById('closedSummaryChargesINR')) document.getElementById('closedSummaryChargesINR').innerText = `₹${summary.realizedChargesINR.toLocaleString('en-IN', { minimumFractionDigits: 2 })}`;
+  if (document.getElementById('closedSummaryChargesUSD')) document.getElementById('closedSummaryChargesUSD').innerText = `$${summary.realizedChargesUSD.toFixed(4)} Charges`;
+  
+  const cNetEl = document.getElementById('closedSummaryNetINR');
+  if (cNetEl) {
+    cNetEl.innerText = `₹${summary.realizedNetINR.toLocaleString('en-IN', { minimumFractionDigits: 2 })}`;
+    cNetEl.className = `summary-value ${summary.realizedNetINR >= 0 ? 'text-green' : 'text-red'}`;
+  }
+  if (document.getElementById('closedSummaryNetUSD')) document.getElementById('closedSummaryNetUSD').innerText = `$${summary.realizedNetUSD.toFixed(4)} Net`;
 
   // Render Tables
   renderActivePositions(openPositions, settings.instrument);
@@ -259,77 +440,171 @@ function renderDashboard(data) {
   }
 }
 
-function renderActivePositions(positions, symbol) {
-  const tbody = document.getElementById('activePositionsTbody');
-  if (!positions || positions.length === 0) {
-    tbody.innerHTML = `<tr><td colspan="12" style="text-align: center; color: var(--text-dim); padding: 24px;">No active open positions. Engine will open 1 pair per unique market rate.</td></tr>`;
-    return;
+let activeSortKey = null;
+let activeSortDir = 'desc';
+
+let closedSortKey = null;
+let closedSortDir = 'desc';
+
+function sortTable(tableType, key) {
+  if (tableType === 'active') {
+    if (activeSortKey === key) {
+      activeSortDir = activeSortDir === 'asc' ? 'desc' : 'asc';
+    } else {
+      activeSortKey = key;
+      activeSortDir = ['floatingGrossUSD', 'floatingNetINR', 'floatingChargesINR', 'entryPrice', 'currentPrice', 'targetExitPrice'].includes(key) ? 'desc' : 'asc';
+    }
+  } else if (tableType === 'closed') {
+    if (closedSortKey === key) {
+      closedSortDir = closedSortDir === 'asc' ? 'desc' : 'asc';
+    } else {
+      closedSortKey = key;
+      closedSortDir = ['grossProfitUSD', 'netProfitINR', 'totalChargesINR', 'entryPrice', 'exitPrice', 'holdingDurationSec'].includes(key) ? 'desc' : 'asc';
+    }
   }
+
+  if (currentMetrics && currentMetrics.data) {
+    updateDashboardUI(currentMetrics.data);
+  }
+}
+
+function sortDataArray(arr, key, dir) {
+  if (!key || !arr || arr.length === 0) return arr;
+  return arr.slice().sort((a, b) => {
+    let valA = a[key];
+    let valB = b[key];
+
+    if (valA === null || valA === undefined) valA = '';
+    if (valB === null || valB === undefined) valB = '';
+
+    if (typeof valA === 'string' && typeof valB === 'string') {
+      const isDateA = !isNaN(Date.parse(valA));
+      const isDateB = !isNaN(Date.parse(valB));
+      if (isDateA && isDateB) {
+        valA = new Date(valA).getTime();
+        valB = new Date(valB).getTime();
+      } else {
+        const cmp = valA.localeCompare(valB, undefined, { numeric: true, sensitivity: 'base' });
+        return dir === 'asc' ? cmp : -cmp;
+      }
+    }
+
+    if (valA < valB) return dir === 'asc' ? -1 : 1;
+    if (valA > valB) return dir === 'asc' ? 1 : -1;
+    return 0;
+  });
+}
+
+function updateTableHeaderClasses(tableId, activeKey, activeDir) {
+  const table = document.getElementById(tableId);
+  if (!table) return;
+  const ths = table.querySelectorAll('th.sortable');
+  ths.forEach(th => {
+    th.classList.remove('sorted-asc', 'sorted-desc');
+    if (th.getAttribute('data-key') === activeKey) {
+      th.classList.add(activeDir === 'asc' ? 'sorted-asc' : 'sorted-desc');
+    }
+  });
+}
+
+function renderActivePositions(positions, symbol) {
+  updateTableHeaderClasses('activePositionsTable', activeSortKey, activeSortDir);
+  const tbody = document.getElementById('activePositionsTbody');
+  if (!tbody) return;
 
   let html = '';
-  const priceDecimals = symbol === 'BTCUSDT' ? 2 : (symbol === 'XAGUSDT' ? 4 : 2);
+  if (!positions || positions.length === 0) {
+    html = `<tr><td colspan="12" style="text-align: center; color: var(--text-dim); padding: 24px;">No active open positions. Engine will open 1 pair per unique market rate.</td></tr>`;
+  } else {
+    const sortedPositions = sortDataArray(positions, activeSortKey, activeSortDir);
+    for (const pos of sortedPositions) {
+      const posSym = pos.symbol || symbol || 'CLUSDT';
+      const priceDecimals = posSym === 'BTCUSDT' ? 2 : (posSym === 'XAGUSDT' ? 4 : 2);
+      const isBuy = pos.direction === 'BUY';
+      const entryPrice = typeof pos.entryPrice === 'number' ? pos.entryPrice : 0;
+      const currentPrice = typeof pos.currentPrice === 'number' ? pos.currentPrice : entryPrice;
+      const targetPrice = typeof pos.targetExitPrice === 'number' ? pos.targetExitPrice : null;
+      const floatingGrossUSD = typeof pos.floatingGrossUSD === 'number' ? pos.floatingGrossUSD : 0;
+      const floatingChargesINR = typeof pos.floatingChargesINR === 'number' ? pos.floatingChargesINR : 0;
+      const floatingNetINR = typeof pos.floatingNetINR === 'number' ? pos.floatingNetINR : 0;
 
-  for (const pos of positions) {
-    const isBuy = pos.direction === 'BUY';
-    const grossClass = pos.floatingGrossUSD >= 0 ? 'text-green' : 'text-red';
-    const netClass = pos.floatingNetINR >= 0 ? 'text-green' : 'text-red';
+      const grossClass = floatingGrossUSD >= 0 ? 'text-green' : 'text-red';
+      const netClass = floatingNetINR >= 0 ? 'text-green' : 'text-red';
 
-    html += `
-      <tr>
-        <td><strong>${pos.pairId}</strong></td>
-        <td><code style="color:var(--accent-cyan);">${pos.positionId}</code></td>
-        <td><span class="badge-direction ${isBuy ? 'buy' : 'sell'}">${pos.direction}</span></td>
-        <td>${new Date(pos.entryTime).toLocaleTimeString()}</td>
-        <td>$${pos.entryPrice.toFixed(priceDecimals)}</td>
-        <td>$${pos.currentPrice.toFixed(priceDecimals)}</td>
-        <td>${pos.targetExitPrice ? '$' + pos.targetExitPrice.toFixed(priceDecimals) : '<span style="color:var(--text-dim)">DISABLED</span>'}</td>
-        <td class="${grossClass}">$${pos.floatingGrossUSD >= 0 ? '+' : ''}${pos.floatingGrossUSD.toFixed(4)}</td>
-        <td>₹${pos.floatingChargesINR.toFixed(2)}</td>
-        <td class="${netClass}" style="font-weight:700;">₹${pos.floatingNetINR >= 0 ? '+' : ''}${pos.floatingNetINR.toFixed(2)}</td>
-        <td><span class="status-badge live" style="padding:2px 6px; font-size:0.7rem;">OPEN</span></td>
-        <td>
-          <button class="btn btn-danger" style="padding: 2px 8px; font-size: 0.72rem;" onclick="manualClose('${pos.positionId}')">Close</button>
-        </td>
-      </tr>
-    `;
+      html += `
+        <tr>
+          <td><strong>${pos.pairId || 'N/A'}</strong></td>
+          <td><code style="color:var(--accent-cyan);">${pos.positionId || 'N/A'}</code> <span style="font-size:0.65rem; color:var(--text-dim);">(${posSym})</span></td>
+          <td><span class="badge-direction ${isBuy ? 'buy' : 'sell'}">${pos.direction || 'BUY'}</span></td>
+          <td>${pos.entryTime ? new Date(pos.entryTime).toLocaleTimeString() : 'N/A'}</td>
+          <td>$${entryPrice.toFixed(priceDecimals)}</td>
+          <td>$${currentPrice.toFixed(priceDecimals)}</td>
+          <td>${targetPrice !== null ? `<span class="target-price-badge">$${targetPrice.toFixed(priceDecimals)}</span>` : '<span style="color:var(--text-dim)">DISABLED</span>'}</td>
+          <td class="${grossClass}">$${floatingGrossUSD >= 0 ? '+' : ''}${floatingGrossUSD.toFixed(4)}</td>
+          <td>₹${floatingChargesINR.toFixed(2)}</td>
+          <td class="${netClass}" style="font-weight:700;">₹${floatingNetINR >= 0 ? '+' : ''}${floatingNetINR.toFixed(2)}</td>
+          <td><span class="status-badge live" style="padding:2px 6px; font-size:0.7rem;">OPEN</span></td>
+          <td>
+            <button class="btn btn-danger" style="padding: 2px 8px; font-size: 0.72rem;" onclick="manualClose('${pos.positionId}')">Close</button>
+          </td>
+        </tr>
+      `;
+    }
   }
-  tbody.innerHTML = html;
+
+  if (tbody.innerHTML !== html) {
+    tbody.innerHTML = html;
+  }
 }
 
 function renderClosedPositions(positions, symbol) {
+  updateTableHeaderClasses('closedPositionsTable', closedSortKey, closedSortDir);
   const tbody = document.getElementById('closedPositionsTbody');
-  if (!positions || positions.length === 0) {
-    tbody.innerHTML = `<tr><td colspan="13" style="text-align: center; color: var(--text-dim); padding: 24px;">No closed positions recorded yet.</td></tr>`;
-    return;
-  }
+  if (!tbody) return;
 
   let html = '';
-  const priceDecimals = symbol === 'BTCUSDT' ? 2 : (symbol === 'XAGUSDT' ? 4 : 2);
+  if (!positions || positions.length === 0) {
+    html = `<tr><td colspan="13" style="text-align: center; color: var(--text-dim); padding: 24px;">No closed positions recorded yet.</td></tr>`;
+  } else {
+    const sortedPositions = sortDataArray(positions, closedSortKey, closedSortDir);
+    const priceDecimals = symbol === 'BTCUSDT' ? 2 : (symbol === 'XAGUSDT' ? 4 : 2);
 
-  for (const pos of positions) {
-    const isBuy = pos.direction === 'BUY';
-    const grossClass = pos.grossProfitUSD >= 0 ? 'text-green' : 'text-red';
-    const netClass = pos.netProfitINR >= 0 ? 'text-green' : 'text-red';
+    for (const pos of sortedPositions) {
+      const isBuy = pos.direction === 'BUY';
+      const entryPrice = typeof pos.entryPrice === 'number' ? pos.entryPrice : 0;
+      const exitPrice = typeof pos.exitPrice === 'number' ? pos.exitPrice : entryPrice;
+      const targetPrice = typeof pos.targetExitPrice === 'number' ? pos.targetExitPrice : null;
+      const grossProfitUSD = typeof pos.grossProfitUSD === 'number' ? pos.grossProfitUSD : 0;
+      const totalChargesINR = typeof pos.totalChargesINR === 'number' ? pos.totalChargesINR : 0;
+      const netProfitINR = typeof pos.netProfitINR === 'number' ? pos.netProfitINR : 0;
+      const durationSec = typeof pos.holdingDurationSec === 'number' ? pos.holdingDurationSec : 0;
 
-    html += `
-      <tr>
-        <td><strong>${pos.pairId}</strong></td>
-        <td><code style="color:var(--accent-cyan);">${pos.positionId}</code></td>
-        <td><span class="badge-direction ${isBuy ? 'buy' : 'sell'}">${pos.direction}</span></td>
-        <td>${new Date(pos.entryTime).toLocaleTimeString()}</td>
-        <td>${new Date(pos.exitTime).toLocaleTimeString()}</td>
-        <td>$${pos.entryPrice.toFixed(priceDecimals)}</td>
-        <td>$${pos.exitPrice.toFixed(priceDecimals)}</td>
-        <td>${pos.targetExitPrice ? '$' + pos.targetExitPrice.toFixed(priceDecimals) : 'N/A'}</td>
-        <td class="${grossClass}">$${pos.grossProfitUSD >= 0 ? '+' : ''}${pos.grossProfitUSD.toFixed(4)}</td>
-        <td>₹${pos.totalChargesINR.toFixed(2)}</td>
-        <td class="${netClass}" style="font-weight:700;">₹${pos.netProfitINR >= 0 ? '+' : ''}${pos.netProfitINR.toFixed(2)}</td>
-        <td><span class="badge-reason">${pos.exitReason}</span></td>
-        <td>${pos.holdingDurationSec}s</td>
-      </tr>
-    `;
+      const grossClass = grossProfitUSD >= 0 ? 'text-green' : 'text-red';
+      const netClass = netProfitINR >= 0 ? 'text-green' : 'text-red';
+
+      html += `
+        <tr>
+          <td><strong>${pos.pairId || 'N/A'}</strong></td>
+          <td><code style="color:var(--accent-cyan);">${pos.positionId || 'N/A'}</code></td>
+          <td><span class="badge-direction ${isBuy ? 'buy' : 'sell'}">${pos.direction || 'BUY'}</span></td>
+          <td>${pos.entryTime ? new Date(pos.entryTime).toLocaleTimeString() : 'N/A'}</td>
+          <td>${pos.exitTime ? new Date(pos.exitTime).toLocaleTimeString() : 'N/A'}</td>
+          <td>$${entryPrice.toFixed(priceDecimals)}</td>
+          <td>$${exitPrice.toFixed(priceDecimals)}</td>
+          <td>${targetPrice !== null ? `<span class="target-price-badge">$${targetPrice.toFixed(priceDecimals)}</span>` : 'N/A'}</td>
+          <td class="${grossClass}">$${grossProfitUSD >= 0 ? '+' : ''}${grossProfitUSD.toFixed(4)}</td>
+          <td>₹${totalChargesINR.toFixed(2)}</td>
+          <td class="${netClass}" style="font-weight:700;">₹${netProfitINR >= 0 ? '+' : ''}${netProfitINR.toFixed(2)}</td>
+          <td><span class="badge-reason">${pos.exitReason || 'TARGET HIT'}</span></td>
+          <td>${durationSec}s</td>
+        </tr>
+      `;
+    }
   }
-  tbody.innerHTML = html;
+
+  if (tbody.innerHTML !== html) {
+    tbody.innerHTML = html;
+  }
 }
 
 function switchTab(tabId) {
@@ -374,13 +649,6 @@ function applySettingChange() {
   });
 }
 
-function toggleEngineState() {
-  fetch('/api/toggle-engine', { method: 'POST' })
-    .then(r => r.json())
-    .then(res => {
-      fetchMetricsFallback();
-    });
-}
 
 function manualClose(positionId) {
   if (confirm(`Manually close position ${positionId} at current market price?`)) {
@@ -700,6 +968,22 @@ function renderAuditLogs(logs) {
   container.innerHTML = html;
 }
 
+function toggleEngineState() {
+  fetch('/api/toggle-engine', { method: 'POST' })
+    .then(r => r.json())
+    .then(res => {
+      if (res && res.success) {
+        fetchMetricsFallback();
+      } else {
+        alert('Engine toggle failed: ' + (res.error || 'Unknown error'));
+      }
+    })
+    .catch(err => {
+      console.error('Error toggling engine:', err);
+      alert('Network error while toggling engine state.');
+    });
+}
+
 function openSettingsModal() {
   document.getElementById('settingsModal').style.display = 'flex';
 }
@@ -726,5 +1010,98 @@ function saveModalSettings() {
   .then(res => {
     closeSettingsModal();
     fetchMetricsFallback();
+  });
+}
+
+function openMudrexLiveModal() {
+  document.getElementById('mudrexLiveModal').style.display = 'flex';
+  checkMudrexAuthStatus();
+}
+
+function closeMudrexLiveModal() {
+  const modal = document.getElementById('mudrexLiveModal');
+  if (modal) modal.style.display = 'none';
+}
+
+// Global Modal Dismiss listeners
+window.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape') {
+    closeMudrexLiveModal();
+    if (typeof closeSettingsModal === 'function') closeSettingsModal();
+  }
+});
+
+function checkMudrexAuthStatus() {
+  const container = document.getElementById('mudrexAuthStatusContainer');
+  container.innerHTML = '<span style="color:var(--accent-cyan)">Connecting to Mudrex Live API...</span>';
+
+  fetch('/api/mudrex/auth-check')
+    .then(r => r.json())
+    .then(res => {
+      if (res.success) {
+        const totalBal = res.totalPortfolioBalance || res.balance || 0;
+        const spotBal = res.spotBalance || 0;
+        const futBal = res.futuresBalance || 0;
+
+        const totalStr = `₹${Number(totalBal).toLocaleString('en-IN', { minimumFractionDigits: 2 })}`;
+        const spotStr = `₹${Number(spotBal).toLocaleString('en-IN', { minimumFractionDigits: 2 })}`;
+        const futStr = `₹${Number(futBal).toLocaleString('en-IN', { minimumFractionDigits: 2 })}`;
+
+        const hBal = document.getElementById('heroWalletBal');
+        if (hBal) hBal.innerText = totalStr;
+        const mBal = document.getElementById('mudrexLiveWalletBalDisplay');
+        if (mBal) mBal.innerText = `${totalStr} (Spot: ${spotStr} | Futures: ${futStr})`;
+
+        container.innerHTML = `
+          <div style="color:#a7f3d0; font-weight:700;">✅ MUDREX API AUTHENTICATION SUCCESSFUL!</div>
+          <div style="color:#fff; margin-top:6px; font-size:1.1rem;">Est. Total Account Value: <strong style="color:#a7f3d0;">${totalStr}</strong></div>
+          <div style="color:var(--text-muted); margin-top:4px; font-size:0.8rem;">
+            INR Funds (Spot): <strong style="color:#fff">${spotStr}</strong> &nbsp;|&nbsp; 
+            INR Futures Margin: <strong style="color:#38bdf8">${futStr}</strong>
+          </div>
+        `;
+      } else {
+        container.innerHTML = `
+          <div style="color:#f87171; font-weight:700;">⚠️ MUDREX LIVE API AUTHENTICATION REQUIRED</div>
+          <div style="color:var(--text-muted); margin-top:4px; font-size:0.78rem;">${res.error || 'MUDREX_API_SECRET missing in environment.'}</div>
+        `;
+      }
+    })
+    .catch(err => {
+      container.innerHTML = `<div style="color:#f87171">Error checking auth: ${err.message}</div>`;
+    });
+}
+
+function saveAndConnectMudrexKeys() {
+  const apiKey = (document.getElementById('inputMudrexApiKey')?.value || '').trim();
+  const apiSecret = (document.getElementById('inputMudrexApiSecret')?.value || '').trim();
+
+  if (!apiKey && !apiSecret) {
+    alert('Please paste your Mudrex API Key and Secret Key.');
+    return;
+  }
+
+  const container = document.getElementById('mudrexAuthStatusContainer');
+  if (container) container.innerHTML = '<span style="color:var(--accent-cyan)">Saving and testing Mudrex API credentials...</span>';
+
+  fetch('/api/mudrex/save-keys', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ apiKey, apiSecret })
+  })
+  .then(r => r.json())
+  .then(res => {
+    if (res.success && res.auth && res.auth.success) {
+      alert('✅ Mudrex API Keys Connected Successfully!');
+      checkMudrexAuthStatus();
+      fetchMetricsFallback();
+    } else {
+      const errMsg = (res.auth && res.auth.error) ? res.auth.error : (res.error || 'Invalid API Secret Key');
+      alert('⚠️ Mudrex API Connection Failed: ' + errMsg);
+      checkMudrexAuthStatus();
+    }
+  })
+  .catch(err => {
+    alert('Error connecting API keys: ' + err.message);
   });
 }

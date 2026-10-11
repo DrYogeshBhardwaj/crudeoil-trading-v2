@@ -1,0 +1,450 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Mudrex LIVE Real Trading Engine — Live Terminal</title>
+  <link rel="stylesheet" href="style.css?v=20261011_v3">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    .mudrex-brand-badge {
+      background: linear-gradient(135deg, #10b981, #059669);
+      color: #fff;
+      padding: 4px 10px;
+      border-radius: 6px;
+      font-size: 0.75rem;
+      font-weight: 800;
+      letter-spacing: 0.5px;
+      text-transform: uppercase;
+      box-shadow: 0 0 10px rgba(16, 185, 129, 0.4);
+    }
+    .mudrex-hero-card {
+      background: linear-gradient(135deg, rgba(16, 185, 129, 0.12), rgba(15, 23, 42, 0.95));
+      border: 1px solid rgba(16, 185, 129, 0.4);
+      border-radius: 14px;
+      padding: 20px 24px;
+      margin-bottom: 24px;
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Safety Banner -->
+  <div class="safety-banner" style="background: linear-gradient(90deg, #065f46, #047857, #065f46); border-bottom: 1px solid #10b981; padding: 4px 10px; font-size: 0.78rem;">
+    <span>⚡ MUDREX LIVE REAL TRADING TERMINAL</span>
+  </div>
+
+  <!-- Header Bar -->
+  <header class="app-header">
+    <div class="brand-section">
+      <div class="brand-logo" style="background: linear-gradient(135deg, #10b981, #06b6d4);">M</div>
+      <div class="brand-title">
+        <h1>Mudrex Live <span class="mudrex-brand-badge">LIVE API</span></h1>
+      </div>
+    </div>
+
+    <!-- Ticker Stream Display -->
+    <div class="live-ticker-bar">
+      <div class="ticker-item">
+        <span class="ticker-label" id="currentSymbolLabel">CLUSDT — Crude Oil</span>
+        <span class="ticker-value" id="liveTickerPrice">--.--</span>
+      </div>
+      <div class="ticker-item">
+        <span class="ticker-label">Last Tick Time / Age</span>
+        <span class="ticker-value" id="tickTimeAgeDisplay" style="color:var(--text-main); font-size: 0.95rem;">--:--:-- (0ms)</span>
+      </div>
+      <div class="ticker-item">
+        <span class="ticker-label">Last Processed Rate</span>
+        <span class="ticker-value" id="lastProcessedRateDisplay" style="color:var(--accent-cyan);">--.--</span>
+      </div>
+      <div class="ticker-item">
+        <span class="ticker-label">USD / INR Rate</span>
+        <span class="ticker-value" id="usdInrDisplay">₹86.50</span>
+      </div>
+      <div class="ticker-item">
+        <span class="ticker-label">Feed Status</span>
+        <span id="feedStatusBadge" class="status-badge stale">
+          <span class="pulse-dot"></span>
+          <span id="feedStatusText">CONNECTING</span>
+        </span>
+      </div>
+    </div>
+
+    <!-- Header Actions -->
+    <div class="header-actions">
+      <button id="mudrexStartEngineMainBtn" class="btn" style="background: linear-gradient(135deg, #10b981, #047857); color: #fff; font-weight: 800; font-size: 0.95rem; padding: 10px 22px; border-radius: 8px; border: 1px solid #34d399; box-shadow: 0 0 16px rgba(16, 185, 129, 0.5); cursor: pointer;" onclick="toggleEngineState()">
+        <span>🚀 START ENGINE</span>
+      </button>
+      <button class="btn btn-secondary" style="border: 1px solid var(--accent-cyan); color: var(--accent-cyan);" onclick="openMudrexLiveModal()">🔑 Mudrex API Keys</button>
+      <button class="btn btn-secondary" onclick="openSettingsModal()">⚙️ Settings</button>
+    </div>
+  </header>
+
+  <!-- Main Container -->
+  <main class="dashboard-container">
+
+    <!-- Engine Alert / Pause Banner (If paused) -->
+    <div id="engineAlertBanner" class="engine-alert-banner" style="display: none;">
+      <span id="engineAlertText">⚠️ ENGINE PAUSED</span>
+      <button class="btn btn-secondary" style="padding: 4px 10px; font-size: 0.75rem;" onclick="openSettingsModal()">Adjust Settings</button>
+    </div>
+
+    <!-- Mudrex Live Hero Card & API Connection Box -->
+    <section class="mudrex-hero-card" style="padding: 16px 20px; margin-bottom: 16px;">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; flex-wrap: wrap; gap: 10px;">
+        <div>
+          <h2 style="color: #fff; font-size: 1.15rem; margin-bottom: 2px;">🚀 Live Account & Order Router</h2>
+          <p style="color: var(--text-muted); font-size: 0.78rem;">Connected to Mudrex Futures REST API v1/v2</p>
+        </div>
+        <button class="btn btn-secondary" style="border: 1px solid #10b981; color: #a7f3d0; font-weight: 700;" onclick="openMudrexLiveModal()">🔑 Connect / Update Mudrex API Keys</button>
+      </div>
+
+      <!-- Live Balance Grid -->
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px;">
+        <div style="background: #0d1117; border: 1px solid var(--border-color); border-radius: 10px; padding: 14px 18px;">
+          <div style="font-size: 0.72rem; color: var(--text-muted); font-weight: 700; text-transform: uppercase;">Mudrex Wallet Balance</div>
+          <div style="font-size: 1.5rem; font-weight: 800; font-family: monospace; color: #a7f3d0;" id="heroWalletBal">₹1,00,000.00</div>
+          <div style="font-size: 0.72rem; color: var(--text-dim);">Live Exchange Capital</div>
+        </div>
+
+        <div style="background: #0d1117; border: 1px solid var(--border-color); border-radius: 10px; padding: 14px 18px;">
+          <div style="font-size: 0.72rem; color: var(--text-muted); font-weight: 700; text-transform: uppercase;">Realized Net P/L</div>
+          <div style="font-size: 1.5rem; font-weight: 800; font-family: monospace;" id="kpiRealizedNet">₹0.00</div>
+          <div style="font-size: 0.72rem; color: var(--text-dim);" id="kpiRealizedGrossSubtext">Gross: $0.00 | Charges: ₹0.00</div>
+        </div>
+
+        <div style="background: #0d1117; border: 1px solid var(--border-color); border-radius: 10px; padding: 14px 18px;">
+          <div style="font-size: 0.72rem; color: var(--text-muted); font-weight: 700; text-transform: uppercase;">Floating Net P/L</div>
+          <div style="font-size: 1.5rem; font-weight: 800; font-family: monospace;" id="kpiFloatingNet">₹0.00</div>
+          <div style="font-size: 0.72rem; color: var(--text-dim);" id="kpiFloatingSubtext">Gross: $0.00 | Charges: ₹0.00</div>
+        </div>
+
+        <div style="background: #0d1117; border: 1px solid var(--border-color); border-radius: 10px; padding: 14px 18px;">
+          <div style="font-size: 0.72rem; color: var(--text-muted); font-weight: 700; text-transform: uppercase;">Available Free Margin</div>
+          <div style="font-size: 1.5rem; font-weight: 800; font-family: monospace; color: #38bdf8;" id="kpiAvailableMargin">₹96,450.00</div>
+          <div style="font-size: 0.72rem; color: var(--text-dim);" id="kpiMarginUsed">Simulated Margin Used: ₹3,528.00 (5x)</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Top KPI Cards Grid -->
+    <section class="kpi-grid">
+      <!-- Total Equity -->
+      <div class="kpi-card">
+        <div class="kpi-title">
+          <span>TOTAL EQUITY</span>
+          <span class="kpi-icon">💰</span>
+        </div>
+        <div class="kpi-value" id="kpiTotalEquity">₹1,00,000.00</div>
+        <div class="kpi-subtext" id="kpiEquitySubtext">Starting Capital: ₹1,00,000.00</div>
+      </div>
+
+      <!-- Realized Balance -->
+      <div class="kpi-card">
+        <div class="kpi-title">
+          <span>REALIZED BALANCE</span>
+          <span class="kpi-icon">🏦</span>
+        </div>
+        <div class="kpi-value" id="kpiRealizedBalance">₹1,00,000.00</div>
+        <div class="kpi-subtext">Capital + Realized P/L</div>
+      </div>
+
+      <!-- Active Pairs / Cap -->
+      <div class="kpi-card">
+        <div class="kpi-title">
+          <span>ACTIVE PAIRS / CAP</span>
+          <span class="kpi-icon">📊</span>
+        </div>
+        <div class="kpi-value" id="kpiActivePairs">0 / 25</div>
+        <div class="kpi-subtext" id="kpiUniqueRatesCount">Processed Rates: 0 unique</div>
+      </div>
+
+      <!-- Closed Trades / Win Rate -->
+      <div class="kpi-card">
+        <div class="kpi-title">
+          <span>CLOSED TRADES / WIN RATE</span>
+          <span class="kpi-icon">🎯</span>
+        </div>
+        <div class="kpi-value text-green" id="kpiWinRate">0%</div>
+        <div class="kpi-subtext" id="kpiTradesCount">Total: 0 | Wins: 0 | Losses: 0</div>
+      </div>
+    </section>
+
+    <!-- Interactive Control Panel -->
+    <section class="control-panel">
+      <!-- Instrument Selector -->
+      <div class="form-group">
+        <label>Trading Instrument</label>
+        <select id="settingInstrument" class="form-control" onchange="onInstrumentSelectChanged()">
+          <option value="CLUSDT">CLUSDT — Crude Oil (1.0 Barrel)</option>
+          <option value="XAGUSDT">XAGUSDT — Silver (1.0 oz)</option>
+          <option value="BTCUSDT">BTCUSDT — Bitcoin (1.0 BTC)</option>
+        </select>
+      </div>
+
+      <!-- Profit Target Move -->
+      <div class="form-group">
+        <label>Profit Target Move ($)</label>
+        <select id="settingTargetMove" class="form-control" onchange="applySettingChange()">
+          <option value="0.05">$0.05 Target Move</option>
+          <option value="0.10">$0.10 Target Move</option>
+          <option value="0.15">$0.15 Target Move</option>
+          <option value="0.20">$0.20 Target Move (Crude Standard)</option>
+          <option value="0.25">$0.25 Target Move</option>
+          <option value="0.50">$0.50 Target Move</option>
+          <option value="1.00">$1.00 Target Move</option>
+          <option value="1.15">$1.15 Target Move (Silver Standard)</option>
+          <option value="DISABLED">Disabled (No Auto Target)</option>
+        </select>
+      </div>
+
+      <!-- Max Active Pairs Cap -->
+      <div class="form-group">
+        <label>Max Active Pairs Cap</label>
+        <input type="number" id="settingMaxPairs" class="form-control" value="25" min="1" max="100" style="width: 110px;" onchange="applySettingChange()">
+      </div>
+
+      <!-- USD to INR Conversion Rate -->
+      <div class="form-group">
+        <label>USD-INR Rate (₹)</label>
+        <input type="number" id="settingUsdInr" class="form-control" value="86.50" step="0.01" style="width: 110px;" onchange="applySettingChange()">
+      </div>
+    </section>
+
+    <!-- Main Content Area: Tabs -->
+    <section class="main-content-card">
+      <div class="tabs-header">
+        <button class="tab-btn active" onclick="switchTab('tabActive')">⚡ Active Positions (<span id="tabActiveCount">0</span>)</button>
+        <button class="tab-btn" onclick="switchTab('tabClosed')">📜 Closed Positions History (<span id="tabClosedCount">0</span>)</button>
+        <button class="tab-btn" onclick="switchTab('tabBacktest')">📊 Historical Day Backtester</button>
+        <button class="tab-btn" onclick="switchTab('tabTestRunner')">🧪 Test Suite Runner</button>
+        <button class="tab-btn" onclick="switchTab('tabLogs')">📋 System Audit Logs</button>
+      </div>
+
+      <!-- Tab 1: Active Positions -->
+      <div id="tabActive" class="tab-content active">
+        <!-- Compact Live Price & Next Target Tracker Bar -->
+        <div class="table-quick-tracker" id="activeTabQuickBar">
+          <div class="quick-tracker-item">
+            <span class="quick-tracker-label">⚡ Live Market Rate</span>
+            <span class="quick-tracker-val" id="quickRateVal">$0.00</span>
+          </div>
+          <div class="quick-tracker-item">
+            <span class="quick-tracker-label">🎯 Next BUY Target Exit (UP)</span>
+            <span class="quick-tracker-val text-green" id="quickBuyTargetVal">--</span>
+            <span class="quick-tracker-sub" id="quickBuyDistVal"></span>
+          </div>
+          <div class="quick-tracker-item">
+            <span class="quick-tracker-label">🎯 Next SELL Target Exit (DOWN)</span>
+            <span class="quick-tracker-val text-red" id="quickSellTargetVal">--</span>
+            <span class="quick-tracker-sub" id="quickSellDistVal"></span>
+          </div>
+          <div class="quick-tracker-item">
+            <span class="quick-tracker-label">📊 Floating Net P/L</span>
+            <span class="quick-tracker-val" id="quickFloatingNetVal">₹0.00</span>
+          </div>
+        </div>
+
+        <table class="data-table" id="activePositionsTable">
+          <thead>
+            <tr>
+              <th class="sortable" data-key="pairId" onclick="sortTable('active', 'pairId')">Pair ID</th>
+              <th class="sortable" data-key="positionId" onclick="sortTable('active', 'positionId')">Position ID</th>
+              <th class="sortable" data-key="direction" onclick="sortTable('active', 'direction')">Type</th>
+              <th class="sortable" data-key="entryTime" onclick="sortTable('active', 'entryTime')">Entry Time</th>
+              <th class="sortable" data-key="entryPrice" onclick="sortTable('active', 'entryPrice')">Entry Price</th>
+              <th class="sortable" data-key="currentPrice" onclick="sortTable('active', 'currentPrice')">Current Price</th>
+              <th class="sortable" data-key="targetExitPrice" onclick="sortTable('active', 'targetExitPrice')">Target Price 🎯</th>
+              <th class="sortable" data-key="floatingGrossUSD" onclick="sortTable('active', 'floatingGrossUSD')">Floating Gross (USD)</th>
+              <th class="sortable" data-key="floatingChargesINR" onclick="sortTable('active', 'floatingChargesINR')">Est. Charges (INR)</th>
+              <th class="sortable" data-key="floatingNetINR" onclick="sortTable('active', 'floatingNetINR')">Floating Net P/L (INR)</th>
+              <th class="sortable" data-key="status" onclick="sortTable('active', 'status')">Status</th>
+              <th>Action</th>
+            </tr>
+          </thead>
+          <tbody id="activePositionsTbody">
+            <tr>
+              <td colspan="12" style="text-align: center; color: var(--text-dim); padding: 24px;">No active open positions. Engine will open 1 pair per unique market rate.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Tab 2: Closed Positions History -->
+      <div id="tabClosed" class="tab-content">
+        <!-- Top Closed Positions History Performance Summary -->
+        <div class="closed-history-summary" id="closedTabSummaryBar">
+          <div class="summary-box">
+            <div class="summary-label">Closed Trades / Win Rate</div>
+            <div class="summary-value" id="closedSummaryCount">0</div>
+            <div class="summary-subtext" id="closedSummaryWinLoss">Wins: 0 | Losses: 0 | Win Rate: 0%</div>
+          </div>
+          <div class="summary-box">
+            <div class="summary-label">Total Realized Gross P/L</div>
+            <div class="summary-value" id="closedSummaryGrossINR">₹0.00</div>
+            <div class="summary-subtext" id="closedSummaryGrossUSD">$0.0000 Gross</div>
+          </div>
+          <div class="summary-box">
+            <div class="summary-label">Total Charges Paid (Fees+GST)</div>
+            <div class="summary-value text-amber" id="closedSummaryChargesINR">₹0.00</div>
+            <div class="summary-subtext" id="closedSummaryChargesUSD">$0.0000 Charges</div>
+          </div>
+          <div class="summary-box">
+            <div class="summary-label">Total Realized Net P/L</div>
+            <div class="summary-value" id="closedSummaryNetINR">₹0.00</div>
+            <div class="summary-subtext" id="closedSummaryNetUSD">$0.0000 Net</div>
+          </div>
+        </div>
+
+        <table class="data-table" id="closedPositionsTable">
+          <thead>
+            <tr>
+              <th class="sortable" data-key="pairId" onclick="sortTable('closed', 'pairId')">Pair ID</th>
+              <th class="sortable" data-key="positionId" onclick="sortTable('closed', 'positionId')">Position ID</th>
+              <th class="sortable" data-key="direction" onclick="sortTable('closed', 'direction')">Type</th>
+              <th class="sortable" data-key="entryTime" onclick="sortTable('closed', 'entryTime')">Entry Time</th>
+              <th class="sortable" data-key="exitTime" onclick="sortTable('closed', 'exitTime')">Exit Time</th>
+              <th class="sortable" data-key="entryPrice" onclick="sortTable('closed', 'entryPrice')">Entry Price</th>
+              <th class="sortable" data-key="exitPrice" onclick="sortTable('closed', 'exitPrice')">Exit Price</th>
+              <th class="sortable" data-key="targetExitPrice" onclick="sortTable('closed', 'targetExitPrice')">Target Price 🎯</th>
+              <th class="sortable" data-key="grossProfitUSD" onclick="sortTable('closed', 'grossProfitUSD')">Gross P/L (USD)</th>
+              <th class="sortable" data-key="totalChargesINR" onclick="sortTable('closed', 'totalChargesINR')">Total Charges (INR)</th>
+              <th class="sortable" data-key="netProfitINR" onclick="sortTable('closed', 'netProfitINR')">Net P/L (INR)</th>
+              <th class="sortable" data-key="exitReason" onclick="sortTable('closed', 'exitReason')">Exit Reason</th>
+              <th class="sortable" data-key="holdingDurationSec" onclick="sortTable('closed', 'holdingDurationSec')">Duration</th>
+            </tr>
+          </thead>
+          <tbody id="closedPositionsTbody">
+            <tr>
+              <td colspan="13" style="text-align: center; color: var(--text-dim); padding: 24px;">No closed positions recorded yet.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Tab 3: Historical Backtester -->
+      <div id="tabBacktest" class="tab-content">
+        <h3 style="color: #fff; margin-bottom: 12px;">Historical Day Backtest Simulation</h3>
+        <p style="color: var(--text-muted); font-size: 0.85rem; margin-bottom: 18px;">Simulate unique rate pair strategy against 1-second historical kline data.</p>
+        <!-- Form omitted for brevity -->
+      </div>
+
+      <!-- Tab 4: Test Suite Runner -->
+      <div id="tabTestRunner" class="tab-content">
+        <div style="margin-bottom: 16px; display: flex; justify-content: space-between; align-items: center;">
+          <div>
+            <h3 style="color: #fff; margin-bottom: 4px;">Acceptance Test Suite</h3>
+            <p style="color: var(--text-muted); font-size: 0.8rem;">Runs automated verification tests.</p>
+          </div>
+          <button class="btn btn-primary" onclick="runAcceptanceTests()">🧪 Run Acceptance Tests</button>
+        </div>
+        <div id="testOutputContainer" class="audit-log-container" style="min-height: 250px;"></div>
+      </div>
+
+      <!-- Tab 5: Audit Logs -->
+      <div id="tabLogs" class="tab-content">
+        <h4 style="color: #fff; margin-bottom: 10px;">Engine Event Audit Log</h4>
+        <div id="auditLogList" class="audit-log-container"></div>
+      </div>
+    </section>
+  </main>
+
+  <!-- Mudrex Live API Modal -->
+  <div id="mudrexLiveModal" class="modal-overlay" onclick="if(event.target === this) closeMudrexLiveModal()">
+    <div class="modal-card" style="max-width: 580px; position: relative;">
+      <div class="modal-header">
+        <h3>🔑 Mudrex Live API Key & Secret Connection</h3>
+        <button class="close-btn" onclick="closeMudrexLiveModal()" style="font-size: 1.5rem; padding: 4px 10px; cursor: pointer; color: #fff;">✕</button>
+      </div>
+      <div style="display: flex; flex-direction: column; gap: 14px;">
+        <div style="background: rgba(16, 185, 129, 0.1); border: 1px solid rgba(16, 185, 129, 0.3); padding: 12px; border-radius: 8px; font-size: 0.82rem; color: #a7f3d0;">
+          <strong>Mudrex Futures API REST Endpoint:</strong> <code>https://trade.mudrex.com/fapi/v1</code> & <code>v2</code>
+        </div>
+
+        <div class="form-group">
+          <label style="color:#fff; font-weight:700;">Mudrex API Key</label>
+          <input type="text" id="inputMudrexApiKey" class="form-control" placeholder="Paste your Mudrex API Key here..." style="font-family:monospace;">
+        </div>
+
+        <div class="form-group">
+          <label style="color:#fff; font-weight:700;">Mudrex API Secret Key</label>
+          <input type="password" id="inputMudrexApiSecret" class="form-control" placeholder="Paste your Mudrex API Secret Key here..." style="font-family:monospace;">
+        </div>
+
+        <button class="btn btn-primary" style="padding: 10px; font-weight: 800;" onclick="saveAndConnectMudrexKeys()">💾 Save & Connect Mudrex API</button>
+        <button class="btn btn-secondary" style="border: 1px solid var(--accent-cyan); color: var(--accent-cyan);" onclick="checkMudrexAuthStatus()">🔑 Check Mudrex Live API Status</button>
+
+        <div id="mudrexAuthStatusContainer" style="background: #0d1117; border: 1px solid var(--border-color); padding: 12px; border-radius: 8px; font-size: 0.8rem; color: #f3f4f6;">
+          <span style="color: var(--text-muted);">Click "Check Mudrex Live API Status" to test API Key & Secret connection.</span>
+        </div>
+
+        <div style="border-top: 1px solid var(--border-color); padding-top: 12px; margin-top: 4px;">
+          <h4 style="color: #fff; margin-bottom: 6px; font-size: 0.9rem;">Alternative: Railway Cloud Environment Variables</h4>
+          <code style="display: block; background: #0b0e14; padding: 10px; border-radius: 6px; font-size: 0.78rem; color: #38bdf8; margin-bottom: 8px; font-family: monospace;">
+            MUDREX_API_KEY="your_mudrex_api_key"<br>
+            MUDREX_API_SECRET="your_mudrex_api_secret"
+          </code>
+        </div>
+
+        <button class="btn btn-secondary" style="width: 100%; margin-top: 6px; background: #374151; color: #fff; font-weight: 700; border: none; padding: 10px; cursor: pointer;" onclick="closeMudrexLiveModal()">✖ Close Modal & Return to Live Dashboard</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Settings Modal -->
+  <div id="settingsModal" class="modal-overlay">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3>Engine Configuration</h3>
+        <button class="close-btn" onclick="closeSettingsModal()">✕</button>
+      </div>
+      <div style="display: flex; flex-direction: column; gap: 14px;">
+        <div class="form-group">
+          <label>Starting Capital (₹)</label>
+          <input type="number" id="modalStartingCapital" class="form-control" value="100000">
+        </div>
+        <div class="form-group">
+          <label>Contract Quantity</label>
+          <input type="number" id="modalContractQuantity" class="form-control" value="1.0" step="0.1">
+        </div>
+        <div class="form-group">
+          <label>Leverage (x)</label>
+          <input type="number" id="modalLeverage" class="form-control" value="5" min="1" max="100">
+        </div>
+        <button class="btn btn-primary" style="margin-top: 10px;" onclick="saveModalSettings()">Save Settings</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Persistent Draggable Quick Glance Dock -->
+  <div id="quickGlanceDock" class="quick-glance-dock">
+    <div class="dock-drag-handle" title="Click & Drag to move widget anywhere">⋮⋮</div>
+    <div class="dock-pill">
+      <span class="dock-label">⚡ Market Rate</span>
+      <span class="dock-val" id="dockMarketRate">$0.00</span>
+    </div>
+    <div class="dock-divider"></div>
+    <div class="dock-pill">
+      <span class="dock-label">🎯 Next BUY Exit (UP)</span>
+      <span class="dock-val text-green" id="dockBuyTarget">--</span>
+      <span class="dock-sub" id="dockBuyDist"></span>
+    </div>
+    <div class="dock-divider"></div>
+    <div class="dock-pill">
+      <span class="dock-label">🎯 Next SELL Exit (DOWN)</span>
+      <span class="dock-val text-red" id="dockSellTarget">--</span>
+      <span class="dock-sub" id="dockSellDist"></span>
+    </div>
+    <div class="dock-divider"></div>
+    <div class="dock-pill">
+      <span class="dock-label">📊 Floating Net P/L</span>
+      <span class="dock-val" id="dockFloatingNet">₹0.00</span>
+    </div>
+  </div>
+
+  <script src="app.js?v=20261011_v3"></script>
+</body>
+</html>

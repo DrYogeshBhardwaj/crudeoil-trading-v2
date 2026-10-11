@@ -8,9 +8,15 @@ const backtest = require('./engine/backtest');
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-app.use(cors());
-app.use(express.json());
-app.use(express.static(path.join(__dirname, '../public')));
+app.use(express.static(path.join(__dirname, '../public'), {
+  etag: false,
+  maxAge: 0,
+  setHeaders: (res) => {
+    res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+    res.setHeader('Pragma', 'no-cache');
+    res.setHeader('Expires', '0');
+  }
+}));
 
 // Start rate feed manager
 rateFeed.start();
@@ -50,22 +56,30 @@ app.get('/api/metrics', (req, res) => {
 });
 
 // 2. Real-time Server-Sent Events Stream (SSE)
-app.get('/api/stream', (req, res) => {
+app.get('/api/stream', async (req, res) => {
   res.setHeader('Content-Type', 'text/event-stream');
   res.setHeader('Cache-Control', 'no-cache');
   res.setHeader('Connection', 'keep-alive');
   res.flushHeaders();
 
-  const sendUpdate = () => {
+  const isMudrexLive = req.query.mode === 'mudrex_live' || (req.headers.referer && req.headers.referer.includes('mudrex_live'));
+
+  const sendUpdate = async () => {
     try {
-      const metrics = paperEngine.getDashboardMetrics();
+      let metrics;
+      if (isMudrexLive) {
+        const mudrexLive = require('./engine/mudrexLiveAdapter');
+        metrics = await mudrexLive.getLiveMetrics();
+      } else {
+        metrics = paperEngine.getDashboardMetrics();
+      }
       res.write(`data: ${JSON.stringify(metrics)}\n\n`);
     } catch (e) {
       console.error('Error sending SSE update:', e);
     }
   };
 
-  sendUpdate();
+  await sendUpdate();
   const interval = setInterval(sendUpdate, 1000);
 
   req.on('close', () => {
@@ -111,6 +125,48 @@ app.post('/api/reset-data', (req, res) => {
   try {
     paperEngine.resetAllData();
     res.json({ success: true, message: 'All paper trading positions and history have been reset.' });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// Standalone Mudrex Live Terminal Page Route
+app.get('/mudrex-live', (req, res) => {
+  res.sendFile(path.join(__dirname, '../public/mudrex_live.html'));
+});
+
+// Mudrex Live API Authentication Check Endpoint
+app.get('/api/mudrex/auth-check', async (req, res) => {
+  try {
+    const mudrexLive = require('./engine/mudrexLiveAdapter');
+    const auth = await mudrexLive.testAuthentication();
+    res.json(auth);
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// Save Mudrex API Key & Secret Endpoint
+app.post('/api/mudrex/save-keys', express.json(), async (req, res) => {
+  try {
+    const { apiKey, apiSecret } = req.body;
+    if (apiKey) process.env.MUDREX_API_KEY = apiKey.trim();
+    if (apiSecret) process.env.MUDREX_API_SECRET = apiSecret.trim();
+
+    const mudrexLive = require('./engine/mudrexLiveAdapter');
+    const auth = await mudrexLive.testAuthentication();
+    res.json({ success: true, auth });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// Mudrex Live Dedicated Metrics Endpoint (Isolated from Paper Data)
+app.get('/api/mudrex/metrics', async (req, res) => {
+  try {
+    const mudrexLive = require('./engine/mudrexLiveAdapter');
+    const liveMetrics = await mudrexLive.getLiveMetrics();
+    res.json({ success: true, data: liveMetrics });
   } catch (err) {
     res.status(500).json({ success: false, error: err.message });
   }
