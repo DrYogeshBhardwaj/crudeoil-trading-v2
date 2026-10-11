@@ -348,12 +348,13 @@ class MudrexLiveAdapter {
     };
     if (targetPrice) body.target_price = Number(targetPrice);
 
-    const url = `${this.v2Url}/futures/order?symbol=${encodeURIComponent(body.symbol)}`;
+    // Clean POST URL without query strings
+    const url = `${this.v2Url}/futures/order`;
     console.log(`[Mudrex Live Adapter] Sending Real Order POST to ${url}:`, body);
     let res = await this.request('POST', url, body);
     if (!res.success) {
       // Fallback to v1 endpoint if v2 returns error
-      const v1Url = `${this.baseUrl}/futures/order?symbol=${encodeURIComponent(body.symbol)}`;
+      const v1Url = `${this.baseUrl}/futures/order`;
       console.log(`[Mudrex Live Adapter] Retrying via v1 ${v1Url}...`);
       res = await this.request('POST', v1Url, body);
     }
