@@ -9,7 +9,7 @@ class PaperEngine {
       leverage: 5,
       instrument: 'CLUSDT',
       profitTargetMode: 'PRICE_MOVE',
-      profitTargetMove: 0.05, // $0.05
+      profitTargetMove: 0.20, // $0.20 default for Crude Oil (CLUSDT)
       targetDisabled: false,
       maxActivePairs: 25,
       dailyLossCircuitBreakerINR: 2000,

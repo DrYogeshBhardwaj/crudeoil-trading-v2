@@ -49,7 +49,7 @@ async function runTestSuite() {
       paperEngine.resetAllData();
       paperEngine.settings.realOrdersDisabled = true;
       paperEngine.settings.targetDisabled = false;
-      paperEngine.settings.profitTargetMove = 0.05;
+      paperEngine.settings.profitTargetMove = 0.20;
       paperEngine.settings.maxActivePairs = 25;
       paperEngine.settings.dailyLossCircuitBreakerINR = 2000;
       paperEngine.settings.startingCapitalINR = 50000;
@@ -126,6 +126,7 @@ function test5() {
 
 // Test 6 — BUY target hit closes ONLY BUY position
 function test6() {
+  paperEngine.settings.profitTargetMove = 0.05;
   sendTestTick('CLUSDT', 100.00);
   const pair = paperEngine.pairs[0];
 
@@ -139,6 +140,7 @@ function test6() {
 
 // Test 7 — SELL target hit closes ONLY SELL position
 function test7() {
+  paperEngine.settings.profitTargetMove = 0.05;
   sendTestTick('CLUSDT', 100.00);
   const pair = paperEngine.pairs[0];
 
