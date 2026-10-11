@@ -515,9 +515,30 @@ class MudrexLiveAdapter {
     try {
       const realPosRes = await this.fetchPositions();
       if (realPosRes.success && Array.isArray(realPosRes.data) && realPosRes.data.length > 0) {
-        liveOpenPositions = realPosRes.data;
+        liveOpenPositions = [...realPosRes.data];
       }
     } catch (e) {}
+
+    // Merge paperEngine active and closed positions into live terminal metrics
+    const paperMetrics = paperEngine.getDashboardMetrics();
+    const paperPositions = paperMetrics.openPositions || [];
+    const paperClosed = paperMetrics.closedPositions || [];
+
+    const existingPosIds = new Set(liveOpenPositions.map(p => p.positionId));
+    for (const pPos of paperPositions) {
+      if (!existingPosIds.has(pPos.positionId)) {
+        liveOpenPositions.push(pPos);
+        existingPosIds.add(pPos.positionId);
+      }
+    }
+
+    const existingClosedIds = new Set(liveClosedPositions.map(p => p.positionId));
+    for (const pCls of paperClosed) {
+      if (!existingClosedIds.has(pCls.positionId)) {
+        liveClosedPositions.push(pCls);
+        existingClosedIds.add(pCls.positionId);
+      }
+    }
 
     let realizedGrossUSD = 0, realizedNetINR = 0;
     let winCount = 0, lossCount = 0;
