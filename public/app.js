@@ -670,19 +670,17 @@ function manualClose(positionId) {
 }
 
 function resetAllData() {
-  resetAllDataConfirm();
+  fetch('/api/reset-data', { method: 'POST' })
+    .then(r => r.json())
+    .then(res => {
+      alert('✅ ' + (res.message || 'Engine reset successfully!'));
+      fetchMetricsFallback();
+    })
+    .catch(err => alert('Reset error: ' + err.message));
 }
 
 function resetAllDataConfirm() {
-  if (confirm('Are you sure you want to reset all positions, processed rates, and trading history?')) {
-    fetch('/api/reset-data', { method: 'POST' })
-      .then(r => r.json())
-      .then(res => {
-        alert(res.message);
-        fetchMetricsFallback();
-      })
-      .catch(err => alert('Reset error: ' + err.message));
-  }
+  resetAllData();
 }
 
 function runBacktestSimulation() {
