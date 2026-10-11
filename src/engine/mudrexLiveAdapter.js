@@ -351,11 +351,11 @@ class MudrexLiveAdapter {
       body.is_takeprofit = true;
     }
 
-    const url = `${this.baseUrl}/futures/${symb}/order?trade_currency=INR`;
+    const url = `${this.baseUrl}/futures/${symb}/order?is_symbol=true&trade_currency=INR`;
     console.log(`[Mudrex Live Adapter] Sending Real Order POST to ${url}:`, body);
     let res = await this.request('POST', url, body);
     if (!res.success) {
-      const altUrl = `${this.baseUrl}/futures/${symb}/order`;
+      const altUrl = `${this.baseUrl}/futures/${symb}/order?is_symbol=true`;
       console.log(`[Mudrex Live Adapter] Retrying via ${altUrl}...`);
       res = await this.request('POST', altUrl, body);
     }
