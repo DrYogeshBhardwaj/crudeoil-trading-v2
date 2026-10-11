@@ -669,14 +669,19 @@ function manualClose(positionId) {
   }
 }
 
+function resetAllData() {
+  resetAllDataConfirm();
+}
+
 function resetAllDataConfirm() {
-  if (confirm('WARNING: Are you sure you want to reset all paper positions, processed rates, and history?')) {
+  if (confirm('Are you sure you want to reset all positions, processed rates, and trading history?')) {
     fetch('/api/reset-data', { method: 'POST' })
       .then(r => r.json())
       .then(res => {
         alert(res.message);
         fetchMetricsFallback();
-      });
+      })
+      .catch(err => alert('Reset error: ' + err.message));
   }
 }
 
