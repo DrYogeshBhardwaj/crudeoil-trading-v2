@@ -287,23 +287,12 @@ class MudrexLiveAdapter {
     }
 
     if (spotBal === 0) {
-      let altSpot = await this.request('GET', `https://trade.mudrex.com/api/v1/wallet/funds?currency=INR`);
+      let altSpot = await this.request('GET', `${this.baseUrl}/wallet/funds`);
       if (altSpot.success) {
         const altBal = this.parseBalanceValue(altSpot.data);
         if (altBal > 0) {
           spotBal = altBal;
           spotRaw = altSpot.data;
-        }
-      }
-    }
-
-    if (spotBal === 0) {
-      let altSpot2 = await this.request('GET', `https://trade.mudrex.com/api/v1/wallet/funds`);
-      if (altSpot2.success) {
-        const altBal2 = this.parseBalanceValue(altSpot2.data);
-        if (altBal2 > 0) {
-          spotBal = altBal2;
-          spotRaw = altSpot2.data;
         }
       }
     }
