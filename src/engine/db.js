@@ -1,0 +1,228 @@
+const fs = require('fs');
+const path = require('path');
+
+const DATA_DIR = process.env.RAILWAY_VOLUME_MOUNT_PATH || process.env.DATA_DIR || path.join(__dirname, '../../data');
+const DB_FILE = path.join(DATA_DIR, 'trading_engine.db');
+const STATE_JSON_FILE = path.join(DATA_DIR, 'engine_state.json');
+
+class DatabaseManager {
+  constructor() {
+    this.ensureDirectory();
+    this.initDatabase();
+  }
+
+  ensureDirectory() {
+    if (!fs.existsSync(DATA_DIR)) {
+      fs.mkdirSync(DATA_DIR, { recursive: true });
+    }
+  }
+
+  initDatabase() {
+    try {
+      const { DatabaseSync } = require('node:sqlite');
+      this.db = new DatabaseSync(DB_FILE);
+
+      // Create Tables
+      this.db.exec(`
+        CREATE TABLE IF NOT EXISTS kv_store (
+          key TEXT PRIMARY KEY,
+          value TEXT NOT NULL
+        );
+
+        CREATE TABLE IF NOT EXISTS active_pairs (
+          pair_id TEXT PRIMARY KEY,
+          symbol TEXT NOT NULL,
+          created_time TEXT NOT NULL,
+          created_timestamp INTEGER NOT NULL,
+          entry_rate REAL NOT NULL,
+          status TEXT NOT NULL,
+          data TEXT NOT NULL
+        );
+
+        CREATE TABLE IF NOT EXISTS closed_positions (
+          position_id TEXT PRIMARY KEY,
+          pair_id TEXT NOT NULL,
+          direction TEXT NOT NULL,
+          symbol TEXT NOT NULL,
+          entry_price REAL NOT NULL,
+          exit_price REAL NOT NULL,
+          net_profit_inr REAL NOT NULL,
+          data TEXT NOT NULL,
+          closed_timestamp INTEGER NOT NULL
+        );
+
+        CREATE TABLE IF NOT EXISTS audit_logs (
+          id TEXT PRIMARY KEY,
+          timestamp TEXT NOT NULL,
+          event TEXT NOT NULL,
+          details TEXT NOT NULL
+        );
+      `);
+      console.log(`[DBMS] SQLite Database initialized successfully at ${DB_FILE}`);
+    } catch (err) {
+      console.warn('[DBMS] Built-in SQLite initialization notice, using JSON storage fallback:', err.message);
+      this.db = null;
+    }
+  }
+
+  loadState() {
+    try {
+      // 1. Try loading from SQLite Database first
+      if (this.db) {
+        const settingsRow = this.db.prepare("SELECT value FROM kv_store WHERE key = 'settings'").get();
+        const dailyTrackerRow = this.db.prepare("SELECT value FROM kv_store WHERE key = 'daily_tracker'").get();
+        const processedRatesRow = this.db.prepare("SELECT value FROM kv_store WHERE key = 'processed_rates'").get();
+        const lastRateRow = this.db.prepare("SELECT value FROM kv_store WHERE key = 'last_processed_rate'").get();
+        const engineRunningRow = this.db.prepare("SELECT value FROM kv_store WHERE key = 'is_engine_running'").get();
+
+        const activePairRows = this.db.prepare("SELECT data FROM active_pairs WHERE status = 'ACTIVE'").all();
+        const closedPosRows = this.db.prepare("SELECT data FROM closed_positions ORDER BY closed_timestamp ASC").all();
+        const auditLogRows = this.db.prepare("SELECT timestamp, event, details FROM audit_logs ORDER BY timestamp ASC LIMIT 500").all();
+
+        if (settingsRow || activePairRows.length > 0) {
+          const settings = settingsRow ? JSON.parse(settingsRow.value) : null;
+          const dailyTracker = dailyTrackerRow ? JSON.parse(dailyTrackerRow.value) : null;
+          const processedRates = processedRatesRow ? JSON.parse(processedRatesRow.value) : {};
+          const lastProcessedRate = lastRateRow ? JSON.parse(lastRateRow.value) : null;
+          const isEngineRunning = engineRunningRow ? JSON.parse(engineRunningRow.value) : true;
+
+          const pairs = activePairRows.map(r => JSON.parse(r.data));
+          const closedPositions = closedPosRows.map(r => JSON.parse(r.data));
+          const auditLogs = auditLogRows.map(r => ({
+            id: `LOG-${new Date(r.timestamp).getTime()}`,
+            timestamp: r.timestamp,
+            event: r.event,
+            details: JSON.parse(r.details)
+          }));
+
+          console.log(`[DBMS] Successfully loaded state from SQLite database (${pairs.length} active pairs, ${closedPositions.length} closed trades).`);
+
+          return {
+            settings,
+            pairs,
+            closedPositions,
+            auditLogs,
+            processedRates,
+            lastProcessedRate,
+            dailyTracker,
+            isEngineRunning
+          };
+        }
+      }
+
+      // 2. Fallback: Load from engine_state.json if SQLite has no records yet
+      if (fs.existsSync(STATE_JSON_FILE)) {
+        const raw = fs.readFileSync(STATE_JSON_FILE, 'utf8');
+        const state = JSON.parse(raw);
+        console.log(`[DBMS] Loaded state from JSON backup file (${state.pairs ? state.pairs.length : 0} pairs).`);
+        return state;
+      }
+    } catch (err) {
+      console.error('[DBMS] Error loading state from DBMS:', err);
+    }
+    return null;
+  }
+
+  saveState(state) {
+    if (!state) return;
+
+    // 1. Save to SQLite Database
+    if (this.db) {
+      try {
+        this.db.exec('BEGIN TRANSACTION;');
+
+        // Save KV items
+        const upsertKv = this.db.prepare('INSERT INTO kv_store (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value');
+        if (state.settings) upsertKv.run('settings', JSON.stringify(state.settings));
+        if (state.dailyTracker) upsertKv.run('daily_tracker', JSON.stringify(state.dailyTracker));
+        if (state.processedRates) upsertKv.run('processed_rates', JSON.stringify(state.processedRates));
+        if (state.lastProcessedRate !== undefined) upsertKv.run('last_processed_rate', JSON.stringify(state.lastProcessedRate));
+        if (state.isEngineRunning !== undefined) upsertKv.run('is_engine_running', JSON.stringify(state.isEngineRunning));
+
+        // Sync Active Pairs
+        this.db.prepare('DELETE FROM active_pairs').run();
+        if (Array.isArray(state.pairs)) {
+          const insertPair = this.db.prepare('INSERT INTO active_pairs (pair_id, symbol, created_time, created_timestamp, entry_rate, status, data) VALUES (?, ?, ?, ?, ?, ?, ?)');
+          for (const pair of state.pairs) {
+            insertPair.run(
+              pair.pairId,
+              pair.symbol || 'CLUSDT',
+              pair.createdTime || new Date().toISOString(),
+              pair.createdTimestamp || Date.now(),
+              pair.entryRate || 0,
+              pair.status || 'ACTIVE',
+              JSON.stringify(pair)
+            );
+          }
+        }
+
+        // Sync Closed Positions
+        if (Array.isArray(state.closedPositions)) {
+          const insertClosed = this.db.prepare('INSERT OR REPLACE INTO closed_positions (position_id, pair_id, direction, symbol, entry_price, exit_price, net_profit_inr, data, closed_timestamp) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)');
+          for (const cp of state.closedPositions) {
+            insertClosed.run(
+              cp.positionId,
+              cp.pairId,
+              cp.direction,
+              cp.symbol || 'CLUSDT',
+              cp.entryPrice || 0,
+              cp.exitPrice || 0,
+              cp.netProfitINR || 0,
+              JSON.stringify(cp),
+              cp.exitTimestamp || Date.now()
+            );
+          }
+        }
+
+        // Sync Audit Logs
+        if (Array.isArray(state.auditLogs)) {
+          const insertLog = this.db.prepare('INSERT OR IGNORE INTO audit_logs (id, timestamp, event, details) VALUES (?, ?, ?, ?)');
+          const recentLogs = state.auditLogs.slice(-100);
+          for (const log of recentLogs) {
+            insertLog.run(
+              log.id || `LOG-${Date.now()}`,
+              log.timestamp || new Date().toISOString(),
+              log.event || 'EVENT',
+              JSON.stringify(log.details || {})
+            );
+          }
+        }
+
+        this.db.exec('COMMIT;');
+      } catch (err) {
+        try { this.db.exec('ROLLBACK;'); } catch (e) {}
+        console.error('[DBMS] SQLite Save Transaction Error:', err);
+      }
+    }
+
+    // 2. Also save atomic JSON backup
+    try {
+      this.ensureDirectory();
+      const tmpPath = `${STATE_JSON_FILE}.tmp`;
+      fs.writeFileSync(tmpPath, JSON.stringify(state, null, 2), 'utf8');
+      fs.renameSync(tmpPath, STATE_JSON_FILE);
+    } catch (err) {
+      console.error('[DBMS] JSON Backup Save Error:', err);
+    }
+  }
+
+  resetAll() {
+    if (this.db) {
+      try {
+        this.db.exec(`
+          DELETE FROM kv_store;
+          DELETE FROM active_pairs;
+          DELETE FROM closed_positions;
+          DELETE FROM audit_logs;
+        `);
+      } catch (err) {
+        console.error('[DBMS] Reset DB Error:', err);
+      }
+    }
+    if (fs.existsSync(STATE_JSON_FILE)) {
+      try { fs.unlinkSync(STATE_JSON_FILE); } catch (e) {}
+    }
+  }
+}
+
+module.exports = new DatabaseManager();
