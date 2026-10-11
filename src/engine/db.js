@@ -5,6 +5,7 @@ const DATA_DIR = process.env.RAILWAY_VOLUME_MOUNT_PATH || process.env.DATA_DIR |
 const DB_FILE = path.join(DATA_DIR, 'trading_engine.db');
 const STATE_JSON_FILE = path.join(DATA_DIR, 'engine_state.json');
 const TMP_BACKUP_FILE = path.join('/tmp', 'engine_state_backup.json');
+const STATE_SEED_FILE = path.join(__dirname, 'state_seed.json');
 
 class DatabaseManager {
   constructor() {
@@ -120,12 +121,12 @@ class DatabaseManager {
 
       // 2. Load from JSON backups and merge if DB missing records
       let jsonBackupState = null;
-      const jsonBackupPath = fs.existsSync(TMP_BACKUP_FILE) ? TMP_BACKUP_FILE : (fs.existsSync(STATE_JSON_FILE) ? STATE_JSON_FILE : null);
+      const jsonBackupPath = [TMP_BACKUP_FILE, STATE_JSON_FILE, STATE_SEED_FILE].find(p => fs.existsSync(p));
       if (jsonBackupPath) {
         try {
           const raw = fs.readFileSync(jsonBackupPath, 'utf8');
           jsonBackupState = JSON.parse(raw);
-          console.log(`[DBMS] Loaded state from JSON backup file (${jsonBackupState.closedPositions ? jsonBackupState.closedPositions.length : 0} closed positions).`);
+          console.log(`[DBMS] Loaded state from JSON backup file ${jsonBackupPath} (${jsonBackupState.closedPositions ? jsonBackupState.closedPositions.length : 0} closed positions).`);
         } catch (e) {}
       }
 
@@ -236,13 +237,14 @@ class DatabaseManager {
       }
     }
 
-    // 2. Also save atomic JSON backup
+    // 2. Also save atomic JSON backup & git-tracked seed file
     try {
       this.ensureDirectory();
       const tmpPath = `${STATE_JSON_FILE}.tmp`;
       fs.writeFileSync(tmpPath, JSON.stringify(state, null, 2), 'utf8');
       fs.renameSync(tmpPath, STATE_JSON_FILE);
       try { fs.writeFileSync(TMP_BACKUP_FILE, JSON.stringify(state, null, 2), 'utf8'); } catch (e) {}
+      try { fs.writeFileSync(STATE_SEED_FILE, JSON.stringify(state, null, 2), 'utf8'); } catch (e) {}
     } catch (err) {
       console.error('[DBMS] JSON Backup Save Error:', err);
     }
