@@ -1,0 +1,397 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Mudrex LIVE Rate Trading Engine Live (Paper Simulation)</title>
+  <link rel="stylesheet" href="style.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
+</head>
+<body>
+
+  <!-- Safety Banner -->
+  <div class="safety-banner">
+    <span class="shield-icon">🛡️</span>
+    <span>PAPER TRADING — REAL ORDERS DISABLED PERMANENTLY IN THIS ENGINE</span>
+    <span class="shield-icon">🛡️</span>
+  </div>
+
+  <!-- Header Bar -->
+  <header class="app-header">
+    <div class="brand-section">
+      <div class="brand-logo">M</div>
+      <div class="brand-title">
+        <h1>Mudrex LIVE Rate Engine Live</h1>
+        <p>UNIQUE RATE PAPER SIMULATION PLATFORM</p>
+      </div>
+    </div>
+
+    <!-- Ticker Stream Display -->
+    <div class="live-ticker-bar">
+      <div class="ticker-item">
+        <span class="ticker-label" id="currentSymbolLabel">CLUSDT — Crude Oil</span>
+        <span class="ticker-value" id="liveTickerPrice">--.--</span>
+      </div>
+      <div class="ticker-item">
+        <span class="ticker-label">Last Tick Time / Age</span>
+        <span class="ticker-value" id="tickTimeAgeDisplay" style="color:var(--text-main); font-size: 0.95rem;">--:--:-- (0ms)</span>
+      </div>
+      <div class="ticker-item">
+        <span class="ticker-label">Last Processed Rate</span>
+        <span class="ticker-value" id="lastProcessedRateDisplay" style="color:var(--accent-cyan);">--.--</span>
+      </div>
+      <div class="ticker-item">
+        <span class="ticker-label">USD / INR Rate</span>
+        <span class="ticker-value" id="usdInrDisplay">₹86.50</span>
+      </div>
+      <div class="ticker-item">
+        <span class="ticker-label">Feed Status</span>
+        <span id="feedStatusBadge" class="status-badge stale">
+          <span class="pulse-dot"></span>
+          <span id="feedStatusText">CONNECTING</span>
+        </span>
+      </div>
+    </div>
+
+    <!-- Header Actions -->
+    <div class="header-actions">
+      <button id="toggleEngineBtn" class="btn btn-primary" onclick="toggleEngineState()">
+        <span>▶</span> <span id="toggleEngineBtnText">PAUSE ENGINE</span>
+      </button>
+      <button class="btn btn-secondary" onclick="openSettingsModal()">⚙️ Settings</button>
+      <button class="btn btn-warning" onclick="resetAllDataConfirm()">🔄 Reset Data</button>
+    </div>
+  </header>
+
+  <!-- Main Container -->
+  <main class="dashboard-container">
+
+    <!-- Engine Alert / Pause Banner (If paused) -->
+    <div id="engineAlertBanner" class="engine-alert-banner" style="display: none;">
+      <span id="engineAlertText">⚠️ ENGINE PAUSED</span>
+      <button class="btn btn-secondary" style="padding: 4px 10px; font-size: 0.75rem;" onclick="openSettingsModal()">Adjust Settings</button>
+    </div>
+
+    <!-- Top KPI Cards Grid -->
+    <section class="kpi-grid">
+      <!-- Total Equity -->
+      <div class="kpi-card">
+        <div class="kpi-header">
+          <span class="kpi-title">Total Equity</span>
+          <span class="kpi-icon">💰</span>
+        </div>
+        <div class="kpi-value text-blue" id="kpiTotalEquity">₹50,000.00</div>
+        <div class="kpi-subtext" id="kpiEquitySubtext">Capital: ₹50,000</div>
+      </div>
+
+      <!-- Realized Balance -->
+      <div class="kpi-card">
+        <div class="kpi-header">
+          <span class="kpi-title">Realized Balance</span>
+          <span class="kpi-icon">🏦</span>
+        </div>
+        <div class="kpi-value" id="kpiRealizedBalance">₹50,000.00</div>
+        <div class="kpi-subtext" id="kpiBalanceSubtext">Capital + Realized P/L</div>
+      </div>
+
+      <!-- Realized Net P/L -->
+      <div class="kpi-card">
+        <div class="kpi-header">
+          <span class="kpi-title">Realized Net P/L</span>
+          <span class="kpi-icon">📈</span>
+        </div>
+        <div class="kpi-value" id="kpiRealizedNet">₹0.00</div>
+        <div class="kpi-subtext" id="kpiRealizedGrossSubtext">Gross: $0.00 | Charges: ₹0.00</div>
+      </div>
+
+      <!-- Floating Net P/L -->
+      <div class="kpi-card">
+        <div class="kpi-header">
+          <span class="kpi-title">Floating Net P/L</span>
+          <span class="kpi-icon">⚡</span>
+        </div>
+        <div class="kpi-value" id="kpiFloatingNet">₹0.00</div>
+        <div class="kpi-subtext" id="kpiFloatingSubtext">Gross: $0.00 | Charges: ₹0.00</div>
+      </div>
+
+      <!-- Active Pairs Cap & Unique Rates -->
+      <div class="kpi-card">
+        <div class="kpi-header">
+          <span class="kpi-title">Active Pairs / Cap</span>
+          <span class="kpi-icon">🔄</span>
+        </div>
+        <div class="kpi-value" id="kpiActivePairs">0 / 25</div>
+        <div class="kpi-subtext" id="kpiUniqueRatesCount">Processed Rates: 0</div>
+      </div>
+
+      <!-- Margin & Buying Power -->
+      <div class="kpi-card">
+        <div class="kpi-header">
+          <span class="kpi-title">Available Margin</span>
+          <span class="kpi-icon">🛡️</span>
+        </div>
+        <div class="kpi-value" id="kpiAvailableMargin">₹50,000.00</div>
+        <div class="kpi-subtext" id="kpiMarginUsed">Margin Used: ₹0.00 (5x)</div>
+      </div>
+
+      <!-- Daily Loss Circuit Breaker -->
+      <div class="kpi-card">
+        <div class="kpi-header">
+          <span class="kpi-title">Daily Net Loss Tracker</span>
+          <span class="kpi-icon">⚡</span>
+        </div>
+        <div class="kpi-value" id="kpiDailyLoss">₹0.00</div>
+        <div class="kpi-subtext" id="kpiDailyLimit">Circuit Limit: ₹2,000.00</div>
+      </div>
+
+      <!-- Win Rate / Closed Count -->
+      <div class="kpi-card">
+        <div class="kpi-header">
+          <span class="kpi-title">Closed Trades / Win Rate</span>
+          <span class="kpi-icon">🎯</span>
+        </div>
+        <div class="kpi-value text-green" id="kpiWinRate">0%</div>
+        <div class="kpi-subtext" id="kpiTradesCount">Total: 0 | Wins: 0 | Losses: 0</div>
+      </div>
+    </section>
+
+    <!-- Interactive Control Panel -->
+    <section class="control-panel">
+      <!-- Instrument Selector -->
+      <div class="form-group">
+        <label>Trading Instrument</label>
+        <select id="settingInstrument" class="form-control" onchange="onInstrumentSelectChanged()">
+          <option value="CLUSDT">CLUSDT — Crude Oil (1.0 Barrel)</option>
+          <option value="XAGUSDT">XAGUSDT — Silver (1.0 oz)</option>
+          <option value="BTCUSDT">BTCUSDT — Bitcoin (1.0 BTC)</option>
+        </select>
+      </div>
+
+      <!-- Profit Target Move -->
+      <div class="form-group">
+        <label>Profit Target Move ($)</label>
+        <select id="settingTargetMove" class="form-control" onchange="applySettingChange()">
+          <option value="0.05">$0.05 Target Move</option>
+          <option value="0.10">$0.10 Target Move</option>
+          <option value="0.15">$0.15 Target Move</option>
+          <option value="0.20">$0.20 Target Move (Crude Standard)</option>
+          <option value="0.25">$0.25 Target Move</option>
+          <option value="0.50">$0.50 Target Move</option>
+          <option value="1.00">$1.00 Target Move</option>
+          <option value="1.15">$1.15 Target Move (Silver Standard)</option>
+          <option value="DISABLED">Disabled (No Auto Target)</option>
+        </select>
+      </div>
+
+      <!-- Max Active Pairs Cap -->
+      <div class="form-group">
+        <label>Max Active Pairs Cap</label>
+        <input type="number" id="settingMaxPairs" class="form-control" value="25" min="1" max="100" style="width: 110px;" onchange="applySettingChange()">
+      </div>
+
+      <!-- Daily Loss Limit (INR) -->
+      <div class="form-group">
+        <label>Daily Loss Circuit Breaker (₹)</label>
+        <input type="number" id="settingDailyLoss" class="form-control" value="2000" min="100" step="100" style="width: 140px;" onchange="applySettingChange()">
+      </div>
+
+      <!-- USD to INR Conversion Rate -->
+      <div class="form-group">
+        <label>USD-INR Rate (₹)</label>
+        <input type="number" id="settingUsdInr" class="form-control" value="86.50" step="0.01" style="width: 110px;" onchange="applySettingChange()">
+      </div>
+    </section>
+
+    <!-- Main Content Area: Tabs -->
+    <section class="main-content-card">
+      <div class="tabs-header">
+        <button class="tab-btn active" onclick="switchTab('tabActive')">⚡ Active Positions (<span id="tabActiveCount">0</span>)</button>
+        <button class="tab-btn" onclick="switchTab('tabClosed')">📜 Closed Positions History (<span id="tabClosedCount">0</span>)</button>
+        <button class="tab-btn" onclick="switchTab('tabBacktest')">📊 Historical Day Backtester</button>
+        <button class="tab-btn" onclick="switchTab('tabTestRunner')">🧪 Test Suite Runner</button>
+        <button class="tab-btn" onclick="switchTab('tabLogs')">📋 System Audit Logs</button>
+      </div>
+
+      <!-- Tab 1: Active Positions -->
+      <div id="tabActive" class="tab-content active">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Pair ID</th>
+              <th>Position ID</th>
+              <th>Type</th>
+              <th>Entry Time</th>
+              <th>Entry Price</th>
+              <th>Current Price</th>
+              <th>Target Price</th>
+              <th>Floating Gross (USD)</th>
+              <th>Est. Charges (INR)</th>
+              <th>Floating Net P/L (INR)</th>
+              <th>Status</th>
+              <th>Action</th>
+            </tr>
+          </thead>
+          <tbody id="activePositionsTbody">
+            <tr>
+              <td colspan="12" style="text-align: center; color: var(--text-dim); padding: 24px;">No active open positions. Engine will open 1 pair per unique market rate.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Tab 2: Closed Positions History -->
+      <div id="tabClosed" class="tab-content">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Pair ID</th>
+              <th>Position ID</th>
+              <th>Type</th>
+              <th>Entry Time</th>
+              <th>Exit Time</th>
+              <th>Entry Price</th>
+              <th>Exit Price</th>
+              <th>Target Price</th>
+              <th>Gross P/L (USD)</th>
+              <th>Total Charges (INR)</th>
+              <th>Net P/L (INR)</th>
+              <th>Exit Reason</th>
+              <th>Duration</th>
+            </tr>
+          </thead>
+          <tbody id="closedPositionsTbody">
+            <tr>
+              <td colspan="13" style="text-align: center; color: var(--text-dim); padding: 24px;">No closed positions recorded yet.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Tab 3: Historical Day Backtester (Single Date & From-To Range + Multi-Run Comparison) -->
+      <div id="tabBacktest" class="tab-content">
+        <!-- Warning Disclaimer Banner -->
+        <div style="background: rgba(245, 158, 11, 0.1); border: 1px solid rgba(245, 158, 11, 0.3); color: #fef08a; padding: 10px 14px; border-radius: 6px; font-size: 0.8rem; margin-bottom: 16px;">
+          ⚠️ <strong>Disclaimer:</strong> Historical simulation results are estimates based on available historical data and configured fee/execution assumptions. They do not guarantee future profit.
+        </div>
+
+        <!-- Backtest Control Form -->
+        <div style="display: flex; gap: 14px; align-items: flex-end; margin-bottom: 20px; flex-wrap: wrap; background: #0d1117; padding: 16px; border-radius: 8px;">
+          <div class="form-group">
+            <label>Mode</label>
+            <select id="btMode" class="form-control" onchange="toggleBtModeDisplay()">
+              <option value="SINGLE">Single Date</option>
+              <option value="RANGE">From Date – To Date Range</option>
+            </select>
+          </div>
+
+          <div class="form-group" id="btSingleDateGroup">
+            <label>Select Date</label>
+            <input type="date" id="btDate" class="form-control">
+          </div>
+
+          <div class="form-group" id="btFromDateGroup" style="display: none;">
+            <label>From Date</label>
+            <input type="date" id="btFromDate" class="form-control">
+          </div>
+
+          <div class="form-group" id="btToDateGroup" style="display: none;">
+            <label>To Date</label>
+            <input type="date" id="btToDate" class="form-control">
+          </div>
+
+          <div class="form-group">
+            <label>Instrument</label>
+            <select id="btSymbol" class="form-control">
+              <option value="CLUSDT">CLUSDT — Crude Oil</option>
+              <option value="XAGUSDT">XAGUSDT — Silver</option>
+              <option value="BTCUSDT">BTCUSDT — Bitcoin</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label>Target Move ($)</label>
+            <input type="number" id="btTargetMove" class="form-control" value="0.05" step="0.01" style="width: 100px;">
+          </div>
+
+          <div class="form-group">
+            <label>Cap (Pairs)</label>
+            <input type="number" id="btMaxPairs" class="form-control" value="25" min="1" max="100" style="width: 90px;">
+          </div>
+
+          <div class="form-group">
+            <label>Quantity</label>
+            <input type="number" id="btQuantity" class="form-control" value="1.0" step="0.1" style="width: 90px;">
+          </div>
+
+          <button class="btn btn-primary" onclick="runBacktestSimulation()">▶ Run Backtest Simulation</button>
+        </div>
+
+        <!-- Backtest Results Display -->
+        <div id="backtestResultsContainer" style="display: none;"></div>
+
+        <!-- Multi-Run Comparison Section -->
+        <div id="backtestComparisonSection" style="margin-top: 24px; display: none;">
+          <h4 style="color: var(--accent-cyan); margin-bottom: 12px;">📊 Historical Run Comparison Table</h4>
+          <table class="data-table">
+            <thead>
+              <tr id="btCompHeaderTr">
+                <th>Metric</th>
+              </tr>
+            </thead>
+            <tbody id="btCompTbody"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Tab 4: Acceptance Test Suite Runner -->
+      <div id="tabTestRunner" class="tab-content">
+        <div style="margin-bottom: 16px; display: flex; justify-content: space-between; align-items: center;">
+          <div>
+            <h3 style="color: #fff; margin-bottom: 4px;">Unique Rate Logic Acceptance Test Suite</h3>
+            <p style="color: var(--text-muted); font-size: 0.8rem;">Runs automated tests verifying 100 repeated ticks deduplication, unique rate pairs, independent exits, and equity math.</p>
+          </div>
+          <button class="btn btn-primary" onclick="runAcceptanceTests()">🧪 Run All 10 Tests Now</button>
+        </div>
+        <div id="testOutputContainer" class="audit-log-container" style="min-height: 250px; font-size: 0.85rem;">
+          Click "Run All 10 Tests Now" to execute the acceptance test suite.
+        </div>
+      </div>
+
+      <!-- Tab 5: System Audit Logs -->
+      <div id="tabLogs" class="tab-content">
+        <h4 style="color: #fff; margin-bottom: 10px;">Engine Event Audit Log</h4>
+        <div id="auditLogList" class="audit-log-container"></div>
+      </div>
+    </section>
+  </main>
+
+  <!-- Settings Modal -->
+  <div id="settingsModal" class="modal-overlay">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3>Engine Configuration</h3>
+        <button class="close-btn" onclick="closeSettingsModal()">✕</button>
+      </div>
+      <div style="display: flex; flex-direction: column; gap: 14px;">
+        <div class="form-group">
+          <label>Starting Virtual Capital (₹)</label>
+          <input type="number" id="modalStartingCapital" class="form-control" value="50000">
+        </div>
+        <div class="form-group">
+          <label>Contract Quantity per Position</label>
+          <input type="number" id="modalContractQuantity" class="form-control" value="1.0" step="0.1">
+        </div>
+        <div class="form-group">
+          <label>Leverage (x)</label>
+          <input type="number" id="modalLeverage" class="form-control" value="5" min="1" max="100">
+        </div>
+        <button class="btn btn-primary" style="margin-top: 10px;" onclick="saveModalSettings()">Save Settings</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>

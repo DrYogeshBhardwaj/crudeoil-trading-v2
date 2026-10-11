@@ -1,0 +1,4540 @@
+{
+  "settings": {
+    "startingCapitalINR": 50000,
+    "contractQuantity": 1,
+    "leverage": 5,
+    "instrument": "XAGUSDT",
+    "profitTargetMode": "PRICE_MOVE",
+    "profitTargetMove": 1.15,
+    "targetDisabled": false,
+    "maxActivePairs": 25,
+    "dailyLossCircuitBreakerINR": 2000,
+    "takerFeeRate": 0.0005,
+    "gstRate": 0.18,
+    "realOrdersDisabled": true,
+    "pairFrequencyMs": 60000
+  },
+  "pairs": [
+    {
+      "pairId": "PAIR-0001",
+      "symbol": "XAGUSDT",
+      "createdTime": "2026-10-11T11:43:26.233Z",
+      "createdTimestamp": 1791719006233,
+      "entryRate": 30,
+      "status": "ACTIVE",
+      "buyPosition": {
+        "positionId": "P-0001-BUY",
+        "pairId": "PAIR-0001",
+        "direction": "BUY",
+        "symbol": "XAGUSDT",
+        "entryTime": "2026-10-11T11:43:26.233Z",
+        "entryTimestamp": 1791719006233,
+        "entryPrice": 30,
+        "quantity": 1,
+        "contractMultiplier": 1,
+        "targetExitPrice": 31.15,
+        "targetMove": 1.15,
+        "status": "CLOSED",
+        "entryFeeUSD": 0.015,
+        "usdInrRateAtEntry": 86.5,
+        "exitPrice": 31.15,
+        "exitTime": "2026-10-11T11:43:26.237Z",
+        "exitTimestamp": 1791719006237,
+        "exitReason": "BUY TARGET PROFIT HIT"
+      },
+      "sellPosition": {
+        "positionId": "P-0001-SELL",
+        "pairId": "PAIR-0001",
+        "direction": "SELL",
+        "symbol": "XAGUSDT",
+        "entryTime": "2026-10-11T11:43:26.233Z",
+        "entryTimestamp": 1791719006233,
+        "entryPrice": 30,
+        "quantity": 1,
+        "contractMultiplier": 1,
+        "targetExitPrice": 28.85,
+        "targetMove": 1.15,
+        "status": "OPEN",
+        "entryFeeUSD": 0.015,
+        "usdInrRateAtEntry": 86.5
+      }
+    },
+    {
+      "pairId": "PAIR-0002",
+      "symbol": "XAGUSDT",
+      "createdTime": "2026-10-11T11:43:26.235Z",
+      "createdTimestamp": 1791719006235,
+      "entryRate": 30.5,
+      "status": "ACTIVE",
+      "buyPosition": {
+        "positionId": "P-0002-BUY",
+        "pairId": "PAIR-0002",
+        "direction": "BUY",
+        "symbol": "XAGUSDT",
+        "entryTime": "2026-10-11T11:43:26.235Z",
+        "entryTimestamp": 1791719006235,
+        "entryPrice": 30.5,
+        "quantity": 1,
+        "contractMultiplier": 1,
+        "targetExitPrice": 31.65,
+        "targetMove": 1.15,
+        "status": "OPEN",
+        "entryFeeUSD": 0.01525,
+        "usdInrRateAtEntry": 86.5
+      },
+      "sellPosition": {
+        "positionId": "P-0002-SELL",
+        "pairId": "PAIR-0002",
+        "direction": "SELL",
+        "symbol": "XAGUSDT",
+        "entryTime": "2026-10-11T11:43:26.235Z",
+        "entryTimestamp": 1791719006235,
+        "entryPrice": 30.5,
+        "quantity": 1,
+        "contractMultiplier": 1,
+        "targetExitPrice": 29.35,
+        "targetMove": 1.15,
+        "status": "OPEN",
+        "entryFeeUSD": 0.01525,
+        "usdInrRateAtEntry": 86.5
+      }
+    },
+    {
+      "pairId": "PAIR-0003",
+      "symbol": "XAGUSDT",
+      "createdTime": "2026-10-11T11:43:26.237Z",
+      "createdTimestamp": 1791719006237,
+      "entryRate": 31.15,
+      "status": "ACTIVE",
+      "buyPosition": {
+        "positionId": "P-0003-BUY",
+        "pairId": "PAIR-0003",
+        "direction": "BUY",
+        "symbol": "XAGUSDT",
+        "entryTime": "2026-10-11T11:43:26.237Z",
+        "entryTimestamp": 1791719006237,
+        "entryPrice": 31.15,
+        "quantity": 1,
+        "contractMultiplier": 1,
+        "targetExitPrice": 32.3,
+        "targetMove": 1.15,
+        "status": "OPEN",
+        "entryFeeUSD": 0.015575,
+        "usdInrRateAtEntry": 86.5
+      },
+      "sellPosition": {
+        "positionId": "P-0003-SELL",
+        "pairId": "PAIR-0003",
+        "direction": "SELL",
+        "symbol": "XAGUSDT",
+        "entryTime": "2026-10-11T11:43:26.237Z",
+        "entryTimestamp": 1791719006237,
+        "entryPrice": 31.15,
+        "quantity": 1,
+        "contractMultiplier": 1,
+        "targetExitPrice": 30,
+        "targetMove": 1.15,
+        "status": "OPEN",
+        "entryFeeUSD": 0.015575,
+        "usdInrRateAtEntry": 86.5
+      }
+    }
+  ],
+  "closedPositions": [
+    {
+      "pairId": "PAIR-0001",
+      "positionId": "P-0001-BUY",
+      "direction": "BUY",
+      "symbol": "XAGUSDT",
+      "entryTime": "2026-10-11T11:43:26.233Z",
+      "exitTime": "2026-10-11T11:43:26.237Z",
+      "entryPrice": 30,
+      "exitPrice": 31.15,
+      "targetExitPrice": 31.15,
+      "quantity": 1,
+      "contractMultiplier": 1,
+      "grossProfitUSD": 1.15,
+      "grossProfitINR": 99.47,
+      "entryFeeUSD": 0.015,
+      "exitFeeUSD": 0.0156,
+      "gstUSD": 0.0055,
+      "totalChargesUSD": 0.0361,
+      "totalChargesINR": 3.12,
+      "netProfitUSD": 1.1139,
+      "netProfitINR": 96.35,
+      "usdInrRate": 86.5,
+      "exitReason": "BUY TARGET PROFIT HIT",
+      "holdingDurationSec": 0
+    }
+  ],
+  "auditLogs": [
+    {
+      "id": "LOG-1791717756535-829",
+      "timestamp": "2026-10-11T11:22:36.535Z",
+      "event": "FEED_STALE",
+      "details": "Rate feed for XAGUSDT is stale. New pair creation paused."
+    },
+    {
+      "id": "LOG-1791717768580-73",
+      "timestamp": "2026-10-11T11:22:48.580Z",
+      "event": "FEED_STALE",
+      "details": "Rate feed for XAGUSDT is stale. New pair creation paused."
+    },
+    {
+      "id": "LOG-1791717770582-718",
+      "timestamp": "2026-10-11T11:22:50.582Z",
+      "event": "FEED_STALE",
+      "details": "Rate feed for XAGUSDT is stale. New pair creation paused."
+    },
+    {
+      "id": "LOG-1791717772591-814",
+      "timestamp": "2026-10-11T11:22:52.591Z",
+      "event": "FEED_STALE",
+      "details": "Rate feed for XAGUSDT is stale. New pair creation paused."
+    },
+    {
+      "id": "LOG-1791717774591-385",
+      "timestamp": "2026-10-11T11:22:54.591Z",
+      "event": "FEED_STALE",
+      "details": "Rate feed for XAGUSDT is stale. New pair creation paused."
+    },
+    {
+      "id": "LOG-1791717776605-404",
+      "timestamp": "2026-10-11T11:22:56.605Z",
+      "event": "FEED_STALE",
+      "details": "Rate feed for XAGUSDT is stale. New pair creation paused."
+    },
+    {
+      "id": "LOG-1791717778610-157",
+      "timestamp": "2026-10-11T11:22:58.610Z",
+      "event": "FEED_STALE",
+      "details": "Rate feed for XAGUSDT is stale. New pair creation paused."
+    },
+    {
+      "id": "LOG-1791717778766-830",
+      "timestamp": "2026-10-11T11:22:58.766Z",
+      "event": "ENTRY_SKIPPED",
+      "details": "ENTRY SKIPPED — RATE ALREADY PROCESSED ($60.81)"
+    },
+    {
+      "id": "LOG-1791717790663-143",
+      "timestamp": "2026-10-11T11:23:10.663Z",
+      "event": "FEED_STALE",
+      "details": "Rate feed for XAGUSDT is stale. New pair creation paused."
+    },
+    {
+      "id": "LOG-1791717792668-961",
+      "timestamp": "2026-10-11T11:23:12.668Z",
+      "event": "FEED_STALE",
+      "details": "Rate feed for XAGUSDT is stale. New pair creation paused."
+    },
+    {
+      "id": "LOG-1791717794681-723",
+      "timestamp": "2026-10-11T11:23:14.681Z",
+      "event": "FEED_STALE",
+      "details": "Rate feed for XAGUSDT is stale. New pair creation paused."
+    },
+    {
+      "id": "LOG-1791717796694-951",
+      "timestamp": "2026-10-11T11:23:16.694Z",
+      "event": "FEED_STALE",
+      "details": "Rate feed for XAGUSDT is stale. New pair creation paused."
+    },
+    {
+      "id": "LOG-1791717798700-49",
+      "timestamp": "2026-10-11T11:23:18.700Z",
+      "event": "FEED_STALE",
+      "details": "Rate feed for XAGUSDT is stale. New pair creation paused."
+    },
+    {
+      "id": "LOG-1791717800703-523",
+      "timestamp": "2026-10-11T11:23:20.703Z",
+      "event": "FEED_STALE",
+      "details": "Rate feed for XAGUSDT is stale. New pair creation paused."
+    },
+    {
+      "id": "LOG-1791717802708-755",
+      "timestamp": "2026-10-11T11:23:22.708Z",
+      "event": "FEED_STALE",
+      "details": "Rate feed for XAGUSDT is stale. New pair creation paused."
+    },
+    {
+      "id": "LOG-1791717804711-480",
+      "timestamp": "2026-10-11T11:23:24.711Z",
+      "event": "FEED_STALE",
+      "details": "Rate feed for XAGUSDT is stale. New pair creation paused."
+    },
+    {
+      "id": "LOG-1791717816752-263",
+      "timestamp": "2026-10-11T11:23:36.752Z",
+      "event": "FEED_STALE",
+      "details": "Rate feed for XAGUSDT is stale. New pair creation paused."
+    },
+    {
+      "id": "LOG-1791717818761-225",
+      "timestamp": "2026-10-11T11:23:38.761Z",
+      "event": "FEED_STALE",
+      "details": "Rate feed for XAGUSDT is stale. New pair creation paused."
+    },
+    {
+      "id": "LOG-1791717820770-809",
+      "timestamp": "2026-10-11T11:23:40.770Z",
+      "event": "FEED_STALE",
+      "details": "Rate feed for XAGUSDT is stale. New pair creation paused."
+    },
+    {
+      "id": "LOG-1791717822777-457",
+      "timestamp": "2026-10-11T11:23:42.777Z",
+      "event": "FEED_STALE",
+      "details": "Rate feed for XAGUSDT is stale. New pair creation paused."
+    },
+    {
+      "id": "LOG-1791717824781-243",
+      "timestamp": "2026-10-11T11:23:44.781Z",
+      "event": "FEED_STALE",
+      "details": "Rate feed for XAGUSDT is stale. New pair creation paused."
+    },
+    {
+      "id": "LOG-1791717826785-307",
+      "timestamp": "2026-10-11T11:23:46.785Z",
+      "event": "FEED_STALE",
+      "details": "Rate feed for XAGUSDT is stale. New pair creation paused."
+    },
+    {
+      "id": "LOG-1791717826944-124",
+      "timestamp": "2026-10-11T11:23:46.944Z",
+      "event": "ENTRY_SKIPPED",
+      "details": "ENTRY SKIPPED — RATE ALREADY PROCESSED ($60.8)"
+    },
+    {
+      "id": "LOG-1791717836826-915",
+      "timestamp": "2026-10-11T11:23:56.826Z",
+      "event": "FEED_STALE",
+      "details": "Rate feed for XAGUSDT is stale. New pair creation paused."
+    },
+    {
+      "id": "LOG-1791717836989-639",
+      "timestamp": "2026-10-11T11:23:56.989Z",
+      "event": "ENTRY_SKIPPED",
+      "details": "ENTRY SKIPPED — RATE ALREADY PROCESSED ($60.81)"
+    },
+    {
+      "id": "LOG-1791717848868-592",
+      "timestamp": "2026-10-11T11:24:08.868Z",
+      "event": "FEED_STALE",
+      "details": "Rate feed for XAGUSDT is stale. New pair creation paused."
+    },
+    {
+      "id": "LOG-1791717850882-157",
+      "timestamp": "2026-10-11T11:24:10.882Z",
+      "event": "FEED_STALE",
+      "details": "Rate feed for XAGUSDT is stale. New pair creation paused."
+    },
+    {
+      "id": "LOG-1791717852890-553",
+      "timestamp": "2026-10-11T11:24:12.890Z",
+      "event": "FEED_STALE",
+      "details": "Rate feed for XAGUSDT is stale. New pair creation paused."
+    },
+    {
+      "id": "LOG-1791717854898-956",
+      "timestamp": "2026-10-11T11:24:14.898Z",
+      "event": "FEED_STALE",
+      "details": "Rate feed for XAGUSDT is stale. New pair creation paused."
+    },
+    {
+      "id": "LOG-1791717856901-244",
+      "timestamp": "2026-10-11T11:24:16.901Z",
+      "event": "FEED_STALE",
+      "details": "Rate feed for XAGUSDT is stale. New pair creation paused."
+    },
+    {
+      "id": "LOG-1791717858916-696",
+      "timestamp": "2026-10-11T11:24:18.916Z",
+      "event": "FEED_STALE",
+      "details": "Rate feed for XAGUSDT is stale. New pair creation paused."
+    },
+    {
+      "id": "LOG-1791717860927-651",
+      "timestamp": "2026-10-11T11:24:20.927Z",
+      "event": "FEED_STALE",
+      "details": "Rate feed for XAGUSDT is stale. New pair creation paused."
+    },
+    {
+      "id": "LOG-1791717862934-444",
+      "timestamp": "2026-10-11T11:24:22.934Z",
+      "event": "FEED_STALE",
+      "details": "Rate feed for XAGUSDT is stale. New pair creation paused."
+    },
+    {
+      "id": "LOG-1791717864942-216",
+      "timestamp": "2026-10-11T11:24:24.942Z",
+      "event": "FEED_STALE",
+      "details": "Rate feed for XAGUSDT is stale. New pair creation paused."
+    },
+    {
+      "id": "LOG-1791717866950-529",
+      "timestamp": "2026-10-11T11:24:26.950Z",
+      "event": "FEED_STALE",
+      "details": "Rate feed for XAGUSDT is stale. New pair creation paused."
+    },
+    {
+      "id": "LOG-1791717868965-815",
+      "timestamp": "2026-10-11T11:24:28.965Z",
+      "event": "FEED_STALE",
+      "details": "Rate feed for XAGUSDT is stale. New pair creation paused."
+    },
+    {
+      "id": "LOG-1791717870973-776",
+      "timestamp": "2026-10-11T11:24:30.973Z",
+      "event": "FEED_STALE",
+      "details": "Rate feed for XAGUSDT is stale. New pair creation paused."
+    },
+    {
+      "id": "LOG-1791717871135-952",
+      "timestamp": "2026-10-11T11:24:31.135Z",
+      "event": "ENTRY_SKIPPED",
+      "details": "ENTRY SKIPPED — RATE ALREADY PROCESSED ($60.8)"
+    },
+    {
+      "id": "LOG-1791717883032-494",
+      "timestamp": "2026-10-11T11:24:43.032Z",
+      "event": "FEED_STALE",
+      "details": "Rate feed for XAGUSDT is stale. New pair creation paused."
+    },
+    {
+      "id": "LOG-1791717883194-231",
+      "timestamp": "2026-10-11T11:24:43.194Z",
+      "event": "ENTRY_SKIPPED",
+      "details": "ENTRY SKIPPED — RATE ALREADY PROCESSED ($60.81)"
+    },
+    {
+      "id": "LOG-1791717903251-682",
+      "timestamp": "2026-10-11T11:25:03.251Z",
+      "event": "ENTRY_SKIPPED",
+      "details": "ENTRY SKIPPED — RATE ALREADY PROCESSED ($60.8)"
+    },
+    {
+      "id": "LOG-1791717905257-211",
+      "timestamp": "2026-10-11T11:25:05.257Z",
+      "event": "ENTRY_SKIPPED",
+      "details": "ENTRY SKIPPED — RATE ALREADY PROCESSED ($60.81)"
+    },
+    {
+      "id": "LOG-1791717907111-887",
+      "timestamp": "2026-10-11T11:25:07.111Z",
+      "event": "FEED_STALE",
+      "details": "Rate feed for XAGUSDT is stale. New pair creation paused."
+    },
+    {
+      "id": "LOG-1791717907257-765",
+      "timestamp": "2026-10-11T11:25:07.257Z",
+      "event": "ENTRY_SKIPPED",
+      "details": "ENTRY SKIPPED — RATE ALREADY PROCESSED ($60.8)"
+    },
+    {
+      "id": "LOG-1791717917155-978",
+      "timestamp": "2026-10-11T11:25:17.156Z",
+      "event": "FEED_STALE",
+      "details": "Rate feed for XAGUSDT is stale. New pair creation paused."
+    },
+    {
+      "id": "LOG-1791717919163-27",
+      "timestamp": "2026-10-11T11:25:19.163Z",
+      "event": "FEED_STALE",
+      "details": "Rate feed for XAGUSDT is stale. New pair creation paused."
+    },
+    {
+      "id": "LOG-1791717921173-566",
+      "timestamp": "2026-10-11T11:25:21.173Z",
+      "event": "FEED_STALE",
+      "details": "Rate feed for XAGUSDT is stale. New pair creation paused."
+    },
+    {
+      "id": "LOG-1791717923185-161",
+      "timestamp": "2026-10-11T11:25:23.185Z",
+      "event": "FEED_STALE",
+      "details": "Rate feed for XAGUSDT is stale. New pair creation paused."
+    },
+    {
+      "id": "LOG-1791717923329-401",
+      "timestamp": "2026-10-11T11:25:23.329Z",
+      "event": "ENTRY_SKIPPED",
+      "details": "ENTRY SKIPPED — RATE ALREADY PROCESSED ($60.81)"
+    },
+    {
+      "id": "LOG-1791717925336-883",
+      "timestamp": "2026-10-11T11:25:25.336Z",
+      "event": "ENTRY_SKIPPED",
+      "details": "ENTRY SKIPPED — RATE ALREADY PROCESSED ($60.8)"
+    },
+    {
+      "id": "LOG-1791717937383-555",
+      "timestamp": "2026-10-11T11:25:37.383Z",
+      "event": "ENTRY_SKIPPED",
+      "details": "ENTRY SKIPPED — RATE ALREADY PROCESSED ($60.81)"
+    },
+    {
+      "id": "LOG-1791717945423-641",
+      "timestamp": "2026-10-11T11:25:45.423Z",
+      "event": "ENTRY_SKIPPED",
+      "details": "ENTRY SKIPPED — RATE ALREADY PROCESSED ($60.8)"
+    },
+    {
+      "id": "LOG-1791717955474-25",
+      "timestamp": "2026-10-11T11:25:55.474Z",
+      "event": "ENTRY_SKIPPED",
+      "details": "ENTRY SKIPPED — RATE ALREADY PROCESSED ($60.81)"
+    },
+    {
+      "id": "LOG-1791717957483-672",
+      "timestamp": "2026-10-11T11:25:57.483Z",
+      "event": "ENTRY_SKIPPED",
+      "details": "ENTRY SKIPPED — RATE ALREADY PROCESSED ($60.8)"
+    },
+    {
+      "id": "LOG-1791717969542-81",
+      "timestamp": "2026-10-11T11:26:09.542Z",
+      "event": "ENTRY_SKIPPED",
+      "details": "ENTRY SKIPPED — RATE ALREADY PROCESSED ($60.81)"
+    },
+    {
+      "id": "LOG-1791717995501-33",
+      "timestamp": "2026-10-11T11:26:35.501Z",
+      "event": "FEED_STALE",
+      "details": "Rate feed for XAGUSDT is stale. New pair creation paused."
+    },
+    {
+      "id": "LOG-1791717997503-74",
+      "timestamp": "2026-10-11T11:26:37.503Z",
+      "event": "FEED_STALE",
+      "details": "Rate feed for XAGUSDT is stale. New pair creation paused."
+    },
+    {
+      "id": "LOG-1791717999513-54",
+      "timestamp": "2026-10-11T11:26:39.513Z",
+      "event": "FEED_STALE",
+      "details": "Rate feed for XAGUSDT is stale. New pair creation paused."
+    },
+    {
+      "id": "LOG-1791718001525-783",
+      "timestamp": "2026-10-11T11:26:41.525Z",
+      "event": "FEED_STALE",
+      "details": "Rate feed for XAGUSDT is stale. New pair creation paused."
+    },
+    {
+      "id": "LOG-1791718003534-47",
+      "timestamp": "2026-10-11T11:26:43.534Z",
+      "event": "FEED_STALE",
+      "details": "Rate feed for XAGUSDT is stale. New pair creation paused."
+    },
+    {
+      "id": "LOG-1791718005542-615",
+      "timestamp": "2026-10-11T11:26:45.542Z",
+      "event": "FEED_STALE",
+      "details": "Rate feed for XAGUSDT is stale. New pair creation paused."
+    },
+    {
+      "id": "LOG-1791718007546-496",
+      "timestamp": "2026-10-11T11:26:47.546Z",
+      "event": "FEED_STALE",
+      "details": "Rate feed for XAGUSDT is stale. New pair creation paused."
+    },
+    {
+      "id": "LOG-1791718009552-272",
+      "timestamp": "2026-10-11T11:26:49.552Z",
+      "event": "FEED_STALE",
+      "details": "Rate feed for XAGUSDT is stale. New pair creation paused."
+    },
+    {
+      "id": "LOG-1791718011560-782",
+      "timestamp": "2026-10-11T11:26:51.560Z",
+      "event": "FEED_STALE",
+      "details": "Rate feed for XAGUSDT is stale. New pair creation paused."
+    },
+    {
+      "id": "LOG-1791718013568-244",
+      "timestamp": "2026-10-11T11:26:53.568Z",
+      "event": "FEED_STALE",
+      "details": "Rate feed for XAGUSDT is stale. New pair creation paused."
+    },
+    {
+      "id": "LOG-1791718015568-73",
+      "timestamp": "2026-10-11T11:26:55.568Z",
+      "event": "FEED_STALE",
+      "details": "Rate feed for XAGUSDT is stale. New pair creation paused."
+    },
+    {
+      "id": "LOG-1791718017579-845",
+      "timestamp": "2026-10-11T11:26:57.579Z",
+      "event": "FEED_STALE",
+      "details": "Rate feed for XAGUSDT is stale. New pair creation paused."
+    },
+    {
+      "id": "LOG-1791718019589-436",
+      "timestamp": "2026-10-11T11:26:59.589Z",
+      "event": "FEED_STALE",
+      "details": "Rate feed for XAGUSDT is stale. New pair creation paused."
+    },
+    {
+      "id": "LOG-1791718021598-171",
+      "timestamp": "2026-10-11T11:27:01.598Z",
+      "event": "FEED_STALE",
+      "details": "Rate feed for XAGUSDT is stale. New pair creation paused."
+    },
+    {
+      "id": "LOG-1791718023607-623",
+      "timestamp": "2026-10-11T11:27:03.607Z",
+      "event": "FEED_STALE",
+      "details": "Rate feed for XAGUSDT is stale. New pair creation paused."
+    },
+    {
+      "id": "LOG-1791718035647-294",
+      "timestamp": "2026-10-11T11:27:15.647Z",
+      "event": "FEED_STALE",
+      "details": "Rate feed for XAGUSDT is stale. New pair creation paused."
+    },
+    {
+      "id": "LOG-1791718037652-947",
+      "timestamp": "2026-10-11T11:27:17.652Z",
+      "event": "FEED_STALE",
+      "details": "Rate feed for XAGUSDT is stale. New pair creation paused."
+    },
+    {
+      "id": "LOG-1791718039662-670",
+      "timestamp": "2026-10-11T11:27:19.662Z",
+      "event": "FEED_STALE",
+      "details": "Rate feed for XAGUSDT is stale. New pair creation paused."
+    },
+    {
+      "id": "LOG-1791718041666-811",
+      "timestamp": "2026-10-11T11:27:21.666Z",
+      "event": "FEED_STALE",
+      "details": "Rate feed for XAGUSDT is stale. New pair creation paused."
+    },
+    {
+      "id": "LOG-1791718043673-417",
+      "timestamp": "2026-10-11T11:27:23.673Z",
+      "event": "FEED_STALE",
+      "details": "Rate feed for XAGUSDT is stale. New pair creation paused."
+    },
+    {
+      "id": "LOG-1791718045683-540",
+      "timestamp": "2026-10-11T11:27:25.683Z",
+      "event": "FEED_STALE",
+      "details": "Rate feed for XAGUSDT is stale. New pair creation paused."
+    },
+    {
+      "id": "LOG-1791718047697-260",
+      "timestamp": "2026-10-11T11:27:27.697Z",
+      "event": "FEED_STALE",
+      "details": "Rate feed for XAGUSDT is stale. New pair creation paused."
+    },
+    {
+      "id": "LOG-1791718049703-657",
+      "timestamp": "2026-10-11T11:27:29.704Z",
+      "event": "FEED_STALE",
+      "details": "Rate feed for XAGUSDT is stale. New pair creation paused."
+    },
+    {
+      "id": "LOG-1791718051708-226",
+      "timestamp": "2026-10-11T11:27:31.708Z",
+      "event": "FEED_STALE",
+      "details": "Rate feed for XAGUSDT is stale. New pair creation paused."
+    },
+    {
+      "id": "LOG-1791718053713-36",
+      "timestamp": "2026-10-11T11:27:33.713Z",
+      "event": "FEED_STALE",
+      "details": "Rate feed for XAGUSDT is stale. New pair creation paused."
+    },
+    {
+      "id": "LOG-1791718055721-639",
+      "timestamp": "2026-10-11T11:27:35.721Z",
+      "event": "FEED_STALE",
+      "details": "Rate feed for XAGUSDT is stale. New pair creation paused."
+    },
+    {
+      "id": "LOG-1791718057730-792",
+      "timestamp": "2026-10-11T11:27:37.730Z",
+      "event": "FEED_STALE",
+      "details": "Rate feed for XAGUSDT is stale. New pair creation paused."
+    },
+    {
+      "id": "LOG-1791718059739-982",
+      "timestamp": "2026-10-11T11:27:39.739Z",
+      "event": "FEED_STALE",
+      "details": "Rate feed for XAGUSDT is stale. New pair creation paused."
+    },
+    {
+      "id": "LOG-1791718061754-468",
+      "timestamp": "2026-10-11T11:27:41.754Z",
+      "event": "FEED_STALE",
+      "details": "Rate feed for XAGUSDT is stale. New pair creation paused."
+    },
+    {
+      "id": "LOG-1791718063756-390",
+      "timestamp": "2026-10-11T11:27:43.756Z",
+      "event": "FEED_STALE",
+      "details": "Rate feed for XAGUSDT is stale. New pair creation paused."
+    },
+    {
+      "id": "LOG-1791718065759-152",
+      "timestamp": "2026-10-11T11:27:45.759Z",
+      "event": "FEED_STALE",
+      "details": "Rate feed for XAGUSDT is stale. New pair creation paused."
+    },
+    {
+      "id": "LOG-1791718067762-767",
+      "timestamp": "2026-10-11T11:27:47.762Z",
+      "event": "FEED_STALE",
+      "details": "Rate feed for XAGUSDT is stale. New pair creation paused."
+    },
+    {
+      "id": "LOG-1791718069766-281",
+      "timestamp": "2026-10-11T11:27:49.766Z",
+      "event": "FEED_STALE",
+      "details": "Rate feed for XAGUSDT is stale. New pair creation paused."
+    },
+    {
+      "id": "LOG-1791718071766-21",
+      "timestamp": "2026-10-11T11:27:51.766Z",
+      "event": "FEED_STALE",
+      "details": "Rate feed for XAGUSDT is stale. New pair creation paused."
+    },
+    {
+      "id": "LOG-1791718073778-731",
+      "timestamp": "2026-10-11T11:27:53.778Z",
+      "event": "FEED_STALE",
+      "details": "Rate feed for XAGUSDT is stale. New pair creation paused."
+    },
+    {
+      "id": "LOG-1791718075790-853",
+      "timestamp": "2026-10-11T11:27:55.790Z",
+      "event": "FEED_STALE",
+      "details": "Rate feed for XAGUSDT is stale. New pair creation paused."
+    },
+    {
+      "id": "LOG-1791718077792-707",
+      "timestamp": "2026-10-11T11:27:57.792Z",
+      "event": "FEED_STALE",
+      "details": "Rate feed for XAGUSDT is stale. New pair creation paused."
+    },
+    {
+      "id": "LOG-1791718079793-288",
+      "timestamp": "2026-10-11T11:27:59.793Z",
+      "event": "FEED_STALE",
+      "details": "Rate feed for XAGUSDT is stale. New pair creation paused."
+    },
+    {
+      "id": "LOG-1791718079951-352",
+      "timestamp": "2026-10-11T11:27:59.951Z",
+      "event": "PAIR_CREATED",
+      "details": {
+        "reason": "NEW_UNIQUE_RATE",
+        "pairId": "PAIR-0012",
+        "symbol": "XAGUSDT",
+        "entryPrice": 60.82,
+        "previousProcessedRate": 60.81,
+        "buyTarget": 60.87,
+        "sellTarget": 60.77
+      }
+    },
+    {
+      "id": "LOG-1791718081962-192",
+      "timestamp": "2026-10-11T11:28:01.963Z",
+      "event": "ENTRY_SKIPPED",
+      "details": "ENTRY SKIPPED — RATE ALREADY PROCESSED ($60.82)"
+    },
+    {
+      "id": "LOG-1791718103891-532",
+      "timestamp": "2026-10-11T11:28:23.891Z",
+      "event": "FEED_STALE",
+      "details": "Rate feed for XAGUSDT is stale. New pair creation paused."
+    },
+    {
+      "id": "LOG-1791718105894-622",
+      "timestamp": "2026-10-11T11:28:25.894Z",
+      "event": "FEED_STALE",
+      "details": "Rate feed for XAGUSDT is stale. New pair creation paused."
+    },
+    {
+      "id": "LOG-1791718107895-136",
+      "timestamp": "2026-10-11T11:28:27.895Z",
+      "event": "FEED_STALE",
+      "details": "Rate feed for XAGUSDT is stale. New pair creation paused."
+    },
+    {
+      "id": "LOG-1791718109908-657",
+      "timestamp": "2026-10-11T11:28:29.908Z",
+      "event": "FEED_STALE",
+      "details": "Rate feed for XAGUSDT is stale. New pair creation paused."
+    },
+    {
+      "id": "LOG-1791718111910-582",
+      "timestamp": "2026-10-11T11:28:31.910Z",
+      "event": "FEED_STALE",
+      "details": "Rate feed for XAGUSDT is stale. New pair creation paused."
+    },
+    {
+      "id": "LOG-1791718113919-636",
+      "timestamp": "2026-10-11T11:28:33.919Z",
+      "event": "FEED_STALE",
+      "details": "Rate feed for XAGUSDT is stale. New pair creation paused."
+    },
+    {
+      "id": "LOG-1791718115933-149",
+      "timestamp": "2026-10-11T11:28:35.933Z",
+      "event": "FEED_STALE",
+      "details": "Rate feed for XAGUSDT is stale. New pair creation paused."
+    },
+    {
+      "id": "LOG-1791718117938-393",
+      "timestamp": "2026-10-11T11:28:37.938Z",
+      "event": "FEED_STALE",
+      "details": "Rate feed for XAGUSDT is stale. New pair creation paused."
+    },
+    {
+      "id": "LOG-1791718118100-381",
+      "timestamp": "2026-10-11T11:28:38.100Z",
+      "event": "ENTRY_SKIPPED",
+      "details": "ENTRY SKIPPED — RATE ALREADY PROCESSED ($60.81)"
+    },
+    {
+      "id": "LOG-1791718131982-902",
+      "timestamp": "2026-10-11T11:28:51.982Z",
+      "event": "FEED_STALE",
+      "details": "Rate feed for XAGUSDT is stale. New pair creation paused."
+    },
+    {
+      "id": "LOG-1791718133992-898",
+      "timestamp": "2026-10-11T11:28:53.992Z",
+      "event": "FEED_STALE",
+      "details": "Rate feed for XAGUSDT is stale. New pair creation paused."
+    },
+    {
+      "id": "LOG-1791718135996-727",
+      "timestamp": "2026-10-11T11:28:55.996Z",
+      "event": "FEED_STALE",
+      "details": "Rate feed for XAGUSDT is stale. New pair creation paused."
+    },
+    {
+      "id": "LOG-1791718138005-779",
+      "timestamp": "2026-10-11T11:28:58.005Z",
+      "event": "FEED_STALE",
+      "details": "Rate feed for XAGUSDT is stale. New pair creation paused."
+    },
+    {
+      "id": "LOG-1791718140008-755",
+      "timestamp": "2026-10-11T11:29:00.008Z",
+      "event": "FEED_STALE",
+      "details": "Rate feed for XAGUSDT is stale. New pair creation paused."
+    },
+    {
+      "id": "LOG-1791718142016-989",
+      "timestamp": "2026-10-11T11:29:02.016Z",
+      "event": "FEED_STALE",
+      "details": "Rate feed for XAGUSDT is stale. New pair creation paused."
+    },
+    {
+      "id": "LOG-1791718144018-422",
+      "timestamp": "2026-10-11T11:29:04.018Z",
+      "event": "FEED_STALE",
+      "details": "Rate feed for XAGUSDT is stale. New pair creation paused."
+    },
+    {
+      "id": "LOG-1791718146026-65",
+      "timestamp": "2026-10-11T11:29:06.026Z",
+      "event": "FEED_STALE",
+      "details": "Rate feed for XAGUSDT is stale. New pair creation paused."
+    },
+    {
+      "id": "LOG-1791718152198-429",
+      "timestamp": "2026-10-11T11:29:12.198Z",
+      "event": "ENTRY_SKIPPED",
+      "details": "ENTRY SKIPPED — RATE ALREADY PROCESSED ($60.82)"
+    },
+    {
+      "id": "LOG-1791718154210-621",
+      "timestamp": "2026-10-11T11:29:14.210Z",
+      "event": "ENTRY_SKIPPED",
+      "details": "ENTRY SKIPPED — RATE ALREADY PROCESSED ($60.81)"
+    },
+    {
+      "id": "LOG-1791718156215-265",
+      "timestamp": "2026-10-11T11:29:16.215Z",
+      "event": "ENTRY_SKIPPED",
+      "details": "ENTRY SKIPPED — RATE ALREADY PROCESSED ($60.82)"
+    },
+    {
+      "id": "LOG-1791718176301-682",
+      "timestamp": "2026-10-11T11:29:36.301Z",
+      "event": "ENTRY_SKIPPED",
+      "details": "ENTRY SKIPPED — RATE ALREADY PROCESSED ($60.81)"
+    },
+    {
+      "id": "LOG-1791718178306-78",
+      "timestamp": "2026-10-11T11:29:38.306Z",
+      "event": "ENTRY_SKIPPED",
+      "details": "ENTRY SKIPPED — RATE ALREADY PROCESSED ($60.82)"
+    },
+    {
+      "id": "LOG-1791718180153-705",
+      "timestamp": "2026-10-11T11:29:40.153Z",
+      "event": "FEED_STALE",
+      "details": "Rate feed for XAGUSDT is stale. New pair creation paused."
+    },
+    {
+      "id": "LOG-1791718180314-954",
+      "timestamp": "2026-10-11T11:29:40.314Z",
+      "event": "ENTRY_SKIPPED",
+      "details": "ENTRY SKIPPED — RATE ALREADY PROCESSED ($60.81)"
+    },
+    {
+      "id": "LOG-1791718190200-269",
+      "timestamp": "2026-10-11T11:29:50.200Z",
+      "event": "FEED_STALE",
+      "details": "Rate feed for XAGUSDT is stale. New pair creation paused."
+    },
+    {
+      "id": "LOG-1791718192203-531",
+      "timestamp": "2026-10-11T11:29:52.203Z",
+      "event": "FEED_STALE",
+      "details": "Rate feed for XAGUSDT is stale. New pair creation paused."
+    },
+    {
+      "id": "LOG-1791718194211-106",
+      "timestamp": "2026-10-11T11:29:54.211Z",
+      "event": "FEED_STALE",
+      "details": "Rate feed for XAGUSDT is stale. New pair creation paused."
+    },
+    {
+      "id": "LOG-1791718196221-829",
+      "timestamp": "2026-10-11T11:29:56.221Z",
+      "event": "FEED_STALE",
+      "details": "Rate feed for XAGUSDT is stale. New pair creation paused."
+    },
+    {
+      "id": "LOG-1791718198233-35",
+      "timestamp": "2026-10-11T11:29:58.233Z",
+      "event": "FEED_STALE",
+      "details": "Rate feed for XAGUSDT is stale. New pair creation paused."
+    },
+    {
+      "id": "LOG-1791718200249-872",
+      "timestamp": "2026-10-11T11:30:00.249Z",
+      "event": "FEED_STALE",
+      "details": "Rate feed for XAGUSDT is stale. New pair creation paused."
+    },
+    {
+      "id": "LOG-1791718202263-657",
+      "timestamp": "2026-10-11T11:30:02.263Z",
+      "event": "FEED_STALE",
+      "details": "Rate feed for XAGUSDT is stale. New pair creation paused."
+    },
+    {
+      "id": "LOG-1791718210450-583",
+      "timestamp": "2026-10-11T11:30:10.450Z",
+      "event": "ENTRY_SKIPPED",
+      "details": "ENTRY SKIPPED — RATE ALREADY PROCESSED ($60.82)"
+    },
+    {
+      "id": "LOG-1791718224347-442",
+      "timestamp": "2026-10-11T11:30:24.347Z",
+      "event": "FEED_STALE",
+      "details": "Rate feed for XAGUSDT is stale. New pair creation paused."
+    },
+    {
+      "id": "LOG-1791718226357-922",
+      "timestamp": "2026-10-11T11:30:26.357Z",
+      "event": "FEED_STALE",
+      "details": "Rate feed for XAGUSDT is stale. New pair creation paused."
+    },
+    {
+      "id": "LOG-1791718228371-512",
+      "timestamp": "2026-10-11T11:30:28.371Z",
+      "event": "FEED_STALE",
+      "details": "Rate feed for XAGUSDT is stale. New pair creation paused."
+    },
+    {
+      "id": "LOG-1791718230385-766",
+      "timestamp": "2026-10-11T11:30:30.385Z",
+      "event": "FEED_STALE",
+      "details": "Rate feed for XAGUSDT is stale. New pair creation paused."
+    },
+    {
+      "id": "LOG-1791718232397-388",
+      "timestamp": "2026-10-11T11:30:32.397Z",
+      "event": "FEED_STALE",
+      "details": "Rate feed for XAGUSDT is stale. New pair creation paused."
+    },
+    {
+      "id": "LOG-1791718234407-779",
+      "timestamp": "2026-10-11T11:30:34.407Z",
+      "event": "FEED_STALE",
+      "details": "Rate feed for XAGUSDT is stale. New pair creation paused."
+    },
+    {
+      "id": "LOG-1791718236419-474",
+      "timestamp": "2026-10-11T11:30:36.419Z",
+      "event": "FEED_STALE",
+      "details": "Rate feed for XAGUSDT is stale. New pair creation paused."
+    },
+    {
+      "id": "LOG-1791718238431-634",
+      "timestamp": "2026-10-11T11:30:38.431Z",
+      "event": "FEED_STALE",
+      "details": "Rate feed for XAGUSDT is stale. New pair creation paused."
+    },
+    {
+      "id": "LOG-1791718240446-330",
+      "timestamp": "2026-10-11T11:30:40.446Z",
+      "event": "FEED_STALE",
+      "details": "Rate feed for XAGUSDT is stale. New pair creation paused."
+    },
+    {
+      "id": "LOG-1791718242453-340",
+      "timestamp": "2026-10-11T11:30:42.453Z",
+      "event": "FEED_STALE",
+      "details": "Rate feed for XAGUSDT is stale. New pair creation paused."
+    },
+    {
+      "id": "LOG-1791718256526-757",
+      "timestamp": "2026-10-11T11:30:56.526Z",
+      "event": "FEED_STALE",
+      "details": "Rate feed for XAGUSDT is stale. New pair creation paused."
+    },
+    {
+      "id": "LOG-1791718258534-978",
+      "timestamp": "2026-10-11T11:30:58.534Z",
+      "event": "FEED_STALE",
+      "details": "Rate feed for XAGUSDT is stale. New pair creation paused."
+    },
+    {
+      "id": "LOG-1791718260538-283",
+      "timestamp": "2026-10-11T11:31:00.538Z",
+      "event": "FEED_STALE",
+      "details": "Rate feed for XAGUSDT is stale. New pair creation paused."
+    },
+    {
+      "id": "LOG-1791718262552-72",
+      "timestamp": "2026-10-11T11:31:02.552Z",
+      "event": "FEED_STALE",
+      "details": "Rate feed for XAGUSDT is stale. New pair creation paused."
+    },
+    {
+      "id": "LOG-1791718264564-443",
+      "timestamp": "2026-10-11T11:31:04.564Z",
+      "event": "FEED_STALE",
+      "details": "Rate feed for XAGUSDT is stale. New pair creation paused."
+    },
+    {
+      "id": "LOG-1791718266573-600",
+      "timestamp": "2026-10-11T11:31:06.573Z",
+      "event": "FEED_STALE",
+      "details": "Rate feed for XAGUSDT is stale. New pair creation paused."
+    },
+    {
+      "id": "LOG-1791718266733-299",
+      "timestamp": "2026-10-11T11:31:06.733Z",
+      "event": "ENTRY_SKIPPED",
+      "details": "ENTRY SKIPPED — RATE ALREADY PROCESSED ($60.81)"
+    },
+    {
+      "id": "LOG-1791718276612-651",
+      "timestamp": "2026-10-11T11:31:16.612Z",
+      "event": "FEED_STALE",
+      "details": "Rate feed for XAGUSDT is stale. New pair creation paused."
+    },
+    {
+      "id": "LOG-1791718278617-75",
+      "timestamp": "2026-10-11T11:31:18.617Z",
+      "event": "FEED_STALE",
+      "details": "Rate feed for XAGUSDT is stale. New pair creation paused."
+    },
+    {
+      "id": "LOG-1791718280618-260",
+      "timestamp": "2026-10-11T11:31:20.618Z",
+      "event": "FEED_STALE",
+      "details": "Rate feed for XAGUSDT is stale. New pair creation paused."
+    },
+    {
+      "id": "LOG-1791718282627-38",
+      "timestamp": "2026-10-11T11:31:22.627Z",
+      "event": "FEED_STALE",
+      "details": "Rate feed for XAGUSDT is stale. New pair creation paused."
+    },
+    {
+      "id": "LOG-1791718284627-234",
+      "timestamp": "2026-10-11T11:31:24.627Z",
+      "event": "FEED_STALE",
+      "details": "Rate feed for XAGUSDT is stale. New pair creation paused."
+    },
+    {
+      "id": "LOG-1791718286632-415",
+      "timestamp": "2026-10-11T11:31:26.632Z",
+      "event": "FEED_STALE",
+      "details": "Rate feed for XAGUSDT is stale. New pair creation paused."
+    },
+    {
+      "id": "LOG-1791718288645-426",
+      "timestamp": "2026-10-11T11:31:28.645Z",
+      "event": "FEED_STALE",
+      "details": "Rate feed for XAGUSDT is stale. New pair creation paused."
+    },
+    {
+      "id": "LOG-1791718290651-743",
+      "timestamp": "2026-10-11T11:31:30.651Z",
+      "event": "FEED_STALE",
+      "details": "Rate feed for XAGUSDT is stale. New pair creation paused."
+    },
+    {
+      "id": "LOG-1791718292658-841",
+      "timestamp": "2026-10-11T11:31:32.658Z",
+      "event": "FEED_STALE",
+      "details": "Rate feed for XAGUSDT is stale. New pair creation paused."
+    },
+    {
+      "id": "LOG-1791718294665-859",
+      "timestamp": "2026-10-11T11:31:34.665Z",
+      "event": "FEED_STALE",
+      "details": "Rate feed for XAGUSDT is stale. New pair creation paused."
+    },
+    {
+      "id": "LOG-1791718294826-475",
+      "timestamp": "2026-10-11T11:31:34.826Z",
+      "event": "ENTRY_SKIPPED",
+      "details": "ENTRY SKIPPED — RATE ALREADY PROCESSED ($60.82)"
+    },
+    {
+      "id": "LOG-1791718310742-412",
+      "timestamp": "2026-10-11T11:31:50.742Z",
+      "event": "FEED_STALE",
+      "details": "Rate feed for XAGUSDT is stale. New pair creation paused."
+    },
+    {
+      "id": "LOG-1791718312752-797",
+      "timestamp": "2026-10-11T11:31:52.752Z",
+      "event": "FEED_STALE",
+      "details": "Rate feed for XAGUSDT is stale. New pair creation paused."
+    },
+    {
+      "id": "LOG-1791718314754-584",
+      "timestamp": "2026-10-11T11:31:54.754Z",
+      "event": "FEED_STALE",
+      "details": "Rate feed for XAGUSDT is stale. New pair creation paused."
+    },
+    {
+      "id": "LOG-1791718316763-707",
+      "timestamp": "2026-10-11T11:31:56.763Z",
+      "event": "FEED_STALE",
+      "details": "Rate feed for XAGUSDT is stale. New pair creation paused."
+    },
+    {
+      "id": "LOG-1791718318775-202",
+      "timestamp": "2026-10-11T11:31:58.775Z",
+      "event": "FEED_STALE",
+      "details": "Rate feed for XAGUSDT is stale. New pair creation paused."
+    },
+    {
+      "id": "LOG-1791718320776-676",
+      "timestamp": "2026-10-11T11:32:00.776Z",
+      "event": "FEED_STALE",
+      "details": "Rate feed for XAGUSDT is stale. New pair creation paused."
+    },
+    {
+      "id": "LOG-1791718322786-661",
+      "timestamp": "2026-10-11T11:32:02.786Z",
+      "event": "FEED_STALE",
+      "details": "Rate feed for XAGUSDT is stale. New pair creation paused."
+    },
+    {
+      "id": "LOG-1791718324801-216",
+      "timestamp": "2026-10-11T11:32:04.801Z",
+      "event": "FEED_STALE",
+      "details": "Rate feed for XAGUSDT is stale. New pair creation paused."
+    },
+    {
+      "id": "LOG-1791718326808-765",
+      "timestamp": "2026-10-11T11:32:06.808Z",
+      "event": "FEED_STALE",
+      "details": "Rate feed for XAGUSDT is stale. New pair creation paused."
+    },
+    {
+      "id": "LOG-1791718328819-843",
+      "timestamp": "2026-10-11T11:32:08.819Z",
+      "event": "FEED_STALE",
+      "details": "Rate feed for XAGUSDT is stale. New pair creation paused."
+    },
+    {
+      "id": "LOG-1791718330823-323",
+      "timestamp": "2026-10-11T11:32:10.823Z",
+      "event": "FEED_STALE",
+      "details": "Rate feed for XAGUSDT is stale. New pair creation paused."
+    },
+    {
+      "id": "LOG-1791718332836-876",
+      "timestamp": "2026-10-11T11:32:12.836Z",
+      "event": "FEED_STALE",
+      "details": "Rate feed for XAGUSDT is stale. New pair creation paused."
+    },
+    {
+      "id": "LOG-1791718334841-750",
+      "timestamp": "2026-10-11T11:32:14.841Z",
+      "event": "FEED_STALE",
+      "details": "Rate feed for XAGUSDT is stale. New pair creation paused."
+    },
+    {
+      "id": "LOG-1791718336851-437",
+      "timestamp": "2026-10-11T11:32:16.851Z",
+      "event": "FEED_STALE",
+      "details": "Rate feed for XAGUSDT is stale. New pair creation paused."
+    },
+    {
+      "id": "LOG-1791718337012-448",
+      "timestamp": "2026-10-11T11:32:17.012Z",
+      "event": "ENTRY_SKIPPED",
+      "details": "ENTRY SKIPPED — RATE ALREADY PROCESSED ($60.81)"
+    },
+    {
+      "id": "LOG-1791718352914-226",
+      "timestamp": "2026-10-11T11:32:32.914Z",
+      "event": "FEED_STALE",
+      "details": "Rate feed for XAGUSDT is stale. New pair creation paused."
+    },
+    {
+      "id": "LOG-1791718354915-22",
+      "timestamp": "2026-10-11T11:32:34.915Z",
+      "event": "FEED_STALE",
+      "details": "Rate feed for XAGUSDT is stale. New pair creation paused."
+    },
+    {
+      "id": "LOG-1791718356925-787",
+      "timestamp": "2026-10-11T11:32:36.925Z",
+      "event": "FEED_STALE",
+      "details": "Rate feed for XAGUSDT is stale. New pair creation paused."
+    },
+    {
+      "id": "LOG-1791718358935-506",
+      "timestamp": "2026-10-11T11:32:38.935Z",
+      "event": "FEED_STALE",
+      "details": "Rate feed for XAGUSDT is stale. New pair creation paused."
+    },
+    {
+      "id": "LOG-1791718360937-914",
+      "timestamp": "2026-10-11T11:32:40.937Z",
+      "event": "FEED_STALE",
+      "details": "Rate feed for XAGUSDT is stale. New pair creation paused."
+    },
+    {
+      "id": "LOG-1791718362947-837",
+      "timestamp": "2026-10-11T11:32:42.947Z",
+      "event": "FEED_STALE",
+      "details": "Rate feed for XAGUSDT is stale. New pair creation paused."
+    },
+    {
+      "id": "LOG-1791718364956-835",
+      "timestamp": "2026-10-11T11:32:44.956Z",
+      "event": "FEED_STALE",
+      "details": "Rate feed for XAGUSDT is stale. New pair creation paused."
+    },
+    {
+      "id": "LOG-1791718366970-801",
+      "timestamp": "2026-10-11T11:32:46.970Z",
+      "event": "FEED_STALE",
+      "details": "Rate feed for XAGUSDT is stale. New pair creation paused."
+    },
+    {
+      "id": "LOG-1791718368978-581",
+      "timestamp": "2026-10-11T11:32:48.978Z",
+      "event": "FEED_STALE",
+      "details": "Rate feed for XAGUSDT is stale. New pair creation paused."
+    },
+    {
+      "id": "LOG-1791718370988-774",
+      "timestamp": "2026-10-11T11:32:50.988Z",
+      "event": "FEED_STALE",
+      "details": "Rate feed for XAGUSDT is stale. New pair creation paused."
+    },
+    {
+      "id": "LOG-1791718372989-384",
+      "timestamp": "2026-10-11T11:32:52.989Z",
+      "event": "FEED_STALE",
+      "details": "Rate feed for XAGUSDT is stale. New pair creation paused."
+    },
+    {
+      "id": "LOG-1791718375000-846",
+      "timestamp": "2026-10-11T11:32:55.000Z",
+      "event": "FEED_STALE",
+      "details": "Rate feed for XAGUSDT is stale. New pair creation paused."
+    },
+    {
+      "id": "LOG-1791718377009-483",
+      "timestamp": "2026-10-11T11:32:57.009Z",
+      "event": "FEED_STALE",
+      "details": "Rate feed for XAGUSDT is stale. New pair creation paused."
+    },
+    {
+      "id": "LOG-1791718379010-779",
+      "timestamp": "2026-10-11T11:32:59.010Z",
+      "event": "FEED_STALE",
+      "details": "Rate feed for XAGUSDT is stale. New pair creation paused."
+    },
+    {
+      "id": "LOG-1791718381015-738",
+      "timestamp": "2026-10-11T11:33:01.015Z",
+      "event": "FEED_STALE",
+      "details": "Rate feed for XAGUSDT is stale. New pair creation paused."
+    },
+    {
+      "id": "LOG-1791718383025-18",
+      "timestamp": "2026-10-11T11:33:03.025Z",
+      "event": "FEED_STALE",
+      "details": "Rate feed for XAGUSDT is stale. New pair creation paused."
+    },
+    {
+      "id": "LOG-1791718385029-643",
+      "timestamp": "2026-10-11T11:33:05.029Z",
+      "event": "FEED_STALE",
+      "details": "Rate feed for XAGUSDT is stale. New pair creation paused."
+    },
+    {
+      "id": "LOG-1791718387036-104",
+      "timestamp": "2026-10-11T11:33:07.036Z",
+      "event": "FEED_STALE",
+      "details": "Rate feed for XAGUSDT is stale. New pair creation paused."
+    },
+    {
+      "id": "LOG-1791718389043-949",
+      "timestamp": "2026-10-11T11:33:09.043Z",
+      "event": "FEED_STALE",
+      "details": "Rate feed for XAGUSDT is stale. New pair creation paused."
+    },
+    {
+      "id": "LOG-1791718391056-89",
+      "timestamp": "2026-10-11T11:33:11.056Z",
+      "event": "FEED_STALE",
+      "details": "Rate feed for XAGUSDT is stale. New pair creation paused."
+    },
+    {
+      "id": "LOG-1791718393071-521",
+      "timestamp": "2026-10-11T11:33:13.071Z",
+      "event": "FEED_STALE",
+      "details": "Rate feed for XAGUSDT is stale. New pair creation paused."
+    },
+    {
+      "id": "LOG-1791718395076-21",
+      "timestamp": "2026-10-11T11:33:15.076Z",
+      "event": "FEED_STALE",
+      "details": "Rate feed for XAGUSDT is stale. New pair creation paused."
+    },
+    {
+      "id": "LOG-1791718397081-388",
+      "timestamp": "2026-10-11T11:33:17.081Z",
+      "event": "FEED_STALE",
+      "details": "Rate feed for XAGUSDT is stale. New pair creation paused."
+    },
+    {
+      "id": "LOG-1791718399092-676",
+      "timestamp": "2026-10-11T11:33:19.092Z",
+      "event": "FEED_STALE",
+      "details": "Rate feed for XAGUSDT is stale. New pair creation paused."
+    },
+    {
+      "id": "LOG-1791718401096-525",
+      "timestamp": "2026-10-11T11:33:21.096Z",
+      "event": "FEED_STALE",
+      "details": "Rate feed for XAGUSDT is stale. New pair creation paused."
+    },
+    {
+      "id": "LOG-1791718401253-694",
+      "timestamp": "2026-10-11T11:33:21.253Z",
+      "event": "ENTRY_SKIPPED",
+      "details": "ENTRY SKIPPED — RATE ALREADY PROCESSED ($60.82)"
+    },
+    {
+      "id": "LOG-1791718415149-256",
+      "timestamp": "2026-10-11T11:33:35.149Z",
+      "event": "FEED_STALE",
+      "details": "Rate feed for XAGUSDT is stale. New pair creation paused."
+    },
+    {
+      "id": "LOG-1791718417156-908",
+      "timestamp": "2026-10-11T11:33:37.156Z",
+      "event": "FEED_STALE",
+      "details": "Rate feed for XAGUSDT is stale. New pair creation paused."
+    },
+    {
+      "id": "LOG-1791718419160-355",
+      "timestamp": "2026-10-11T11:33:39.160Z",
+      "event": "FEED_STALE",
+      "details": "Rate feed for XAGUSDT is stale. New pair creation paused."
+    },
+    {
+      "id": "LOG-1791718421169-949",
+      "timestamp": "2026-10-11T11:33:41.169Z",
+      "event": "FEED_STALE",
+      "details": "Rate feed for XAGUSDT is stale. New pair creation paused."
+    },
+    {
+      "id": "LOG-1791718423177-728",
+      "timestamp": "2026-10-11T11:33:43.177Z",
+      "event": "FEED_STALE",
+      "details": "Rate feed for XAGUSDT is stale. New pair creation paused."
+    },
+    {
+      "id": "LOG-1791718425189-863",
+      "timestamp": "2026-10-11T11:33:45.189Z",
+      "event": "FEED_STALE",
+      "details": "Rate feed for XAGUSDT is stale. New pair creation paused."
+    },
+    {
+      "id": "LOG-1791718427203-197",
+      "timestamp": "2026-10-11T11:33:47.203Z",
+      "event": "FEED_STALE",
+      "details": "Rate feed for XAGUSDT is stale. New pair creation paused."
+    },
+    {
+      "id": "LOG-1791718429215-834",
+      "timestamp": "2026-10-11T11:33:49.215Z",
+      "event": "FEED_STALE",
+      "details": "Rate feed for XAGUSDT is stale. New pair creation paused."
+    },
+    {
+      "id": "LOG-1791718431226-988",
+      "timestamp": "2026-10-11T11:33:51.226Z",
+      "event": "FEED_STALE",
+      "details": "Rate feed for XAGUSDT is stale. New pair creation paused."
+    },
+    {
+      "id": "LOG-1791718433229-765",
+      "timestamp": "2026-10-11T11:33:53.229Z",
+      "event": "FEED_STALE",
+      "details": "Rate feed for XAGUSDT is stale. New pair creation paused."
+    },
+    {
+      "id": "LOG-1791718435239-794",
+      "timestamp": "2026-10-11T11:33:55.239Z",
+      "event": "FEED_STALE",
+      "details": "Rate feed for XAGUSDT is stale. New pair creation paused."
+    },
+    {
+      "id": "LOG-1791718437252-774",
+      "timestamp": "2026-10-11T11:33:57.252Z",
+      "event": "FEED_STALE",
+      "details": "Rate feed for XAGUSDT is stale. New pair creation paused."
+    },
+    {
+      "id": "LOG-1791718439252-815",
+      "timestamp": "2026-10-11T11:33:59.252Z",
+      "event": "FEED_STALE",
+      "details": "Rate feed for XAGUSDT is stale. New pair creation paused."
+    },
+    {
+      "id": "LOG-1791718441260-630",
+      "timestamp": "2026-10-11T11:34:01.260Z",
+      "event": "FEED_STALE",
+      "details": "Rate feed for XAGUSDT is stale. New pair creation paused."
+    },
+    {
+      "id": "LOG-1791718443268-372",
+      "timestamp": "2026-10-11T11:34:03.268Z",
+      "event": "FEED_STALE",
+      "details": "Rate feed for XAGUSDT is stale. New pair creation paused."
+    },
+    {
+      "id": "LOG-1791718445269-243",
+      "timestamp": "2026-10-11T11:34:05.269Z",
+      "event": "FEED_STALE",
+      "details": "Rate feed for XAGUSDT is stale. New pair creation paused."
+    },
+    {
+      "id": "LOG-1791718447277-628",
+      "timestamp": "2026-10-11T11:34:07.277Z",
+      "event": "FEED_STALE",
+      "details": "Rate feed for XAGUSDT is stale. New pair creation paused."
+    },
+    {
+      "id": "LOG-1791718447503-801",
+      "timestamp": "2026-10-11T11:34:07.503Z",
+      "event": "ENTRY_SKIPPED",
+      "details": "ENTRY SKIPPED — RATE ALREADY PROCESSED ($60.81)"
+    },
+    {
+      "id": "LOG-1791718457334-943",
+      "timestamp": "2026-10-11T11:34:17.334Z",
+      "event": "FEED_STALE",
+      "details": "Rate feed for XAGUSDT is stale. New pair creation paused."
+    },
+    {
+      "id": "LOG-1791718459343-824",
+      "timestamp": "2026-10-11T11:34:19.343Z",
+      "event": "FEED_STALE",
+      "details": "Rate feed for XAGUSDT is stale. New pair creation paused."
+    },
+    {
+      "id": "LOG-1791718461351-935",
+      "timestamp": "2026-10-11T11:34:21.351Z",
+      "event": "FEED_STALE",
+      "details": "Rate feed for XAGUSDT is stale. New pair creation paused."
+    },
+    {
+      "id": "LOG-1791718463361-742",
+      "timestamp": "2026-10-11T11:34:23.361Z",
+      "event": "FEED_STALE",
+      "details": "Rate feed for XAGUSDT is stale. New pair creation paused."
+    },
+    {
+      "id": "LOG-1791718465367-201",
+      "timestamp": "2026-10-11T11:34:25.367Z",
+      "event": "FEED_STALE",
+      "details": "Rate feed for XAGUSDT is stale. New pair creation paused."
+    },
+    {
+      "id": "LOG-1791718467373-13",
+      "timestamp": "2026-10-11T11:34:27.373Z",
+      "event": "FEED_STALE",
+      "details": "Rate feed for XAGUSDT is stale. New pair creation paused."
+    },
+    {
+      "id": "LOG-1791718469381-155",
+      "timestamp": "2026-10-11T11:34:29.381Z",
+      "event": "FEED_STALE",
+      "details": "Rate feed for XAGUSDT is stale. New pair creation paused."
+    },
+    {
+      "id": "LOG-1791718471386-863",
+      "timestamp": "2026-10-11T11:34:31.386Z",
+      "event": "FEED_STALE",
+      "details": "Rate feed for XAGUSDT is stale. New pair creation paused."
+    },
+    {
+      "id": "LOG-1791718473390-878",
+      "timestamp": "2026-10-11T11:34:33.390Z",
+      "event": "FEED_STALE",
+      "details": "Rate feed for XAGUSDT is stale. New pair creation paused."
+    },
+    {
+      "id": "LOG-1791718475397-327",
+      "timestamp": "2026-10-11T11:34:35.397Z",
+      "event": "FEED_STALE",
+      "details": "Rate feed for XAGUSDT is stale. New pair creation paused."
+    },
+    {
+      "id": "LOG-1791718475557-297",
+      "timestamp": "2026-10-11T11:34:35.557Z",
+      "event": "ENTRY_SKIPPED",
+      "details": "ENTRY SKIPPED — RATE ALREADY PROCESSED ($60.82)"
+    },
+    {
+      "id": "LOG-1791718477568-925",
+      "timestamp": "2026-10-11T11:34:37.568Z",
+      "event": "ENTRY_SKIPPED",
+      "details": "ENTRY SKIPPED — RATE ALREADY PROCESSED ($60.81)"
+    },
+    {
+      "id": "LOG-1791718479409-227",
+      "timestamp": "2026-10-11T11:34:39.409Z",
+      "event": "FEED_STALE",
+      "details": "Rate feed for XAGUSDT is stale. New pair creation paused."
+    },
+    {
+      "id": "LOG-1791718479570-763",
+      "timestamp": "2026-10-11T11:34:39.570Z",
+      "event": "ENTRY_SKIPPED",
+      "details": "ENTRY SKIPPED — RATE ALREADY PROCESSED ($60.82)"
+    },
+    {
+      "id": "LOG-1791718485586-332",
+      "timestamp": "2026-10-11T11:34:45.586Z",
+      "event": "ENTRY_SKIPPED",
+      "details": "ENTRY SKIPPED — RATE ALREADY PROCESSED ($60.81)"
+    },
+    {
+      "id": "LOG-1791718491600-819",
+      "timestamp": "2026-10-11T11:34:51.600Z",
+      "event": "ENTRY_SKIPPED",
+      "details": "ENTRY SKIPPED — RATE ALREADY PROCESSED ($60.82)"
+    },
+    {
+      "id": "LOG-1791718503461-853",
+      "timestamp": "2026-10-11T11:35:03.461Z",
+      "event": "FEED_STALE",
+      "details": "Rate feed for XAGUSDT is stale. New pair creation paused."
+    },
+    {
+      "id": "LOG-1791718515517-410",
+      "timestamp": "2026-10-11T11:35:15.517Z",
+      "event": "FEED_STALE",
+      "details": "Rate feed for XAGUSDT is stale. New pair creation paused."
+    },
+    {
+      "id": "LOG-1791718517524-13",
+      "timestamp": "2026-10-11T11:35:17.524Z",
+      "event": "FEED_STALE",
+      "details": "Rate feed for XAGUSDT is stale. New pair creation paused."
+    },
+    {
+      "id": "LOG-1791718519528-480",
+      "timestamp": "2026-10-11T11:35:19.528Z",
+      "event": "FEED_STALE",
+      "details": "Rate feed for XAGUSDT is stale. New pair creation paused."
+    },
+    {
+      "id": "LOG-1791718521532-683",
+      "timestamp": "2026-10-11T11:35:21.532Z",
+      "event": "FEED_STALE",
+      "details": "Rate feed for XAGUSDT is stale. New pair creation paused."
+    },
+    {
+      "id": "LOG-1791718523546-387",
+      "timestamp": "2026-10-11T11:35:23.546Z",
+      "event": "FEED_STALE",
+      "details": "Rate feed for XAGUSDT is stale. New pair creation paused."
+    },
+    {
+      "id": "LOG-1791718525551-843",
+      "timestamp": "2026-10-11T11:35:25.551Z",
+      "event": "FEED_STALE",
+      "details": "Rate feed for XAGUSDT is stale. New pair creation paused."
+    },
+    {
+      "id": "LOG-1791718547629-792",
+      "timestamp": "2026-10-11T11:35:47.629Z",
+      "event": "FEED_STALE",
+      "details": "Rate feed for XAGUSDT is stale. New pair creation paused."
+    },
+    {
+      "id": "LOG-1791718549635-248",
+      "timestamp": "2026-10-11T11:35:49.635Z",
+      "event": "FEED_STALE",
+      "details": "Rate feed for XAGUSDT is stale. New pair creation paused."
+    },
+    {
+      "id": "LOG-1791718551645-844",
+      "timestamp": "2026-10-11T11:35:51.645Z",
+      "event": "FEED_STALE",
+      "details": "Rate feed for XAGUSDT is stale. New pair creation paused."
+    },
+    {
+      "id": "LOG-1791718553658-850",
+      "timestamp": "2026-10-11T11:35:53.658Z",
+      "event": "FEED_STALE",
+      "details": "Rate feed for XAGUSDT is stale. New pair creation paused."
+    },
+    {
+      "id": "LOG-1791718555665-701",
+      "timestamp": "2026-10-11T11:35:55.665Z",
+      "event": "FEED_STALE",
+      "details": "Rate feed for XAGUSDT is stale. New pair creation paused."
+    },
+    {
+      "id": "LOG-1791718557668-596",
+      "timestamp": "2026-10-11T11:35:57.668Z",
+      "event": "FEED_STALE",
+      "details": "Rate feed for XAGUSDT is stale. New pair creation paused."
+    },
+    {
+      "id": "LOG-1791718559676-958",
+      "timestamp": "2026-10-11T11:35:59.676Z",
+      "event": "FEED_STALE",
+      "details": "Rate feed for XAGUSDT is stale. New pair creation paused."
+    },
+    {
+      "id": "LOG-1791718561681-201",
+      "timestamp": "2026-10-11T11:36:01.681Z",
+      "event": "FEED_STALE",
+      "details": "Rate feed for XAGUSDT is stale. New pair creation paused."
+    },
+    {
+      "id": "LOG-1791718563693-479",
+      "timestamp": "2026-10-11T11:36:03.693Z",
+      "event": "FEED_STALE",
+      "details": "Rate feed for XAGUSDT is stale. New pair creation paused."
+    },
+    {
+      "id": "LOG-1791718565702-569",
+      "timestamp": "2026-10-11T11:36:05.702Z",
+      "event": "FEED_STALE",
+      "details": "Rate feed for XAGUSDT is stale. New pair creation paused."
+    },
+    {
+      "id": "LOG-1791718565864-731",
+      "timestamp": "2026-10-11T11:36:05.864Z",
+      "event": "ENTRY_SKIPPED",
+      "details": "ENTRY SKIPPED — RATE ALREADY PROCESSED ($60.81)"
+    },
+    {
+      "id": "LOG-1791718575732-724",
+      "timestamp": "2026-10-11T11:36:15.732Z",
+      "event": "FEED_STALE",
+      "details": "Rate feed for XAGUSDT is stale. New pair creation paused."
+    },
+    {
+      "id": "LOG-1791718587763-192",
+      "timestamp": "2026-10-11T11:36:27.763Z",
+      "event": "FEED_STALE",
+      "details": "Rate feed for XAGUSDT is stale. New pair creation paused."
+    },
+    {
+      "id": "LOG-1791718589772-303",
+      "timestamp": "2026-10-11T11:36:29.772Z",
+      "event": "FEED_STALE",
+      "details": "Rate feed for XAGUSDT is stale. New pair creation paused."
+    },
+    {
+      "id": "LOG-1791718591775-316",
+      "timestamp": "2026-10-11T11:36:31.775Z",
+      "event": "FEED_STALE",
+      "details": "Rate feed for XAGUSDT is stale. New pair creation paused."
+    },
+    {
+      "id": "LOG-1791718593776-118",
+      "timestamp": "2026-10-11T11:36:33.776Z",
+      "event": "FEED_STALE",
+      "details": "Rate feed for XAGUSDT is stale. New pair creation paused."
+    },
+    {
+      "id": "LOG-1791718595785-389",
+      "timestamp": "2026-10-11T11:36:35.785Z",
+      "event": "FEED_STALE",
+      "details": "Rate feed for XAGUSDT is stale. New pair creation paused."
+    },
+    {
+      "id": "LOG-1791718597797-715",
+      "timestamp": "2026-10-11T11:36:37.797Z",
+      "event": "FEED_STALE",
+      "details": "Rate feed for XAGUSDT is stale. New pair creation paused."
+    },
+    {
+      "id": "LOG-1791718599803-813",
+      "timestamp": "2026-10-11T11:36:39.803Z",
+      "event": "FEED_STALE",
+      "details": "Rate feed for XAGUSDT is stale. New pair creation paused."
+    },
+    {
+      "id": "LOG-1791718601814-550",
+      "timestamp": "2026-10-11T11:36:41.814Z",
+      "event": "FEED_STALE",
+      "details": "Rate feed for XAGUSDT is stale. New pair creation paused."
+    },
+    {
+      "id": "LOG-1791718603821-363",
+      "timestamp": "2026-10-11T11:36:43.821Z",
+      "event": "FEED_STALE",
+      "details": "Rate feed for XAGUSDT is stale. New pair creation paused."
+    },
+    {
+      "id": "LOG-1791718605829-488",
+      "timestamp": "2026-10-11T11:36:45.829Z",
+      "event": "FEED_STALE",
+      "details": "Rate feed for XAGUSDT is stale. New pair creation paused."
+    },
+    {
+      "id": "LOG-1791718607837-227",
+      "timestamp": "2026-10-11T11:36:47.837Z",
+      "event": "FEED_STALE",
+      "details": "Rate feed for XAGUSDT is stale. New pair creation paused."
+    },
+    {
+      "id": "LOG-1791718609840-216",
+      "timestamp": "2026-10-11T11:36:49.840Z",
+      "event": "FEED_STALE",
+      "details": "Rate feed for XAGUSDT is stale. New pair creation paused."
+    },
+    {
+      "id": "LOG-1791718609998-791",
+      "timestamp": "2026-10-11T11:36:49.998Z",
+      "event": "ENTRY_SKIPPED",
+      "details": "ENTRY SKIPPED — RATE ALREADY PROCESSED ($60.82)"
+    },
+    {
+      "id": "LOG-1791718618070-892",
+      "timestamp": "2026-10-11T11:36:58.070Z",
+      "event": "SETTINGS_UPDATED",
+      "details": {
+        "changedBy": "USER",
+        "oldSettings": {
+          "startingCapitalINR": 50000,
+          "contractQuantity": 1,
+          "leverage": 5,
+          "instrument": "XAGUSDT",
+          "profitTargetMode": "PRICE_MOVE",
+          "profitTargetMove": 0.05,
+          "targetDisabled": false,
+          "maxActivePairs": 25,
+          "dailyLossCircuitBreakerINR": 2000,
+          "takerFeeRate": 0.0005,
+          "gstRate": 0.18,
+          "realOrdersDisabled": true,
+          "pairFrequencyMs": 60000
+        },
+        "newSettings": {
+          "startingCapitalINR": 50000,
+          "contractQuantity": 1,
+          "leverage": 5,
+          "instrument": "CLUSDT",
+          "profitTargetMode": "PRICE_MOVE",
+          "profitTargetMove": 0.05,
+          "targetDisabled": false,
+          "maxActivePairs": 25,
+          "dailyLossCircuitBreakerINR": 2000,
+          "takerFeeRate": 0.0005,
+          "gstRate": 0.18,
+          "realOrdersDisabled": true,
+          "pairFrequencyMs": 60000
+        }
+      }
+    },
+    {
+      "id": "LOG-1791718620034-174",
+      "timestamp": "2026-10-11T11:37:00.034Z",
+      "event": "POSITION_CLOSED",
+      "details": {
+        "pairId": "PAIR-0010",
+        "positionId": "P-0010-BUY",
+        "direction": "BUY",
+        "symbol": "XAGUSDT",
+        "entryTime": "2026-10-11T11:14:57.806Z",
+        "exitTime": "2026-10-11T11:36:53.205Z",
+        "entryPrice": 60.8,
+        "exitPrice": 91.34,
+        "targetExitPrice": 60.85,
+        "quantity": 1,
+        "contractMultiplier": 1,
+        "grossProfitUSD": 30.54,
+        "grossProfitINR": 2957.19,
+        "entryFeeUSD": 0.0304,
+        "exitFeeUSD": 0.0457,
+        "gstUSD": 0.0137,
+        "totalChargesUSD": 0.0898,
+        "totalChargesINR": 8.69,
+        "netProfitUSD": 30.4502,
+        "netProfitINR": 2948.5,
+        "usdInrRate": 96.83,
+        "exitReason": "BUY TARGET PROFIT HIT",
+        "holdingDurationSec": 1315
+      }
+    },
+    {
+      "id": "LOG-1791718620034-459",
+      "timestamp": "2026-10-11T11:37:00.034Z",
+      "event": "POSITION_CLOSED",
+      "details": {
+        "pairId": "PAIR-0011",
+        "positionId": "P-0011-BUY",
+        "direction": "BUY",
+        "symbol": "XAGUSDT",
+        "entryTime": "2026-10-11T11:15:34.742Z",
+        "exitTime": "2026-10-11T11:36:53.205Z",
+        "entryPrice": 60.81,
+        "exitPrice": 91.34,
+        "targetExitPrice": 60.86,
+        "quantity": 1,
+        "contractMultiplier": 1,
+        "grossProfitUSD": 30.53,
+        "grossProfitINR": 2956.22,
+        "entryFeeUSD": 0.0304,
+        "exitFeeUSD": 0.0457,
+        "gstUSD": 0.0137,
+        "totalChargesUSD": 0.0898,
+        "totalChargesINR": 8.69,
+        "netProfitUSD": 30.4402,
+        "netProfitINR": 2947.53,
+        "usdInrRate": 96.83,
+        "exitReason": "BUY TARGET PROFIT HIT",
+        "holdingDurationSec": 1278
+      }
+    },
+    {
+      "id": "LOG-1791718620034-735",
+      "timestamp": "2026-10-11T11:37:00.034Z",
+      "event": "POSITION_CLOSED",
+      "details": {
+        "pairId": "PAIR-0012",
+        "positionId": "P-0012-BUY",
+        "direction": "BUY",
+        "symbol": "XAGUSDT",
+        "entryTime": "2026-10-11T11:27:57.080Z",
+        "exitTime": "2026-10-11T11:36:53.205Z",
+        "entryPrice": 60.82,
+        "exitPrice": 91.34,
+        "targetExitPrice": 60.87,
+        "quantity": 1,
+        "contractMultiplier": 1,
+        "grossProfitUSD": 30.52,
+        "grossProfitINR": 2955.25,
+        "entryFeeUSD": 0.0304,
+        "exitFeeUSD": 0.0457,
+        "gstUSD": 0.0137,
+        "totalChargesUSD": 0.0898,
+        "totalChargesINR": 8.69,
+        "netProfitUSD": 30.4302,
+        "netProfitINR": 2946.56,
+        "usdInrRate": 96.83,
+        "exitReason": "BUY TARGET PROFIT HIT",
+        "holdingDurationSec": 536
+      }
+    },
+    {
+      "id": "LOG-1791718620036-977",
+      "timestamp": "2026-10-11T11:37:00.037Z",
+      "event": "ENTRY_SKIPPED",
+      "details": "ENTRY SKIPPED — RATE ALREADY PROCESSED ($91.34)"
+    },
+    {
+      "id": "LOG-1791718628063-820",
+      "timestamp": "2026-10-11T11:37:08.063Z",
+      "event": "ENTRY_SKIPPED",
+      "details": "ENTRY SKIPPED — RATE ALREADY PROCESSED ($91.33)"
+    },
+    {
+      "id": "LOG-1791718632076-457",
+      "timestamp": "2026-10-11T11:37:12.076Z",
+      "event": "ENTRY_SKIPPED",
+      "details": "ENTRY SKIPPED — RATE ALREADY PROCESSED ($91.34)"
+    },
+    {
+      "id": "LOG-1791718637063-712",
+      "timestamp": "2026-10-11T11:37:17.063Z",
+      "event": "SETTINGS_UPDATED",
+      "details": {
+        "changedBy": "USER",
+        "oldSettings": {
+          "startingCapitalINR": 50000,
+          "contractQuantity": 1,
+          "leverage": 5,
+          "instrument": "CLUSDT",
+          "profitTargetMode": "PRICE_MOVE",
+          "profitTargetMove": 0.05,
+          "targetDisabled": false,
+          "maxActivePairs": 25,
+          "dailyLossCircuitBreakerINR": 2000,
+          "takerFeeRate": 0.0005,
+          "gstRate": 0.18,
+          "realOrdersDisabled": true,
+          "pairFrequencyMs": 60000
+        },
+        "newSettings": {
+          "startingCapitalINR": 50000,
+          "contractQuantity": 1,
+          "leverage": 5,
+          "instrument": "CLUSDT",
+          "profitTargetMode": "PRICE_MOVE",
+          "profitTargetMove": 0.15,
+          "targetDisabled": false,
+          "maxActivePairs": 25,
+          "dailyLossCircuitBreakerINR": 2000,
+          "takerFeeRate": 0.0005,
+          "gstRate": 0.18,
+          "realOrdersDisabled": true,
+          "pairFrequencyMs": 60000
+        }
+      }
+    },
+    {
+      "id": "LOG-1791718650136-274",
+      "timestamp": "2026-10-11T11:37:30.136Z",
+      "event": "ENTRY_SKIPPED",
+      "details": "ENTRY SKIPPED — RATE ALREADY PROCESSED ($91.33)"
+    },
+    {
+      "id": "LOG-1791718662185-443",
+      "timestamp": "2026-10-11T11:37:42.185Z",
+      "event": "ENTRY_SKIPPED",
+      "details": "ENTRY SKIPPED — RATE ALREADY PROCESSED ($91.34)"
+    },
+    {
+      "id": "LOG-1791718667530-401",
+      "timestamp": "2026-10-11T11:37:47.530Z",
+      "event": "SETTINGS_UPDATED",
+      "details": {
+        "changedBy": "USER",
+        "oldSettings": {
+          "startingCapitalINR": 50000,
+          "contractQuantity": 1,
+          "leverage": 5,
+          "instrument": "CLUSDT",
+          "profitTargetMode": "PRICE_MOVE",
+          "profitTargetMove": 0.15,
+          "targetDisabled": false,
+          "maxActivePairs": 25,
+          "dailyLossCircuitBreakerINR": 2000,
+          "takerFeeRate": 0.0005,
+          "gstRate": 0.18,
+          "realOrdersDisabled": true,
+          "pairFrequencyMs": 60000
+        },
+        "newSettings": {
+          "startingCapitalINR": 50000,
+          "contractQuantity": 1,
+          "leverage": 5,
+          "instrument": "XAGUSDT",
+          "profitTargetMode": "PRICE_MOVE",
+          "profitTargetMove": 0.15,
+          "targetDisabled": false,
+          "maxActivePairs": 25,
+          "dailyLossCircuitBreakerINR": 2000,
+          "takerFeeRate": 0.0005,
+          "gstRate": 0.18,
+          "realOrdersDisabled": true,
+          "pairFrequencyMs": 60000
+        }
+      }
+    },
+    {
+      "id": "LOG-1791718668053-54",
+      "timestamp": "2026-10-11T11:37:48.053Z",
+      "event": "FEED_STALE",
+      "details": "Rate feed for XAGUSDT is stale. New pair creation paused."
+    },
+    {
+      "id": "LOG-1791718668214-352",
+      "timestamp": "2026-10-11T11:37:48.214Z",
+      "event": "ENTRY_SKIPPED",
+      "details": "ENTRY SKIPPED — RATE ALREADY PROCESSED ($60.82)"
+    },
+    {
+      "id": "LOG-1791718672224-298",
+      "timestamp": "2026-10-11T11:37:52.224Z",
+      "event": "ENTRY_SKIPPED",
+      "details": "ENTRY SKIPPED — RATE ALREADY PROCESSED ($60.81)"
+    },
+    {
+      "id": "LOG-1791718678955-815",
+      "timestamp": "2026-10-11T11:37:58.955Z",
+      "event": "SETTINGS_UPDATED",
+      "details": {
+        "changedBy": "USER",
+        "oldSettings": {
+          "startingCapitalINR": 50000,
+          "contractQuantity": 1,
+          "leverage": 5,
+          "instrument": "XAGUSDT",
+          "profitTargetMode": "PRICE_MOVE",
+          "profitTargetMove": 0.15,
+          "targetDisabled": false,
+          "maxActivePairs": 25,
+          "dailyLossCircuitBreakerINR": 2000,
+          "takerFeeRate": 0.0005,
+          "gstRate": 0.18,
+          "realOrdersDisabled": true,
+          "pairFrequencyMs": 60000
+        },
+        "newSettings": {
+          "startingCapitalINR": 50000,
+          "contractQuantity": 1,
+          "leverage": 5,
+          "instrument": "XAGUSDT",
+          "profitTargetMode": "PRICE_MOVE",
+          "profitTargetMove": 1,
+          "targetDisabled": false,
+          "maxActivePairs": 25,
+          "dailyLossCircuitBreakerINR": 2000,
+          "takerFeeRate": 0.0005,
+          "gstRate": 0.18,
+          "realOrdersDisabled": true,
+          "pairFrequencyMs": 60000
+        }
+      }
+    },
+    {
+      "id": "LOG-1791718684092-825",
+      "timestamp": "2026-10-11T11:38:04.092Z",
+      "event": "FEED_STALE",
+      "details": "Rate feed for XAGUSDT is stale. New pair creation paused."
+    },
+    {
+      "id": "LOG-1791718686100-559",
+      "timestamp": "2026-10-11T11:38:06.100Z",
+      "event": "FEED_STALE",
+      "details": "Rate feed for XAGUSDT is stale. New pair creation paused."
+    },
+    {
+      "id": "LOG-1791718688106-816",
+      "timestamp": "2026-10-11T11:38:08.106Z",
+      "event": "FEED_STALE",
+      "details": "Rate feed for XAGUSDT is stale. New pair creation paused."
+    },
+    {
+      "id": "LOG-1791718690274-360",
+      "timestamp": "2026-10-11T11:38:10.274Z",
+      "event": "ENTRY_SKIPPED",
+      "details": "ENTRY SKIPPED — RATE ALREADY PROCESSED ($60.82)"
+    },
+    {
+      "id": "LOG-1791718700150-27",
+      "timestamp": "2026-10-11T11:38:20.150Z",
+      "event": "FEED_STALE",
+      "details": "Rate feed for XAGUSDT is stale. New pair creation paused."
+    },
+    {
+      "id": "LOG-1791718702156-796",
+      "timestamp": "2026-10-11T11:38:22.156Z",
+      "event": "FEED_STALE",
+      "details": "Rate feed for XAGUSDT is stale. New pair creation paused."
+    },
+    {
+      "id": "LOG-1791718704161-144",
+      "timestamp": "2026-10-11T11:38:24.161Z",
+      "event": "FEED_STALE",
+      "details": "Rate feed for XAGUSDT is stale. New pair creation paused."
+    },
+    {
+      "id": "LOG-1791718706168-828",
+      "timestamp": "2026-10-11T11:38:26.168Z",
+      "event": "FEED_STALE",
+      "details": "Rate feed for XAGUSDT is stale. New pair creation paused."
+    },
+    {
+      "id": "LOG-1791718708179-340",
+      "timestamp": "2026-10-11T11:38:28.179Z",
+      "event": "FEED_STALE",
+      "details": "Rate feed for XAGUSDT is stale. New pair creation paused."
+    },
+    {
+      "id": "LOG-1791718710190-929",
+      "timestamp": "2026-10-11T11:38:30.190Z",
+      "event": "FEED_STALE",
+      "details": "Rate feed for XAGUSDT is stale. New pair creation paused."
+    },
+    {
+      "id": "LOG-1791718712199-855",
+      "timestamp": "2026-10-11T11:38:32.199Z",
+      "event": "FEED_STALE",
+      "details": "Rate feed for XAGUSDT is stale. New pair creation paused."
+    },
+    {
+      "id": "LOG-1791718714210-551",
+      "timestamp": "2026-10-11T11:38:34.210Z",
+      "event": "FEED_STALE",
+      "details": "Rate feed for XAGUSDT is stale. New pair creation paused."
+    },
+    {
+      "id": "LOG-1791718716218-95",
+      "timestamp": "2026-10-11T11:38:36.219Z",
+      "event": "FEED_STALE",
+      "details": "Rate feed for XAGUSDT is stale. New pair creation paused."
+    },
+    {
+      "id": "LOG-1791718718227-805",
+      "timestamp": "2026-10-11T11:38:38.227Z",
+      "event": "FEED_STALE",
+      "details": "Rate feed for XAGUSDT is stale. New pair creation paused."
+    },
+    {
+      "id": "LOG-1791718720228-980",
+      "timestamp": "2026-10-11T11:38:40.228Z",
+      "event": "FEED_STALE",
+      "details": "Rate feed for XAGUSDT is stale. New pair creation paused."
+    },
+    {
+      "id": "LOG-1791718722235-630",
+      "timestamp": "2026-10-11T11:38:42.235Z",
+      "event": "FEED_STALE",
+      "details": "Rate feed for XAGUSDT is stale. New pair creation paused."
+    },
+    {
+      "id": "LOG-1791718724246-486",
+      "timestamp": "2026-10-11T11:38:44.246Z",
+      "event": "FEED_STALE",
+      "details": "Rate feed for XAGUSDT is stale. New pair creation paused."
+    },
+    {
+      "id": "LOG-1791718726259-357",
+      "timestamp": "2026-10-11T11:38:46.259Z",
+      "event": "FEED_STALE",
+      "details": "Rate feed for XAGUSDT is stale. New pair creation paused."
+    },
+    {
+      "id": "LOG-1791718728271-929",
+      "timestamp": "2026-10-11T11:38:48.271Z",
+      "event": "FEED_STALE",
+      "details": "Rate feed for XAGUSDT is stale. New pair creation paused."
+    },
+    {
+      "id": "LOG-1791718730273-76",
+      "timestamp": "2026-10-11T11:38:50.273Z",
+      "event": "FEED_STALE",
+      "details": "Rate feed for XAGUSDT is stale. New pair creation paused."
+    },
+    {
+      "id": "LOG-1791718732286-803",
+      "timestamp": "2026-10-11T11:38:52.286Z",
+      "event": "FEED_STALE",
+      "details": "Rate feed for XAGUSDT is stale. New pair creation paused."
+    },
+    {
+      "id": "LOG-1791718734300-746",
+      "timestamp": "2026-10-11T11:38:54.300Z",
+      "event": "FEED_STALE",
+      "details": "Rate feed for XAGUSDT is stale. New pair creation paused."
+    },
+    {
+      "id": "LOG-1791718736313-757",
+      "timestamp": "2026-10-11T11:38:56.313Z",
+      "event": "FEED_STALE",
+      "details": "Rate feed for XAGUSDT is stale. New pair creation paused."
+    },
+    {
+      "id": "LOG-1791718738322-598",
+      "timestamp": "2026-10-11T11:38:58.322Z",
+      "event": "FEED_STALE",
+      "details": "Rate feed for XAGUSDT is stale. New pair creation paused."
+    },
+    {
+      "id": "LOG-1791718740334-597",
+      "timestamp": "2026-10-11T11:39:00.334Z",
+      "event": "FEED_STALE",
+      "details": "Rate feed for XAGUSDT is stale. New pair creation paused."
+    },
+    {
+      "id": "LOG-1791718742337-402",
+      "timestamp": "2026-10-11T11:39:02.337Z",
+      "event": "FEED_STALE",
+      "details": "Rate feed for XAGUSDT is stale. New pair creation paused."
+    },
+    {
+      "id": "LOG-1791718744339-770",
+      "timestamp": "2026-10-11T11:39:04.339Z",
+      "event": "FEED_STALE",
+      "details": "Rate feed for XAGUSDT is stale. New pair creation paused."
+    },
+    {
+      "id": "LOG-1791718746346-315",
+      "timestamp": "2026-10-11T11:39:06.346Z",
+      "event": "FEED_STALE",
+      "details": "Rate feed for XAGUSDT is stale. New pair creation paused."
+    },
+    {
+      "id": "LOG-1791718746503-529",
+      "timestamp": "2026-10-11T11:39:06.503Z",
+      "event": "ENTRY_SKIPPED",
+      "details": "ENTRY SKIPPED — RATE ALREADY PROCESSED ($60.81)"
+    },
+    {
+      "id": "LOG-1791718756395-691",
+      "timestamp": "2026-10-11T11:39:16.395Z",
+      "event": "FEED_STALE",
+      "details": "Rate feed for XAGUSDT is stale. New pair creation paused."
+    },
+    {
+      "id": "LOG-1791718758397-838",
+      "timestamp": "2026-10-11T11:39:18.397Z",
+      "event": "FEED_STALE",
+      "details": "Rate feed for XAGUSDT is stale. New pair creation paused."
+    },
+    {
+      "id": "LOG-1791718760401-745",
+      "timestamp": "2026-10-11T11:39:20.401Z",
+      "event": "FEED_STALE",
+      "details": "Rate feed for XAGUSDT is stale. New pair creation paused."
+    },
+    {
+      "id": "LOG-1791718762414-223",
+      "timestamp": "2026-10-11T11:39:22.414Z",
+      "event": "FEED_STALE",
+      "details": "Rate feed for XAGUSDT is stale. New pair creation paused."
+    },
+    {
+      "id": "LOG-1791718764420-674",
+      "timestamp": "2026-10-11T11:39:24.420Z",
+      "event": "FEED_STALE",
+      "details": "Rate feed for XAGUSDT is stale. New pair creation paused."
+    },
+    {
+      "id": "LOG-1791718766430-947",
+      "timestamp": "2026-10-11T11:39:26.430Z",
+      "event": "FEED_STALE",
+      "details": "Rate feed for XAGUSDT is stale. New pair creation paused."
+    },
+    {
+      "id": "LOG-1791718768576-482",
+      "timestamp": "2026-10-11T11:39:28.576Z",
+      "event": "ENTRY_SKIPPED",
+      "details": "ENTRY SKIPPED — RATE ALREADY PROCESSED ($60.82)"
+    },
+    {
+      "id": "LOG-1791718786634-927",
+      "timestamp": "2026-10-11T11:39:46.634Z",
+      "event": "ENTRY_SKIPPED",
+      "details": "ENTRY SKIPPED — RATE ALREADY PROCESSED ($60.81)"
+    },
+    {
+      "id": "LOG-1791718798531-8",
+      "timestamp": "2026-10-11T11:39:58.531Z",
+      "event": "FEED_STALE",
+      "details": "Rate feed for XAGUSDT is stale. New pair creation paused."
+    },
+    {
+      "id": "LOG-1791718800540-479",
+      "timestamp": "2026-10-11T11:40:00.540Z",
+      "event": "FEED_STALE",
+      "details": "Rate feed for XAGUSDT is stale. New pair creation paused."
+    },
+    {
+      "id": "LOG-1791718802547-433",
+      "timestamp": "2026-10-11T11:40:02.547Z",
+      "event": "FEED_STALE",
+      "details": "Rate feed for XAGUSDT is stale. New pair creation paused."
+    },
+    {
+      "id": "LOG-1791718804552-875",
+      "timestamp": "2026-10-11T11:40:04.552Z",
+      "event": "FEED_STALE",
+      "details": "Rate feed for XAGUSDT is stale. New pair creation paused."
+    },
+    {
+      "id": "LOG-1791718806563-741",
+      "timestamp": "2026-10-11T11:40:06.563Z",
+      "event": "FEED_STALE",
+      "details": "Rate feed for XAGUSDT is stale. New pair creation paused."
+    },
+    {
+      "id": "LOG-1791718816606-211",
+      "timestamp": "2026-10-11T11:40:16.606Z",
+      "event": "FEED_STALE",
+      "details": "Rate feed for XAGUSDT is stale. New pair creation paused."
+    },
+    {
+      "id": "LOG-1791718818619-411",
+      "timestamp": "2026-10-11T11:40:18.619Z",
+      "event": "FEED_STALE",
+      "details": "Rate feed for XAGUSDT is stale. New pair creation paused."
+    },
+    {
+      "id": "LOG-1791718820632-522",
+      "timestamp": "2026-10-11T11:40:20.632Z",
+      "event": "FEED_STALE",
+      "details": "Rate feed for XAGUSDT is stale. New pair creation paused."
+    },
+    {
+      "id": "LOG-1791718822643-201",
+      "timestamp": "2026-10-11T11:40:22.643Z",
+      "event": "FEED_STALE",
+      "details": "Rate feed for XAGUSDT is stale. New pair creation paused."
+    },
+    {
+      "id": "LOG-1791718824644-53",
+      "timestamp": "2026-10-11T11:40:24.644Z",
+      "event": "FEED_STALE",
+      "details": "Rate feed for XAGUSDT is stale. New pair creation paused."
+    },
+    {
+      "id": "LOG-1791718826646-706",
+      "timestamp": "2026-10-11T11:40:26.646Z",
+      "event": "FEED_STALE",
+      "details": "Rate feed for XAGUSDT is stale. New pair creation paused."
+    },
+    {
+      "id": "LOG-1791718828657-414",
+      "timestamp": "2026-10-11T11:40:28.657Z",
+      "event": "FEED_STALE",
+      "details": "Rate feed for XAGUSDT is stale. New pair creation paused."
+    },
+    {
+      "id": "LOG-1791718830662-175",
+      "timestamp": "2026-10-11T11:40:30.662Z",
+      "event": "FEED_STALE",
+      "details": "Rate feed for XAGUSDT is stale. New pair creation paused."
+    },
+    {
+      "id": "LOG-1791718832673-771",
+      "timestamp": "2026-10-11T11:40:32.673Z",
+      "event": "FEED_STALE",
+      "details": "Rate feed for XAGUSDT is stale. New pair creation paused."
+    },
+    {
+      "id": "LOG-1791718834676-715",
+      "timestamp": "2026-10-11T11:40:34.676Z",
+      "event": "FEED_STALE",
+      "details": "Rate feed for XAGUSDT is stale. New pair creation paused."
+    },
+    {
+      "id": "LOG-1791718836681-818",
+      "timestamp": "2026-10-11T11:40:36.681Z",
+      "event": "FEED_STALE",
+      "details": "Rate feed for XAGUSDT is stale. New pair creation paused."
+    },
+    {
+      "id": "LOG-1791718838694-417",
+      "timestamp": "2026-10-11T11:40:38.694Z",
+      "event": "FEED_STALE",
+      "details": "Rate feed for XAGUSDT is stale. New pair creation paused."
+    },
+    {
+      "id": "LOG-1791718840706-123",
+      "timestamp": "2026-10-11T11:40:40.706Z",
+      "event": "FEED_STALE",
+      "details": "Rate feed for XAGUSDT is stale. New pair creation paused."
+    },
+    {
+      "id": "LOG-1791718842710-44",
+      "timestamp": "2026-10-11T11:40:42.710Z",
+      "event": "FEED_STALE",
+      "details": "Rate feed for XAGUSDT is stale. New pair creation paused."
+    },
+    {
+      "id": "LOG-1791718844710-68",
+      "timestamp": "2026-10-11T11:40:44.710Z",
+      "event": "FEED_STALE",
+      "details": "Rate feed for XAGUSDT is stale. New pair creation paused."
+    },
+    {
+      "id": "LOG-1791718846710-342",
+      "timestamp": "2026-10-11T11:40:46.711Z",
+      "event": "FEED_STALE",
+      "details": "Rate feed for XAGUSDT is stale. New pair creation paused."
+    },
+    {
+      "id": "LOG-1791718848716-188",
+      "timestamp": "2026-10-11T11:40:48.716Z",
+      "event": "FEED_STALE",
+      "details": "Rate feed for XAGUSDT is stale. New pair creation paused."
+    },
+    {
+      "id": "LOG-1791718850719-709",
+      "timestamp": "2026-10-11T11:40:50.719Z",
+      "event": "FEED_STALE",
+      "details": "Rate feed for XAGUSDT is stale. New pair creation paused."
+    },
+    {
+      "id": "LOG-1791718852725-938",
+      "timestamp": "2026-10-11T11:40:52.725Z",
+      "event": "FEED_STALE",
+      "details": "Rate feed for XAGUSDT is stale. New pair creation paused."
+    },
+    {
+      "id": "LOG-1791718854729-686",
+      "timestamp": "2026-10-11T11:40:54.729Z",
+      "event": "FEED_STALE",
+      "details": "Rate feed for XAGUSDT is stale. New pair creation paused."
+    },
+    {
+      "id": "LOG-1791718856730-777",
+      "timestamp": "2026-10-11T11:40:56.730Z",
+      "event": "FEED_STALE",
+      "details": "Rate feed for XAGUSDT is stale. New pair creation paused."
+    },
+    {
+      "id": "LOG-1791718858744-834",
+      "timestamp": "2026-10-11T11:40:58.744Z",
+      "event": "FEED_STALE",
+      "details": "Rate feed for XAGUSDT is stale. New pair creation paused."
+    },
+    {
+      "id": "LOG-1791718860757-726",
+      "timestamp": "2026-10-11T11:41:00.757Z",
+      "event": "FEED_STALE",
+      "details": "Rate feed for XAGUSDT is stale. New pair creation paused."
+    },
+    {
+      "id": "LOG-1791718862769-605",
+      "timestamp": "2026-10-11T11:41:02.769Z",
+      "event": "FEED_STALE",
+      "details": "Rate feed for XAGUSDT is stale. New pair creation paused."
+    },
+    {
+      "id": "LOG-1791718864778-443",
+      "timestamp": "2026-10-11T11:41:04.778Z",
+      "event": "FEED_STALE",
+      "details": "Rate feed for XAGUSDT is stale. New pair creation paused."
+    },
+    {
+      "id": "LOG-1791718880944-530",
+      "timestamp": "2026-10-11T11:41:20.944Z",
+      "event": "ENTRY_SKIPPED",
+      "details": "ENTRY SKIPPED — RATE ALREADY PROCESSED ($60.82)"
+    },
+    {
+      "id": "LOG-1791718894856-316",
+      "timestamp": "2026-10-11T11:41:34.856Z",
+      "event": "FEED_STALE",
+      "details": "Rate feed for XAGUSDT is stale. New pair creation paused."
+    },
+    {
+      "id": "LOG-1791718896871-284",
+      "timestamp": "2026-10-11T11:41:36.871Z",
+      "event": "FEED_STALE",
+      "details": "Rate feed for XAGUSDT is stale. New pair creation paused."
+    },
+    {
+      "id": "LOG-1791718898875-271",
+      "timestamp": "2026-10-11T11:41:38.875Z",
+      "event": "FEED_STALE",
+      "details": "Rate feed for XAGUSDT is stale. New pair creation paused."
+    },
+    {
+      "id": "LOG-1791718900877-176",
+      "timestamp": "2026-10-11T11:41:40.877Z",
+      "event": "FEED_STALE",
+      "details": "Rate feed for XAGUSDT is stale. New pair creation paused."
+    },
+    {
+      "id": "LOG-1791718902882-296",
+      "timestamp": "2026-10-11T11:41:42.882Z",
+      "event": "FEED_STALE",
+      "details": "Rate feed for XAGUSDT is stale. New pair creation paused."
+    },
+    {
+      "id": "LOG-1791718904894-719",
+      "timestamp": "2026-10-11T11:41:44.894Z",
+      "event": "FEED_STALE",
+      "details": "Rate feed for XAGUSDT is stale. New pair creation paused."
+    },
+    {
+      "id": "LOG-1791718906894-209",
+      "timestamp": "2026-10-11T11:41:46.894Z",
+      "event": "FEED_STALE",
+      "details": "Rate feed for XAGUSDT is stale. New pair creation paused."
+    },
+    {
+      "id": "LOG-1791718907022-845",
+      "timestamp": "2026-10-11T11:41:47.022Z",
+      "event": "ENTRY_SKIPPED",
+      "details": "ENTRY SKIPPED — RATE ALREADY PROCESSED ($60.81)"
+    },
+    {
+      "id": "LOG-1791718937023-344",
+      "timestamp": "2026-10-11T11:42:17.023Z",
+      "event": "FEED_STALE",
+      "details": "Rate feed for XAGUSDT is stale. New pair creation paused."
+    },
+    {
+      "id": "LOG-1791718939037-870",
+      "timestamp": "2026-10-11T11:42:19.037Z",
+      "event": "FEED_STALE",
+      "details": "Rate feed for XAGUSDT is stale. New pair creation paused."
+    },
+    {
+      "id": "LOG-1791718941048-832",
+      "timestamp": "2026-10-11T11:42:21.048Z",
+      "event": "FEED_STALE",
+      "details": "Rate feed for XAGUSDT is stale. New pair creation paused."
+    },
+    {
+      "id": "LOG-1791718945066-5",
+      "timestamp": "2026-10-11T11:42:25.066Z",
+      "event": "FEED_STALE",
+      "details": "Rate feed for XAGUSDT is stale. New pair creation paused."
+    },
+    {
+      "id": "LOG-1791718955090-757",
+      "timestamp": "2026-10-11T11:42:35.090Z",
+      "event": "FEED_STALE",
+      "details": "Rate feed for XAGUSDT is stale. New pair creation paused."
+    },
+    {
+      "id": "LOG-1791718957095-144",
+      "timestamp": "2026-10-11T11:42:37.095Z",
+      "event": "FEED_STALE",
+      "details": "Rate feed for XAGUSDT is stale. New pair creation paused."
+    },
+    {
+      "id": "LOG-1791718964531-98",
+      "timestamp": "2026-10-11T11:42:44.531Z",
+      "event": "SETTINGS_UPDATED",
+      "details": {
+        "changedBy": "USER",
+        "oldSettings": {
+          "startingCapitalINR": 50000,
+          "contractQuantity": 1,
+          "leverage": 5,
+          "instrument": "XAGUSDT",
+          "profitTargetMode": "PRICE_MOVE",
+          "profitTargetMove": 1,
+          "targetDisabled": false,
+          "maxActivePairs": 25,
+          "dailyLossCircuitBreakerINR": 2000,
+          "takerFeeRate": 0.0005,
+          "gstRate": 0.18,
+          "realOrdersDisabled": true,
+          "pairFrequencyMs": 60000
+        },
+        "newSettings": {
+          "startingCapitalINR": 50000,
+          "contractQuantity": 1,
+          "leverage": 5,
+          "instrument": "XAGUSDT",
+          "profitTargetMode": "PRICE_MOVE",
+          "profitTargetMove": 0.2,
+          "targetDisabled": false,
+          "maxActivePairs": 25,
+          "dailyLossCircuitBreakerINR": 2000,
+          "takerFeeRate": 0.0005,
+          "gstRate": 0.18,
+          "realOrdersDisabled": true,
+          "pairFrequencyMs": 60000
+        }
+      }
+    },
+    {
+      "id": "LOG-1791719005210-820",
+      "timestamp": "2026-10-11T11:43:25.210Z",
+      "event": "ENGINE_RESTORED",
+      "details": "Engine state & processed unique rates restored from storage."
+    },
+    {
+      "id": "LOG-1791719005213-930",
+      "timestamp": "2026-10-11T11:43:25.213Z",
+      "event": "ENGINE_RESET",
+      "details": "All engine paper positions, processed rates, and history reset."
+    },
+    {
+      "id": "LOG-1791719005216-826",
+      "timestamp": "2026-10-11T11:43:25.216Z",
+      "event": "PAIR_CREATED",
+      "details": {
+        "reason": "NEW_UNIQUE_RATE",
+        "pairId": "PAIR-0001",
+        "symbol": "CLUSDT",
+        "entryPrice": 91.35,
+        "previousProcessedRate": null,
+        "buyTarget": 91.4,
+        "sellTarget": 91.3
+      }
+    },
+    {
+      "id": "LOG-1791719005218-481",
+      "timestamp": "2026-10-11T11:43:25.218Z",
+      "event": "ENTRY_SKIPPED",
+      "details": "ENTRY SKIPPED — RATE ALREADY PROCESSED ($91.35)"
+    },
+    {
+      "id": "LOG-1791719005236-274",
+      "timestamp": "2026-10-11T11:43:25.236Z",
+      "event": "ENGINE_RESET",
+      "details": "All engine paper positions, processed rates, and history reset."
+    },
+    {
+      "id": "LOG-1791719005239-699",
+      "timestamp": "2026-10-11T11:43:25.239Z",
+      "event": "PAIR_CREATED",
+      "details": {
+        "reason": "NEW_UNIQUE_RATE",
+        "pairId": "PAIR-0001",
+        "symbol": "CLUSDT",
+        "entryPrice": 91.35,
+        "previousProcessedRate": null,
+        "buyTarget": 91.4,
+        "sellTarget": 91.3
+      }
+    },
+    {
+      "id": "LOG-1791719005241-299",
+      "timestamp": "2026-10-11T11:43:25.241Z",
+      "event": "ENTRY_SKIPPED",
+      "details": "ENTRY SKIPPED — RATE ALREADY PROCESSED ($91.35)"
+    },
+    {
+      "id": "LOG-1791719005241-351",
+      "timestamp": "2026-10-11T11:43:25.241Z",
+      "event": "PAIR_CREATED",
+      "details": {
+        "reason": "NEW_UNIQUE_RATE",
+        "pairId": "PAIR-0002",
+        "symbol": "CLUSDT",
+        "entryPrice": 91.36,
+        "previousProcessedRate": 91.35,
+        "buyTarget": 91.41,
+        "sellTarget": 91.31
+      }
+    },
+    {
+      "id": "LOG-1791719005243-776",
+      "timestamp": "2026-10-11T11:43:25.243Z",
+      "event": "ENTRY_SKIPPED",
+      "details": "ENTRY SKIPPED — RATE ALREADY PROCESSED ($91.36)"
+    },
+    {
+      "id": "LOG-1791719005243-437",
+      "timestamp": "2026-10-11T11:43:25.243Z",
+      "event": "ENGINE_RESET",
+      "details": "All engine paper positions, processed rates, and history reset."
+    },
+    {
+      "id": "LOG-1791719005246-411",
+      "timestamp": "2026-10-11T11:43:25.246Z",
+      "event": "PAIR_CREATED",
+      "details": {
+        "reason": "NEW_UNIQUE_RATE",
+        "pairId": "PAIR-0001",
+        "symbol": "CLUSDT",
+        "entryPrice": 91.35,
+        "previousProcessedRate": null,
+        "buyTarget": 91.4,
+        "sellTarget": 91.3
+      }
+    },
+    {
+      "id": "LOG-1791719005248-636",
+      "timestamp": "2026-10-11T11:43:25.248Z",
+      "event": "ENTRY_SKIPPED",
+      "details": "ENTRY SKIPPED — RATE ALREADY PROCESSED ($91.35)"
+    },
+    {
+      "id": "LOG-1791719005248-640",
+      "timestamp": "2026-10-11T11:43:25.248Z",
+      "event": "PAIR_CREATED",
+      "details": {
+        "reason": "NEW_UNIQUE_RATE",
+        "pairId": "PAIR-0002",
+        "symbol": "CLUSDT",
+        "entryPrice": 91.36,
+        "previousProcessedRate": 91.35,
+        "buyTarget": 91.41,
+        "sellTarget": 91.31
+      }
+    },
+    {
+      "id": "LOG-1791719005250-327",
+      "timestamp": "2026-10-11T11:43:25.250Z",
+      "event": "ENTRY_SKIPPED",
+      "details": "ENTRY SKIPPED — RATE ALREADY PROCESSED ($91.36)"
+    },
+    {
+      "id": "LOG-1791719005251-231",
+      "timestamp": "2026-10-11T11:43:25.251Z",
+      "event": "ENTRY_SKIPPED",
+      "details": "ENTRY SKIPPED — RATE ALREADY PROCESSED ($91.35)"
+    },
+    {
+      "id": "LOG-1791719005251-639",
+      "timestamp": "2026-10-11T11:43:25.251Z",
+      "event": "ENGINE_RESET",
+      "details": "All engine paper positions, processed rates, and history reset."
+    },
+    {
+      "id": "LOG-1791719005253-272",
+      "timestamp": "2026-10-11T11:43:25.253Z",
+      "event": "PAIR_CREATED",
+      "details": {
+        "reason": "NEW_UNIQUE_RATE",
+        "pairId": "PAIR-0001",
+        "symbol": "CLUSDT",
+        "entryPrice": 91.3,
+        "previousProcessedRate": null,
+        "buyTarget": 91.35,
+        "sellTarget": 91.25
+      }
+    },
+    {
+      "id": "LOG-1791719005255-985",
+      "timestamp": "2026-10-11T11:43:25.255Z",
+      "event": "ENTRY_SKIPPED",
+      "details": "ENTRY SKIPPED — RATE ALREADY PROCESSED ($91.3)"
+    },
+    {
+      "id": "LOG-1791719005255-412",
+      "timestamp": "2026-10-11T11:43:25.255Z",
+      "event": "PAIR_CREATED",
+      "details": {
+        "reason": "NEW_UNIQUE_RATE",
+        "pairId": "PAIR-0002",
+        "symbol": "CLUSDT",
+        "entryPrice": 91.31,
+        "previousProcessedRate": 91.3,
+        "buyTarget": 91.36,
+        "sellTarget": 91.26
+      }
+    },
+    {
+      "id": "LOG-1791719005257-58",
+      "timestamp": "2026-10-11T11:43:25.257Z",
+      "event": "ENTRY_SKIPPED",
+      "details": "ENTRY SKIPPED — RATE ALREADY PROCESSED ($91.31)"
+    },
+    {
+      "id": "LOG-1791719005257-793",
+      "timestamp": "2026-10-11T11:43:25.257Z",
+      "event": "PAIR_CREATED",
+      "details": {
+        "reason": "NEW_UNIQUE_RATE",
+        "pairId": "PAIR-0003",
+        "symbol": "CLUSDT",
+        "entryPrice": 91.32,
+        "previousProcessedRate": 91.31,
+        "buyTarget": 91.37,
+        "sellTarget": 91.27
+      }
+    },
+    {
+      "id": "LOG-1791719005259-337",
+      "timestamp": "2026-10-11T11:43:25.259Z",
+      "event": "ENTRY_SKIPPED",
+      "details": "ENTRY SKIPPED — RATE ALREADY PROCESSED ($91.32)"
+    },
+    {
+      "id": "LOG-1791719005259-844",
+      "timestamp": "2026-10-11T11:43:25.259Z",
+      "event": "PAIR_CREATED",
+      "details": {
+        "reason": "NEW_UNIQUE_RATE",
+        "pairId": "PAIR-0004",
+        "symbol": "CLUSDT",
+        "entryPrice": 91.33,
+        "previousProcessedRate": 91.32,
+        "buyTarget": 91.38,
+        "sellTarget": 91.28
+      }
+    },
+    {
+      "id": "LOG-1791719005262-610",
+      "timestamp": "2026-10-11T11:43:25.262Z",
+      "event": "ENTRY_SKIPPED",
+      "details": "ENTRY SKIPPED — RATE ALREADY PROCESSED ($91.33)"
+    },
+    {
+      "id": "LOG-1791719005263-864",
+      "timestamp": "2026-10-11T11:43:25.263Z",
+      "event": "PAIR_CREATED",
+      "details": {
+        "reason": "NEW_UNIQUE_RATE",
+        "pairId": "PAIR-0005",
+        "symbol": "CLUSDT",
+        "entryPrice": 91.34,
+        "previousProcessedRate": 91.33,
+        "buyTarget": 91.39,
+        "sellTarget": 91.29
+      }
+    },
+    {
+      "id": "LOG-1791719005264-811",
+      "timestamp": "2026-10-11T11:43:25.264Z",
+      "event": "ENTRY_SKIPPED",
+      "details": "ENTRY SKIPPED — RATE ALREADY PROCESSED ($91.34)"
+    },
+    {
+      "id": "LOG-1791719005265-147",
+      "timestamp": "2026-10-11T11:43:25.265Z",
+      "event": "ENGINE_RESET",
+      "details": "All engine paper positions, processed rates, and history reset."
+    },
+    {
+      "id": "LOG-1791719005266-965",
+      "timestamp": "2026-10-11T11:43:25.266Z",
+      "event": "PAIR_CREATED",
+      "details": {
+        "reason": "NEW_UNIQUE_RATE",
+        "pairId": "PAIR-0001",
+        "symbol": "CLUSDT",
+        "entryPrice": 90.01,
+        "previousProcessedRate": null,
+        "buyTarget": 90.06,
+        "sellTarget": 89.96
+      }
+    },
+    {
+      "id": "LOG-1791719005269-86",
+      "timestamp": "2026-10-11T11:43:25.269Z",
+      "event": "ENTRY_SKIPPED",
+      "details": "ENTRY SKIPPED — RATE ALREADY PROCESSED ($90.01)"
+    },
+    {
+      "id": "LOG-1791719005269-51",
+      "timestamp": "2026-10-11T11:43:25.269Z",
+      "event": "PAIR_CREATED",
+      "details": {
+        "reason": "NEW_UNIQUE_RATE",
+        "pairId": "PAIR-0002",
+        "symbol": "CLUSDT",
+        "entryPrice": 90.02,
+        "previousProcessedRate": 90.01,
+        "buyTarget": 90.07,
+        "sellTarget": 89.97
+      }
+    },
+    {
+      "id": "LOG-1791719005270-701",
+      "timestamp": "2026-10-11T11:43:25.270Z",
+      "event": "ENTRY_SKIPPED",
+      "details": "ENTRY SKIPPED — RATE ALREADY PROCESSED ($90.02)"
+    },
+    {
+      "id": "LOG-1791719005270-796",
+      "timestamp": "2026-10-11T11:43:25.270Z",
+      "event": "PAIR_CREATED",
+      "details": {
+        "reason": "NEW_UNIQUE_RATE",
+        "pairId": "PAIR-0003",
+        "symbol": "CLUSDT",
+        "entryPrice": 90.03,
+        "previousProcessedRate": 90.02,
+        "buyTarget": 90.08,
+        "sellTarget": 89.98
+      }
+    },
+    {
+      "id": "LOG-1791719005272-364",
+      "timestamp": "2026-10-11T11:43:25.272Z",
+      "event": "ENTRY_SKIPPED",
+      "details": "ENTRY SKIPPED — RATE ALREADY PROCESSED ($90.03)"
+    },
+    {
+      "id": "LOG-1791719005272-733",
+      "timestamp": "2026-10-11T11:43:25.272Z",
+      "event": "PAIR_CREATED",
+      "details": {
+        "reason": "NEW_UNIQUE_RATE",
+        "pairId": "PAIR-0004",
+        "symbol": "CLUSDT",
+        "entryPrice": 90.04,
+        "previousProcessedRate": 90.03,
+        "buyTarget": 90.09,
+        "sellTarget": 89.99
+      }
+    },
+    {
+      "id": "LOG-1791719005273-479",
+      "timestamp": "2026-10-11T11:43:25.273Z",
+      "event": "ENTRY_SKIPPED",
+      "details": "ENTRY SKIPPED — RATE ALREADY PROCESSED ($90.04)"
+    },
+    {
+      "id": "LOG-1791719005274-390",
+      "timestamp": "2026-10-11T11:43:25.274Z",
+      "event": "PAIR_CREATED",
+      "details": {
+        "reason": "NEW_UNIQUE_RATE",
+        "pairId": "PAIR-0005",
+        "symbol": "CLUSDT",
+        "entryPrice": 90.05,
+        "previousProcessedRate": 90.04,
+        "buyTarget": 90.1,
+        "sellTarget": 90
+      }
+    },
+    {
+      "id": "LOG-1791719005275-856",
+      "timestamp": "2026-10-11T11:43:25.275Z",
+      "event": "ENTRY_SKIPPED",
+      "details": "ENTRY SKIPPED — RATE ALREADY PROCESSED ($90.05)"
+    },
+    {
+      "id": "LOG-1791719005276-872",
+      "timestamp": "2026-10-11T11:43:25.276Z",
+      "event": "POSITION_CLOSED",
+      "details": {
+        "pairId": "PAIR-0001",
+        "positionId": "P-0001-BUY",
+        "direction": "BUY",
+        "symbol": "CLUSDT",
+        "entryTime": "2026-10-11T11:43:25.266Z",
+        "exitTime": "2026-10-11T11:43:25.275Z",
+        "entryPrice": 90.01,
+        "exitPrice": 90.06,
+        "targetExitPrice": 90.06,
+        "quantity": 1,
+        "contractMultiplier": 1,
+        "grossProfitUSD": 0.05,
+        "grossProfitINR": 4.32,
+        "entryFeeUSD": 0.045,
+        "exitFeeUSD": 0.045,
+        "gstUSD": 0.0162,
+        "totalChargesUSD": 0.1062,
+        "totalChargesINR": 9.19,
+        "netProfitUSD": -0.0562,
+        "netProfitINR": -4.86,
+        "usdInrRate": 86.5,
+        "exitReason": "BUY TARGET PROFIT HIT",
+        "holdingDurationSec": 0
+      }
+    },
+    {
+      "id": "LOG-1791719005278-325",
+      "timestamp": "2026-10-11T11:43:25.278Z",
+      "event": "PAIR_CREATED",
+      "details": {
+        "reason": "NEW_UNIQUE_RATE",
+        "pairId": "PAIR-0006",
+        "symbol": "CLUSDT",
+        "entryPrice": 90.06,
+        "previousProcessedRate": 90.05,
+        "buyTarget": 90.11,
+        "sellTarget": 90.01
+      }
+    },
+    {
+      "id": "LOG-1791719005280-245",
+      "timestamp": "2026-10-11T11:43:25.280Z",
+      "event": "ENTRY_SKIPPED",
+      "details": "ENTRY SKIPPED — RATE ALREADY PROCESSED ($90.06)"
+    },
+    {
+      "id": "LOG-1791719005280-450",
+      "timestamp": "2026-10-11T11:43:25.280Z",
+      "event": "POSITION_CLOSED",
+      "details": {
+        "pairId": "PAIR-0002",
+        "positionId": "P-0002-BUY",
+        "direction": "BUY",
+        "symbol": "CLUSDT",
+        "entryTime": "2026-10-11T11:43:25.269Z",
+        "exitTime": "2026-10-11T11:43:25.280Z",
+        "entryPrice": 90.02,
+        "exitPrice": 90.07,
+        "targetExitPrice": 90.07,
+        "quantity": 1,
+        "contractMultiplier": 1,
+        "grossProfitUSD": 0.05,
+        "grossProfitINR": 4.32,
+        "entryFeeUSD": 0.045,
+        "exitFeeUSD": 0.045,
+        "gstUSD": 0.0162,
+        "totalChargesUSD": 0.1063,
+        "totalChargesINR": 9.19,
+        "netProfitUSD": -0.0563,
+        "netProfitINR": -4.87,
+        "usdInrRate": 86.5,
+        "exitReason": "BUY TARGET PROFIT HIT",
+        "holdingDurationSec": 0
+      }
+    },
+    {
+      "id": "LOG-1791719005282-323",
+      "timestamp": "2026-10-11T11:43:25.282Z",
+      "event": "PAIR_CREATED",
+      "details": {
+        "reason": "NEW_UNIQUE_RATE",
+        "pairId": "PAIR-0007",
+        "symbol": "CLUSDT",
+        "entryPrice": 90.07,
+        "previousProcessedRate": 90.06,
+        "buyTarget": 90.12,
+        "sellTarget": 90.02
+      }
+    },
+    {
+      "id": "LOG-1791719005284-555",
+      "timestamp": "2026-10-11T11:43:25.284Z",
+      "event": "ENTRY_SKIPPED",
+      "details": "ENTRY SKIPPED — RATE ALREADY PROCESSED ($90.07)"
+    },
+    {
+      "id": "LOG-1791719005285-622",
+      "timestamp": "2026-10-11T11:43:25.285Z",
+      "event": "POSITION_CLOSED",
+      "details": {
+        "pairId": "PAIR-0003",
+        "positionId": "P-0003-BUY",
+        "direction": "BUY",
+        "symbol": "CLUSDT",
+        "entryTime": "2026-10-11T11:43:25.270Z",
+        "exitTime": "2026-10-11T11:43:25.284Z",
+        "entryPrice": 90.03,
+        "exitPrice": 90.08,
+        "targetExitPrice": 90.08,
+        "quantity": 1,
+        "contractMultiplier": 1,
+        "grossProfitUSD": 0.05,
+        "grossProfitINR": 4.32,
+        "entryFeeUSD": 0.045,
+        "exitFeeUSD": 0.045,
+        "gstUSD": 0.0162,
+        "totalChargesUSD": 0.1063,
+        "totalChargesINR": 9.19,
+        "netProfitUSD": -0.0563,
+        "netProfitINR": -4.87,
+        "usdInrRate": 86.5,
+        "exitReason": "BUY TARGET PROFIT HIT",
+        "holdingDurationSec": 0
+      }
+    },
+    {
+      "id": "LOG-1791719005286-8",
+      "timestamp": "2026-10-11T11:43:25.286Z",
+      "event": "PAIR_CREATED",
+      "details": {
+        "reason": "NEW_UNIQUE_RATE",
+        "pairId": "PAIR-0008",
+        "symbol": "CLUSDT",
+        "entryPrice": 90.08,
+        "previousProcessedRate": 90.07,
+        "buyTarget": 90.13,
+        "sellTarget": 90.03
+      }
+    },
+    {
+      "id": "LOG-1791719005288-483",
+      "timestamp": "2026-10-11T11:43:25.288Z",
+      "event": "ENTRY_SKIPPED",
+      "details": "ENTRY SKIPPED — RATE ALREADY PROCESSED ($90.08)"
+    },
+    {
+      "id": "LOG-1791719005288-159",
+      "timestamp": "2026-10-11T11:43:25.288Z",
+      "event": "POSITION_CLOSED",
+      "details": {
+        "pairId": "PAIR-0004",
+        "positionId": "P-0004-BUY",
+        "direction": "BUY",
+        "symbol": "CLUSDT",
+        "entryTime": "2026-10-11T11:43:25.272Z",
+        "exitTime": "2026-10-11T11:43:25.288Z",
+        "entryPrice": 90.04,
+        "exitPrice": 90.09,
+        "targetExitPrice": 90.09,
+        "quantity": 1,
+        "contractMultiplier": 1,
+        "grossProfitUSD": 0.05,
+        "grossProfitINR": 4.32,
+        "entryFeeUSD": 0.045,
+        "exitFeeUSD": 0.045,
+        "gstUSD": 0.0162,
+        "totalChargesUSD": 0.1063,
+        "totalChargesINR": 9.19,
+        "netProfitUSD": -0.0563,
+        "netProfitINR": -4.87,
+        "usdInrRate": 86.5,
+        "exitReason": "BUY TARGET PROFIT HIT",
+        "holdingDurationSec": 0
+      }
+    },
+    {
+      "id": "LOG-1791719005290-128",
+      "timestamp": "2026-10-11T11:43:25.290Z",
+      "event": "PAIR_CREATED",
+      "details": {
+        "reason": "NEW_UNIQUE_RATE",
+        "pairId": "PAIR-0009",
+        "symbol": "CLUSDT",
+        "entryPrice": 90.09,
+        "previousProcessedRate": 90.08,
+        "buyTarget": 90.14,
+        "sellTarget": 90.04
+      }
+    },
+    {
+      "id": "LOG-1791719005292-596",
+      "timestamp": "2026-10-11T11:43:25.292Z",
+      "event": "ENTRY_SKIPPED",
+      "details": "ENTRY SKIPPED — RATE ALREADY PROCESSED ($90.09)"
+    },
+    {
+      "id": "LOG-1791719005292-28",
+      "timestamp": "2026-10-11T11:43:25.292Z",
+      "event": "POSITION_CLOSED",
+      "details": {
+        "pairId": "PAIR-0005",
+        "positionId": "P-0005-BUY",
+        "direction": "BUY",
+        "symbol": "CLUSDT",
+        "entryTime": "2026-10-11T11:43:25.274Z",
+        "exitTime": "2026-10-11T11:43:25.292Z",
+        "entryPrice": 90.05,
+        "exitPrice": 90.1,
+        "targetExitPrice": 90.1,
+        "quantity": 1,
+        "contractMultiplier": 1,
+        "grossProfitUSD": 0.05,
+        "grossProfitINR": 4.32,
+        "entryFeeUSD": 0.045,
+        "exitFeeUSD": 0.045,
+        "gstUSD": 0.0162,
+        "totalChargesUSD": 0.1063,
+        "totalChargesINR": 9.19,
+        "netProfitUSD": -0.0563,
+        "netProfitINR": -4.87,
+        "usdInrRate": 86.5,
+        "exitReason": "BUY TARGET PROFIT HIT",
+        "holdingDurationSec": 0
+      }
+    },
+    {
+      "id": "LOG-1791719005295-7",
+      "timestamp": "2026-10-11T11:43:25.295Z",
+      "event": "PAIR_CREATED",
+      "details": {
+        "reason": "NEW_UNIQUE_RATE",
+        "pairId": "PAIR-0010",
+        "symbol": "CLUSDT",
+        "entryPrice": 90.1,
+        "previousProcessedRate": 90.09,
+        "buyTarget": 90.15,
+        "sellTarget": 90.05
+      }
+    },
+    {
+      "id": "LOG-1791719005298-724",
+      "timestamp": "2026-10-11T11:43:25.299Z",
+      "event": "ENTRY_SKIPPED",
+      "details": "ENTRY SKIPPED — RATE ALREADY PROCESSED ($90.1)"
+    },
+    {
+      "id": "LOG-1791719005299-749",
+      "timestamp": "2026-10-11T11:43:25.299Z",
+      "event": "POSITION_CLOSED",
+      "details": {
+        "pairId": "PAIR-0006",
+        "positionId": "P-0006-BUY",
+        "direction": "BUY",
+        "symbol": "CLUSDT",
+        "entryTime": "2026-10-11T11:43:25.275Z",
+        "exitTime": "2026-10-11T11:43:25.299Z",
+        "entryPrice": 90.06,
+        "exitPrice": 90.11,
+        "targetExitPrice": 90.11,
+        "quantity": 1,
+        "contractMultiplier": 1,
+        "grossProfitUSD": 0.05,
+        "grossProfitINR": 4.32,
+        "entryFeeUSD": 0.045,
+        "exitFeeUSD": 0.0451,
+        "gstUSD": 0.0162,
+        "totalChargesUSD": 0.1063,
+        "totalChargesINR": 9.19,
+        "netProfitUSD": -0.0563,
+        "netProfitINR": -4.87,
+        "usdInrRate": 86.5,
+        "exitReason": "BUY TARGET PROFIT HIT",
+        "holdingDurationSec": 0
+      }
+    },
+    {
+      "id": "LOG-1791719005303-557",
+      "timestamp": "2026-10-11T11:43:25.303Z",
+      "event": "PAIR_CREATED",
+      "details": {
+        "reason": "NEW_UNIQUE_RATE",
+        "pairId": "PAIR-0011",
+        "symbol": "CLUSDT",
+        "entryPrice": 90.11,
+        "previousProcessedRate": 90.1,
+        "buyTarget": 90.16,
+        "sellTarget": 90.06
+      }
+    },
+    {
+      "id": "LOG-1791719005305-578",
+      "timestamp": "2026-10-11T11:43:25.305Z",
+      "event": "ENTRY_SKIPPED",
+      "details": "ENTRY SKIPPED — RATE ALREADY PROCESSED ($90.11)"
+    },
+    {
+      "id": "LOG-1791719005305-801",
+      "timestamp": "2026-10-11T11:43:25.305Z",
+      "event": "POSITION_CLOSED",
+      "details": {
+        "pairId": "PAIR-0007",
+        "positionId": "P-0007-BUY",
+        "direction": "BUY",
+        "symbol": "CLUSDT",
+        "entryTime": "2026-10-11T11:43:25.280Z",
+        "exitTime": "2026-10-11T11:43:25.305Z",
+        "entryPrice": 90.07,
+        "exitPrice": 90.12,
+        "targetExitPrice": 90.12,
+        "quantity": 1,
+        "contractMultiplier": 1,
+        "grossProfitUSD": 0.05,
+        "grossProfitINR": 4.33,
+        "entryFeeUSD": 0.045,
+        "exitFeeUSD": 0.0451,
+        "gstUSD": 0.0162,
+        "totalChargesUSD": 0.1063,
+        "totalChargesINR": 9.2,
+        "netProfitUSD": -0.0563,
+        "netProfitINR": -4.87,
+        "usdInrRate": 86.5,
+        "exitReason": "BUY TARGET PROFIT HIT",
+        "holdingDurationSec": 0
+      }
+    },
+    {
+      "id": "LOG-1791719005307-929",
+      "timestamp": "2026-10-11T11:43:25.307Z",
+      "event": "PAIR_CREATED",
+      "details": {
+        "reason": "NEW_UNIQUE_RATE",
+        "pairId": "PAIR-0012",
+        "symbol": "CLUSDT",
+        "entryPrice": 90.12,
+        "previousProcessedRate": 90.11,
+        "buyTarget": 90.17,
+        "sellTarget": 90.07
+      }
+    },
+    {
+      "id": "LOG-1791719005312-777",
+      "timestamp": "2026-10-11T11:43:25.312Z",
+      "event": "ENTRY_SKIPPED",
+      "details": "ENTRY SKIPPED — RATE ALREADY PROCESSED ($90.12)"
+    },
+    {
+      "id": "LOG-1791719005312-951",
+      "timestamp": "2026-10-11T11:43:25.312Z",
+      "event": "POSITION_CLOSED",
+      "details": {
+        "pairId": "PAIR-0008",
+        "positionId": "P-0008-BUY",
+        "direction": "BUY",
+        "symbol": "CLUSDT",
+        "entryTime": "2026-10-11T11:43:25.284Z",
+        "exitTime": "2026-10-11T11:43:25.312Z",
+        "entryPrice": 90.08,
+        "exitPrice": 90.13,
+        "targetExitPrice": 90.13,
+        "quantity": 1,
+        "contractMultiplier": 1,
+        "grossProfitUSD": 0.05,
+        "grossProfitINR": 4.32,
+        "entryFeeUSD": 0.045,
+        "exitFeeUSD": 0.0451,
+        "gstUSD": 0.0162,
+        "totalChargesUSD": 0.1063,
+        "totalChargesINR": 9.2,
+        "netProfitUSD": -0.0563,
+        "netProfitINR": -4.87,
+        "usdInrRate": 86.5,
+        "exitReason": "BUY TARGET PROFIT HIT",
+        "holdingDurationSec": 0
+      }
+    },
+    {
+      "id": "LOG-1791719005316-312",
+      "timestamp": "2026-10-11T11:43:25.316Z",
+      "event": "PAIR_CREATED",
+      "details": {
+        "reason": "NEW_UNIQUE_RATE",
+        "pairId": "PAIR-0013",
+        "symbol": "CLUSDT",
+        "entryPrice": 90.13,
+        "previousProcessedRate": 90.12,
+        "buyTarget": 90.18,
+        "sellTarget": 90.08
+      }
+    },
+    {
+      "id": "LOG-1791719005321-892",
+      "timestamp": "2026-10-11T11:43:25.321Z",
+      "event": "ENTRY_SKIPPED",
+      "details": "ENTRY SKIPPED — RATE ALREADY PROCESSED ($90.13)"
+    },
+    {
+      "id": "LOG-1791719005321-28",
+      "timestamp": "2026-10-11T11:43:25.321Z",
+      "event": "POSITION_CLOSED",
+      "details": {
+        "pairId": "PAIR-0009",
+        "positionId": "P-0009-BUY",
+        "direction": "BUY",
+        "symbol": "CLUSDT",
+        "entryTime": "2026-10-11T11:43:25.288Z",
+        "exitTime": "2026-10-11T11:43:25.321Z",
+        "entryPrice": 90.09,
+        "exitPrice": 90.14,
+        "targetExitPrice": 90.14,
+        "quantity": 1,
+        "contractMultiplier": 1,
+        "grossProfitUSD": 0.05,
+        "grossProfitINR": 4.32,
+        "entryFeeUSD": 0.045,
+        "exitFeeUSD": 0.0451,
+        "gstUSD": 0.0162,
+        "totalChargesUSD": 0.1063,
+        "totalChargesINR": 9.2,
+        "netProfitUSD": -0.0563,
+        "netProfitINR": -4.87,
+        "usdInrRate": 86.5,
+        "exitReason": "BUY TARGET PROFIT HIT",
+        "holdingDurationSec": 0
+      }
+    },
+    {
+      "id": "LOG-1791719005323-477",
+      "timestamp": "2026-10-11T11:43:25.323Z",
+      "event": "PAIR_CREATED",
+      "details": {
+        "reason": "NEW_UNIQUE_RATE",
+        "pairId": "PAIR-0014",
+        "symbol": "CLUSDT",
+        "entryPrice": 90.14,
+        "previousProcessedRate": 90.13,
+        "buyTarget": 90.19,
+        "sellTarget": 90.09
+      }
+    },
+    {
+      "id": "LOG-1791719005328-888",
+      "timestamp": "2026-10-11T11:43:25.328Z",
+      "event": "ENTRY_SKIPPED",
+      "details": "ENTRY SKIPPED — RATE ALREADY PROCESSED ($90.14)"
+    },
+    {
+      "id": "LOG-1791719005329-242",
+      "timestamp": "2026-10-11T11:43:25.329Z",
+      "event": "POSITION_CLOSED",
+      "details": {
+        "pairId": "PAIR-0010",
+        "positionId": "P-0010-BUY",
+        "direction": "BUY",
+        "symbol": "CLUSDT",
+        "entryTime": "2026-10-11T11:43:25.292Z",
+        "exitTime": "2026-10-11T11:43:25.328Z",
+        "entryPrice": 90.1,
+        "exitPrice": 90.15,
+        "targetExitPrice": 90.15,
+        "quantity": 1,
+        "contractMultiplier": 1,
+        "grossProfitUSD": 0.05,
+        "grossProfitINR": 4.33,
+        "entryFeeUSD": 0.045,
+        "exitFeeUSD": 0.0451,
+        "gstUSD": 0.0162,
+        "totalChargesUSD": 0.1063,
+        "totalChargesINR": 9.2,
+        "netProfitUSD": -0.0563,
+        "netProfitINR": -4.87,
+        "usdInrRate": 86.5,
+        "exitReason": "BUY TARGET PROFIT HIT",
+        "holdingDurationSec": 0
+      }
+    },
+    {
+      "id": "LOG-1791719005332-141",
+      "timestamp": "2026-10-11T11:43:25.332Z",
+      "event": "PAIR_CREATED",
+      "details": {
+        "reason": "NEW_UNIQUE_RATE",
+        "pairId": "PAIR-0015",
+        "symbol": "CLUSDT",
+        "entryPrice": 90.15,
+        "previousProcessedRate": 90.14,
+        "buyTarget": 90.2,
+        "sellTarget": 90.1
+      }
+    },
+    {
+      "id": "LOG-1791719005334-813",
+      "timestamp": "2026-10-11T11:43:25.334Z",
+      "event": "ENTRY_SKIPPED",
+      "details": "ENTRY SKIPPED — RATE ALREADY PROCESSED ($90.15)"
+    },
+    {
+      "id": "LOG-1791719005334-30",
+      "timestamp": "2026-10-11T11:43:25.334Z",
+      "event": "POSITION_CLOSED",
+      "details": {
+        "pairId": "PAIR-0011",
+        "positionId": "P-0011-BUY",
+        "direction": "BUY",
+        "symbol": "CLUSDT",
+        "entryTime": "2026-10-11T11:43:25.299Z",
+        "exitTime": "2026-10-11T11:43:25.334Z",
+        "entryPrice": 90.11,
+        "exitPrice": 90.16,
+        "targetExitPrice": 90.16,
+        "quantity": 1,
+        "contractMultiplier": 1,
+        "grossProfitUSD": 0.05,
+        "grossProfitINR": 4.32,
+        "entryFeeUSD": 0.0451,
+        "exitFeeUSD": 0.0451,
+        "gstUSD": 0.0162,
+        "totalChargesUSD": 0.1064,
+        "totalChargesINR": 9.2,
+        "netProfitUSD": -0.0564,
+        "netProfitINR": -4.88,
+        "usdInrRate": 86.5,
+        "exitReason": "BUY TARGET PROFIT HIT",
+        "holdingDurationSec": 0
+      }
+    },
+    {
+      "id": "LOG-1791719005337-563",
+      "timestamp": "2026-10-11T11:43:25.337Z",
+      "event": "PAIR_CREATED",
+      "details": {
+        "reason": "NEW_UNIQUE_RATE",
+        "pairId": "PAIR-0016",
+        "symbol": "CLUSDT",
+        "entryPrice": 90.16,
+        "previousProcessedRate": 90.15,
+        "buyTarget": 90.21,
+        "sellTarget": 90.11
+      }
+    },
+    {
+      "id": "LOG-1791719005339-138",
+      "timestamp": "2026-10-11T11:43:25.339Z",
+      "event": "ENTRY_SKIPPED",
+      "details": "ENTRY SKIPPED — RATE ALREADY PROCESSED ($90.16)"
+    },
+    {
+      "id": "LOG-1791719005339-753",
+      "timestamp": "2026-10-11T11:43:25.339Z",
+      "event": "POSITION_CLOSED",
+      "details": {
+        "pairId": "PAIR-0012",
+        "positionId": "P-0012-BUY",
+        "direction": "BUY",
+        "symbol": "CLUSDT",
+        "entryTime": "2026-10-11T11:43:25.305Z",
+        "exitTime": "2026-10-11T11:43:25.339Z",
+        "entryPrice": 90.12,
+        "exitPrice": 90.17,
+        "targetExitPrice": 90.17,
+        "quantity": 1,
+        "contractMultiplier": 1,
+        "grossProfitUSD": 0.05,
+        "grossProfitINR": 4.32,
+        "entryFeeUSD": 0.0451,
+        "exitFeeUSD": 0.0451,
+        "gstUSD": 0.0162,
+        "totalChargesUSD": 0.1064,
+        "totalChargesINR": 9.2,
+        "netProfitUSD": -0.0564,
+        "netProfitINR": -4.88,
+        "usdInrRate": 86.5,
+        "exitReason": "BUY TARGET PROFIT HIT",
+        "holdingDurationSec": 0
+      }
+    },
+    {
+      "id": "LOG-1791719005341-559",
+      "timestamp": "2026-10-11T11:43:25.341Z",
+      "event": "PAIR_CREATED",
+      "details": {
+        "reason": "NEW_UNIQUE_RATE",
+        "pairId": "PAIR-0017",
+        "symbol": "CLUSDT",
+        "entryPrice": 90.17,
+        "previousProcessedRate": 90.16,
+        "buyTarget": 90.22,
+        "sellTarget": 90.12
+      }
+    },
+    {
+      "id": "LOG-1791719005347-117",
+      "timestamp": "2026-10-11T11:43:25.347Z",
+      "event": "ENTRY_SKIPPED",
+      "details": "ENTRY SKIPPED — RATE ALREADY PROCESSED ($90.17)"
+    },
+    {
+      "id": "LOG-1791719005347-523",
+      "timestamp": "2026-10-11T11:43:25.347Z",
+      "event": "POSITION_CLOSED",
+      "details": {
+        "pairId": "PAIR-0013",
+        "positionId": "P-0013-BUY",
+        "direction": "BUY",
+        "symbol": "CLUSDT",
+        "entryTime": "2026-10-11T11:43:25.312Z",
+        "exitTime": "2026-10-11T11:43:25.347Z",
+        "entryPrice": 90.13,
+        "exitPrice": 90.18,
+        "targetExitPrice": 90.18,
+        "quantity": 1,
+        "contractMultiplier": 1,
+        "grossProfitUSD": 0.05,
+        "grossProfitINR": 4.33,
+        "entryFeeUSD": 0.0451,
+        "exitFeeUSD": 0.0451,
+        "gstUSD": 0.0162,
+        "totalChargesUSD": 0.1064,
+        "totalChargesINR": 9.2,
+        "netProfitUSD": -0.0564,
+        "netProfitINR": -4.88,
+        "usdInrRate": 86.5,
+        "exitReason": "BUY TARGET PROFIT HIT",
+        "holdingDurationSec": 0
+      }
+    },
+    {
+      "id": "LOG-1791719005350-758",
+      "timestamp": "2026-10-11T11:43:25.350Z",
+      "event": "PAIR_CREATED",
+      "details": {
+        "reason": "NEW_UNIQUE_RATE",
+        "pairId": "PAIR-0018",
+        "symbol": "CLUSDT",
+        "entryPrice": 90.18,
+        "previousProcessedRate": 90.17,
+        "buyTarget": 90.23,
+        "sellTarget": 90.13
+      }
+    },
+    {
+      "id": "LOG-1791719005353-635",
+      "timestamp": "2026-10-11T11:43:25.353Z",
+      "event": "ENTRY_SKIPPED",
+      "details": "ENTRY SKIPPED — RATE ALREADY PROCESSED ($90.18)"
+    },
+    {
+      "id": "LOG-1791719005354-675",
+      "timestamp": "2026-10-11T11:43:25.354Z",
+      "event": "POSITION_CLOSED",
+      "details": {
+        "pairId": "PAIR-0014",
+        "positionId": "P-0014-BUY",
+        "direction": "BUY",
+        "symbol": "CLUSDT",
+        "entryTime": "2026-10-11T11:43:25.321Z",
+        "exitTime": "2026-10-11T11:43:25.353Z",
+        "entryPrice": 90.14,
+        "exitPrice": 90.19,
+        "targetExitPrice": 90.19,
+        "quantity": 1,
+        "contractMultiplier": 1,
+        "grossProfitUSD": 0.05,
+        "grossProfitINR": 4.32,
+        "entryFeeUSD": 0.0451,
+        "exitFeeUSD": 0.0451,
+        "gstUSD": 0.0162,
+        "totalChargesUSD": 0.1064,
+        "totalChargesINR": 9.2,
+        "netProfitUSD": -0.0564,
+        "netProfitINR": -4.88,
+        "usdInrRate": 86.5,
+        "exitReason": "BUY TARGET PROFIT HIT",
+        "holdingDurationSec": 0
+      }
+    },
+    {
+      "id": "LOG-1791719005356-797",
+      "timestamp": "2026-10-11T11:43:25.356Z",
+      "event": "PAIR_CREATED",
+      "details": {
+        "reason": "NEW_UNIQUE_RATE",
+        "pairId": "PAIR-0019",
+        "symbol": "CLUSDT",
+        "entryPrice": 90.19,
+        "previousProcessedRate": 90.18,
+        "buyTarget": 90.24,
+        "sellTarget": 90.14
+      }
+    },
+    {
+      "id": "LOG-1791719005359-120",
+      "timestamp": "2026-10-11T11:43:25.359Z",
+      "event": "ENTRY_SKIPPED",
+      "details": "ENTRY SKIPPED — RATE ALREADY PROCESSED ($90.19)"
+    },
+    {
+      "id": "LOG-1791719005359-580",
+      "timestamp": "2026-10-11T11:43:25.359Z",
+      "event": "POSITION_CLOSED",
+      "details": {
+        "pairId": "PAIR-0015",
+        "positionId": "P-0015-BUY",
+        "direction": "BUY",
+        "symbol": "CLUSDT",
+        "entryTime": "2026-10-11T11:43:25.328Z",
+        "exitTime": "2026-10-11T11:43:25.359Z",
+        "entryPrice": 90.15,
+        "exitPrice": 90.2,
+        "targetExitPrice": 90.2,
+        "quantity": 1,
+        "contractMultiplier": 1,
+        "grossProfitUSD": 0.05,
+        "grossProfitINR": 4.32,
+        "entryFeeUSD": 0.0451,
+        "exitFeeUSD": 0.0451,
+        "gstUSD": 0.0162,
+        "totalChargesUSD": 0.1064,
+        "totalChargesINR": 9.2,
+        "netProfitUSD": -0.0564,
+        "netProfitINR": -4.88,
+        "usdInrRate": 86.5,
+        "exitReason": "BUY TARGET PROFIT HIT",
+        "holdingDurationSec": 0
+      }
+    },
+    {
+      "id": "LOG-1791719005363-943",
+      "timestamp": "2026-10-11T11:43:25.363Z",
+      "event": "PAIR_CREATED",
+      "details": {
+        "reason": "NEW_UNIQUE_RATE",
+        "pairId": "PAIR-0020",
+        "symbol": "CLUSDT",
+        "entryPrice": 90.2,
+        "previousProcessedRate": 90.19,
+        "buyTarget": 90.25,
+        "sellTarget": 90.15
+      }
+    },
+    {
+      "id": "LOG-1791719005367-525",
+      "timestamp": "2026-10-11T11:43:25.367Z",
+      "event": "ENTRY_SKIPPED",
+      "details": "ENTRY SKIPPED — RATE ALREADY PROCESSED ($90.2)"
+    },
+    {
+      "id": "LOG-1791719005367-480",
+      "timestamp": "2026-10-11T11:43:25.367Z",
+      "event": "POSITION_CLOSED",
+      "details": {
+        "pairId": "PAIR-0016",
+        "positionId": "P-0016-BUY",
+        "direction": "BUY",
+        "symbol": "CLUSDT",
+        "entryTime": "2026-10-11T11:43:25.334Z",
+        "exitTime": "2026-10-11T11:43:25.367Z",
+        "entryPrice": 90.16,
+        "exitPrice": 90.21,
+        "targetExitPrice": 90.21,
+        "quantity": 1,
+        "contractMultiplier": 1,
+        "grossProfitUSD": 0.05,
+        "grossProfitINR": 4.32,
+        "entryFeeUSD": 0.0451,
+        "exitFeeUSD": 0.0451,
+        "gstUSD": 0.0162,
+        "totalChargesUSD": 0.1064,
+        "totalChargesINR": 9.21,
+        "netProfitUSD": -0.0564,
+        "netProfitINR": -4.88,
+        "usdInrRate": 86.5,
+        "exitReason": "BUY TARGET PROFIT HIT",
+        "holdingDurationSec": 0
+      }
+    },
+    {
+      "id": "LOG-1791719005371-713",
+      "timestamp": "2026-10-11T11:43:25.371Z",
+      "event": "PAIR_CREATED",
+      "details": {
+        "reason": "NEW_UNIQUE_RATE",
+        "pairId": "PAIR-0021",
+        "symbol": "CLUSDT",
+        "entryPrice": 90.21,
+        "previousProcessedRate": 90.2,
+        "buyTarget": 90.26,
+        "sellTarget": 90.16
+      }
+    },
+    {
+      "id": "LOG-1791719005373-798",
+      "timestamp": "2026-10-11T11:43:25.373Z",
+      "event": "ENTRY_SKIPPED",
+      "details": "ENTRY SKIPPED — RATE ALREADY PROCESSED ($90.21)"
+    },
+    {
+      "id": "LOG-1791719005373-809",
+      "timestamp": "2026-10-11T11:43:25.373Z",
+      "event": "POSITION_CLOSED",
+      "details": {
+        "pairId": "PAIR-0017",
+        "positionId": "P-0017-BUY",
+        "direction": "BUY",
+        "symbol": "CLUSDT",
+        "entryTime": "2026-10-11T11:43:25.339Z",
+        "exitTime": "2026-10-11T11:43:25.373Z",
+        "entryPrice": 90.17,
+        "exitPrice": 90.22,
+        "targetExitPrice": 90.22,
+        "quantity": 1,
+        "contractMultiplier": 1,
+        "grossProfitUSD": 0.05,
+        "grossProfitINR": 4.32,
+        "entryFeeUSD": 0.0451,
+        "exitFeeUSD": 0.0451,
+        "gstUSD": 0.0162,
+        "totalChargesUSD": 0.1064,
+        "totalChargesINR": 9.21,
+        "netProfitUSD": -0.0564,
+        "netProfitINR": -4.88,
+        "usdInrRate": 86.5,
+        "exitReason": "BUY TARGET PROFIT HIT",
+        "holdingDurationSec": 0
+      }
+    },
+    {
+      "id": "LOG-1791719005376-687",
+      "timestamp": "2026-10-11T11:43:25.376Z",
+      "event": "PAIR_CREATED",
+      "details": {
+        "reason": "NEW_UNIQUE_RATE",
+        "pairId": "PAIR-0022",
+        "symbol": "CLUSDT",
+        "entryPrice": 90.22,
+        "previousProcessedRate": 90.21,
+        "buyTarget": 90.27,
+        "sellTarget": 90.17
+      }
+    },
+    {
+      "id": "LOG-1791719005380-35",
+      "timestamp": "2026-10-11T11:43:25.380Z",
+      "event": "ENTRY_SKIPPED",
+      "details": "ENTRY SKIPPED — RATE ALREADY PROCESSED ($90.22)"
+    },
+    {
+      "id": "LOG-1791719005380-670",
+      "timestamp": "2026-10-11T11:43:25.380Z",
+      "event": "POSITION_CLOSED",
+      "details": {
+        "pairId": "PAIR-0018",
+        "positionId": "P-0018-BUY",
+        "direction": "BUY",
+        "symbol": "CLUSDT",
+        "entryTime": "2026-10-11T11:43:25.347Z",
+        "exitTime": "2026-10-11T11:43:25.380Z",
+        "entryPrice": 90.18,
+        "exitPrice": 90.23,
+        "targetExitPrice": 90.23,
+        "quantity": 1,
+        "contractMultiplier": 1,
+        "grossProfitUSD": 0.05,
+        "grossProfitINR": 4.32,
+        "entryFeeUSD": 0.0451,
+        "exitFeeUSD": 0.0451,
+        "gstUSD": 0.0162,
+        "totalChargesUSD": 0.1064,
+        "totalChargesINR": 9.21,
+        "netProfitUSD": -0.0564,
+        "netProfitINR": -4.88,
+        "usdInrRate": 86.5,
+        "exitReason": "BUY TARGET PROFIT HIT",
+        "holdingDurationSec": 0
+      }
+    },
+    {
+      "id": "LOG-1791719005383-882",
+      "timestamp": "2026-10-11T11:43:25.383Z",
+      "event": "PAIR_CREATED",
+      "details": {
+        "reason": "NEW_UNIQUE_RATE",
+        "pairId": "PAIR-0023",
+        "symbol": "CLUSDT",
+        "entryPrice": 90.23,
+        "previousProcessedRate": 90.22,
+        "buyTarget": 90.28,
+        "sellTarget": 90.18
+      }
+    },
+    {
+      "id": "LOG-1791719005386-262",
+      "timestamp": "2026-10-11T11:43:25.386Z",
+      "event": "ENTRY_SKIPPED",
+      "details": "ENTRY SKIPPED — RATE ALREADY PROCESSED ($90.23)"
+    },
+    {
+      "id": "LOG-1791719005386-448",
+      "timestamp": "2026-10-11T11:43:25.386Z",
+      "event": "POSITION_CLOSED",
+      "details": {
+        "pairId": "PAIR-0019",
+        "positionId": "P-0019-BUY",
+        "direction": "BUY",
+        "symbol": "CLUSDT",
+        "entryTime": "2026-10-11T11:43:25.353Z",
+        "exitTime": "2026-10-11T11:43:25.386Z",
+        "entryPrice": 90.19,
+        "exitPrice": 90.24,
+        "targetExitPrice": 90.24,
+        "quantity": 1,
+        "contractMultiplier": 1,
+        "grossProfitUSD": 0.05,
+        "grossProfitINR": 4.32,
+        "entryFeeUSD": 0.0451,
+        "exitFeeUSD": 0.0451,
+        "gstUSD": 0.0162,
+        "totalChargesUSD": 0.1065,
+        "totalChargesINR": 9.21,
+        "netProfitUSD": -0.0565,
+        "netProfitINR": -4.88,
+        "usdInrRate": 86.5,
+        "exitReason": "BUY TARGET PROFIT HIT",
+        "holdingDurationSec": 0
+      }
+    },
+    {
+      "id": "LOG-1791719005389-410",
+      "timestamp": "2026-10-11T11:43:25.389Z",
+      "event": "PAIR_CREATED",
+      "details": {
+        "reason": "NEW_UNIQUE_RATE",
+        "pairId": "PAIR-0024",
+        "symbol": "CLUSDT",
+        "entryPrice": 90.24,
+        "previousProcessedRate": 90.23,
+        "buyTarget": 90.29,
+        "sellTarget": 90.19
+      }
+    },
+    {
+      "id": "LOG-1791719005394-693",
+      "timestamp": "2026-10-11T11:43:25.394Z",
+      "event": "ENTRY_SKIPPED",
+      "details": "ENTRY SKIPPED — RATE ALREADY PROCESSED ($90.24)"
+    },
+    {
+      "id": "LOG-1791719005395-620",
+      "timestamp": "2026-10-11T11:43:25.395Z",
+      "event": "POSITION_CLOSED",
+      "details": {
+        "pairId": "PAIR-0020",
+        "positionId": "P-0020-BUY",
+        "direction": "BUY",
+        "symbol": "CLUSDT",
+        "entryTime": "2026-10-11T11:43:25.359Z",
+        "exitTime": "2026-10-11T11:43:25.395Z",
+        "entryPrice": 90.2,
+        "exitPrice": 90.25,
+        "targetExitPrice": 90.25,
+        "quantity": 1,
+        "contractMultiplier": 1,
+        "grossProfitUSD": 0.05,
+        "grossProfitINR": 4.32,
+        "entryFeeUSD": 0.0451,
+        "exitFeeUSD": 0.0451,
+        "gstUSD": 0.0162,
+        "totalChargesUSD": 0.1065,
+        "totalChargesINR": 9.21,
+        "netProfitUSD": -0.0565,
+        "netProfitINR": -4.88,
+        "usdInrRate": 86.5,
+        "exitReason": "BUY TARGET PROFIT HIT",
+        "holdingDurationSec": 0
+      }
+    },
+    {
+      "id": "LOG-1791719005399-301",
+      "timestamp": "2026-10-11T11:43:25.399Z",
+      "event": "PAIR_CREATED",
+      "details": {
+        "reason": "NEW_UNIQUE_RATE",
+        "pairId": "PAIR-0025",
+        "symbol": "CLUSDT",
+        "entryPrice": 90.25,
+        "previousProcessedRate": 90.24,
+        "buyTarget": 90.3,
+        "sellTarget": 90.2
+      }
+    },
+    {
+      "id": "LOG-1791719005402-951",
+      "timestamp": "2026-10-11T11:43:25.402Z",
+      "event": "POSITION_CLOSED",
+      "details": {
+        "pairId": "PAIR-0021",
+        "positionId": "P-0021-BUY",
+        "direction": "BUY",
+        "symbol": "CLUSDT",
+        "entryTime": "2026-10-11T11:43:25.367Z",
+        "exitTime": "2026-10-11T11:43:25.402Z",
+        "entryPrice": 90.21,
+        "exitPrice": 90.26,
+        "targetExitPrice": 90.26,
+        "quantity": 1,
+        "contractMultiplier": 1,
+        "grossProfitUSD": 0.05,
+        "grossProfitINR": 4.33,
+        "entryFeeUSD": 0.0451,
+        "exitFeeUSD": 0.0451,
+        "gstUSD": 0.0162,
+        "totalChargesUSD": 0.1065,
+        "totalChargesINR": 9.21,
+        "netProfitUSD": -0.0565,
+        "netProfitINR": -4.89,
+        "usdInrRate": 86.5,
+        "exitReason": "BUY TARGET PROFIT HIT",
+        "holdingDurationSec": 0
+      }
+    },
+    {
+      "id": "LOG-1791719005406-530",
+      "timestamp": "2026-10-11T11:43:25.406Z",
+      "event": "POSITION_CLOSED",
+      "details": {
+        "pairId": "PAIR-0022",
+        "positionId": "P-0022-BUY",
+        "direction": "BUY",
+        "symbol": "CLUSDT",
+        "entryTime": "2026-10-11T11:43:25.373Z",
+        "exitTime": "2026-10-11T11:43:25.406Z",
+        "entryPrice": 90.22,
+        "exitPrice": 90.27,
+        "targetExitPrice": 90.27,
+        "quantity": 1,
+        "contractMultiplier": 1,
+        "grossProfitUSD": 0.05,
+        "grossProfitINR": 4.32,
+        "entryFeeUSD": 0.0451,
+        "exitFeeUSD": 0.0451,
+        "gstUSD": 0.0162,
+        "totalChargesUSD": 0.1065,
+        "totalChargesINR": 9.21,
+        "netProfitUSD": -0.0565,
+        "netProfitINR": -4.89,
+        "usdInrRate": 86.5,
+        "exitReason": "BUY TARGET PROFIT HIT",
+        "holdingDurationSec": 0
+      }
+    },
+    {
+      "id": "LOG-1791719005410-572",
+      "timestamp": "2026-10-11T11:43:25.410Z",
+      "event": "POSITION_CLOSED",
+      "details": {
+        "pairId": "PAIR-0023",
+        "positionId": "P-0023-BUY",
+        "direction": "BUY",
+        "symbol": "CLUSDT",
+        "entryTime": "2026-10-11T11:43:25.380Z",
+        "exitTime": "2026-10-11T11:43:25.409Z",
+        "entryPrice": 90.23,
+        "exitPrice": 90.28,
+        "targetExitPrice": 90.28,
+        "quantity": 1,
+        "contractMultiplier": 1,
+        "grossProfitUSD": 0.05,
+        "grossProfitINR": 4.32,
+        "entryFeeUSD": 0.0451,
+        "exitFeeUSD": 0.0451,
+        "gstUSD": 0.0162,
+        "totalChargesUSD": 0.1065,
+        "totalChargesINR": 9.21,
+        "netProfitUSD": -0.0565,
+        "netProfitINR": -4.89,
+        "usdInrRate": 86.5,
+        "exitReason": "BUY TARGET PROFIT HIT",
+        "holdingDurationSec": 0
+      }
+    },
+    {
+      "id": "LOG-1791719005414-293",
+      "timestamp": "2026-10-11T11:43:25.414Z",
+      "event": "POSITION_CLOSED",
+      "details": {
+        "pairId": "PAIR-0024",
+        "positionId": "P-0024-BUY",
+        "direction": "BUY",
+        "symbol": "CLUSDT",
+        "entryTime": "2026-10-11T11:43:25.386Z",
+        "exitTime": "2026-10-11T11:43:25.414Z",
+        "entryPrice": 90.24,
+        "exitPrice": 90.29,
+        "targetExitPrice": 90.29,
+        "quantity": 1,
+        "contractMultiplier": 1,
+        "grossProfitUSD": 0.05,
+        "grossProfitINR": 4.33,
+        "entryFeeUSD": 0.0451,
+        "exitFeeUSD": 0.0451,
+        "gstUSD": 0.0162,
+        "totalChargesUSD": 0.1065,
+        "totalChargesINR": 9.21,
+        "netProfitUSD": -0.0565,
+        "netProfitINR": -4.89,
+        "usdInrRate": 86.5,
+        "exitReason": "BUY TARGET PROFIT HIT",
+        "holdingDurationSec": 0
+      }
+    },
+    {
+      "id": "LOG-1791719005417-756",
+      "timestamp": "2026-10-11T11:43:25.417Z",
+      "event": "POSITION_CLOSED",
+      "details": {
+        "pairId": "PAIR-0025",
+        "positionId": "P-0025-BUY",
+        "direction": "BUY",
+        "symbol": "CLUSDT",
+        "entryTime": "2026-10-11T11:43:25.395Z",
+        "exitTime": "2026-10-11T11:43:25.417Z",
+        "entryPrice": 90.25,
+        "exitPrice": 90.3,
+        "targetExitPrice": 90.3,
+        "quantity": 1,
+        "contractMultiplier": 1,
+        "grossProfitUSD": 0.05,
+        "grossProfitINR": 4.32,
+        "entryFeeUSD": 0.0451,
+        "exitFeeUSD": 0.0452,
+        "gstUSD": 0.0162,
+        "totalChargesUSD": 0.1065,
+        "totalChargesINR": 9.21,
+        "netProfitUSD": -0.0565,
+        "netProfitINR": -4.89,
+        "usdInrRate": 86.5,
+        "exitReason": "BUY TARGET PROFIT HIT",
+        "holdingDurationSec": 0
+      }
+    },
+    {
+      "id": "LOG-1791719005421-453",
+      "timestamp": "2026-10-11T11:43:25.421Z",
+      "event": "ENGINE_RESET",
+      "details": "All engine paper positions, processed rates, and history reset."
+    },
+    {
+      "id": "LOG-1791719005424-228",
+      "timestamp": "2026-10-11T11:43:25.424Z",
+      "event": "PAIR_CREATED",
+      "details": {
+        "reason": "NEW_UNIQUE_RATE",
+        "pairId": "PAIR-0001",
+        "symbol": "CLUSDT",
+        "entryPrice": 100,
+        "previousProcessedRate": null,
+        "buyTarget": 100.05,
+        "sellTarget": 99.95
+      }
+    },
+    {
+      "id": "LOG-1791719005427-117",
+      "timestamp": "2026-10-11T11:43:25.427Z",
+      "event": "ENTRY_SKIPPED",
+      "details": "ENTRY SKIPPED — RATE ALREADY PROCESSED ($100)"
+    },
+    {
+      "id": "LOG-1791719005427-415",
+      "timestamp": "2026-10-11T11:43:25.427Z",
+      "event": "POSITION_CLOSED",
+      "details": {
+        "pairId": "PAIR-0001",
+        "positionId": "P-0001-BUY",
+        "direction": "BUY",
+        "symbol": "CLUSDT",
+        "entryTime": "2026-10-11T11:43:25.423Z",
+        "exitTime": "2026-10-11T11:43:25.427Z",
+        "entryPrice": 100,
+        "exitPrice": 100.05,
+        "targetExitPrice": 100.05,
+        "quantity": 1,
+        "contractMultiplier": 1,
+        "grossProfitUSD": 0.05,
+        "grossProfitINR": 4.32,
+        "entryFeeUSD": 0.05,
+        "exitFeeUSD": 0.05,
+        "gstUSD": 0.018,
+        "totalChargesUSD": 0.118,
+        "totalChargesINR": 10.21,
+        "netProfitUSD": -0.068,
+        "netProfitINR": -5.88,
+        "usdInrRate": 86.5,
+        "exitReason": "BUY TARGET PROFIT HIT",
+        "holdingDurationSec": 0
+      }
+    },
+    {
+      "id": "LOG-1791719005430-6",
+      "timestamp": "2026-10-11T11:43:25.430Z",
+      "event": "PAIR_CREATED",
+      "details": {
+        "reason": "NEW_UNIQUE_RATE",
+        "pairId": "PAIR-0002",
+        "symbol": "CLUSDT",
+        "entryPrice": 100.05,
+        "previousProcessedRate": 100,
+        "buyTarget": 100.1,
+        "sellTarget": 100
+      }
+    },
+    {
+      "id": "LOG-1791719005432-333",
+      "timestamp": "2026-10-11T11:43:25.432Z",
+      "event": "ENTRY_SKIPPED",
+      "details": "ENTRY SKIPPED — RATE ALREADY PROCESSED ($100.05)"
+    },
+    {
+      "id": "LOG-1791719005432-956",
+      "timestamp": "2026-10-11T11:43:25.432Z",
+      "event": "ENGINE_RESET",
+      "details": "All engine paper positions, processed rates, and history reset."
+    },
+    {
+      "id": "LOG-1791719005434-17",
+      "timestamp": "2026-10-11T11:43:25.434Z",
+      "event": "PAIR_CREATED",
+      "details": {
+        "reason": "NEW_UNIQUE_RATE",
+        "pairId": "PAIR-0001",
+        "symbol": "CLUSDT",
+        "entryPrice": 100,
+        "previousProcessedRate": null,
+        "buyTarget": 100.05,
+        "sellTarget": 99.95
+      }
+    },
+    {
+      "id": "LOG-1791719005436-567",
+      "timestamp": "2026-10-11T11:43:25.436Z",
+      "event": "ENTRY_SKIPPED",
+      "details": "ENTRY SKIPPED — RATE ALREADY PROCESSED ($100)"
+    },
+    {
+      "id": "LOG-1791719005437-474",
+      "timestamp": "2026-10-11T11:43:25.437Z",
+      "event": "POSITION_CLOSED",
+      "details": {
+        "pairId": "PAIR-0001",
+        "positionId": "P-0001-SELL",
+        "direction": "SELL",
+        "symbol": "CLUSDT",
+        "entryTime": "2026-10-11T11:43:25.434Z",
+        "exitTime": "2026-10-11T11:43:25.437Z",
+        "entryPrice": 100,
+        "exitPrice": 99.95,
+        "targetExitPrice": 99.95,
+        "quantity": 1,
+        "contractMultiplier": 1,
+        "grossProfitUSD": 0.05,
+        "grossProfitINR": 4.32,
+        "entryFeeUSD": 0.05,
+        "exitFeeUSD": 0.05,
+        "gstUSD": 0.018,
+        "totalChargesUSD": 0.118,
+        "totalChargesINR": 10.2,
+        "netProfitUSD": -0.068,
+        "netProfitINR": -5.88,
+        "usdInrRate": 86.5,
+        "exitReason": "SELL TARGET PROFIT HIT",
+        "holdingDurationSec": 0
+      }
+    },
+    {
+      "id": "LOG-1791719005439-711",
+      "timestamp": "2026-10-11T11:43:25.439Z",
+      "event": "PAIR_CREATED",
+      "details": {
+        "reason": "NEW_UNIQUE_RATE",
+        "pairId": "PAIR-0002",
+        "symbol": "CLUSDT",
+        "entryPrice": 99.95,
+        "previousProcessedRate": 100,
+        "buyTarget": 100,
+        "sellTarget": 99.9
+      }
+    },
+    {
+      "id": "LOG-1791719005441-258",
+      "timestamp": "2026-10-11T11:43:25.441Z",
+      "event": "ENTRY_SKIPPED",
+      "details": "ENTRY SKIPPED — RATE ALREADY PROCESSED ($99.95)"
+    },
+    {
+      "id": "LOG-1791719005441-278",
+      "timestamp": "2026-10-11T11:43:25.441Z",
+      "event": "ENGINE_RESET",
+      "details": "All engine paper positions, processed rates, and history reset."
+    },
+    {
+      "id": "LOG-1791719005446-495",
+      "timestamp": "2026-10-11T11:43:25.446Z",
+      "event": "PAIR_CREATED",
+      "details": {
+        "reason": "NEW_UNIQUE_RATE",
+        "pairId": "PAIR-0001",
+        "symbol": "CLUSDT",
+        "entryPrice": 100,
+        "previousProcessedRate": null,
+        "buyTarget": 100.05,
+        "sellTarget": 99.95
+      }
+    },
+    {
+      "id": "LOG-1791719005449-225",
+      "timestamp": "2026-10-11T11:43:25.449Z",
+      "event": "ENTRY_SKIPPED",
+      "details": "ENTRY SKIPPED — RATE ALREADY PROCESSED ($100)"
+    },
+    {
+      "id": "LOG-1791719005449-206",
+      "timestamp": "2026-10-11T11:43:25.449Z",
+      "event": "POSITION_CLOSED",
+      "details": {
+        "pairId": "PAIR-0001",
+        "positionId": "P-0001-BUY",
+        "direction": "BUY",
+        "symbol": "CLUSDT",
+        "entryTime": "2026-10-11T11:43:25.446Z",
+        "exitTime": "2026-10-11T11:43:25.449Z",
+        "entryPrice": 100,
+        "exitPrice": 100.05,
+        "targetExitPrice": 100.05,
+        "quantity": 1,
+        "contractMultiplier": 1,
+        "grossProfitUSD": 0.05,
+        "grossProfitINR": 4.32,
+        "entryFeeUSD": 0.05,
+        "exitFeeUSD": 0.05,
+        "gstUSD": 0.018,
+        "totalChargesUSD": 0.118,
+        "totalChargesINR": 10.21,
+        "netProfitUSD": -0.068,
+        "netProfitINR": -5.88,
+        "usdInrRate": 86.5,
+        "exitReason": "BUY TARGET PROFIT HIT",
+        "holdingDurationSec": 0
+      }
+    },
+    {
+      "id": "LOG-1791719005450-173",
+      "timestamp": "2026-10-11T11:43:25.450Z",
+      "event": "PAIR_CREATED",
+      "details": {
+        "reason": "NEW_UNIQUE_RATE",
+        "pairId": "PAIR-0002",
+        "symbol": "CLUSDT",
+        "entryPrice": 100.05,
+        "previousProcessedRate": 100,
+        "buyTarget": 100.1,
+        "sellTarget": 100
+      }
+    },
+    {
+      "id": "LOG-1791719005452-381",
+      "timestamp": "2026-10-11T11:43:25.452Z",
+      "event": "ENTRY_SKIPPED",
+      "details": "ENTRY SKIPPED — RATE ALREADY PROCESSED ($100.05)"
+    },
+    {
+      "id": "LOG-1791719005453-7",
+      "timestamp": "2026-10-11T11:43:25.453Z",
+      "event": "ENGINE_RESET",
+      "details": "All engine paper positions, processed rates, and history reset."
+    },
+    {
+      "id": "LOG-1791719005455-364",
+      "timestamp": "2026-10-11T11:43:25.455Z",
+      "event": "PAIR_CREATED",
+      "details": {
+        "reason": "NEW_UNIQUE_RATE",
+        "pairId": "PAIR-0001",
+        "symbol": "CLUSDT",
+        "entryPrice": 91.35,
+        "previousProcessedRate": null,
+        "buyTarget": 91.4,
+        "sellTarget": 91.3
+      }
+    },
+    {
+      "id": "LOG-1791719005457-191",
+      "timestamp": "2026-10-11T11:43:25.457Z",
+      "event": "ENTRY_SKIPPED",
+      "details": "ENTRY SKIPPED — RATE ALREADY PROCESSED ($91.35)"
+    },
+    {
+      "id": "LOG-1791719005457-433",
+      "timestamp": "2026-10-11T11:43:25.457Z",
+      "event": "PAIR_CREATED",
+      "details": {
+        "reason": "NEW_UNIQUE_RATE",
+        "pairId": "PAIR-0002",
+        "symbol": "CLUSDT",
+        "entryPrice": 91.36,
+        "previousProcessedRate": 91.35,
+        "buyTarget": 91.41,
+        "sellTarget": 91.31
+      }
+    },
+    {
+      "id": "LOG-1791719005460-329",
+      "timestamp": "2026-10-11T11:43:25.460Z",
+      "event": "ENTRY_SKIPPED",
+      "details": "ENTRY SKIPPED — RATE ALREADY PROCESSED ($91.36)"
+    },
+    {
+      "id": "LOG-1791719005463-835",
+      "timestamp": "2026-10-11T11:43:25.463Z",
+      "event": "ENGINE_RESET",
+      "details": "All engine paper positions, processed rates, and history reset."
+    },
+    {
+      "id": "LOG-1791719005465-415",
+      "timestamp": "2026-10-11T11:43:25.465Z",
+      "event": "ENGINE_RESET",
+      "details": "All engine paper positions, processed rates, and history reset."
+    },
+    {
+      "id": "LOG-1791719005688-208",
+      "timestamp": "2026-10-11T11:43:25.688Z",
+      "event": "ENGINE_RESET",
+      "details": "All engine paper positions, processed rates, and history reset."
+    },
+    {
+      "id": "LOG-1791719006200-525",
+      "timestamp": "2026-10-11T11:43:26.200Z",
+      "event": "ENGINE_RESET",
+      "details": "All engine paper positions, processed rates, and history reset."
+    },
+    {
+      "id": "LOG-1791719006203-673",
+      "timestamp": "2026-10-11T11:43:26.203Z",
+      "event": "PAIR_CREATED",
+      "details": {
+        "reason": "NEW_UNIQUE_RATE",
+        "pairId": "PAIR-0001",
+        "symbol": "CLUSDT",
+        "entryPrice": 90,
+        "previousProcessedRate": null,
+        "buyTarget": 90.2,
+        "sellTarget": 89.8
+      }
+    },
+    {
+      "id": "LOG-1791719006210-652",
+      "timestamp": "2026-10-11T11:43:26.210Z",
+      "event": "ENTRY_SKIPPED",
+      "details": "ENTRY SKIPPED — RATE ALREADY PROCESSED ($90)"
+    },
+    {
+      "id": "LOG-1791719006211-543",
+      "timestamp": "2026-10-11T11:43:26.211Z",
+      "event": "PAIR_CREATED",
+      "details": {
+        "reason": "NEW_UNIQUE_RATE",
+        "pairId": "PAIR-0002",
+        "symbol": "CLUSDT",
+        "entryPrice": 90.15,
+        "previousProcessedRate": 90,
+        "buyTarget": 90.35,
+        "sellTarget": 89.95
+      }
+    },
+    {
+      "id": "LOG-1791719006219-271",
+      "timestamp": "2026-10-11T11:43:26.219Z",
+      "event": "ENTRY_SKIPPED",
+      "details": "ENTRY SKIPPED — RATE ALREADY PROCESSED ($90.15)"
+    },
+    {
+      "id": "LOG-1791719006220-743",
+      "timestamp": "2026-10-11T11:43:26.220Z",
+      "event": "POSITION_CLOSED",
+      "details": {
+        "pairId": "PAIR-0001",
+        "positionId": "P-0001-BUY",
+        "direction": "BUY",
+        "symbol": "CLUSDT",
+        "entryTime": "2026-10-11T11:43:26.203Z",
+        "exitTime": "2026-10-11T11:43:26.220Z",
+        "entryPrice": 90,
+        "exitPrice": 90.2,
+        "targetExitPrice": 90.2,
+        "quantity": 1,
+        "contractMultiplier": 1,
+        "grossProfitUSD": 0.2,
+        "grossProfitINR": 17.3,
+        "entryFeeUSD": 0.045,
+        "exitFeeUSD": 0.0451,
+        "gstUSD": 0.0162,
+        "totalChargesUSD": 0.1063,
+        "totalChargesINR": 9.2,
+        "netProfitUSD": 0.0937,
+        "netProfitINR": 8.1,
+        "usdInrRate": 86.5,
+        "exitReason": "BUY TARGET PROFIT HIT",
+        "holdingDurationSec": 0
+      }
+    },
+    {
+      "id": "LOG-1791719006222-736",
+      "timestamp": "2026-10-11T11:43:26.222Z",
+      "event": "PAIR_CREATED",
+      "details": {
+        "reason": "NEW_UNIQUE_RATE",
+        "pairId": "PAIR-0003",
+        "symbol": "CLUSDT",
+        "entryPrice": 90.2,
+        "previousProcessedRate": 90.15,
+        "buyTarget": 90.4,
+        "sellTarget": 90
+      }
+    },
+    {
+      "id": "LOG-1791719006231-112",
+      "timestamp": "2026-10-11T11:43:26.231Z",
+      "event": "ENTRY_SKIPPED",
+      "details": "ENTRY SKIPPED — RATE ALREADY PROCESSED ($90.2)"
+    },
+    {
+      "id": "LOG-1791719006231-481",
+      "timestamp": "2026-10-11T11:43:26.231Z",
+      "event": "ENGINE_RESET",
+      "details": "All engine paper positions, processed rates, and history reset."
+    },
+    {
+      "id": "LOG-1791719006233-239",
+      "timestamp": "2026-10-11T11:43:26.233Z",
+      "event": "PAIR_CREATED",
+      "details": {
+        "reason": "NEW_UNIQUE_RATE",
+        "pairId": "PAIR-0001",
+        "symbol": "XAGUSDT",
+        "entryPrice": 30,
+        "previousProcessedRate": null,
+        "buyTarget": 31.15,
+        "sellTarget": 28.85
+      }
+    },
+    {
+      "id": "LOG-1791719006235-32",
+      "timestamp": "2026-10-11T11:43:26.235Z",
+      "event": "PAIR_CREATED",
+      "details": {
+        "reason": "NEW_UNIQUE_RATE",
+        "pairId": "PAIR-0002",
+        "symbol": "XAGUSDT",
+        "entryPrice": 30.5,
+        "previousProcessedRate": 30,
+        "buyTarget": 31.65,
+        "sellTarget": 29.35
+      }
+    },
+    {
+      "id": "LOG-1791719006237-940",
+      "timestamp": "2026-10-11T11:43:26.237Z",
+      "event": "POSITION_CLOSED",
+      "details": {
+        "pairId": "PAIR-0001",
+        "positionId": "P-0001-BUY",
+        "direction": "BUY",
+        "symbol": "XAGUSDT",
+        "entryTime": "2026-10-11T11:43:26.233Z",
+        "exitTime": "2026-10-11T11:43:26.237Z",
+        "entryPrice": 30,
+        "exitPrice": 31.15,
+        "targetExitPrice": 31.15,
+        "quantity": 1,
+        "contractMultiplier": 1,
+        "grossProfitUSD": 1.15,
+        "grossProfitINR": 99.47,
+        "entryFeeUSD": 0.015,
+        "exitFeeUSD": 0.0156,
+        "gstUSD": 0.0055,
+        "totalChargesUSD": 0.0361,
+        "totalChargesINR": 3.12,
+        "netProfitUSD": 1.1139,
+        "netProfitINR": 96.35,
+        "usdInrRate": 86.5,
+        "exitReason": "BUY TARGET PROFIT HIT",
+        "holdingDurationSec": 0
+      }
+    },
+    {
+      "id": "LOG-1791719006239-156",
+      "timestamp": "2026-10-11T11:43:26.239Z",
+      "event": "PAIR_CREATED",
+      "details": {
+        "reason": "NEW_UNIQUE_RATE",
+        "pairId": "PAIR-0003",
+        "symbol": "XAGUSDT",
+        "entryPrice": 31.15,
+        "previousProcessedRate": 30.5,
+        "buyTarget": 32.3,
+        "sellTarget": 30
+      }
+    }
+  ],
+  "processedRates": {
+    "CLUSDT": [],
+    "XAGUSDT": [
+      30,
+      30.5,
+      31.15
+    ],
+    "BTCUSDT": []
+  },
+  "lastProcessedRate": 31.15,
+  "dailyTracker": {
+    "dateKey": "2026-10-11",
+    "realizedNetLossINR": 0,
+    "realizedNetProfitINR": 96.35420974999988
+  },
+  "isEngineRunning": true
+}

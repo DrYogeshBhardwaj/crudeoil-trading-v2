@@ -1,0 +1,23 @@
+{
+  "name": "mudrex-live-rate-trading-engine-live",
+  "version": "1.0.0",
+  "description": "Mudrex LIVE Rate Trading Engine Live - Isolated Paper Trading & Simulation Engine",
+  "main": "src/server.js",
+  "scripts": {
+    "start": "node src/server.js",
+    "test": "node tests/runTests.js"
+  },
+  "dependencies": {
+    "cors": "^2.8.5",
+    "express": "^4.21.2",
+    "ws": "^8.18.0"
+  },
+  "keywords": [
+    "paper-trading",
+    "mudrex",
+    "simulation",
+    "trading-engine"
+  ],
+  "author": "Antigravity AI",
+  "license": "ISC"
+}
