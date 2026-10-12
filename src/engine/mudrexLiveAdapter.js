@@ -627,8 +627,12 @@ class MudrexLiveAdapter {
       `${this.baseUrl}/futures/positions?trade_currency=INR`,
       `${this.baseUrl}/futures/${symbol}/positions?trade_currency=INR`,
       `${this.v2Url}/futures/positions?trade_currency=INR`,
-      `${this.baseUrl}/futures/open_orders?trade_currency=INR`
+      `${this.baseUrl}/futures/open_orders?trade_currency=INR`,
+      `${this.v2Url}/futures/open_orders?trade_currency=INR`
     ];
+
+    let combinedItems = [];
+    const seenPosIds = new Set();
 
     for (const url of endpoints) {
       try {
@@ -641,63 +645,72 @@ class MudrexLiveAdapter {
             list = res.data.data;
           } else if (Array.isArray(res.data.positions)) {
             list = res.data.positions;
+          } else if (Array.isArray(res.data.orders)) {
+            list = res.data.orders;
           } else if (typeof res.data === 'object' && (res.data.position_id || res.data.id || res.data.order_id)) {
             list = [res.data];
           }
 
-          const activeList = list.filter(item => {
-            if (!item || typeof item !== 'object') return false;
+          for (const item of list) {
+            if (!item || typeof item !== 'object') continue;
+            const posId = item.position_id || item.id || item.order_id || item.orderId || item.positionId;
+            if (posId && seenPosIds.has(String(posId))) continue;
+            if (posId) seenPosIds.add(String(posId));
+
             const statusStr = String(item.status || item.position_status || item.state || item.order_status || '').toUpperCase();
             if (['CLOSED', 'FILLED', 'CANCELLED', 'EXPIRED', 'COMPLETED', 'REJECTED', 'DONE', 'INACTIVE'].includes(statusStr)) {
-              return false;
+              continue;
             }
-            if (item.closed === true || item.is_closed === true) return false;
-            if (item.quantity !== undefined && Number(item.quantity || item.qty || 0) <= 0) return false;
-            const posId = item.position_id || item.id || item.order_id || item.orderId || item.positionId;
+            if (item.closed === true || item.is_closed === true) continue;
+            if (item.quantity !== undefined && Number(item.quantity || item.qty || 0) <= 0) continue;
             const pairId = item.pair_id || item.pairId;
-            if (posId && (this.userClosedRealPositionIds.has(posId) || this.userClosedRealPositionIds.has(String(posId)))) return false;
-            if (pairId && (this.userClosedRealPositionIds.has(pairId) || this.userClosedRealPositionIds.has(String(pairId)))) return false;
-            return true;
-          });
-
-          const parsedPositions = activeList.map((item, idx) => {
-            const direction = (item.side || item.direction || item.order_type || 'BUY').toUpperCase().includes('SHORT') || (item.side === 'SELL') ? 'SELL' : 'BUY';
-            const entryPrice = Number(item.entry_price || item.price || item.entryPrice || 91.15);
-            const qty = Number(item.quantity || item.qty || 1.0);
-            const posId = item.position_id || item.id || item.order_id || item.orderId || item.positionId || `P-REAL-${idx + 1}`;
-            const pairId = item.pair_id || item.pairId || `PAIR-${(idx + 1).toString().padStart(4, '0')}`;
+            if (posId && (this.userClosedRealPositionIds.has(posId) || this.userClosedRealPositionIds.has(String(posId)))) continue;
+            if (pairId && (this.userClosedRealPositionIds.has(pairId) || this.userClosedRealPositionIds.has(String(pairId)))) continue;
             
-            if (this.userClosedRealPositionIds.has(posId) || this.userClosedRealPositionIds.has(pairId) || this.userClosedRealPositionIds.has(`P-REAL-${idx + 1}`)) {
-              return null;
-            }
-
-            const targetExit = item.takeprofit_price ? Number(item.takeprofit_price) : (direction === 'BUY' ? Number((entryPrice + 1.00).toFixed(2)) : Number((entryPrice - 1.00).toFixed(2)));
-
-            return {
-              pairId,
-              positionId: posId,
-              direction,
-              symbol: item.symbol || symbol,
-              entryTime: item.created_at || item.created_time || new Date().toISOString(),
-              entryPrice,
-              currentPrice: entryPrice,
-              targetExitPrice: targetExit,
-              quantity: qty,
-              status: 'OPEN',
-              apiStatus: 'REAL_MUDREX_POSITION'
-            };
-          }).filter(Boolean);
-          const resObj = { success: true, data: parsedPositions };
-          this.lastFetchPositionsRes = resObj;
-          this.lastFetchPositionsTime = Date.now();
-          return resObj;
+            combinedItems.push(item);
+          }
         }
       } catch (e) {
         console.warn(`[Mudrex Live Adapter] Error querying ${url}:`, e.message);
       }
     }
-    const fallbackRes = { success: false, data: [] };
-    this.lastFetchPositionsRes = fallbackRes;
+
+    if (combinedItems.length > 0) {
+      const parsedPositions = combinedItems.map((item, idx) => {
+        const direction = (item.side || item.direction || item.order_type || 'BUY').toUpperCase().includes('SHORT') || (item.side === 'SELL') ? 'SELL' : 'BUY';
+        const entryPrice = Number(item.entry_price || item.price || item.entryPrice || 91.15);
+        const qty = Number(item.quantity || item.qty || 1.0);
+        const posId = item.position_id || item.id || item.order_id || item.orderId || item.positionId || `P-REAL-${idx + 1}`;
+        const pairId = item.pair_id || item.pairId || `PAIR-${(idx + 1).toString().padStart(4, '0')}`;
+        
+        if (this.userClosedRealPositionIds.has(posId) || this.userClosedRealPositionIds.has(pairId) || this.userClosedRealPositionIds.has(`P-REAL-${idx + 1}`)) {
+          return null;
+        }
+
+        const targetExit = item.takeprofit_price ? Number(item.takeprofit_price) : (direction === 'BUY' ? Number((entryPrice + 1.00).toFixed(2)) : Number((entryPrice - 1.00).toFixed(2)));
+
+        return {
+          pairId,
+          positionId: posId,
+          direction,
+          symbol: item.symbol || symbol,
+          entryTime: item.created_at || item.created_time || new Date().toISOString(),
+          entryPrice,
+          currentPrice: entryPrice,
+          targetExitPrice: targetExit,
+          quantity: qty,
+          status: 'OPEN',
+          apiStatus: 'REAL_MUDREX_POSITION'
+        };
+      }).filter(Boolean);
+
+      const resObj = { success: true, data: parsedPositions };
+      this.lastFetchPositionsRes = resObj;
+      this.lastFetchPositionsTime = Date.now();
+      return resObj;
+    }
+
+    const fallbackRes = this.lastFetchPositionsRes || { success: false, data: [] };
     this.lastFetchPositionsTime = Date.now();
     return fallbackRes;
   }
