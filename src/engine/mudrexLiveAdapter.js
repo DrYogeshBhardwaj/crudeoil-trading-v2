@@ -657,11 +657,7 @@ class MudrexLiveAdapter {
       }
     }
 
-    // Pure Paper Mode: Purge any external REAL_MUDREX_POSITION records so only 100% Paper Simulation Pairs are displayed
-    this.liveOpenPositions = (this.liveOpenPositions || []).filter(p => p.apiStatus !== 'REAL_MUDREX_POSITION' && !p.positionId?.includes('P-REAL'));
-    liveOpenPositions = [...this.liveOpenPositions];
-
-    if (process.env.ENABLE_REAL_MUDREX_POSITIONS_SYNC === 'true') {
+    if (this.isRealExecutionEnabled()) {
       try {
         const realPosRes = await this.fetchPositions();
         if (realPosRes.success && Array.isArray(realPosRes.data)) {
@@ -682,6 +678,10 @@ class MudrexLiveAdapter {
           this.saveState();
         }
       } catch (e) {}
+    } else {
+      // Pure Paper Mode: Purge any external REAL_MUDREX_POSITION records so only 100% Paper Simulation Pairs are displayed
+      this.liveOpenPositions = (this.liveOpenPositions || []).filter(p => p.apiStatus !== 'REAL_MUDREX_POSITION' && !p.positionId?.includes('P-REAL'));
+      liveOpenPositions = [...this.liveOpenPositions];
     }
 
     // Merge paperEngine active and closed positions into live terminal metrics
