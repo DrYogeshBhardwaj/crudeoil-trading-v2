@@ -95,6 +95,8 @@ document.addEventListener('DOMContentLoaded', () => {
   checkMudrexAuthStatus();
 
   window.toggleEngineState = toggleEngineState;
+  const dhanBtn = document.getElementById('dhanStartEngineMainBtn');
+  if (dhanBtn) dhanBtn.addEventListener('click', toggleEngineState);
   const mainBtn = document.getElementById('mudrexStartEngineMainBtn');
   if (mainBtn) mainBtn.addEventListener('click', toggleEngineState);
   const toggleBtn = document.getElementById('toggleEngineBtn');
@@ -183,7 +185,7 @@ function toggleBtModeDisplay() {
 let fallbackInterval = null;
 
 function initRealtimeStream() {
-  const isMudrexLivePage = window.location.pathname.includes('mudrex_live') || !!document.getElementById('mudrexStartEngineMainBtn');
+  const isMudrexLivePage = window.location.pathname.includes('mudrex_live') || window.location.pathname.includes('mudrex-live') || !!document.getElementById('mudrexLiveStartBtn');
   const streamUrl = isMudrexLivePage ? '/api/stream?mode=mudrex_live' : '/api/stream';
 
   // Fetch immediately on page load so UI is updated without waiting
@@ -217,7 +219,7 @@ function initRealtimeStream() {
 }
 
 function fetchMetricsFallback() {
-  const isMudrexLivePage = window.location.pathname.includes('mudrex_live') || !!document.getElementById('mudrexStartEngineMainBtn');
+  const isMudrexLivePage = window.location.pathname.includes('mudrex_live') || window.location.pathname.includes('mudrex-live') || !!document.getElementById('mudrexLiveStartBtn');
   const endpoint = isMudrexLivePage ? '/api/mudrex/metrics' : '/api/metrics';
 
   fetch(endpoint)

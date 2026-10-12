@@ -75,7 +75,7 @@ app.get('/api/stream', async (req, res) => {
   res.setHeader('Connection', 'keep-alive');
   res.flushHeaders();
 
-  const isMudrexLive = req.query.mode === 'mudrex_live' || (req.headers.referer && (req.headers.referer.includes('mudrex_live') || req.headers.referer.includes('dhan_mcx') || req.headers.referer.includes('dhan-mcx')));
+  const isMudrexLive = req.query.mode === 'mudrex_live' || (req.headers.referer && (req.headers.referer.includes('mudrex_live') || req.headers.referer.includes('mudrex-live')));
 
   const sendUpdate = async () => {
     try {
