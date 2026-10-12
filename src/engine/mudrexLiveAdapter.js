@@ -924,6 +924,9 @@ class MudrexLiveAdapter {
         dailyLossLimitINR: 2000
       },
       aiTargetInfo: this.calculateAiTargets(),
+      isRealExecutionEnabled: this.isRealExecutionEnabled(),
+      mudrexApiKeyPresent: !!(process.env.MUDREX_API_KEY || process.env.MUDREX_KEY || this.mudrexApiKey),
+      mudrexApiSecretPresent: !!(process.env.MUDREX_API_SECRET || process.env.MUDREX_SECRET || process.env.MUDREX_SECRET_KEY || this.mudrexApiSecret),
       openPositions: liveOpenPositions,
       closedPositions: liveClosedPositions,
       auditLogs: []
