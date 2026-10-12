@@ -559,6 +559,13 @@ class MudrexLiveAdapter {
     const authResult = await this.testAuthentication(true);
     const paperEngine = require('./paperEngine');
 
+    // Read-Only Raw Exchange Endpoints Reconciliation
+    const rawPosV1 = await this.request('GET', `${this.baseUrl}/futures/positions?trade_currency=INR`);
+    const rawPosCl = await this.request('GET', `${this.baseUrl}/futures/CLUSDT/positions?trade_currency=INR`);
+    const rawPosV2 = await this.request('GET', `${this.v2Url}/futures/positions?trade_currency=INR`);
+    const rawOpenOrders = await this.request('GET', `${this.baseUrl}/futures/open_orders?trade_currency=INR`);
+    const rawOrdersHistory = await this.request('GET', `${this.baseUrl}/futures/orders?trade_currency=INR`);
+
     const openPositionsDebug = (paperEngine.pairs || []).map(p => {
       const b = p.buyPosition;
       const s = p.sellPosition;
@@ -575,6 +582,13 @@ class MudrexLiveAdapter {
       keyMask,
       secretMask,
       authResult,
+      rawExchangeData: {
+        positions_v1: rawPosV1,
+        positions_CLUSDT: rawPosCl,
+        positions_v2: rawPosV2,
+        open_orders: rawOpenOrders,
+        orders_history: rawOrdersHistory
+      },
       rateLimitUntil: this.rateLimitUntil,
       isRateLimitedNow: Date.now() < this.rateLimitUntil,
       settings: this.settings,
