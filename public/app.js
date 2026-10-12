@@ -680,6 +680,8 @@ function renderDashboard(data) {
   if (maxP) maxP.value = settings.maxActivePairs;
   const usdInrInput = document.getElementById('settingUsdInr');
   if (usdInrInput) usdInrInput.value = settings.usdInrRate || usdInrRate;
+  const qtyEl = document.getElementById('modalContractQuantity');
+  if (qtyEl) qtyEl.value = (settings.contractQuantity !== undefined && settings.contractQuantity !== null) ? settings.contractQuantity.toString() : '2.0';
 
   // Tabs count badges
   const actTab = document.getElementById('tabActiveCount');

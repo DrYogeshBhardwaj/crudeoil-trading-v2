@@ -58,9 +58,12 @@ class MudrexLiveAdapter {
       const saved = storage.loadState();
       if (saved) {
         if (saved.mudrexSettings) {
+          const savedQty = saved.mudrexSettings.contractQuantity;
           this.settings = { ...this.settings, ...saved.mudrexSettings };
+          if (savedQty !== undefined && savedQty !== null) {
+            this.settings.contractQuantity = savedQty;
+          }
         }
-        this.settings.contractQuantity = 2.0;
         if (saved.mudrexApiKey && !saved.mudrexApiKey.includes('*') && !process.env.MUDREX_API_KEY) {
           process.env.MUDREX_API_KEY = saved.mudrexApiKey;
         }

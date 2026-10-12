@@ -76,10 +76,15 @@ class PaperEngine {
   initFromStorage() {
     const saved = storage.loadState();
     if (saved) {
-      if (saved.settings) this.settings = { ...this.settings, ...saved.settings };
+      if (saved.settings) {
+        const savedQty = saved.settings.contractQuantity;
+        this.settings = { ...this.settings, ...saved.settings };
+        if (savedQty !== undefined && savedQty !== null) {
+          this.settings.contractQuantity = savedQty;
+        }
+      }
       this.settings.startingCapitalINR = 350000; // ₹3.5 Lakh virtual capital
       this.settings.maxActivePairs = 50; // 50 Active Pairs Cap
-      this.settings.contractQuantity = 2.0; // 2 Barrels Default
       this.settings.strategyMode = 'ALTERNATING_STAGGERED';
       if (saved.pairs) this.pairs = saved.pairs;
       if (saved.closedPositions) this.closedPositions = saved.closedPositions;
