@@ -179,7 +179,7 @@ class PaperEngine {
 
     if (newSettings.instrument && newSettings.instrument !== oldSettings.instrument) {
       rateFeed.setActiveSymbol(newSettings.instrument);
-      if (this.pauseReason.includes('STALE MARKET FEED')) {
+      if (this.pauseReason && this.pauseReason.includes('STALE MARKET FEED')) {
         this.pauseReason = '';
         if (this.isEngineRunning) this.engineStatus = 'RUNNING';
       }
@@ -239,7 +239,7 @@ class PaperEngine {
       return;
     }
 
-    if (this.pauseReason.includes('STALE MARKET FEED')) {
+    if (this.pauseReason && this.pauseReason.includes('STALE MARKET FEED')) {
       this.engineStatus = 'RUNNING';
       this.pauseReason = '';
       this.logAudit('FEED_RESUMED', `Market feed for ${symbol} recovered. Resuming new pair creation.`);
