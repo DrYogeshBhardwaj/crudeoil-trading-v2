@@ -588,34 +588,88 @@ function renderDashboard(data) {
   const mTradesCount = document.getElementById('modalTradesCount');
   if (mTradesCount) mTradesCount.innerText = `Total: ${summary.closedPositionsCount} | Wins: ${summary.winCount} | Losses: ${summary.lossCount}`;
 
-  if (document.getElementById('kpiTotalEquity')) document.getElementById('kpiTotalEquity').innerText = `₹${summary.totalEquityINR.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-  if (document.getElementById('kpiEquitySubtext')) document.getElementById('kpiEquitySubtext').innerText = `Virtual Capital: ₹${summary.startingCapitalINR.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  const usdInrRate = (rateFeedInfo && rateFeedInfo.usdInrRate) || 96.96;
+  const realizedNetINR = summary.realizedNetINR || 0;
+  const realizedNetUSD = summary.realizedNetUSD !== undefined ? summary.realizedNetUSD : (realizedNetINR / usdInrRate);
+  const realizedGrossUSD = summary.realizedGrossUSD || 0;
+  const realizedChargesINR = summary.realizedChargesINR || 0;
+  const realizedChargesUSD = summary.realizedChargesUSD !== undefined ? summary.realizedChargesUSD : (realizedChargesINR / usdInrRate);
 
-  if (document.getElementById('kpiRealizedBalance')) document.getElementById('kpiRealizedBalance').innerText = `₹${summary.realizedBalanceINR.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  const floatingNetINR = summary.floatingNetINR || 0;
+  const floatingNetUSD = summary.floatingNetUSD !== undefined ? summary.floatingNetUSD : (floatingNetINR / usdInrRate);
+  const floatingGrossUSD = summary.floatingGrossUSD || 0;
+  const floatingChargesUSD = (summary.floatingChargesINR || 0) / usdInrRate;
 
+  const estTotalNetINR = realizedNetINR + floatingNetINR;
+  const estTotalNetUSD = estTotalNetINR / usdInrRate;
+
+  const availableMarginINR = summary.availableMarginINR || 0;
+  const availableMarginUSD = availableMarginINR / usdInrRate;
+  const totalEquityINR = summary.totalEquityINR || 0;
+  const totalEquityUSD = totalEquityINR / usdInrRate;
+  const marginUsedINR = summary.marginUsedINR || 0;
+  const marginUsedUSD = marginUsedINR / usdInrRate;
+
+  if (document.getElementById('kpiTotalEquity')) document.getElementById('kpiTotalEquity').innerText = `$${totalEquityUSD.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  if (document.getElementById('kpiEquitySubtext')) document.getElementById('kpiEquitySubtext').innerText = `Virtual Capital: $${(summary.startingCapitalINR / usdInrRate).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+
+  if (document.getElementById('kpiRealizedBalance')) document.getElementById('kpiRealizedBalance').innerText = `$${(summary.realizedBalanceINR / usdInrRate).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+
+  // 1. Realized Net P/L Card
   const realizedNetEl = document.getElementById('kpiRealizedNet');
   if (realizedNetEl) {
-    realizedNetEl.innerText = `₹${summary.realizedNetINR.toFixed(2)}`;
-    realizedNetEl.className = `kpi-value ${summary.realizedNetINR >= 0 ? 'text-green' : 'text-red'}`;
+    const rSign = realizedNetUSD >= 0 ? '+' : '-';
+    const rLabel = realizedNetUSD >= 0 ? 'PROFIT' : 'LOSS';
+    realizedNetEl.innerText = `${rSign}$${Math.abs(realizedNetUSD).toFixed(2)} ${rLabel}`;
+    realizedNetEl.className = `kpi-value ${realizedNetUSD >= 0 ? 'text-green' : 'text-red'}`;
   }
-  if (document.getElementById('kpiRealizedGrossSubtext')) document.getElementById('kpiRealizedGrossSubtext').innerText = `Gross: $${summary.realizedGrossUSD.toFixed(2)} | Charges: ₹${summary.realizedChargesINR.toFixed(2)}`;
+  if (document.getElementById('kpiRealizedGrossSubtext')) {
+    document.getElementById('kpiRealizedGrossSubtext').innerText = `Gross: +$${realizedGrossUSD.toFixed(2)} | Charges: -$${realizedChargesUSD.toFixed(2)}`;
+  }
 
+  // 2. Floating Net P/L Card
   const floatNetEl = document.getElementById('kpiFloatingNet');
   if (floatNetEl) {
-    floatNetEl.innerText = `₹${summary.floatingNetINR.toFixed(2)}`;
-    floatNetEl.className = `kpi-value ${summary.floatingNetINR >= 0 ? 'text-green' : 'text-red'}`;
+    const fSign = floatingNetUSD >= 0 ? '+' : '-';
+    const fLabel = floatingNetUSD >= 0 ? 'PROFIT' : 'LOSS';
+    floatNetEl.innerText = `${fSign}$${Math.abs(floatingNetUSD).toFixed(2)} ${fLabel}`;
+    floatNetEl.className = `kpi-value ${floatingNetUSD >= 0 ? 'text-green' : 'text-red'}`;
   }
-  if (document.getElementById('kpiFloatingSubtext')) document.getElementById('kpiFloatingSubtext').innerText = `Gross: $${summary.floatingGrossUSD.toFixed(2)} | Charges: ₹${summary.floatingChargesINR.toFixed(2)}`;
+  if (document.getElementById('kpiFloatingSubtext')) {
+    document.getElementById('kpiFloatingSubtext').innerText = `Gross: ${floatingGrossUSD >= 0 ? '+' : ''}$${floatingGrossUSD.toFixed(2)} | Charges: -$${floatingChargesUSD.toFixed(2)}`;
+  }
 
-  if (document.getElementById('kpiActivePairs')) document.getElementById('kpiActivePairs').innerText = `${summary.activePairsCount} / ${summary.maxActivePairs}`;
+  // 3. Estimated Total P/L Card (Realized + Floating)
+  const estNetEl = document.getElementById('kpiEstTotalNet');
+  if (estNetEl) {
+    const eSign = estTotalNetUSD >= 0 ? '+' : '-';
+    const eLabel = estTotalNetUSD >= 0 ? 'PROFIT' : 'LOSS';
+    estNetEl.innerText = `${eSign}$${Math.abs(estTotalNetUSD).toFixed(2)} ${eLabel}`;
+    estNetEl.className = `kpi-value ${estTotalNetUSD >= 0 ? 'text-green' : 'text-red'}`;
+  }
+  if (document.getElementById('kpiEstTotalSubtext')) {
+    document.getElementById('kpiEstTotalSubtext').innerText = `Realized (${realizedNetUSD >= 0 ? '+' : ''}$${realizedNetUSD.toFixed(2)}) + Floating (${floatingNetUSD >= 0 ? '+' : ''}$${floatingNetUSD.toFixed(2)})`;
+  }
+
+  // 4. Active Pairs / Cap Card
+  if (document.getElementById('kpiActivePairs')) {
+    document.getElementById('kpiActivePairs').innerText = `${summary.activePairsCount} / ${summary.maxActivePairs} Pairs`;
+  }
   if (document.getElementById('kpiUniqueRatesCount')) {
-    const p1B = summary.pairs1B !== undefined ? summary.pairs1B : 0;
-    const p2B = summary.pairs2B !== undefined ? summary.pairs2B : 0;
-    document.getElementById('kpiUniqueRatesCount').innerText = `📦 1 Barrel: ${p1B} Pairs | 📦 2 Barrels: ${p2B} Pairs`;
+    const totalBarrels = openPositions ? openPositions.reduce((sum, p) => sum + (p.quantity || 1.0), 0) : 0;
+    document.getElementById('kpiUniqueRatesCount').innerText = `${totalBarrels} Barrels Open (${summary.activeBuyCount || 0} BUY / ${summary.activeSellCount || 0} SELL)`;
   }
 
-  if (document.getElementById('kpiAvailableMargin')) document.getElementById('kpiAvailableMargin').innerText = `₹${summary.availableMarginINR.toLocaleString('en-IN', { minimumFractionDigits: 2 })}`;
-  if (document.getElementById('kpiMarginUsed')) document.getElementById('kpiMarginUsed').innerText = `Locked Margin: ₹${summary.marginUsedINR.toFixed(2)} (${settings.leverage}x)`;
+  // 5. Simulated Margin & Equity Callout Bar
+  if (document.getElementById('kpiAvailableMargin')) {
+    document.getElementById('kpiAvailableMargin').innerText = `$${availableMarginUSD.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  }
+  if (document.getElementById('kpiSimulatedEquity')) {
+    document.getElementById('kpiSimulatedEquity').innerText = `$${totalEquityUSD.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  }
+  if (document.getElementById('kpiMarginUsed')) {
+    document.getElementById('kpiMarginUsed').innerText = `Locked Margin: $${marginUsedUSD.toFixed(2)} (${settings.leverage || 5}x)`;
+  }
 
   if (document.getElementById('kpiWinRate')) document.getElementById('kpiWinRate').innerText = `${summary.winRate}%`;
   if (document.getElementById('kpiTradesCount')) document.getElementById('kpiTradesCount').innerText = `Total: ${summary.closedPositionsCount} | Wins: ${summary.winCount} | Losses: ${summary.lossCount}`;
@@ -890,11 +944,27 @@ function renderActivePositions(positions, symbol, isDhanPage = false, pricePrefi
     sellBadge.innerText = sell2B > 0 ? `${sellPositions.length} Active (${sell1B} 1-B, ${sell2B} 2-B)` : `${sellPositions.length} Active`;
   }
 
+  const totalBuyNetUSD = totalBuyNetINR / usdRate;
+  const totalSellNetUSD = totalSellNetINR / usdRate;
+
+  if (buyBadge) {
+    buyBadge.innerText = buy2B > 0 ? `${buyPositions.length} Active (${buy1B} 1-B, ${buy2B} 2-B)` : `${buyPositions.length} Active`;
+  }
+  if (sellBadge) {
+    sellBadge.innerText = sell2B > 0 ? `${sellPositions.length} Active (${sell1B} 1-B, ${sell2B} 2-B)` : `${sellPositions.length} Active`;
+  }
+
   if (buyNetPlEl) {
-    buyNetPlEl.innerHTML = `NET P/L: <strong class="${totalBuyNetINR >= 0 ? 'text-green' : 'text-red'}">₹${totalBuyNetINR >= 0 ? '+' : ''}${totalBuyNetINR.toFixed(2)}</strong>`;
+    const bSign = totalBuyNetUSD >= 0 ? '+' : '-';
+    const bLabel = totalBuyNetUSD >= 0 ? 'PROFIT' : 'LOSS';
+    const bColor = totalBuyNetUSD >= 0 ? '#34d399' : '#f87171';
+    buyNetPlEl.innerHTML = `BUY FLOATING P/L: <strong style="color:${bColor}; font-size: 1.35rem; font-family: monospace;">${bSign}$${Math.abs(totalBuyNetUSD).toFixed(2)} ${bLabel}</strong>`;
   }
   if (sellNetPlEl) {
-    sellNetPlEl.innerHTML = `NET P/L: <strong class="${totalSellNetINR >= 0 ? 'text-green' : 'text-red'}">₹${totalSellNetINR >= 0 ? '+' : ''}${totalSellNetINR.toFixed(2)}</strong>`;
+    const sSign = totalSellNetUSD >= 0 ? '+' : '-';
+    const sLabel = totalSellNetUSD >= 0 ? 'PROFIT' : 'LOSS';
+    const sColor = totalSellNetUSD >= 0 ? '#34d399' : '#f87171';
+    sellNetPlEl.innerHTML = `SELL FLOATING P/L: <strong style="color:${sColor}; font-size: 1.35rem; font-family: monospace;">${sSign}$${Math.abs(totalSellNetUSD).toFixed(2)} ${sLabel}</strong>`;
   }
 
   // Sort by Next Exit target distance ascending (closest target exit first)
@@ -915,6 +985,7 @@ function renderActivePositions(positions, symbol, isDhanPage = false, pricePrefi
       const currentPrice = rawCurrent * priceMultiplier;
       const targetPrice = rawTarget !== null ? rawTarget * priceMultiplier : null;
       const floatingNetINR = typeof pos.floatingNetINR === 'number' ? pos.floatingNetINR : 0;
+      const posFloatingNetUSD = floatingNetINR / usdRate;
 
       const qtyVal = typeof pos.quantity === 'number' ? pos.quantity : 1.0;
       const qtyLabel = qtyVal >= 2 ? '2 Barrels' : '1 Barrel';
@@ -922,7 +993,10 @@ function renderActivePositions(positions, symbol, isDhanPage = false, pricePrefi
       const qtyColor = qtyVal >= 2 ? '#f59e0b' : '#38bdf8';
 
       const dist = targetPrice !== null ? Math.abs(targetPrice - currentPrice) : null;
-      const netClass = floatingNetINR >= 0 ? 'text-green' : 'text-red';
+      const distUSD = dist !== null ? (dist / priceMultiplier) : null;
+      const netClass = posFloatingNetUSD >= 0 ? 'text-green' : 'text-red';
+      const posSign = posFloatingNetUSD >= 0 ? '+' : '-';
+      const posLabel = posFloatingNetUSD >= 0 ? 'PROFIT' : 'LOSS';
 
       const fmtP = (v) => priceDecimals === 0 ? Math.round(v).toLocaleString('en-IN') : v.toFixed(priceDecimals);
 
@@ -930,34 +1004,34 @@ function renderActivePositions(positions, symbol, isDhanPage = false, pricePrefi
         <tr>
           <td>
             <div style="display: flex; align-items: center; gap: 6px;">
-              <strong style="font-size:0.85rem;">${pos.pairId || 'N/A'}</strong>
-              <span style="font-size:0.65rem; padding: 2px 6px; border-radius: 4px; background: ${qtyBg}; color: ${qtyColor}; font-weight: 800;">${qtyLabel}</span>
+              <strong style="font-size:0.95rem;">${pos.pairId || 'N/A'}</strong>
+              <span style="font-size:0.7rem; padding: 2px 6px; border-radius: 4px; background: ${qtyBg}; color: ${qtyColor}; font-weight: 800;">${qtyLabel}</span>
             </div>
-            <span style="display:block; margin-top: 2px;"><code style="color:var(--accent-cyan); font-size:0.75rem;">${pos.positionId || 'N/A'}</code></span>
+            <span style="display:block; margin-top: 2px;"><code style="color:var(--accent-cyan); font-size:0.8rem;">${pos.positionId || 'N/A'}</code></span>
             ${(() => {
               if (!pos.apiStatus || pos.apiStatus.includes('REAL_ORDERS_DISABLED') || pos.apiStatus.includes('LIVE_ENGINE')) return '';
               let s = pos.apiStatus;
               if (s.includes('{') || s.includes('5002') || s.includes('rate limit') || s.includes('request_id') || s.length > 40) return '';
               const color = s.includes('REAL_MUDREX') ? '#a7f3d0' : (s.includes('TRANSMITTED') || s.includes('SENDING') ? '#38bdf8' : '#fbbf24');
-              return `<span style="display:block; font-size:0.62rem; color:${color}; font-weight:700; margin-top:2px;">📡 ${s}</span>`;
+              return `<span style="display:block; font-size:0.65rem; color:${color}; font-weight:700; margin-top:2px;">📡 ${s}</span>`;
             })()}
           </td>
           <td>
-            <div style="font-size:0.78rem; color:var(--text-muted);">${pricePrefix}${fmtP(entryPrice)}</div>
-            <div style="font-size:0.88rem; font-weight:700; color:#fff;">➔ ${pricePrefix}${fmtP(currentPrice)}</div>
+            <div style="font-size:0.85rem; color:var(--text-muted);">$${fmtP(entryPrice)}</div>
+            <div style="font-size:1.05rem; font-weight:800; color:#fff;">➔ $${fmtP(currentPrice)}</div>
           </td>
           <td>
             ${targetPrice !== null ? `
-              <div style="font-size:1.05rem; font-weight:800; color:#f59e0b; font-family:monospace;">${pricePrefix}${fmtP(targetPrice)}</div>
-              <div style="font-size:0.68rem; color:${isBuyTable ? '#a7f3d0' : '#fca5a5'}; font-weight:700;">${isBuyTable ? '⬆️ UP' : '⬇️ DOWN'} (${pricePrefix}${fmtP(dist)} to exit)</div>
+              <div style="font-size:1.15rem; font-weight:900; color:#f59e0b; font-family:monospace;">$${fmtP(targetPrice)}</div>
+              <div style="font-size:1.0rem; color:${isBuyTable ? '#34d399' : '#f87171'}; font-weight:800;">${isBuyTable ? '⬆️ UP' : '⬇️ DOWN'} ($${distUSD !== null ? distUSD.toFixed(2) : '--'} to exit)</div>
             ` : '<span style="color:var(--text-dim)">DISABLED</span>'}
           </td>
           <td style="text-align: right;">
-            <div class="${netClass}" style="font-size:1.08rem; font-weight:800; font-family:monospace;">₹${floatingNetINR >= 0 ? '+' : ''}${floatingNetINR.toFixed(2)}</div>
-            <div style="font-size:0.68rem; color:var(--text-muted);">NET P/L (INR)</div>
+            <div class="${netClass}" style="font-size:1.25rem; font-weight:900; font-family:monospace;">${posSign}$${Math.abs(posFloatingNetUSD).toFixed(2)} ${posLabel}</div>
+            <div style="font-size:0.75rem; color:var(--text-muted);">NET FLOATING P/L (USD)</div>
           </td>
           <td style="text-align: center;">
-            <button class="btn btn-danger" style="padding: 3px 8px; font-size: 0.72rem; font-weight:700;" onclick="manualClose('${pos.positionId}')">Close</button>
+            <button class="btn btn-danger" style="padding: 4px 10px; font-size: 0.8rem; font-weight:800; border-radius: 6px; cursor: pointer;" onclick="manualClose('${pos.positionId}')">Close</button>
           </td>
         </tr>
       `;
@@ -1000,30 +1074,27 @@ function renderClosedPositions(positions, symbol, isDhanPage = false, pricePrefi
       const targetPrice = rawTarget !== null ? rawTarget * priceMultiplier : null;
 
       const grossProfitUSD = typeof pos.grossProfitUSD === 'number' ? pos.grossProfitUSD : 0;
-      const grossProfitINR = typeof pos.grossProfitINR === 'number' ? pos.grossProfitINR : (grossProfitUSD * (pos.usdInrRate || 86.5));
-      const totalChargesINR = typeof pos.totalChargesINR === 'number' ? pos.totalChargesINR : 0;
-      const netProfitINR = typeof pos.netProfitINR === 'number' ? pos.netProfitINR : 0;
+      const totalChargesUSD = typeof pos.totalChargesUSD === 'number' ? pos.totalChargesUSD : ((pos.totalChargesINR || 0) / (pos.usdInrRate || 96.96));
+      const netProfitUSD = typeof pos.netProfitUSD === 'number' ? pos.netProfitUSD : ((pos.netProfitINR || 0) / (pos.usdInrRate || 96.96));
 
-      const grossClass = grossProfitINR >= 0 ? 'text-green' : 'text-red';
-      const netClass = netProfitINR >= 0 ? 'text-green' : 'text-red';
+      const grossClass = grossProfitUSD >= 0 ? 'text-green' : 'text-red';
+      const netClass = netProfitUSD >= 0 ? 'text-green' : 'text-red';
 
       html += `
         <tr>
           <td><strong>${pos.pairId || 'N/A'}</strong></td>
-          <td><code style="color:var(--accent-cyan);">${pos.positionId || 'N/A'}</code></td>
+          <td><code style="color:var(--accent-cyan); font-weight: 700;">${pos.positionId || 'N/A'}</code></td>
           <td><span class="badge-direction ${isBuy ? 'buy' : 'sell'}">${pos.direction || 'BUY'}</span></td>
           <td>${pos.entryTime ? new Date(pos.entryTime).toLocaleTimeString() : 'N/A'}</td>
           <td>${pos.exitTime ? new Date(pos.exitTime).toLocaleTimeString() : 'N/A'}</td>
-          <td>${pricePrefix}${fmtP(entryPrice)}</td>
-          <td>${pricePrefix}${fmtP(exitPrice)}</td>
-          <td>${targetPrice !== null ? `<span class="target-price-badge">${pricePrefix}${fmtP(targetPrice)}</span>` : 'N/A'}</td>
-          <td class="${grossClass}">₹${grossProfitINR >= 0 ? '+' : ''}${grossProfitINR.toFixed(2)}</td>
-          <td>₹${totalChargesINR.toFixed(2)}</td>
-          <td class="${netClass}" style="font-weight:700;">₹${netProfitINR >= 0 ? '+' : ''}${netProfitINR.toFixed(2)}</td>
+          <td style="font-family: monospace;">$${fmtP(entryPrice)}</td>
+          <td style="font-family: monospace;">$${fmtP(exitPrice)}</td>
+          <td>${targetPrice !== null ? `<span class="target-price-badge" style="font-family: monospace;">$${fmtP(targetPrice)}</span>` : 'N/A'}</td>
+          <td class="${grossClass}" style="font-weight: 800; font-family: monospace;">+$${grossProfitUSD.toFixed(2)}</td>
+          <td style="color: #f87171; font-weight: 800; font-family: monospace;">-$${totalChargesUSD.toFixed(2)}</td>
+          <td class="${netClass}" style="font-weight: 900; font-family: monospace;">${netProfitUSD >= 0 ? '+' : '-'}$${Math.abs(netProfitUSD).toFixed(2)} ${netProfitUSD >= 0 ? 'PROFIT' : 'LOSS'}</td>
+          <td style="font-size: 0.82rem; color: var(--text-muted); font-weight: 700;">₹${pos.usdInrRate || 96.96}</td>
           <td><span class="badge-reason">${pos.exitReason || 'TARGET HIT'}</span></td>
-          <td class="${netClass}" style="font-size: 1.1rem; font-weight: 800; font-family: monospace; white-space: nowrap; background: rgba(15, 23, 42, 0.6); border-left: 2px solid ${netProfitINR >= 0 ? '#10b981' : '#ef4444'}; text-align: center;">
-            <span>₹${netProfitINR >= 0 ? '+' : ''}${netProfitINR.toFixed(2)}</span>
-          </td>
         </tr>
       `;
     }

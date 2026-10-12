@@ -102,40 +102,66 @@
       <button class="btn btn-secondary" style="padding: 4px 10px; font-size: 0.75rem; border: 1px solid #ef4444; color: #f87171;" onclick="resetAllDataConfirm()">🧹 Reset Engine Data</button>
     </div>
 
-    <!-- Single Top Summary Section (4 Cards Only) -->
-    <section class="top-summary-card" style="background: linear-gradient(135deg, rgba(16, 185, 129, 0.08), rgba(15, 23, 42, 0.95)); border: 1px solid rgba(16, 185, 129, 0.35); border-radius: 14px; padding: 18px 22px; margin-bottom: 20px; box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);">
-      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px;">
+    <!-- Single Top Summary Section (4 Prominent Cards Only) -->
+    <section class="top-summary-card" style="background: linear-gradient(135deg, rgba(16, 185, 129, 0.08), rgba(15, 23, 42, 0.95)); border: 1px solid rgba(16, 185, 129, 0.35); border-radius: 16px; padding: 22px; margin-bottom: 16px; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);">
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 18px;">
         
-        <!-- 1. Realized Net P/L -->
-        <div style="background: #0d1117; border: 1px solid var(--border-color); border-radius: 10px; padding: 14px 18px;">
-          <div style="font-size: 0.72rem; color: var(--text-muted); font-weight: 700; text-transform: uppercase;">Realized Net P/L</div>
-          <div style="font-size: 1.5rem; font-weight: 800; font-family: monospace;" id="kpiRealizedNet">₹0.00</div>
-          <div style="font-size: 0.72rem; color: var(--text-dim);" id="kpiRealizedGrossSubtext">Gross: $0.00 | Charges: ₹0.00</div>
+        <!-- 1. Realized Net P/L (Closed Trades Only) -->
+        <div style="background: #0d1117; border: 1px solid var(--border-color); border-radius: 12px; padding: 18px 20px;">
+          <div style="font-size: 0.82rem; color: #94a3b8; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px;">REALIZED NET P/L (CLOSED)</div>
+          <div style="font-size: 2.3rem; font-weight: 900; font-family: monospace; margin: 6px 0; line-height: 1.1;" id="kpiRealizedNet">+$0.00 PROFIT</div>
+          <div style="font-size: 0.8rem; color: var(--text-dim);" id="kpiRealizedGrossSubtext">Gross: +$0.00 | Charges: -$0.00</div>
         </div>
 
-        <!-- 2. Floating Net P/L -->
-        <div style="background: #0d1117; border: 1px solid var(--border-color); border-radius: 10px; padding: 14px 18px;">
-          <div style="font-size: 0.72rem; color: var(--text-muted); font-weight: 700; text-transform: uppercase;">Floating Net P/L</div>
-          <div style="font-size: 1.5rem; font-weight: 800; font-family: monospace;" id="kpiFloatingNet">₹0.00</div>
-          <div style="font-size: 0.72rem; color: var(--text-dim);" id="kpiFloatingSubtext">Gross: $0.00 | Charges: ₹0.00</div>
+        <!-- 2. Floating Net P/L (Open Trades Only) -->
+        <div style="background: #0d1117; border: 1px solid var(--border-color); border-radius: 12px; padding: 18px 20px;">
+          <div style="font-size: 0.82rem; color: #94a3b8; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px;">FLOATING NET P/L (OPEN)</div>
+          <div style="font-size: 2.3rem; font-weight: 900; font-family: monospace; margin: 6px 0; line-height: 1.1;" id="kpiFloatingNet">+$0.00 PROFIT</div>
+          <div style="font-size: 0.8rem; color: var(--text-dim);" id="kpiFloatingSubtext">Gross: +$0.00 | Charges: -$0.00</div>
         </div>
 
-        <!-- 3. Available Free Margin -->
-        <div style="background: #0d1117; border: 1px solid var(--border-color); border-radius: 10px; padding: 14px 18px;">
-          <div style="font-size: 0.72rem; color: var(--text-muted); font-weight: 700; text-transform: uppercase;">Available Free Margin</div>
-          <div style="font-size: 1.5rem; font-weight: 800; font-family: monospace; color: #38bdf8;" id="kpiAvailableMargin">₹0.00</div>
-          <div style="font-size: 0.72rem; color: var(--text-dim);" id="kpiMarginUsed">Margin Used: ₹0.00 (5x)</div>
+        <!-- 3. Estimated Total P/L (Realized + Floating) -->
+        <div style="background: #0d1117; border: 1px solid var(--border-color); border-radius: 12px; padding: 18px 20px;">
+          <div style="font-size: 0.82rem; color: #94a3b8; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px;">ESTIMATED TOTAL P/L (TOTAL)</div>
+          <div style="font-size: 2.3rem; font-weight: 900; font-family: monospace; margin: 6px 0; line-height: 1.1;" id="kpiEstTotalNet">+$0.00 PROFIT</div>
+          <div style="font-size: 0.8rem; color: var(--text-dim);" id="kpiEstTotalSubtext">Realized + Floating Combined</div>
         </div>
 
-        <!-- 4. Active Pairs / Cap -->
-        <div style="background: #0d1117; border: 1px solid var(--border-color); border-radius: 10px; padding: 14px 18px;">
-          <div style="font-size: 0.72rem; color: var(--text-muted); font-weight: 700; text-transform: uppercase;">Active Pairs / Cap 📊</div>
-          <div style="font-size: 1.5rem; font-weight: 800; font-family: monospace; color: #f59e0b;" id="kpiActivePairs">0 / 25</div>
-          <div style="font-size: 0.72rem; color: var(--text-dim);" id="kpiUniqueRatesCount">Processed Rates: 0 unique</div>
+        <!-- 4. Active Pairs / Pair Limit -->
+        <div style="background: #0d1117; border: 1px solid var(--border-color); border-radius: 12px; padding: 18px 20px;">
+          <div style="font-size: 0.82rem; color: #94a3b8; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px;">ACTIVE PAIRS / PAIR LIMIT 📊</div>
+          <div style="font-size: 1.95rem; font-weight: 900; font-family: monospace; color: #f59e0b; margin: 6px 0; line-height: 1.1;" id="kpiActivePairs">0 / 25 Pairs</div>
+          <div style="font-size: 0.8rem; color: var(--text-dim);" id="kpiUniqueRatesCount">0 Barrels Open</div>
         </div>
 
       </div>
     </section>
+
+    <!-- Simulated Account & Margin Callout Bar -->
+    <div style="background: rgba(13, 17, 23, 0.95); border: 1px solid rgba(56, 189, 248, 0.3); border-radius: 12px; padding: 14px 20px; margin-bottom: 24px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 16px;">
+      <div style="display: flex; align-items: center; gap: 12px;">
+        <span style="font-size: 1.2rem;">🛡️</span>
+        <div>
+          <span style="font-size: 0.75rem; color: #38bdf8; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px;">SIMULATED PAPER TRADING ACCOUNT (VIRTUAL CAPITAL)</span>
+          <div style="font-size: 0.8rem; color: var(--text-muted);">Amounts converted to USD ($) at reference rate. Paper trading metrics — not actual exchange wallet funds.</div>
+        </div>
+      </div>
+
+      <div style="display: flex; align-items: center; gap: 24px; flex-wrap: wrap;">
+        <div>
+          <span style="font-size: 0.72rem; color: var(--text-muted); font-weight: 700; text-transform: uppercase;">Available Simulated Margin</span>
+          <div style="font-size: 1.65rem; font-weight: 900; font-family: monospace; color: #38bdf8;" id="kpiAvailableMargin">$0.00</div>
+        </div>
+        <div>
+          <span style="font-size: 0.72rem; color: var(--text-muted); font-weight: 700; text-transform: uppercase;">Simulated Equity</span>
+          <div style="font-size: 1.25rem; font-weight: 800; font-family: monospace; color: #f8fafc;" id="kpiSimulatedEquity">$0.00</div>
+        </div>
+        <div>
+          <span style="font-size: 0.72rem; color: var(--text-muted); font-weight: 700; text-transform: uppercase;">Locked Margin</span>
+          <div style="font-size: 1.25rem; font-weight: 800; font-family: monospace; color: #fbbf24;" id="kpiMarginUsed">$0.00 (5x)</div>
+        </div>
+      </div>
+    </div>
 
     <!-- Mobile Bottom Secondary Controls & Technical Info Panel (Moved down below chart/tables on mobile) -->
     <div class="mobile-bottom-panel" style="display: none;">
@@ -216,20 +242,20 @@
         <div class="active-tables-container">
           <!-- BUY Positions Table -->
           <div class="active-table-card buy-card">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; padding-bottom: 6px; border-bottom: 1px solid rgba(16, 185, 129, 0.25);">
-              <h4 style="margin: 0; color: #10b981; font-size: 0.95rem; font-weight: 800; display: flex; align-items: center; gap: 8px;">
-                <span>🟢 BUY Positions P/L (Long)</span>
-                <span id="buyPositionsBadge" class="badge-direction buy" style="font-size: 0.7rem;">0 Active</span>
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; padding-bottom: 8px; border-bottom: 1px solid rgba(16, 185, 129, 0.25);">
+              <h4 style="margin: 0; color: #10b981; font-size: 1.05rem; font-weight: 900; display: flex; align-items: center; gap: 8px;">
+                <span>🟢 BUY Positions (Long)</span>
+                <span id="buyPositionsBadge" class="badge-direction buy" style="font-size: 0.75rem;">0 Active</span>
               </h4>
-              <span id="buyPositionsNetPL" style="font-size: 0.85rem; font-weight: 800; color: #10b981;">NET P/L: ₹0.00</span>
+              <span id="buyPositionsNetPL" style="font-size: 1.35rem; font-weight: 900; color: #10b981; font-family: monospace;">BUY FLOATING P/L: +$0.00 PROFIT</span>
             </div>
             <table class="data-table" id="buyPositionsTable">
               <thead>
                 <tr>
                   <th>Pair / Position ID</th>
-                  <th>Entry ➔ Current</th>
-                  <th>Target Exit 🎯</th>
-                  <th style="text-align: right;">Net Floating P/L (INR)</th>
+                  <th>Entry ➔ Current ($)</th>
+                  <th>Target Exit 🎯 ($)</th>
+                  <th style="text-align: right;">Net Floating P/L ($)</th>
                   <th style="text-align: center;">Action</th>
                 </tr>
               </thead>
@@ -243,20 +269,20 @@
 
           <!-- SELL Positions Table -->
           <div class="active-table-card sell-card">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; padding-bottom: 6px; border-bottom: 1px solid rgba(239, 68, 68, 0.25);">
-              <h4 style="margin: 0; color: #ef4444; font-size: 0.95rem; font-weight: 800; display: flex; align-items: center; gap: 8px;">
-                <span>🔴 SELL Positions P/L (Short)</span>
-                <span id="sellPositionsBadge" class="badge-direction sell" style="font-size: 0.7rem;">0 Active</span>
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; padding-bottom: 8px; border-bottom: 1px solid rgba(239, 68, 68, 0.25);">
+              <h4 style="margin: 0; color: #ef4444; font-size: 1.05rem; font-weight: 900; display: flex; align-items: center; gap: 8px;">
+                <span>🔴 SELL Positions (Short)</span>
+                <span id="sellPositionsBadge" class="badge-direction sell" style="font-size: 0.75rem;">0 Active</span>
               </h4>
-              <span id="sellPositionsNetPL" style="font-size: 0.85rem; font-weight: 800; color: #ef4444;">NET P/L: ₹0.00</span>
+              <span id="sellPositionsNetPL" style="font-size: 1.35rem; font-weight: 900; color: #ef4444; font-family: monospace;">SELL FLOATING P/L: +$0.00 PROFIT</span>
             </div>
             <table class="data-table" id="sellPositionsTable">
               <thead>
                 <tr>
                   <th>Pair / Position ID</th>
-                  <th>Entry ➔ Current</th>
-                  <th>Target Exit 🎯</th>
-                  <th style="text-align: right;">Net Floating P/L (INR)</th>
+                  <th>Entry ➔ Current ($)</th>
+                  <th>Target Exit 🎯 ($)</th>
+                  <th style="text-align: right;">Net Floating P/L ($)</th>
                   <th style="text-align: center;">Action</th>
                 </tr>
               </thead>
@@ -280,19 +306,19 @@
             <div class="summary-subtext" id="closedSummaryWinLoss">Wins: 0 | Losses: 0 | Win Rate: 0%</div>
           </div>
           <div class="summary-box">
-            <div class="summary-label">Total Realized Gross P/L</div>
-            <div class="summary-value" id="closedSummaryGrossINR">₹0.00</div>
-            <div class="summary-subtext" id="closedSummaryGrossUSD">$0.0000 Gross</div>
+            <div class="summary-label">Total Realized Gross P/L ($)</div>
+            <div class="summary-value" id="closedSummaryGrossINR">+$0.00</div>
+            <div class="summary-subtext" id="closedSummaryGrossUSD">Gross P/L</div>
           </div>
           <div class="summary-box">
-            <div class="summary-label">Total Charges Paid (Fees+GST)</div>
-            <div class="summary-value text-amber" id="closedSummaryChargesINR">₹0.00</div>
-            <div class="summary-subtext" id="closedSummaryChargesUSD">$0.0000 Charges</div>
+            <div class="summary-label">Total Charges Paid ($)</div>
+            <div class="summary-value text-amber" id="closedSummaryChargesINR">-$0.00</div>
+            <div class="summary-subtext" id="closedSummaryChargesUSD">Taker Fees + GST + Buffer</div>
           </div>
           <div class="summary-box">
-            <div class="summary-label">Total Realized Net P/L</div>
-            <div class="summary-value" id="closedSummaryNetINR">₹0.00</div>
-            <div class="summary-subtext" id="closedSummaryNetUSD">$0.0000 Net</div>
+            <div class="summary-label">Total Realized Net P/L ($)</div>
+            <div class="summary-value" id="closedSummaryNetINR">+$0.00 PROFIT</div>
+            <div class="summary-subtext" id="closedSummaryNetUSD">Realized Net</div>
           </div>
         </div>
 
@@ -304,14 +330,14 @@
               <th class="sortable" data-key="direction" onclick="sortTable('closed', 'direction')">Type</th>
               <th class="sortable" data-key="entryTime" onclick="sortTable('closed', 'entryTime')">Entry Time</th>
               <th class="sortable" data-key="exitTime" onclick="sortTable('closed', 'exitTime')">Exit Time</th>
-              <th class="sortable" data-key="entryPrice" onclick="sortTable('closed', 'entryPrice')">Entry Price</th>
-              <th class="sortable" data-key="exitPrice" onclick="sortTable('closed', 'exitPrice')">Exit Price</th>
-              <th class="sortable" data-key="targetExitPrice" onclick="sortTable('closed', 'targetExitPrice')">Target Price 🎯</th>
-              <th class="sortable" data-key="grossProfitUSD" onclick="sortTable('closed', 'grossProfitUSD')">Gross P/L (USD)</th>
-              <th class="sortable" data-key="totalChargesINR" onclick="sortTable('closed', 'totalChargesINR')">Total Charges (INR)</th>
-              <th class="sortable" data-key="netProfitINR" onclick="sortTable('closed', 'netProfitINR')">Net P/L (INR)</th>
+              <th class="sortable" data-key="entryPrice" onclick="sortTable('closed', 'entryPrice')">Entry Price ($)</th>
+              <th class="sortable" data-key="exitPrice" onclick="sortTable('closed', 'exitPrice')">Exit Price ($)</th>
+              <th class="sortable" data-key="targetExitPrice" onclick="sortTable('closed', 'targetExitPrice')">Target Exit ($) 🎯</th>
+              <th class="sortable" data-key="grossProfitUSD" onclick="sortTable('closed', 'grossProfitUSD')">Gross P/L ($)</th>
+              <th class="sortable" data-key="totalChargesUSD" onclick="sortTable('closed', 'totalChargesUSD')">Charges Paid ($)</th>
+              <th class="sortable" data-key="netProfitUSD" onclick="sortTable('closed', 'netProfitUSD')">Net P/L ($)</th>
+              <th class="sortable" data-key="usdInrRate" onclick="sortTable('closed', 'usdInrRate')">Rate (₹/$)</th>
               <th class="sortable" data-key="exitReason" onclick="sortTable('closed', 'exitReason')">Exit Reason</th>
-              <th class="sortable" data-key="netProfitINR" onclick="sortTable('closed', 'netProfitINR')" style="background: rgba(16, 185, 129, 0.15); color: #a7f3d0; font-weight: 800; text-align: center;">💎 Net Pure Profit (INR)</th>
             </tr>
           </thead>
           <tbody id="closedPositionsTbody">
