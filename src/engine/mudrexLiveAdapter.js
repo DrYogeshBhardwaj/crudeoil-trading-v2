@@ -918,6 +918,11 @@ class MudrexLiveAdapter {
     };
   }
 
+  processLiveTick(tick) {
+    if (!tick || !tick.price) return;
+    if (tick.symbol && tick.symbol !== 'CLUSDT') return;
+  }
+
   resetLiveEngine() {
     this.liveOpenPositions = [];
     this.liveClosedPositions = [];
