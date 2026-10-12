@@ -176,7 +176,7 @@
           </div>
           <div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-top: 12px;">
             <span style="font-size: 0.72rem; color: var(--text-muted); font-weight: 700;">Quick Target Presets:</span>
-            <button type="button" class="pill-btn" style="background: rgba(16, 185, 129, 0.25); color: #34d399; border-color: #10b981; font-weight: 800;" onclick="setPcCustomTargets('0.30', '0.20')">🤖 AUTO AI DYNAMIC TARGET (BUY $0.30 / SELL $0.20)</button>
+            <button type="button" class="pill-btn" style="background: rgba(16, 185, 129, 0.25); color: #34d399; border-color: #10b981; font-weight: 800;" onclick="enablePcAiMode()">🤖 AUTO AI DYNAMIC TARGET (Adaptive Trend Target)</button>
             <button type="button" class="pill-btn" onclick="setPcCustomTargets('0.20', '0.20')">$0.20 Both (Default)</button>
             <button type="button" class="pill-btn" onclick="setPcCustomTargets('0.20', '0.30')">BUY $0.20 / SELL $0.30</button>
             <button type="button" class="pill-btn" onclick="setPcCustomTargets('0.30', '0.20')">BUY $0.30 / SELL $0.20</button>
@@ -249,7 +249,18 @@
       }
     }
 
+    let isAiDynamicMode = false;
+
+    function enablePcAiMode() {
+      isAiDynamicMode = true;
+      const bEl = document.getElementById('pcBuyTargetMove');
+      const sEl = document.getElementById('pcSellTargetMove');
+      if (bEl) bEl.value = 0.30;
+      if (sEl) sEl.value = 0.20;
+    }
+
     function setPcCustomTargets(buyVal, sellVal) {
+      isAiDynamicMode = false;
       const bEl = document.getElementById('pcBuyTargetMove');
       const sEl = document.getElementById('pcSellTargetMove');
       if (bEl) bEl.value = buyVal;
@@ -315,6 +326,7 @@
         targetMove,
         buyTargetMove,
         sellTargetMove,
+        autoAiTargetMode: isAiDynamicMode,
         maxActivePairs,
         usdInrRate,
         takerFeeRate: 0.00059, // Mudrex fee rate

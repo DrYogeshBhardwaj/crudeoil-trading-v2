@@ -127,6 +127,28 @@ class HistoricalBacktester {
     return { isClosed: false, reason: '' };
   }
 
+  calculateAiTargetsFromHistory(recentPrices) {
+    if (!recentPrices || recentPrices.length < 3) {
+      return { buyTargetMove: 0.20, sellTargetMove: 0.20 };
+    }
+    const len = recentPrices.length;
+    const oldest = recentPrices[0];
+    const newest = recentPrices[len - 1];
+    const diff = newest - oldest;
+
+    if (diff >= 0.08) {
+      return { buyTargetMove: 0.35, sellTargetMove: 0.15 };
+    } else if (diff >= 0.02) {
+      return { buyTargetMove: 0.30, sellTargetMove: 0.20 };
+    } else if (diff <= -0.08) {
+      return { buyTargetMove: 0.15, sellTargetMove: 0.35 };
+    } else if (diff <= -0.02) {
+      return { buyTargetMove: 0.20, sellTargetMove: 0.30 };
+    } else {
+      return { buyTargetMove: 0.20, sellTargetMove: 0.20 };
+    }
+  }
+
   async runBacktest(config) {
     const {
       mode = 'SINGLE', // 'SINGLE' or 'RANGE'
@@ -137,6 +159,9 @@ class HistoricalBacktester {
       startingCapitalINR = 100000,
       contractQuantity = 2.0,
       targetMove = 0.20,
+      buyTargetMove,
+      sellTargetMove,
+      autoAiTargetMode = false,
       maxActivePairs = 25,
       takerFeeRate = 0.00059, // Mudrex exact 0.059%
       gstRate = 0.18,
@@ -161,6 +186,7 @@ class HistoricalBacktester {
     const closedPositions = [];
     const dailyReports = [];
     const missingDates = [];
+    const recentSubTicks = [];
 
     let currentPrice = null;
     let lastProcessedRate = null;
@@ -205,6 +231,18 @@ class HistoricalBacktester {
           const priceStep = this.normalizePrice(rawPrice, symbol);
           if (priceStep === null) continue;
 
+          recentSubTicks.push(priceStep);
+          if (recentSubTicks.length > 20) recentSubTicks.shift();
+
+          let bTargetMove = buyTargetMove !== undefined && buyTargetMove !== null ? Number(buyTargetMove) : (targetMove || 0.20);
+          let sTargetMove = sellTargetMove !== undefined && sellTargetMove !== null ? Number(sellTargetMove) : (targetMove || 0.20);
+
+          if (autoAiTargetMode) {
+            const aiTargets = this.calculateAiTargetsFromHistory(recentSubTicks);
+            bTargetMove = aiTargets.buyTargetMove;
+            sTargetMove = aiTargets.sellTargetMove;
+          }
+
           // 1. Evaluate Target Exits for ALL Open Positions on THIS sub-tick rate
           for (const pair of pairs) {
             if (pair.status === 'CLOSED') continue;
@@ -241,7 +279,7 @@ class HistoricalBacktester {
 
             if (buyOpen && !sellOpen) {
               if (Math.abs(priceStep - pair.buyPosition.entryPrice) <= tolerance) {
-                this.reopenBacktestLeg(pair, 'SELL', priceStep, timestamp, targetMove, symbol, contractQuantity, multiplier, config.buyTargetMove, config.sellTargetMove);
+                this.reopenBacktestLeg(pair, 'SELL', priceStep, timestamp, targetMove, symbol, contractQuantity, multiplier, bTargetMove, sTargetMove);
                 legReopened = true;
                 break;
               }
@@ -249,7 +287,7 @@ class HistoricalBacktester {
 
             if (sellOpen && !buyOpen) {
               if (Math.abs(priceStep - pair.sellPosition.entryPrice) <= tolerance) {
-                this.reopenBacktestLeg(pair, 'BUY', priceStep, timestamp, targetMove, symbol, contractQuantity, multiplier, config.buyTargetMove, config.sellTargetMove);
+                this.reopenBacktestLeg(pair, 'BUY', priceStep, timestamp, targetMove, symbol, contractQuantity, multiplier, bTargetMove, sTargetMove);
                 legReopened = true;
                 break;
               }
@@ -282,8 +320,6 @@ class HistoricalBacktester {
           // Create New Pair instantly on NEW RATE!
           const pairSeq = (pairs.length + 1).toString().padStart(4, '0');
           const pairId = `BT-PAIR-${pairSeq}`;
-          const bTargetMove = config.buyTargetMove !== undefined && config.buyTargetMove !== null ? Number(config.buyTargetMove) : (config.targetMove || 0.20);
-          const sTargetMove = config.sellTargetMove !== undefined && config.sellTargetMove !== null ? Number(config.sellTargetMove) : (config.targetMove || 0.20);
 
           const buyTarget = bTargetMove ? this.normalizePrice(priceStep + bTargetMove, symbol) : null;
           const sellTarget = sTargetMove ? this.normalizePrice(priceStep - sTargetMove, symbol) : null;
