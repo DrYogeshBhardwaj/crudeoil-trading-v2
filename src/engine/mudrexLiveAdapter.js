@@ -698,13 +698,28 @@ class MudrexLiveAdapter {
     const paperPositions = paperMetrics.openPositions || [];
     const paperClosed = paperMetrics.closedPositions || [];
 
+    // Build strict set of currently active open paper position IDs and closed position IDs
+    const activePaperPosIds = new Set(paperPositions.map(p => p.positionId));
+    const paperClosedPosIds = new Set(paperClosed.map(c => c.positionId));
+
+    // Purge any closed positions from liveOpenPositions
+    liveOpenPositions = (liveOpenPositions || []).filter(p => {
+      if (paperClosedPosIds.has(p.positionId)) return false;
+      if (p.status === 'CLOSED') return false;
+      if (p.apiStatus === 'REAL_MUDREX_POSITION') return true;
+      return activePaperPosIds.has(p.positionId);
+    });
+
+    // Sync current active paper positions
     const existingPosIds = new Set(liveOpenPositions.map(p => p.positionId));
     for (const pPos of paperPositions) {
-      if (!existingPosIds.has(pPos.positionId)) {
+      if (pPos.status === 'OPEN' && !existingPosIds.has(pPos.positionId)) {
         liveOpenPositions.push(pPos);
         existingPosIds.add(pPos.positionId);
       }
     }
+
+    this.liveOpenPositions = liveOpenPositions;
 
     const existingClosedIds = new Set(liveClosedPositions.map(p => p.positionId));
     for (const pCls of paperClosed) {

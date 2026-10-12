@@ -752,8 +752,77 @@ table.data-table tr:hover {
 }
 
 @media (max-width: 768px) {
+  header.app-header {
+    padding: 10px 14px;
+    flex-wrap: wrap;
+    gap: 10px;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .brand-section {
+    flex: 1;
+  }
+
+  .header-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  /* On mobile, show only the main START/PAUSE ENGINE button in top header, hide secondary buttons & ticker */
+  .header-actions .btn-secondary {
+    display: none !important;
+  }
+
+  .live-ticker-bar {
+    display: none !important;
+  }
+
+  /* Mobile Re-ordering Container */
   .dashboard-container {
-    padding: 12px;
+    display: flex;
+    flex-direction: column;
+    padding: 8px;
+  }
+
+  /* Order 1: Main Content Card (Live Chart + Active Positions Tables FIRST) */
+  .main-content-card {
+    order: 1 !important;
+    margin-bottom: 12px !important;
+  }
+
+  /* Order 2: Top Summary Section (4 Cards in compact 2x2 grid below chart/tables) */
+  .top-summary-card {
+    order: 2 !important;
+    margin-bottom: 12px !important;
+    padding: 12px !important;
+  }
+
+  .top-summary-card > div {
+    grid-template-columns: repeat(2, 1fr) !important;
+    gap: 8px !important;
+  }
+
+  .top-summary-card > div > div {
+    padding: 10px 12px !important;
+  }
+
+  .top-summary-card div[id^="kpi"] {
+    font-size: 1.15rem !important;
+  }
+
+  /* Order 3: Mobile Bottom Control Panel (Secondary Buttons & Info at bottom of screen) */
+  .mobile-bottom-panel {
+    order: 3 !important;
+    display: flex !important;
+    flex-direction: column;
+    gap: 10px;
+    background: #0d1117;
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    padding: 14px;
+    margin-bottom: 24px;
   }
 
   .metrics-grid {
@@ -817,18 +886,6 @@ table.data-table tr:hover {
 
   .brand-title h1 {
     font-size: 1rem;
-  }
-
-  .live-ticker-bar {
-    display: grid;
-    grid-template-columns: repeat(2, 1fr);
-    gap: 8px;
-    padding: 8px;
-  }
-
-  .ticker-item:last-child {
-    grid-column: span 2;
-    align-items: center;
   }
 
   .btn {
