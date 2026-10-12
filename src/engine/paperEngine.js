@@ -78,7 +78,7 @@ class PaperEngine {
       if (saved.settings) this.settings = { ...this.settings, ...saved.settings };
       this.settings.startingCapitalINR = 350000; // ₹3.5 Lakh virtual capital
       this.settings.maxActivePairs = 50; // 50 Active Pairs Cap
-      this.settings.strategyMode = this.settings.strategyMode || 'ALTERNATING_STAGGERED';
+      this.settings.strategyMode = 'ALTERNATING_STAGGERED';
       if (saved.pairs) this.pairs = saved.pairs;
       if (saved.closedPositions) this.closedPositions = saved.closedPositions;
       if (saved.auditLogs) this.auditLogs = saved.auditLogs.slice(-500);

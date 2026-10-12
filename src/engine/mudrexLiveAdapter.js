@@ -53,6 +53,8 @@ class MudrexLiveAdapter {
         if (saved.mudrexSettings) {
           this.settings = { ...this.settings, ...saved.mudrexSettings };
         }
+        this.settings.strategyMode = 'ALTERNATING_STAGGERED';
+        this.settings.maxActivePairs = 50;
         if (saved.mudrexApiKey && !saved.mudrexApiKey.includes('*') && !process.env.MUDREX_API_KEY) {
           process.env.MUDREX_API_KEY = saved.mudrexApiKey;
         }
