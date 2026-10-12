@@ -50,6 +50,12 @@ app.get('/health', (req, res) => {
   }
 });
 
+// Express Page Routes
+app.get('/dhan-mcx', (req, res) => res.sendFile(path.join(__dirname, '../public/dhan_mcx.html')));
+app.get('/mcx-calc', (req, res) => res.sendFile(path.join(__dirname, '../public/mcx_calc.html')));
+app.get('/paper-calc', (req, res) => res.sendFile(path.join(__dirname, '../public/paper_calc.html')));
+app.get('/mudrex-live', (req, res) => res.sendFile(path.join(__dirname, '../public/mudrex_live.html')));
+
 // 1. Dashboard Metrics
 app.get('/api/metrics', (req, res) => {
   try {
@@ -67,7 +73,7 @@ app.get('/api/stream', async (req, res) => {
   res.setHeader('Connection', 'keep-alive');
   res.flushHeaders();
 
-  const isMudrexLive = req.query.mode === 'mudrex_live' || (req.headers.referer && req.headers.referer.includes('mudrex_live'));
+  const isMudrexLive = req.query.mode === 'mudrex_live' || (req.headers.referer && (req.headers.referer.includes('mudrex_live') || req.headers.referer.includes('dhan_mcx') || req.headers.referer.includes('dhan-mcx')));
 
   const sendUpdate = async () => {
     try {

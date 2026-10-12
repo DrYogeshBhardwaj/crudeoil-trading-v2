@@ -1,0 +1,445 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dhan MCX Commodities Trading Terminal — Live Engine</title>
+  <link rel="stylesheet" href="style.css?v=20261012_v4">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --dhan-primary: #00d09c;
+      --dhan-dark: #008765;
+      --dhan-glow: rgba(0, 208, 156, 0.4);
+    }
+    .dhan-brand-badge {
+      background: linear-gradient(135deg, #00d09c, #008765);
+      color: #fff;
+      padding: 4px 10px;
+      border-radius: 6px;
+      font-size: 0.75rem;
+      font-weight: 800;
+      letter-spacing: 0.5px;
+      text-transform: uppercase;
+      box-shadow: 0 0 10px var(--dhan-glow);
+    }
+    .dhan-hero-card {
+      background: linear-gradient(135deg, rgba(0, 208, 156, 0.12), rgba(15, 23, 42, 0.95));
+      border: 1px solid rgba(0, 208, 156, 0.4);
+      border-radius: 14px;
+      padding: 20px 24px;
+      margin-bottom: 24px;
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+    }
+    .order-type-tag {
+      background: rgba(56, 189, 248, 0.15);
+      border: 1px solid rgba(56, 189, 248, 0.4);
+      color: #38bdf8;
+      padding: 3px 8px;
+      border-radius: 4px;
+      font-size: 0.75rem;
+      font-weight: 700;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Safety Banner -->
+  <div class="safety-banner" style="background: linear-gradient(90deg, #064e3b, #008765, #064e3b); border-bottom: 1px solid #00d09c; padding: 4px 10px; font-size: 0.78rem;">
+    <span>⚡ DHAN MCX COMMODITIES LIVE PAIR TRADING TERMINAL (NRML CARRYFORWARD MODE)</span>
+  </div>
+
+  <!-- Header Bar -->
+  <header class="app-header">
+    <div class="brand-section">
+      <div class="brand-logo" style="background: linear-gradient(135deg, #00d09c, #0284c7);">🇮🇳</div>
+      <div class="brand-title">
+        <h1>Dhan MCX <span class="dhan-brand-badge">DHAN HQ API</span></h1>
+      </div>
+    </div>
+
+    <!-- Ticker Stream Display -->
+    <div class="live-ticker-bar">
+      <div class="ticker-item">
+        <span class="ticker-label" id="currentSymbolLabel">MCX Silver (SILVERM 1kg)</span>
+        <span class="ticker-value" id="liveTickerPrice" style="color: #00d09c;">₹89,450 / kg</span>
+      </div>
+      <div class="ticker-item">
+        <span class="ticker-label">Last Tick Time / Age</span>
+        <span class="ticker-value" id="tickTimeAgeDisplay" style="color:var(--text-main); font-size: 0.95rem;">--:--:-- (0ms)</span>
+      </div>
+      <div class="ticker-item">
+        <span class="ticker-label">Last Processed Rate</span>
+        <span class="ticker-value" id="lastProcessedRateDisplay" style="color:var(--accent-cyan);">₹89,450</span>
+      </div>
+      <div class="ticker-item">
+        <span class="ticker-label">Order Type</span>
+        <span class="ticker-value" style="color: #38bdf8; font-weight: 800;">NRML (Overnight)</span>
+      </div>
+      <div class="ticker-item">
+        <span class="ticker-label">Feed Status</span>
+        <span id="feedStatusBadge" class="status-badge stale">
+          <span class="pulse-dot"></span>
+          <span id="feedStatusText">CONNECTING</span>
+        </span>
+      </div>
+    </div>
+
+    <!-- Header Actions -->
+    <div class="header-actions">
+      <a href="/mcx-calc" class="btn btn-secondary" style="border: 1px solid #f59e0b; color: #fbbf24; font-weight: 700; text-decoration: none;">🧮 MCX Calc</a>
+      <a href="/mudrex-live" class="btn btn-secondary" style="border: 1px solid #10b981; color: #34d399; font-weight: 700; text-decoration: none;">⚡ Mudrex Live</a>
+      <button id="mudrexStartEngineMainBtn" class="btn" style="background: linear-gradient(135deg, #00d09c, #008765); color: #fff; font-weight: 800; font-size: 0.95rem; padding: 10px 22px; border-radius: 8px; border: 1px solid #34d399; box-shadow: 0 0 16px var(--dhan-glow); cursor: pointer;" onclick="toggleEngineState()">
+        <span>🚀 START DHAN ENGINE</span>
+      </button>
+      <button class="btn btn-secondary" style="border: 1px solid #00d09c; color: #00d09c; font-weight: 700;" onclick="openDhanModal()">🔑 Dhan API Keys</button>
+      <button class="btn btn-secondary" style="border: 1px solid #38bdf8; color: #38bdf8; font-weight: 700;" onclick="openAccountDetailsModal()">💰 Account Info</button>
+      <button class="btn btn-secondary" onclick="openSettingsModal()">⚙️ Settings</button>
+    </div>
+  </header>
+
+  <!-- Main Container -->
+  <main class="dashboard-container">
+
+    <!-- Engine Alert / Pause Banner (If paused) -->
+    <div id="engineAlertBanner" class="engine-alert-banner" style="display: none;">
+      <span id="engineAlertText">⚠️ ENGINE PAUSED</span>
+      <button class="btn btn-secondary" style="padding: 4px 10px; font-size: 0.75rem;" onclick="openSettingsModal()">Adjust Settings</button>
+    </div>
+
+    <!-- Single Top Summary Section (4 Cards Only) -->
+    <section class="top-summary-card" style="background: linear-gradient(135deg, rgba(0, 208, 156, 0.08), rgba(15, 23, 42, 0.95)); border: 1px solid rgba(0, 208, 156, 0.35); border-radius: 14px; padding: 18px 22px; margin-bottom: 20px; box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);">
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px;">
+        
+        <!-- 1. Realized Net P/L -->
+        <div style="background: #0d1117; border: 1px solid var(--border-color); border-radius: 10px; padding: 14px 18px;">
+          <div style="font-size: 0.72rem; color: var(--text-muted); font-weight: 700; text-transform: uppercase;">Realized Net P/L</div>
+          <div style="font-size: 1.5rem; font-weight: 800; font-family: monospace; color: #10b981;" id="kpiRealizedNet">₹0.00</div>
+          <div style="font-size: 0.72rem; color: var(--text-dim);" id="kpiRealizedSubtext">Gross: ₹0.00 | Charges: ₹0.00</div>
+        </div>
+
+        <!-- 2. Floating Net P/L -->
+        <div style="background: #0d1117; border: 1px solid var(--border-color); border-radius: 10px; padding: 14px 18px;">
+          <div style="font-size: 0.72rem; color: var(--text-muted); font-weight: 700; text-transform: uppercase;">Floating Net P/L</div>
+          <div style="font-size: 1.5rem; font-weight: 800; font-family: monospace;" id="kpiFloatingNet">₹0.00</div>
+          <div style="font-size: 0.72rem; color: var(--text-dim);" id="kpiFloatingSubtext">Gross: ₹0.00 | Charges: ₹0.00</div>
+        </div>
+
+        <!-- 3. Available Free Margin -->
+        <div style="background: #0d1117; border: 1px solid var(--border-color); border-radius: 10px; padding: 14px 18px;">
+          <div style="font-size: 0.72rem; color: var(--text-muted); font-weight: 700; text-transform: uppercase;">Dhan Free Margin (Hedged)</div>
+          <div style="font-size: 1.5rem; font-weight: 800; font-family: monospace; color: #00d09c;" id="kpiAvailableMargin">₹3,50,000.00</div>
+          <div style="font-size: 0.72rem; color: var(--text-dim);" id="kpiMarginUsed">Locked Margin: ₹0.00 (Dhan Hedge Discount)</div>
+        </div>
+
+        <!-- 4. Active Pairs / Cap -->
+        <div style="background: #0d1117; border: 1px solid var(--border-color); border-radius: 10px; padding: 14px 18px;">
+          <div style="font-size: 0.72rem; color: var(--text-muted); font-weight: 700; text-transform: uppercase;">Active Pairs / Cap 📊</div>
+          <div style="font-size: 1.5rem; font-weight: 800; font-family: monospace; color: #f59e0b;" id="kpiActivePairs">0 / 50</div>
+          <div style="font-size: 0.72rem; color: var(--text-dim);" id="kpiUniqueRatesCount">Processed Rates: 0 unique</div>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- Navigation Tabs -->
+    <div class="nav-tabs">
+      <button class="tab-btn active" onclick="switchTab('activePositions')">⚡ Active Positions (<span id="tabActiveCount">0</span>)</button>
+      <button class="tab-btn" onclick="switchTab('closedHistory')">📜 Closed Positions History (<span id="tabClosedCount">0</span>)</button>
+      <button class="tab-btn" onclick="switchTab('historicalBacktest')">📊 MCX Calculator</button>
+      <button class="tab-btn" onclick="switchTab('testRunner')">🧪 Engine Test Suite</button>
+      <button class="tab-btn" onclick="switchTab('auditLogs')">📜 System Audit Logs</button>
+    </div>
+
+    <!-- Tab 1: Active Positions & Live Chart -->
+    <div id="tabContentActivePositions" class="tab-content active">
+      
+      <!-- Live Chart & Trigger Lines Card -->
+      <div class="card" style="margin-bottom: 20px;">
+        <div class="card-header" style="display: flex; justify-content: space-between; align-items: center;">
+          <div style="display: flex; align-items: center; gap: 10px;">
+            <h2 class="card-title" id="chartSymbolTitle">MCX SILVER (1 kg) LIVE RATE CHART</h2>
+            <span class="live-pulse" id="chartPulse">LIVE</span>
+          </div>
+          <div style="display: flex; gap: 15px; font-size: 0.85rem;">
+            <div><span style="color: var(--text-muted);">Current Rate:</span> <strong id="chartCurrentPriceDisplay" style="color: var(--accent-cyan);">₹0.00</strong></div>
+            <div><span style="color: var(--text-muted);">BUY Target (+₹1,000):</span> <strong id="chartBuyTargetDisplay" style="color: #10b981;">₹0.00</strong></div>
+            <div><span style="color: var(--text-muted);">SELL Target (-₹1,000):</span> <strong id="chartSellTargetDisplay" style="color: #ef4444;">₹0.00</strong></div>
+          </div>
+        </div>
+        <div class="card-body">
+          <div style="position: relative; width: 100%; height: 260px; background: #090d16; border-radius: 10px; padding: 12px; border: 1px solid var(--border-color);">
+            <canvas id="liveChartCanvas" style="width: 100%; height: 100%; display: block;"></canvas>
+          </div>
+        </div>
+      </div>
+
+      <!-- Two Column Active Positions Grid -->
+      <div class="positions-grid">
+        
+        <!-- Left: BUY Positions (Long) -->
+        <div class="card card-buy">
+          <div class="card-header header-buy" style="display: flex; justify-content: space-between; align-items: center;">
+            <h2>📈 BUY Positions P/L (Long) <span class="count-badge" id="buyCountBadge">0 ACTIVE</span></h2>
+            <div style="font-size: 0.85rem; font-weight: 700;">NET P/L: <span id="buyNetPlTotal" style="color: #10b981;">₹0.00</span></div>
+          </div>
+          <div class="card-body padding-none">
+            <div class="table-responsive">
+              <table class="data-table">
+                <thead>
+                  <tr>
+                    <th>PAIR / POSITION ID</th>
+                    <th>ENTRY ➔ CURRENT</th>
+                    <th>TARGET EXIT 🎯</th>
+                    <th>NET FLOATING P/L (INR)</th>
+                    <th>ACTION</th>
+                  </tr>
+                </thead>
+                <tbody id="buyPositionsTbody">
+                  <tr><td colspan="5" style="text-align: center; color: var(--text-muted); padding: 30px;">No Active BUY Positions</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <!-- Right: SELL Positions (Short) -->
+        <div class="card card-sell">
+          <div class="card-header header-sell" style="display: flex; justify-content: space-between; align-items: center;">
+            <h2>📉 SELL Positions P/L (Short) <span class="count-badge" id="sellCountBadge">0 ACTIVE</span></h2>
+            <div style="font-size: 0.85rem; font-weight: 700;">NET P/L: <span id="sellNetPlTotal" style="color: #ef4444;">₹0.00</span></div>
+          </div>
+          <div class="card-body padding-none">
+            <div class="table-responsive">
+              <table class="data-table">
+                <thead>
+                  <tr>
+                    <th>PAIR / POSITION ID</th>
+                    <th>ENTRY ➔ CURRENT</th>
+                    <th>TARGET EXIT 🎯</th>
+                    <th>NET FLOATING P/L (INR)</th>
+                    <th>ACTION</th>
+                  </tr>
+                </thead>
+                <tbody id="sellPositionsTbody">
+                  <tr><td colspan="5" style="text-align: center; color: var(--text-muted); padding: 30px;">No Active SELL Positions</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- Tab 2: Closed History -->
+    <div id="tabContentClosedHistory" class="tab-content">
+      <div class="card">
+        <div class="card-header" style="display: flex; justify-content: space-between; align-items: center;">
+          <h2>📜 Closed Positions Log</h2>
+          <div style="display: flex; gap: 20px; font-size: 0.85rem; font-weight: 700;">
+            <div>Total Closed: <span id="closedTotalCount" style="color: var(--accent-cyan);">0</span></div>
+            <div>Win Rate: <span id="closedWinRate" style="color: #10b981;">0%</span></div>
+            <div>Net Profit: <span id="closedTotalNet" style="color: #10b981;">₹0.00</span></div>
+          </div>
+        </div>
+        <div class="card-body padding-none">
+          <div class="table-responsive">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>POSITION ID</th>
+                  <th>PAIR ID</th>
+                  <th>TYPE</th>
+                  <th>ENTRY TIME</th>
+                  <th>EXIT TIME</th>
+                  <th>ENTRY PRICE</th>
+                  <th>EXIT PRICE</th>
+                  <th>GROSS (₹)</th>
+                  <th>CHARGES (₹)</th>
+                  <th>NET P/L (₹)</th>
+                  <th>EXIT REASON</th>
+                </tr>
+              </thead>
+              <tbody id="closedPositionsTbody">
+                <tr><td colspan="11" style="text-align: center; color: var(--text-muted); padding: 30px;">No Closed Positions Logged Yet</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Tab 3: MCX Backtest Link -->
+    <div id="tabContentHistoricalBacktest" class="tab-content">
+      <div class="card" style="text-align: center; padding: 40px 20px;">
+        <h2 style="color: #00d09c; font-size: 1.5rem; margin-bottom: 12px;">🇮🇳 MCX Commodity Strategy Paper Calculator</h2>
+        <p style="color: var(--text-muted); max-width: 600px; margin: 0 auto 20px auto;">
+          Simulate MCX Silver, Crude Oil and Gold pair trading strategy with historical tick data, custom capital (₹3.5 Lakh), and target moves!
+        </p>
+        <a href="/mcx-calc" class="btn btn-primary" style="background: linear-gradient(135deg, #00d09c, #008765); color: #fff; text-decoration: none; padding: 12px 28px; font-size: 1.05rem; font-weight: 800;">🚀 Open MCX Calculator</a>
+      </div>
+    </div>
+
+    <!-- Tab 4: Test Suite -->
+    <div id="tabContentTestRunner" class="tab-content">
+      <div class="card">
+        <div class="card-header" style="display: flex; justify-content: space-between; align-items: center;">
+          <h2>🧪 Automated Test Suite Execution Log</h2>
+          <button class="btn btn-primary" onclick="runTestSuite()">▶ Run All Engine Tests</button>
+        </div>
+        <div class="card-body">
+          <pre id="testOutputLog" style="background: #090d16; border: 1px solid var(--border-color); padding: 16px; border-radius: 8px; font-family: monospace; font-size: 0.85rem; color: #a7f3d0; max-height: 400px; overflow-y: auto;">Click 'Run All Engine Tests' to execute system verification suite...</pre>
+        </div>
+      </div>
+    </div>
+
+    <!-- Tab 5: Audit Logs -->
+    <div id="tabContentAuditLogs" class="tab-content">
+      <div class="card">
+        <div class="card-header">
+          <h2>📜 System Audit & Execution Event Logs</h2>
+        </div>
+        <div class="card-body padding-none">
+          <div class="table-responsive">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th style="width: 180px;">TIMESTAMP</th>
+                  <th style="width: 160px;">EVENT TYPE</th>
+                  <th>DETAILS</th>
+                </tr>
+              </thead>
+              <tbody id="auditLogsTbody">
+                <tr><td colspan="3" style="text-align: center; color: var(--text-muted); padding: 30px;">No Audit Events Logged</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </main>
+
+  <!-- Dhan API Keys Modal -->
+  <div id="dhanModal" class="modal-overlay" onclick="if(event.target === this) closeDhanModal()">
+    <div class="modal-card" style="max-width: 520px;">
+      <div class="modal-header">
+        <h3>🔑 DhanHQ API Integration Settings</h3>
+        <button class="close-btn" onclick="closeDhanModal()">✕</button>
+      </div>
+      <div style="display: flex; flex-direction: column; gap: 14px;">
+        <p style="font-size: 0.85rem; color: var(--text-muted);">
+          Connect your <strong>Dhan Broking Account</strong> to trade MCX Silver Micro (SILVERM) with NRML Carryforward orders and Hedge Margin benefits.
+        </p>
+        <div class="form-group">
+          <label style="color:#fff; font-weight:700;">Dhan Client ID</label>
+          <input type="text" id="dhanClientId" class="form-control" placeholder="e.g. 1000123456">
+        </div>
+        <div class="form-group">
+          <label style="color:#fff; font-weight:700;">Dhan Access Token (JWT)</label>
+          <input type="password" id="dhanAccessToken" class="form-control" placeholder="Paste DhanHQ Access Token">
+        </div>
+        <div class="form-group">
+          <label style="color:#fff; font-weight:700;">Order Product Type</label>
+          <select id="dhanProductType" class="form-control" disabled>
+            <option value="NRML" selected>NRML — Normal (Overnight Carryforward)</option>
+          </select>
+        </div>
+        <button class="btn btn-primary" style="background: linear-gradient(135deg, #00d09c, #008765); margin-top: 10px; font-weight: 800;" onclick="saveDhanApiKeys()">💾 Save & Connect Dhan API</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Settings Modal -->
+  <div id="settingsModal" class="modal-overlay" onclick="if(event.target === this) closeSettingsModal()">
+    <div class="modal-card" style="max-width: 520px;">
+      <div class="modal-header">
+        <h3>⚙️ Dhan MCX Strategy Settings</h3>
+        <button class="close-btn" onclick="closeSettingsModal()">✕</button>
+      </div>
+      <div style="display: flex; flex-direction: column; gap: 14px;">
+        <div class="form-group">
+          <label style="color:#fff; font-weight:700;">Trading Instrument</label>
+          <select id="settingInstrument" class="form-control" onchange="onInstrumentSelectChanged()">
+            <option value="XAGUSDT" selected>MCX Silver (SILVERM 1.0 kg)</option>
+            <option value="CLUSDT">MCX Crude Oil (1.0 Barrel)</option>
+            <option value="BTCUSDT">MCX Gold (10.0 grams)</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label style="color:#fff; font-weight:700;">Profit Target Move (₹)</label>
+          <select id="settingTargetMove" class="form-control" onchange="applySettingChange()">
+            <option value="500">₹500 Target Move</option>
+            <option value="1000" selected>₹1,000 Target Move (Silver Standard)</option>
+            <option value="1500">₹1,500 Target Move</option>
+            <option value="2000">₹2,000 Target Move</option>
+            <option value="5000">₹5,000 Target Move</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label style="color:#fff; font-weight:700;">Max Active Pairs Cap</label>
+          <input type="number" id="settingMaxPairs" class="form-control" value="50" min="1" max="100" onchange="applySettingChange()">
+        </div>
+        <div class="form-group">
+          <label style="color:#fff; font-weight:700;">Starting Capital (₹)</label>
+          <input type="number" id="modalStartingCapital" class="form-control" value="350000">
+        </div>
+        <div class="form-group">
+          <label style="color:#fff; font-weight:700;">Contract Quantity / Lots</label>
+          <input type="number" id="modalContractQuantity" class="form-control" value="1.0" step="0.1">
+        </div>
+        <button class="btn btn-primary" style="background: linear-gradient(135deg, #00d09c, #008765); margin-top: 10px; font-weight: 800;" onclick="saveModalSettings()">💾 Save & Apply Dhan Settings</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Account & Capital Info Modal -->
+  <div id="accountDetailsModal" class="modal-overlay" onclick="if(event.target === this) closeAccountDetailsModal()">
+    <div class="modal-card" style="max-width: 520px; position: relative;">
+      <div class="modal-header">
+        <h3>💰 Dhan Capital & Account Details</h3>
+        <button class="close-btn" onclick="closeAccountDetailsModal()">✕</button>
+      </div>
+      <div style="display: flex; flex-direction: column; gap: 14px;">
+        <div style="background: #090d16; padding: 14px; border-radius: 8px; border: 1px solid var(--border-color);">
+          <div style="color: var(--text-muted); font-size: 0.8rem;">STARTING CAPITAL</div>
+          <div style="font-size: 1.4rem; font-weight: 800; color: #00d09c;">₹3,50,000.00</div>
+        </div>
+        <div style="background: #090d16; padding: 14px; border-radius: 8px; border: 1px solid var(--border-color);">
+          <div style="color: var(--text-muted); font-size: 0.8rem;">ESTIMATED DHAN HEDGE MARGIN PER PAIR</div>
+          <div style="font-size: 1.4rem; font-weight: 800; color: #38bdf8;">~₹6,500.00</div>
+        </div>
+        <div style="background: #090d16; padding: 14px; border-radius: 8px; border: 1px solid var(--border-color);">
+          <div style="color: var(--text-muted); font-size: 0.8rem;">MAX ACTIVE PAIRS CAPABILITY</div>
+          <div style="font-size: 1.4rem; font-weight: 800; color: #f59e0b;">50 Active Pairs</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="app.js?v=20261012_v4"></script>
+  <script>
+    function openDhanModal() {
+      document.getElementById('dhanModal').style.display = 'flex';
+    }
+    function closeDhanModal() {
+      document.getElementById('dhanModal').style.display = 'none';
+    }
+    function saveDhanApiKeys() {
+      const clientId = document.getElementById('dhanClientId').value;
+      const token = document.getElementById('dhanAccessToken').value;
+      if (!clientId || !token) {
+        alert('Please enter both Dhan Client ID and Access Token.');
+        return;
+      }
+      localStorage.setItem('dhan_client_id', clientId);
+      localStorage.setItem('dhan_access_token', token);
+      alert('✅ Dhan API Credentials Saved Successfully!');
+      closeDhanModal();
+    }
+  </script>
+</body>
+</html>
