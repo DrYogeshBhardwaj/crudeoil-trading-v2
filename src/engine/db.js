@@ -257,7 +257,7 @@ class DatabaseManager {
         leverage: 5,
         profitTargetMove: 0.20,
         profitTargetMode: "PRICE_MOVE",
-        strategyMode: "SINGLE",
+        strategyMode: "ALTERNATING_STAGGERED",
         priceMatchingTolerance: 0.0001,
         maxActivePairs: 50,
         realOrdersDisabled: false,
@@ -280,6 +280,7 @@ class DatabaseManager {
     };
     try {
       fs.writeFileSync(STATE_SEED_FILE, JSON.stringify(cleanSeed, null, 2), 'utf8');
+      fs.writeFileSync(STATE_JSON_FILE, JSON.stringify(cleanSeed, null, 2), 'utf8');
     } catch (e) {}
   }
 }
