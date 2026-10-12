@@ -601,9 +601,18 @@ class PaperEngine {
     }
     position.exitReason = finalExitReason;
 
-    const grossINR = grossUSD * usdInrRate;
-    const totalChargesINR = totalChargesUSD * usdInrRate;
-    const netINR = grossINR - totalChargesINR;
+    const entryPriceINR = Number((position.entryPrice * usdInrRate).toFixed(2));
+    const exitPriceINR = Number((exitPrice * usdInrRate).toFixed(2));
+    let grossINR = 0;
+    if (position.direction === 'BUY') {
+      grossINR = (exitPriceINR - entryPriceINR) * qty * mult;
+    } else {
+      grossINR = (entryPriceINR - exitPriceINR) * qty * mult;
+    }
+    grossINR = Number(grossINR.toFixed(2));
+
+    const totalChargesINR = Number((totalChargesUSD * usdInrRate).toFixed(2));
+    const netINR = Number((grossINR - totalChargesINR).toFixed(2));
 
     const entryTs = position.entryTimestamp || (position.entryTime ? new Date(position.entryTime).getTime() : exitTimestamp);
     const holdingDurationMs = Math.max(0, exitTimestamp - entryTs);

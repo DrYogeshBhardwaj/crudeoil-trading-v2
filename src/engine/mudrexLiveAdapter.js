@@ -166,7 +166,11 @@ class MudrexLiveAdapter {
         this.liveOpenPositions.splice(0, 2);
       }
 
-      if (!this.processedRates.has(normPrice)) {
+      if (this.liveOpenPositions.length === 0) {
+        this.processedRates.clear();
+      }
+
+      if (!this.processedRates.has(normPrice) || this.liveOpenPositions.length === 0) {
         this.processedRates.add(normPrice);
         const pairSeq = (this.pairCounter++).toString().padStart(4, '0');
         const pairId = `PAIR-${pairSeq}`;
