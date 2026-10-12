@@ -49,7 +49,10 @@ async function runTestSuite() {
     { name: 'Test 24 — Duplicate Order Prevention During In-Flight Requests', fn: test24 },
     { name: 'Test 25 — Permanent Transmission Halt on Recorded Real Exchange Order ID', fn: test25 },
     { name: 'Test 26 — 30-Second Rate Limit Cooldown Pause Enforcement', fn: test26 },
-    { name: 'Test 27 — Historic Paper Positions Exclusion', fn: test27 }
+    { name: 'Test 27 — Historic Paper Positions Exclusion', fn: test27 },
+    { name: 'Test 28 — Execution State Consistency Across Health, Metrics & Storage', fn: test28 },
+    { name: 'Test 29 — Fail-Closed Execution Control Under Missing Credentials or Env Override', fn: test29 },
+    { name: 'Test 30 — Fail-Closed Order Rejection', fn: test30 }
   ];
 
   for (const tc of testCases) {
@@ -666,6 +669,62 @@ function test27() {
   const historicPaperPos = { positionId: 'P-HISTORIC-BUY', status: 'OPEN', isPurePaper: true };
   const isEligible = !historicPaperPos.isPurePaper && !historicPaperPos.mudrexOrderId;
   assert(isEligible === false, 'Historic paper positions MUST NOT be retroactively submitted as real trades');
+}
+
+// Test 28 — Execution State Consistency Across Health, Metrics & Storage
+async function test28() {
+  const paperEngine = require('../src/engine/paperEngine');
+  const mudrexLive = require('../src/engine/mudrexLiveAdapter');
+  
+  paperEngine.settings.realOrdersDisabled = true;
+  
+  const isRealEnabled = mudrexLive.isRealExecutionEnabled();
+  const isRealDisabled = mudrexLive.isRealOrdersDisabled();
+  const metrics = await mudrexLive.getLiveMetrics();
+
+  assert(isRealEnabled === false, 'isRealExecutionEnabled must return false when realOrdersDisabled is true');
+  assert(isRealDisabled === true, 'isRealOrdersDisabled must return true');
+  assert(metrics.settings.realOrdersDisabled === true, 'Metrics settings.realOrdersDisabled must be true');
+}
+
+// Test 29 — Fail-Closed Execution Control Under Missing Credentials or Env Override
+function test29() {
+  const mudrexLive = require('../src/engine/mudrexLiveAdapter');
+  const oldKey = process.env.MUDREX_API_KEY;
+  const oldSecret = process.env.MUDREX_API_SECRET;
+  const oldOverride = process.env.DISABLE_REAL_MUDREX_ORDERS;
+
+  try {
+    process.env.MUDREX_API_KEY = '';
+    process.env.MUDREX_API_SECRET = '';
+    delete process.env.DISABLE_REAL_MUDREX_ORDERS;
+    assert(mudrexLive.isRealExecutionEnabled() === false, 'Must fail closed when API keys are missing');
+
+    process.env.MUDREX_API_KEY = 'YOUR_KEY_***';
+    process.env.MUDREX_API_SECRET = 'valid_secret_12345';
+    assert(mudrexLive.isRealExecutionEnabled() === false, 'Must fail closed when API key contains wildcard');
+
+    process.env.DISABLE_REAL_MUDREX_ORDERS = 'true';
+    process.env.MUDREX_API_KEY = 'valid_key_12345';
+    process.env.MUDREX_API_SECRET = 'valid_secret_12345';
+    assert(mudrexLive.isRealExecutionEnabled() === false, 'Must fail closed when DISABLE_REAL_MUDREX_ORDERS=true');
+  } finally {
+    if (oldKey !== undefined) process.env.MUDREX_API_KEY = oldKey; else delete process.env.MUDREX_API_KEY;
+    if (oldSecret !== undefined) process.env.MUDREX_API_SECRET = oldSecret; else delete process.env.MUDREX_API_SECRET;
+    if (oldOverride !== undefined) process.env.DISABLE_REAL_MUDREX_ORDERS = oldOverride; else delete process.env.DISABLE_REAL_MUDREX_ORDERS;
+  }
+}
+
+// Test 30 — Fail-Closed Order Rejection
+async function test30() {
+  const mudrexLive = require('../src/engine/mudrexLiveAdapter');
+  const paperEngine = require('../src/engine/paperEngine');
+
+  paperEngine.settings.realOrdersDisabled = true;
+  const res = await mudrexLive.createRealOrder({ symbol: 'CLUSDT', side: 'BUY', quantity: 5.0, leverage: 5 });
+
+  assert(res.success === false, 'createRealOrder must return success: false when execution is disabled');
+  assert(res.error === 'REAL_ORDERS_DISABLED', `Expected error REAL_ORDERS_DISABLED, got ${res.error}`);
 }
 
 runTestSuite();

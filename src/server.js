@@ -32,13 +32,17 @@ rateFeed.start();
 app.get('/health', (req, res) => {
   try {
     const rateInfo = rateFeed.getCurrentRate();
+    const mudrexLive = require('./engine/mudrexLiveAdapter');
+    const isRealEnabled = mudrexLive.isRealExecutionEnabled();
+    const isRealDisabled = mudrexLive.isRealOrdersDisabled();
     res.json({
       status: 'OK',
       service: 'Mudrex LIVE Rate Engine',
       timestamp: new Date().toISOString(),
       uptimeSeconds: Math.floor(process.uptime()),
-      paperTradingOnly: !require('./engine/mudrexLiveAdapter').isRealExecutionEnabled(),
-      realOrdersDisabled: false,
+      paperTradingOnly: !isRealEnabled,
+      realOrdersDisabled: isRealDisabled,
+      isRealExecutionEnabled: isRealEnabled,
       engineStatus: paperEngine.engineStatus,
       isEngineRunning: paperEngine.isEngineRunning,
       activeInstrument: paperEngine.settings.instrument,

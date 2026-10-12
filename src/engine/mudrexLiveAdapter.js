@@ -63,24 +63,43 @@ class MudrexLiveAdapter {
   }
 
   isRealExecutionEnabled() {
-    if (process.env.DISABLE_REAL_MUDREX_ORDERS === 'true') return false;
-    const key = (
-      process.env.MUDREX_API_KEY ||
-      process.env.MUDREX_KEY ||
-      this.mudrexApiKey || ''
-    ).trim();
-    const secret = (
-      process.env.MUDREX_API_SECRET ||
-      process.env.MUDREX_SECRET ||
-      process.env.MUDREX_SECRET_KEY ||
-      this.mudrexApiSecret || ''
-    ).trim();
-    if (!key || !secret) return false;
     try {
+      // Fail-Closed Rule 1: Global override env var
+      if (process.env.DISABLE_REAL_MUDREX_ORDERS === 'true' || process.env.DISABLE_REAL_MUDREX_ORDERS === '1') {
+        return false;
+      }
+
+      // Fail-Closed Rule 2: API Keys presence and wildcard check
+      const key = (
+        process.env.MUDREX_API_KEY ||
+        process.env.MUDREX_KEY ||
+        this.mudrexApiKey || ''
+      ).trim();
+      const secret = (
+        process.env.MUDREX_API_SECRET ||
+        process.env.MUDREX_SECRET ||
+        process.env.MUDREX_SECRET_KEY ||
+        this.mudrexApiSecret || ''
+      ).trim();
+
+      if (!key || !secret || key.includes('*') || secret.includes('*') || key.length < 5 || secret.length < 5) {
+        return false;
+      }
+
+      // Fail-Closed Rule 3: Engine settings check (if paperEngine explicitly disabled real orders, fail closed)
       const paperEngine = require('./paperEngine');
-      paperEngine.settings.realOrdersDisabled = false;
-    } catch (e) {}
-    return true;
+      if (!paperEngine || !paperEngine.settings) return false;
+      if (paperEngine.settings.realOrdersDisabled === true) return false;
+      if (paperEngine.settings.tradingMode !== 'LIVE') return false;
+
+      return true;
+    } catch (e) {
+      return false; // Fail closed on any evaluation error
+    }
+  }
+
+  isRealOrdersDisabled() {
+    return !this.isRealExecutionEnabled();
   }
 
   getHeaders() {
@@ -114,8 +133,8 @@ class MudrexLiveAdapter {
 
   async createRealOrder({ symbol, side, quantity, leverage, targetPrice }) {
     if (!this.isRealExecutionEnabled()) {
-      console.log('[Mudrex Live Adapter] Real order execution disabled. MUDREX_API_KEY/SECRET missing in environment.');
-      return { success: false, error: 'REAL_ORDERS_DISABLED_MISSING_API_KEYS' };
+      console.log('[Mudrex Live Adapter] Real order execution disabled. Failing closed.');
+      return { success: false, error: 'REAL_ORDERS_DISABLED' };
     }
 
     const rawSym = (symbol || 'CLUSDT').toUpperCase();
@@ -893,7 +912,7 @@ class MudrexLiveAdapter {
 
     return {
       rateFeedInfo: rateInfo,
-      settings: { ...paperEngine.settings, instrument: 'CLUSDT' },
+      settings: { ...paperEngine.settings, instrument: 'CLUSDT', realOrdersDisabled: this.isRealOrdersDisabled(), isRealExecutionEnabled: this.isRealExecutionEnabled() },
       engineStatus: paperEngine.engineStatus,
       pauseReason: paperEngine.pauseReason,
       isEngineRunning: paperEngine.isEngineRunning,

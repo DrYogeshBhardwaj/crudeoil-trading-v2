@@ -915,9 +915,15 @@ class PaperEngine {
       effectivePauseReason = '';
     }
 
+    let isRealDisabled = true;
+    try {
+      const mudrexLive = require('./mudrexLiveAdapter');
+      isRealDisabled = mudrexLive.isRealOrdersDisabled();
+    } catch (e) {}
+
     return {
       rateFeedInfo: rateInfo,
-      settings: this.settings,
+      settings: { ...this.settings, realOrdersDisabled: isRealDisabled },
       engineStatus: effectiveEngineStatus,
       pauseReason: effectivePauseReason,
       isEngineRunning: this.isEngineRunning,
