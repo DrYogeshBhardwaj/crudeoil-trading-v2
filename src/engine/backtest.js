@@ -64,66 +64,8 @@ class HistoricalBacktester {
   }
 
   checkMarketClosedStatus(dateStr) {
-    const d = new Date(`${dateStr}T00:00:00Z`);
-    const dayOfWeek = d.getUTCDay();
-
-    if (dayOfWeek === 0) {
-      return { isClosed: true, reason: 'Sunday (Weekend Market Closed)' };
-    }
-    if (dayOfWeek === 6) {
-      return { isClosed: true, reason: 'Saturday (Weekend Market Closed)' };
-    }
-
-    const holidays = {
-      '2026-01-26': 'Republic Day',
-      '2026-03-08': 'Mahashivratri',
-      '2026-03-25': 'Holi',
-      '2026-04-03': 'Good Friday',
-      '2026-04-14': 'Dr. Ambedkar Jayanti',
-      '2026-05-01': 'Maharashtra Day',
-      '2026-08-15': 'Independence Day',
-      '2026-10-02': 'Mahatma Gandhi Jayanti',
-      '2026-11-08': 'Diwali Laxmi Pujan',
-      '2026-11-24': 'Guru Nanak Jayanti',
-      '2026-12-25': 'Christmas',
-
-      '2025-01-26': 'Republic Day',
-      '2025-02-26': 'Mahashivratri',
-      '2025-03-14': 'Holi',
-      '2025-03-31': 'Id-Ul-Fitr',
-      '2025-04-10': 'Mahavir Jayanti',
-      '2025-04-18': 'Good Friday',
-      '2025-04-14': 'Dr. Ambedkar Jayanti',
-      '2025-05-01': 'Maharashtra Day',
-      '2025-06-07': 'Bakri Id',
-      '2025-07-06': 'Moharram',
-      '2025-08-15': 'Independence Day',
-      '2025-10-02': 'Mahatma Gandhi Jayanti',
-      '2025-10-21': 'Diwali Laxmi Pujan',
-      '2025-10-22': 'Diwali Balipratipada',
-      '2025-11-05': 'Guru Nanak Jayanti',
-      '2025-12-25': 'Christmas',
-
-      '2024-01-26': 'Republic Day',
-      '2024-03-08': 'Mahashivratri',
-      '2024-03-25': 'Holi',
-      '2024-03-29': 'Good Friday',
-      '2024-04-11': 'Id-Ul-Fitr',
-      '2024-04-17': 'Ram Navami',
-      '2024-05-01': 'Maharashtra Day',
-      '2024-06-17': 'Bakri Id',
-      '2024-07-17': 'Moharram',
-      '2024-08-15': 'Independence Day',
-      '2024-10-02': 'Mahatma Gandhi Jayanti',
-      '2024-11-01': 'Diwali Laxmi Pujan',
-      '2024-11-15': 'Guru Nanak Jayanti',
-      '2024-12-25': 'Christmas'
-    };
-
-    if (holidays[dateStr]) {
-      return { isClosed: true, reason: `Market Holiday — ${holidays[dateStr]}` };
-    }
-
+    // Crypto / Mudrex perpetual futures (CLUSDT, BTCUSDT, XAGUSDT, etc.) trade 24/7/365 continuously.
+    // There are no weekend closures or exchange holidays for Mudrex crypto markets.
     return { isClosed: false, reason: '' };
   }
 
