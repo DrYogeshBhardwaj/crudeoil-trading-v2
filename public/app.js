@@ -4,43 +4,33 @@ let backtestRunsHistory = []; // In-memory store for multi-run comparison
 
 const INSTRUMENT_TARGET_OPTIONS = {
   CLUSDT: [
-    { value: '0.05', label: '$0.05 Target Move' },
-    { value: '0.10', label: '$0.10 Target Move' },
-    { value: '0.15', label: '$0.15 Target Move' },
-    { value: '0.20', label: '$0.20 Target Move (Crude Standard)' },
-    { value: '0.25', label: '$0.25 Target Move' },
-    { value: '0.50', label: '$0.50 Target Move' },
+    { value: '10', label: '₹10 Target Move' },
+    { value: '20', label: '₹20 Target Move (Crude Standard)' },
+    { value: '50', label: '₹50 Target Move' },
+    { value: '100', label: '₹100 Target Move' },
+    { value: '200', label: '₹200 Target Move' },
+    { value: '500', label: '₹500 Target Move' },
+    { value: '1000', label: '₹1,000 Target Move' },
     { value: '1.00', label: '$1.00 Target Move' },
-    { value: '1.25', label: '$1.25 Target Move' },
-    { value: '1.50', label: '$1.50 Target Move' },
-    { value: '2.00', label: '$2.00 Target Move' },
-    { value: '2.50', label: '$2.50 Target Move' },
-    { value: '3.00', label: '$3.00 Target Move' },
-    { value: '5.00', label: '$5.00 Target Move' },
-    { value: '10.00', label: '$10.00 Target Move' },
-    { value: '25.00', label: '$25.00 Target Move' },
-    { value: '50.00', label: '$50.00 Target Move' },
+    { value: '0.20', label: '$0.20 Target Move' },
     { value: 'DISABLED', label: 'Disabled (No Auto Target)' }
   ],
   XAGUSDT: [
-    { value: '0.05', label: '$0.05 Target Move' },
-    { value: '0.10', label: '$0.10 Target Move' },
-    { value: '0.15', label: '$0.15 Target Move' },
-    { value: '0.25', label: '$0.25 Target Move' },
-    { value: '0.50', label: '$0.50 Target Move' },
-    { value: '1.00', label: '$1.00 Target Move' },
-    { value: '1.15', label: '$1.15 Target Move (Silver Standard)' },
-    { value: '1.50', label: '$1.50 Target Move' },
-    { value: '2.00', label: '$2.00 Target Move' },
+    { value: '200', label: '₹200 Target Move' },
+    { value: '500', label: '₹500 Target Move' },
+    { value: '1000', label: '₹1,000 Target Move (Silver Standard)' },
+    { value: '1500', label: '₹1,500 Target Move' },
+    { value: '2000', label: '₹2,000 Target Move' },
+    { value: '5000', label: '₹5,000 Target Move' },
+    { value: '1.00', label: '₹1 Target Move' },
     { value: 'DISABLED', label: 'Disabled (No Auto Target)' }
   ],
   BTCUSDT: [
-    { value: '10.00', label: '$10.00 Target Move' },
-    { value: '25.00', label: '$25.00 Target Move' },
-    { value: '50.00', label: '$50.00 Target Move' },
-    { value: '100.00', label: '$100.00 Target Move' },
-    { value: '250.00', label: '$250.00 Target Move' },
-    { value: '500.00', label: '$500.00 Target Move' },
+    { value: '100', label: '₹100 Target Move' },
+    { value: '200', label: '₹200 Target Move (Gold Standard)' },
+    { value: '500', label: '₹500 Target Move' },
+    { value: '1000', label: '₹1,000 Target Move' },
+    { value: '2000', label: '₹2,000 Target Move' },
     { value: 'DISABLED', label: 'Disabled (No Auto Target)' }
   ]
 };
@@ -62,7 +52,7 @@ function updateTargetDropdownOptions(symbol, currentTargetValStr) {
   });
 
   if (!matchFound && options.length > 0) {
-    const defaultVal = symbol === 'XAGUSDT' ? '1.15' : (symbol === 'CLUSDT' ? '1.00' : '50.00');
+    const defaultVal = symbol === 'XAGUSDT' ? '1000' : (symbol === 'CLUSDT' ? '1.00' : '200');
     html = '';
     options.forEach(opt => {
       const isSelected = (opt.value === defaultVal);
@@ -74,13 +64,14 @@ function updateTargetDropdownOptions(symbol, currentTargetValStr) {
 }
 
 function onInstrumentSelectChanged() {
-  const instrument = document.getElementById('settingInstrument').value;
-  const defaultVal = instrument === 'XAGUSDT' ? '1.15' : (instrument === 'CLUSDT' ? '1.00' : '50.00');
+  const instSelect = document.getElementById('settingInstrument');
+  const instrument = instSelect ? instSelect.value : 'CLUSDT';
+  const defaultVal = instrument === 'XAGUSDT' ? '1000' : (instrument === 'CLUSDT' ? '1.00' : '200');
   updateTargetDropdownOptions(instrument, defaultVal);
   
   const btTargetInput = document.getElementById('btTargetMove');
   if (btTargetInput) {
-    btTargetInput.value = defaultVal === 'DISABLED' ? '1.00' : defaultVal;
+    btTargetInput.value = defaultVal === 'DISABLED' ? '1000' : defaultVal;
   }
   
   applySettingChange();
@@ -95,7 +86,10 @@ document.addEventListener('DOMContentLoaded', () => {
   const btToDate = document.getElementById('btToDate');
   if (btToDate) btToDate.value = today;
 
-  updateTargetDropdownOptions('CLUSDT', '1.00');
+  const instSelect = document.getElementById('settingInstrument');
+  const initialInst = instSelect ? instSelect.value : 'CLUSDT';
+  const initialDefault = initialInst === 'XAGUSDT' ? '1000' : (initialInst === 'CLUSDT' ? '1.00' : '200');
+  updateTargetDropdownOptions(initialInst, initialDefault);
   makeDockDraggable();
   initRealtimeStream();
   checkMudrexAuthStatus();
