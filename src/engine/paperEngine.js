@@ -79,11 +79,9 @@ class PaperEngine {
       if (saved.closedPositions) this.closedPositions = saved.closedPositions;
       if (saved.auditLogs) this.auditLogs = saved.auditLogs.slice(-500);
       if (saved.dailyTracker) this.dailyTracker = saved.dailyTracker;
-      this.isEngineRunning = typeof saved.isEngineRunning === 'boolean' ? saved.isEngineRunning : true;
-      if (this.isEngineRunning) {
-        this.engineStatus = 'RUNNING';
-        this.pauseReason = '';
-      }
+      this.isEngineRunning = false;
+      this.engineStatus = 'PAUSED';
+      this.pauseReason = 'ENGINE PAUSED BY USER — MANUAL MONITORING MODE ACTIVE';
       if (saved.lastProcessedRate !== undefined) this.lastProcessedRate = saved.lastProcessedRate;
 
       if (saved.processedRates) {

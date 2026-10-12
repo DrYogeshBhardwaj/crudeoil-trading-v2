@@ -718,27 +718,24 @@ class MudrexLiveAdapter {
     }
 
     if (this.isRealExecutionEnabled()) {
+      // Purge any local paper pairs (non-REAL_MUDREX_POSITION) unconditionally in real mode
+      this.liveOpenPositions = (this.liveOpenPositions || []).filter(p => p.apiStatus === 'REAL_MUDREX_POSITION');
+
       try {
         const realPosRes = await this.fetchPositions();
         if (realPosRes.success && Array.isArray(realPosRes.data)) {
           const freshRealIds = new Set(realPosRes.data.map(p => p.positionId));
-          // Keep only real positions fetched from Mudrex API
-          this.liveOpenPositions = (this.liveOpenPositions || []).filter(p => {
-            if (p.apiStatus === 'REAL_MUDREX_POSITION') {
-              return freshRealIds.has(p.positionId);
-            }
-            return false; // Purge paper simulation positions from Mudrex Live Terminal
-          });
+          this.liveOpenPositions = this.liveOpenPositions.filter(p => freshRealIds.has(p.positionId));
 
           for (const rPos of realPosRes.data) {
             if (!this.liveOpenPositions.some(p => p.positionId === rPos.positionId)) {
               this.liveOpenPositions.push(rPos);
             }
           }
-          liveOpenPositions = [...this.liveOpenPositions];
           this.saveState();
         }
       } catch (e) {}
+      liveOpenPositions = [...this.liveOpenPositions];
     } else {
       // Pure Paper Mode: Purge any external REAL_MUDREX_POSITION records so only 100% Paper Simulation Pairs are displayed
       this.liveOpenPositions = (this.liveOpenPositions || []).filter(p => p.apiStatus !== 'REAL_MUDREX_POSITION' && !p.positionId?.includes('P-REAL'));
