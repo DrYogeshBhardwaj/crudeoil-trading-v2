@@ -537,6 +537,9 @@ class MudrexLiveAdapter {
 
   isRealExecutionEnabled() {
     if (process.env.DISABLE_REAL_MUDREX_ORDERS === 'true') return false;
+    const key = process.env.MUDREX_API_KEY || this.mudrexApiKey;
+    const secret = process.env.MUDREX_API_SECRET || this.mudrexApiSecret;
+    if (!key || !secret) return false;
     return true;
   }
 
