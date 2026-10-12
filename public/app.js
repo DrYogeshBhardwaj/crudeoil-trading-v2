@@ -262,6 +262,9 @@ function drawLiveCanvasChart(canvasId, livePrice, nearestBuyTarget, nearestSellT
   const w = rect.width;
   const h = rect.height;
 
+  const isMcx = window.location.pathname.includes('dhan') || (currentMetrics && currentMetrics.settings && currentMetrics.settings.instrument === 'XAGUSDT');
+  const currPrefix = isMcx ? '₹' : '$';
+
   const bgGrad = ctx.createLinearGradient(0, 0, 0, h);
   bgGrad.addColorStop(0, '#090d16');
   bgGrad.addColorStop(1, '#05070c');
@@ -319,15 +322,15 @@ function drawLiveCanvasChart(canvasId, livePrice, nearestBuyTarget, nearestSellT
     ctx.lineTo(w - paddingRight, y);
     ctx.stroke();
 
-    ctx.fillText(`$${val.toFixed(2)}`, w - paddingRight + 8, y + 4);
+    ctx.fillText(`${currPrefix}${val.toFixed(2)}`, w - paddingRight + 8, y + 4);
   }
 
   // Gradient under curve
   const isUp = tickHistory[tickHistory.length - 1].price >= tickHistory[0].price;
-  const strokeColor = isUp ? '#10b981' : '#38bdf8';
+  const strokeColor = isUp ? '#10b981' : '#00d09c';
 
   const areaGrad = ctx.createLinearGradient(0, paddingTop, 0, h - paddingBottom);
-  areaGrad.addColorStop(0, isUp ? 'rgba(16, 185, 129, 0.3)' : 'rgba(56, 189, 248, 0.3)');
+  areaGrad.addColorStop(0, isUp ? 'rgba(16, 185, 129, 0.3)' : 'rgba(0, 208, 156, 0.3)');
   areaGrad.addColorStop(1, 'rgba(15, 23, 42, 0.0)');
 
   ctx.beginPath();
@@ -365,7 +368,7 @@ function drawLiveCanvasChart(canvasId, livePrice, nearestBuyTarget, nearestSellT
 
     ctx.fillStyle = '#10b981';
     ctx.font = 'bold 11px Inter, sans-serif';
-    ctx.fillText(`🎯 BUY $${nearestBuyTarget.toFixed(2)}`, w - paddingRight + 8, buyY + 4);
+    ctx.fillText(`🎯 BUY ${currPrefix}${nearestBuyTarget.toFixed(2)}`, w - paddingRight + 8, buyY + 4);
   }
 
   // Draw SELL Target Line
@@ -382,7 +385,7 @@ function drawLiveCanvasChart(canvasId, livePrice, nearestBuyTarget, nearestSellT
 
     ctx.fillStyle = '#ef4444';
     ctx.font = 'bold 11px Inter, sans-serif';
-    ctx.fillText(`🎯 SELL $${nearestSellTarget.toFixed(2)}`, w - paddingRight + 8, sellY + 4);
+    ctx.fillText(`🎯 SELL ${currPrefix}${nearestSellTarget.toFixed(2)}`, w - paddingRight + 8, sellY + 4);
   }
 
   // Current Live Price Pulse Point
@@ -404,7 +407,7 @@ function drawLiveCanvasChart(canvasId, livePrice, nearestBuyTarget, nearestSellT
 
   ctx.fillStyle = '#0f172a';
   ctx.font = 'bold 12px monospace';
-  ctx.fillText(`$${tickHistory[lastI].price.toFixed(2)}`, w - paddingRight + 8, lastY + 4);
+  ctx.fillText(`${currPrefix}${tickHistory[lastI].price.toFixed(2)}`, w - paddingRight + 8, lastY + 4);
 }
 
 function renderDashboard(data) {
@@ -608,13 +611,33 @@ function renderDashboard(data) {
     recordPriceTick(newPrice);
   }
 
-  const liveRateStr = livePrice ? `$${livePrice.toFixed(priceDec)}` : 'FETCHING...';
-  const buyTargetStr = nearestBuyTarget !== null ? `$${nearestBuyTarget.toFixed(priceDec)}` : 'No Target';
-  const buyDistStr = distBuy !== null ? `(+$${distBuy.toFixed(priceDec)})` : '';
-  const sellTargetStr = nearestSellTarget !== null ? `$${nearestSellTarget.toFixed(priceDec)}` : 'No Target';
-  const sellDistStr = distSell !== null ? `(-$${distSell.toFixed(priceDec)})` : '';
+  const isMcxSymbol = window.location.pathname.includes('dhan') || currentSymbol === 'XAGUSDT';
+  const currSym = isMcxSymbol ? '₹' : '$';
+
+  const liveRateStr = livePrice ? `${currSym}${livePrice.toFixed(priceDec)}` : 'FETCHING...';
+  const buyTargetStr = nearestBuyTarget !== null ? `${currSym}${nearestBuyTarget.toFixed(priceDec)}` : 'No Target';
+  const buyDistStr = distBuy !== null ? `(+${currSym}${distBuy.toFixed(priceDec)})` : '';
+  const sellTargetStr = nearestSellTarget !== null ? `${currSym}${nearestSellTarget.toFixed(priceDec)}` : 'No Target';
+  const sellDistStr = distSell !== null ? `(-${currSym}${distSell.toFixed(priceDec)})` : '';
   const floatNetStr = `₹${summary.floatingNetINR.toFixed(2)}`;
   const floatNetClass = summary.floatingNetINR >= 0 ? 'text-green' : 'text-red';
+
+  // Update Dhan MCX Specific Chart Header Callouts
+  const chartTitleEl = document.getElementById('chartSymbolTitle');
+  if (chartTitleEl) {
+    const symbolChartTitles = {
+      CLUSDT: 'MCX CRUDE OIL (1 BBL) LIVE RATE CHART',
+      XAGUSDT: 'MCX SILVER (1 kg) LIVE RATE CHART',
+      BTCUSDT: 'MCX GOLD (10g) LIVE RATE CHART'
+    };
+    chartTitleEl.innerText = symbolChartTitles[currentSymbol] || `${currentSymbol} LIVE RATE CHART`;
+  }
+  const chartCurEl = document.getElementById('chartCurrentPriceDisplay');
+  if (chartCurEl) chartCurEl.innerText = liveRateStr;
+  const chartBuyEl = document.getElementById('chartBuyTargetDisplay');
+  if (chartBuyEl) chartBuyEl.innerText = buyTargetStr;
+  const chartSellEl = document.getElementById('chartSellTargetDisplay');
+  if (chartSellEl) chartSellEl.innerText = sellTargetStr;
 
   // Update 3 Large 2.4rem Callouts (Live Rate, Green BUY Target Exit, Red SELL Target Exit)
   const mainCrudeRateEl = document.getElementById('mainCrudeLiveRate');
@@ -629,14 +652,14 @@ function renderDashboard(data) {
   // Green BUY Target Exit Callout
   if (document.getElementById('mainBuyTargetRate')) document.getElementById('mainBuyTargetRate').innerText = buyTargetStr;
   if (document.getElementById('mainBuyTargetRateIndex')) document.getElementById('mainBuyTargetRateIndex').innerText = buyTargetStr;
-  const buyDistText = distBuy !== null ? `+$${distBuy.toFixed(priceDec)} to exit` : '--';
+  const buyDistText = distBuy !== null ? `+${currSym}${distBuy.toFixed(priceDec)} to exit` : '--';
   if (document.getElementById('mainBuyTargetDist')) document.getElementById('mainBuyTargetDist').innerText = buyDistText;
   if (document.getElementById('mainBuyTargetDistIndex')) document.getElementById('mainBuyTargetDistIndex').innerText = buyDistText;
 
   // Red SELL Target Exit Callout
   if (document.getElementById('mainSellTargetRate')) document.getElementById('mainSellTargetRate').innerText = sellTargetStr;
   if (document.getElementById('mainSellTargetRateIndex')) document.getElementById('mainSellTargetRateIndex').innerText = sellTargetStr;
-  const sellDistText = distSell !== null ? `-$${distSell.toFixed(priceDec)} to exit` : '--';
+  const sellDistText = distSell !== null ? `-${currSym}${distSell.toFixed(priceDec)} to exit` : '--';
   if (document.getElementById('mainSellTargetDist')) document.getElementById('mainSellTargetDist').innerText = sellDistText;
   if (document.getElementById('mainSellTargetDistIndex')) document.getElementById('mainSellTargetDistIndex').innerText = sellDistText;
 
@@ -659,6 +682,7 @@ function renderDashboard(data) {
   // Render Canvas Charts
   drawLiveCanvasChart('livePriceCanvas', livePrice, nearestBuyTarget, nearestSellTarget);
   drawLiveCanvasChart('livePriceCanvasIndex', livePrice, nearestBuyTarget, nearestSellTarget);
+  drawLiveCanvasChart('liveChartCanvas', livePrice, nearestBuyTarget, nearestSellTarget);
 
   // Closed Positions History Top Summary Bar
   if (document.getElementById('closedSummaryCount')) document.getElementById('closedSummaryCount').innerText = `${summary.closedPositionsCount}`;
