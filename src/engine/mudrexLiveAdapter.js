@@ -493,12 +493,37 @@ class MudrexLiveAdapter {
     }
   }
 
-  async fetchWalletBalance() {
-    const auth = await this.testAuthentication();
-    if (auth.success) {
-      return { success: true, balance: auth.balance, raw: auth.raw };
-    }
-    return { success: false, error: auth.error || 'Failed to fetch Mudrex wallet balance' };
+  async getDebugDiagnostics() {
+    const key = (process.env.MUDREX_API_KEY || process.env.MUDREX_KEY || this.mudrexApiKey || '').trim();
+    const secret = (process.env.MUDREX_API_SECRET || process.env.MUDREX_SECRET || process.env.MUDREX_SECRET_KEY || this.mudrexApiSecret || '').trim();
+    
+    const keyMask = key ? `${key.substring(0, 4)}...${key.slice(-4)}` : 'MISSING';
+    const secretMask = secret ? `${secret.substring(0, 4)}...${secret.slice(-4)}` : 'MISSING';
+
+    const authResult = await this.testAuthentication(true);
+    const paperEngine = require('./paperEngine');
+
+    const openPositionsDebug = (paperEngine.pairs || []).map(p => {
+      const b = p.buyPosition;
+      const s = p.sellPosition;
+      return {
+        pairId: p.pairId,
+        buy: b ? { positionId: b.positionId, status: b.status, mudrexOrderId: b.mudrexOrderId, apiStatus: b.apiStatus, apiError: b.apiError } : null,
+        sell: s ? { positionId: s.positionId, status: s.status, mudrexOrderId: s.mudrexOrderId, apiStatus: s.apiStatus, apiError: s.apiError } : null
+      };
+    });
+
+    return {
+      timestamp: new Date().toISOString(),
+      isRealExecutionEnabled: this.isRealExecutionEnabled(),
+      keyMask,
+      secretMask,
+      authResult,
+      rateLimitUntil: this.rateLimitUntil,
+      isRateLimitedNow: Date.now() < this.rateLimitUntil,
+      settings: this.settings,
+      openPositionsDebug
+    };
   }
 
 

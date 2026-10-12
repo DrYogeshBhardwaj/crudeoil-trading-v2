@@ -60,6 +60,16 @@ app.get(['/mudrex-live', '/mudrex_live', '/mudrex_live.html', '/mudrex-live.html
 app.get(['/mudrex-crude-live', '/mudrex_crude_live', '/mudrex_crude_live.html', '/mudrex-crude-live.html'], (req, res) => res.sendFile(path.join(__dirname, '../public/mudrex_crude_live.html')));
 app.get(['/mudrex-crude-calc', '/mudrex_crude_calc', '/mudrex_crude_calc.html', '/mudrex-crude-calc.html'], (req, res) => res.sendFile(path.join(__dirname, '../public/mudrex_crude_calc.html')));
 
+app.get('/api/mudrex-debug', async (req, res) => {
+  try {
+    const mudrexLive = require('./engine/mudrexLiveAdapter');
+    const diag = await mudrexLive.getDebugDiagnostics();
+    res.json({ success: true, diagnostics: diag });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
 // 1. Dashboard Metrics (Supporting Mudrex Live Mode)
 app.get(['/api/metrics', '/api/mudrex/metrics', '/api/mudrex-metrics'], async (req, res) => {
   try {
