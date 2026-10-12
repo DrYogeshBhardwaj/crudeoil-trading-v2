@@ -25,7 +25,10 @@ class MudrexLiveAdapter {
       maxActivePairs: 25,
       contractQuantity: 2.0,
       leverage: 5,
-      usdInrRate: 86.5
+      takerFeeRate: 0.00075, // 0.075% strict fee
+      gstRate: 0.18, // 18% GST on fees
+      slippageBufferINR: 5.0, // ₹5.00 funding & slippage buffer
+      usdInrRate: 102.00 // 1 USD = 102.00 INR (Mudrex INR Futures Rate)
     };
 
     this.initFromStorage();
@@ -713,9 +716,10 @@ class MudrexLiveAdapter {
       
       const posPrice = rateInfo.price || pos.currentPrice || pos.entryPrice;
       const qty = pos.quantity || 1.0;
-      const usdInrRate = rateInfo.usdInrRate || pos.usdInrRateAtEntry || 86.5;
-      const takerFeeRate = this.settings.takerFeeRate || 0.0005;
+      const usdInrRate = rateInfo.usdInrRate || pos.usdInrRateAtEntry || 102.00;
+      const takerFeeRate = this.settings.takerFeeRate || 0.00075;
       const gstRate = this.settings.gstRate || 0.18;
+      const slippageBufferINR = this.settings.slippageBufferINR || 5.0;
 
       let pGrossUSD = pos.direction === 'BUY' ? (posPrice - pos.entryPrice) * qty : (pos.entryPrice - posPrice) * qty;
       let pGrossINR = pGrossUSD * usdInrRate;
@@ -723,7 +727,8 @@ class MudrexLiveAdapter {
       let entryFeeUSD = pos.entryFeeUSD || (pos.entryPrice * qty * takerFeeRate);
       let exitFeeUSD = posPrice * qty * takerFeeRate;
       let gstUSD = (entryFeeUSD + exitFeeUSD) * gstRate;
-      let totalChargesUSD = entryFeeUSD + exitFeeUSD + gstUSD;
+      let slippageUSD = (slippageBufferINR / usdInrRate) / 2; // Half per open leg
+      let totalChargesUSD = entryFeeUSD + exitFeeUSD + gstUSD + slippageUSD;
       let totalChargesINR = totalChargesUSD * usdInrRate;
 
       let pNetINR = pGrossINR - totalChargesINR;

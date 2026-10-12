@@ -16,8 +16,10 @@ class PaperEngine {
       targetDisabled: false,
       maxActivePairs: 100,
       dailyLossCircuitBreakerINR: 2000,
-      takerFeeRate: 0.00059, // 0.059%
+      takerFeeRate: 0.00075, // 0.075% strict fee
       gstRate: 0.18, // 18% GST on fees
+      slippageBufferINR: 5.0, // ₹5.00 slippage & funding fee buffer per trade
+      usdInrRate: 102.00, // 1 USD = 102.00 INR (Mudrex INR Futures Rate)
       tradingMode: 'LIVE', // 'PAPER' (Simulated) or 'LIVE' (Real Orders)
       realOrdersDisabled: false
     };
@@ -671,7 +673,8 @@ class PaperEngine {
     const entryFeeUSD = entryValueUSD * feeRate;
     const exitFeeUSD = exitValueUSD * feeRate;
     const gstUSD = (entryFeeUSD + exitFeeUSD) * gstRate;
-    const totalChargesUSD = entryFeeUSD + exitFeeUSD + gstUSD;
+    const slippageUSD = (this.settings.slippageBufferINR || 5.0) / usdInrRate;
+    const totalChargesUSD = entryFeeUSD + exitFeeUSD + gstUSD + slippageUSD;
     const netUSD = grossUSD - totalChargesUSD;
 
     let finalExitReason = exitReason;

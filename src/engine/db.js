@@ -263,8 +263,10 @@ class DatabaseManager {
         maxActivePairs: 50,
         realOrdersDisabled: false,
         instrument: "CLUSDT",
-        takerFeeRate: 0.0005,
+        takerFeeRate: 0.00075,
         gstRate: 0.18,
+        slippageBufferINR: 5.0,
+        usdInrRate: 102.00,
         dailyLossCircuitBreakerINR: 2000
       },
       pairs: [],

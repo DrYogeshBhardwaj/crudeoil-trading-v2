@@ -10,7 +10,7 @@ class RateFeedManager {
     };
 
     this.activeSymbol = 'CLUSDT';
-    this.usdInrRate = 86.50; // Configurable USD to INR rate
+    this.usdInrRate = 102.00; // Fixed Mudrex INR Futures Rate (1 USD = 102.00 INR)
     this.usdInrLastUpdated = new Date().toISOString();
     this.staleThresholdMs = 25000; // 25 seconds stale threshold
     this.wsConnections = {};

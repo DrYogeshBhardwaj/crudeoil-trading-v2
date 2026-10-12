@@ -851,7 +851,7 @@ function renderActivePositions(positions, symbol, isDhanPage = false, pricePrefi
   const buyPositions = (positions || []).filter(p => p.direction === 'BUY');
   const sellPositions = (positions || []).filter(p => p.direction === 'SELL');
 
-  const usdRate = (window.lastMetricsData?.data?.rateFeedInfo?.usdInrRate) || 86.5;
+  const usdRate = (window.lastMetricsData?.data?.rateFeedInfo?.usdInrRate) || 102.00;
   buyPositions.forEach(p => {
     if (typeof p.floatingNetINR !== 'number' || (p.floatingNetINR === 0 && p.entryPrice && p.currentPrice && p.entryPrice !== p.currentPrice)) {
       const rawE = p.entryPrice || 0;
@@ -859,7 +859,7 @@ function renderActivePositions(positions, symbol, isDhanPage = false, pricePrefi
       const q = p.quantity || 1.0;
       const grossUSD = (rawC - rawE) * q;
       const grossINR = grossUSD * usdRate;
-      const chargesUSD = (rawE * q * 0.0005 + rawC * q * 0.0005) * 1.18;
+      const chargesUSD = (rawE * q * 0.00075 + rawC * q * 0.00075) * 1.18 + (2.5 / usdRate);
       p.floatingNetINR = Number((grossINR - (chargesUSD * usdRate)).toFixed(2));
     }
   });
@@ -870,7 +870,7 @@ function renderActivePositions(positions, symbol, isDhanPage = false, pricePrefi
       const q = p.quantity || 1.0;
       const grossUSD = (rawE - rawC) * q;
       const grossINR = grossUSD * usdRate;
-      const chargesUSD = (rawE * q * 0.0005 + rawC * q * 0.0005) * 1.18;
+      const chargesUSD = (rawE * q * 0.00075 + rawC * q * 0.00075) * 1.18 + (2.5 / usdRate);
       p.floatingNetINR = Number((grossINR - (chargesUSD * usdRate)).toFixed(2));
     }
   });
