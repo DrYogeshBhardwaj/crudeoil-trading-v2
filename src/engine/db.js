@@ -180,6 +180,7 @@ class DatabaseManager {
         }
 
         // Sync Closed Positions
+        this.db.prepare('DELETE FROM closed_positions').run();
         if (Array.isArray(state.closedPositions)) {
           const insertClosed = this.db.prepare('INSERT OR REPLACE INTO closed_positions (position_id, pair_id, direction, symbol, entry_price, exit_price, net_profit_inr, data, closed_timestamp) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)');
           for (const cp of state.closedPositions) {

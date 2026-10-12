@@ -83,19 +83,17 @@ class MudrexLiveAdapter {
     try {
       const storage = require('./storage');
       const paperEngine = require('./paperEngine');
-      const currentState = storage.loadState() || {};
 
       storage.saveState({
-        ...currentState,
-        mudrexApiKey: process.env.MUDREX_API_KEY || currentState.mudrexApiKey || '',
-        mudrexApiSecret: process.env.MUDREX_API_SECRET || currentState.mudrexApiSecret || '',
+        mudrexApiKey: process.env.MUDREX_API_KEY || '',
+        mudrexApiSecret: process.env.MUDREX_API_SECRET || '',
         mudrexSettings: this.settings,
         settings: paperEngine.settings,
-        pairs: paperEngine.pairs,
-        closedPositions: paperEngine.closedPositions,
-        liveOpenPositions: this.liveOpenPositions.filter(p => p.status === 'OPEN'),
-        liveClosedPositions: this.liveClosedPositions,
-        userClosedRealPositionIds: Array.from(this.userClosedRealPositionIds),
+        pairs: paperEngine.pairs || [],
+        closedPositions: paperEngine.closedPositions || [],
+        liveOpenPositions: (this.liveOpenPositions || []).filter(p => p.status === 'OPEN'),
+        liveClosedPositions: this.liveClosedPositions || [],
+        userClosedRealPositionIds: Array.from(this.userClosedRealPositionIds || []),
         isEngineRunning: paperEngine.isEngineRunning
       });
     } catch (err) {
@@ -655,18 +653,14 @@ class MudrexLiveAdapter {
       }
     }
 
-    // Clean up any stale flags or raw error payloads in apiStatus
+    // Clean up any internal engine flags or raw error payloads in apiStatus
     for (const pos of liveOpenPositions) {
-      if (pos.apiStatus?.includes('REAL_ORDERS_DISABLED')) {
+      if (pos.apiStatus?.includes('REAL_ORDERS_DISABLED') || pos.apiStatus?.includes('LIVE_ENGINE_PAIR')) {
         delete pos.apiStatus;
+        delete pos.apiError;
       } else if (pos.apiStatus && (pos.apiStatus.includes('{') || pos.apiStatus.includes('5002') || pos.apiStatus.includes('rate limit') || pos.apiStatus.includes('request_id') || pos.apiStatus.length > 40)) {
-        if (pos.apiStatus.includes('5002') || pos.apiStatus.includes('rate limit')) {
-          pos.apiStatus = 'LIVE_ENGINE_PAIR (RATE_LIMIT_COOLDOWN)';
-        } else if (pos.apiStatus.includes('balance') || pos.apiStatus.includes('margin')) {
-          pos.apiStatus = 'LIVE_ENGINE_PAIR (INSUFFICIENT_MARGIN)';
-        } else {
-          pos.apiStatus = 'LIVE_ENGINE_PAIR';
-        }
+        delete pos.apiStatus;
+        delete pos.apiError;
       }
     }
 

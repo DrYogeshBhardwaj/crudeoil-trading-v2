@@ -911,17 +911,9 @@ function renderActivePositions(positions, symbol, isDhanPage = false, pricePrefi
             </div>
             <span style="display:block; margin-top: 2px;"><code style="color:var(--accent-cyan); font-size:0.75rem;">${pos.positionId || 'N/A'}</code></span>
             ${(() => {
-              if (!pos.apiStatus || pos.apiStatus.includes('REAL_ORDERS_DISABLED')) return '';
+              if (!pos.apiStatus || pos.apiStatus.includes('REAL_ORDERS_DISABLED') || pos.apiStatus.includes('LIVE_ENGINE')) return '';
               let s = pos.apiStatus;
-              if (s.includes('{') || s.includes('5002') || s.includes('rate limit') || s.includes('request_id') || s.length > 40) {
-                if (s.includes('5002') || s.includes('rate limit')) {
-                  s = 'LIVE_ENGINE_PAIR (RATE_LIMIT_COOLDOWN)';
-                } else if (s.includes('balance') || s.includes('margin')) {
-                  s = 'LIVE_ENGINE_PAIR (INSUFFICIENT_MARGIN)';
-                } else {
-                  s = 'LIVE_ENGINE_PAIR';
-                }
-              }
+              if (s.includes('{') || s.includes('5002') || s.includes('rate limit') || s.includes('request_id') || s.length > 40) return '';
               const color = s.includes('REAL_MUDREX') ? '#a7f3d0' : (s.includes('TRANSMITTED') || s.includes('SENDING') ? '#38bdf8' : '#fbbf24');
               return `<span style="display:block; font-size:0.62rem; color:${color}; font-weight:700; margin-top:2px;">📡 ${s}</span>`;
             })()}
