@@ -137,6 +137,8 @@ class DatabaseManager {
         finalState.settings.strategyMode = 'ALTERNATING_STAGGERED';
         finalState.settings.maxActivePairs = 300;
         finalState.settings.startingCapitalINR = 82978;
+        finalState.settings.tradingMode = 'LIVE';
+        finalState.settings.realOrdersDisabled = false;
         return finalState;
       }
     } catch (err) {
