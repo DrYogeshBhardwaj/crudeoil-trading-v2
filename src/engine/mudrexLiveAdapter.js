@@ -612,11 +612,15 @@ class MudrexLiveAdapter {
     const paperEngine = require('./paperEngine');
     const rateInfo = rateFeed.getCurrentRate(paperEngine.settings.instrument || 'CLUSDT');
     
-    let totalBal = 3227.29;
+    let startingCapital = paperEngine.settings.startingCapitalINR || 100000;
+    let baseWalletBalance = startingCapital;
+    let isRealAuth = false;
+
     try {
       const auth = await this.testAuthentication();
-      if (auth.success && auth.totalPortfolioBalance > 0) {
-        totalBal = auth.totalPortfolioBalance;
+      if (auth.success && (auth.futuresBalance > 0 || auth.totalPortfolioBalance > 0)) {
+        baseWalletBalance = auth.futuresBalance > 0 ? auth.futuresBalance : auth.totalPortfolioBalance;
+        isRealAuth = true;
       }
     } catch (e) {}
 
@@ -723,6 +727,10 @@ class MudrexLiveAdapter {
       marginUsedINR += (pos.entryPrice * qty * (rateInfo.usdInrRate || 86.5)) / (paperEngine.settings.leverage || 5);
     }
 
+    let displayStartingCap = isRealAuth ? baseWalletBalance : startingCapital;
+    let realizedBalanceINR = isRealAuth ? baseWalletBalance : (startingCapital + realizedNetINR);
+    let totalEquityINR = realizedBalanceINR + floatingNetINR;
+
     const closedCount = liveClosedPositions.length;
     const totalTrades = winCount + lossCount;
     const winRate = totalTrades > 0 ? Math.round((winCount / totalTrades) * 100) : 0;
@@ -736,8 +744,8 @@ class MudrexLiveAdapter {
       lastProcessedRate: paperEngine.lastProcessedRate,
       processedRatesCount: paperEngine.processedRatesCount,
       summary: {
-        startingCapitalINR: totalBal,
-        realizedBalanceINR: totalBal + realizedNetINR,
+        startingCapitalINR: displayStartingCap,
+        realizedBalanceINR,
         realizedGrossUSD,
         realizedGrossINR: realizedGrossUSD * (rateInfo.usdInrRate || 86.5),
         realizedChargesUSD: 0,
@@ -750,9 +758,9 @@ class MudrexLiveAdapter {
         floatingChargesINR: 0,
         floatingNetUSD: floatingNetINR / (rateInfo.usdInrRate || 86.5),
         floatingNetINR,
-        totalEquityINR: totalBal + realizedNetINR + floatingNetINR,
+        totalEquityINR,
         marginUsedINR,
-        availableMarginINR: Math.max(0, totalBal + realizedNetINR + floatingNetINR - marginUsedINR),
+        availableMarginINR: Math.max(0, totalEquityINR - marginUsedINR),
         activePairsCount: new Set(liveOpenPositions.map(p => p.pairId || (p.positionId ? p.positionId.replace(/-(BUY|SELL).*/, '').replace(/^P-/, 'PAIR-') : p.id))).size || Math.ceil(liveOpenPositions.length / 2),
         maxActivePairs: paperEngine.settings.maxActivePairs || 25,
         activeBuyCount,
