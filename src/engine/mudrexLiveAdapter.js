@@ -23,7 +23,7 @@ class MudrexLiveAdapter {
       autoAiTargetMode: true,
       targetDisabled: false,
       maxActivePairs: 25,
-      contractQuantity: 5.0,
+      contractQuantity: 1.0,
       leverage: 5,
       takerFeeRate: 0.00075, // 0.075% strict fee
       gstRate: 0.18, // 18% GST on fees
@@ -210,12 +210,9 @@ class MudrexLiveAdapter {
       const saved = storage.loadState();
       if (saved) {
         if (saved.mudrexSettings) {
-          const savedQty = saved.mudrexSettings.contractQuantity;
           this.settings = { ...this.settings, ...saved.mudrexSettings };
-          if (savedQty !== undefined && savedQty !== null) {
-            this.settings.contractQuantity = savedQty;
-          }
         }
+        this.settings.contractQuantity = 1.0;
         if (saved.mudrexApiKey && !saved.mudrexApiKey.includes('*') && !process.env.MUDREX_API_KEY) {
           process.env.MUDREX_API_KEY = saved.mudrexApiKey;
         }
@@ -781,7 +778,7 @@ class MudrexLiveAdapter {
     const paperEngine = require('./paperEngine');
     const rateInfo = rateFeed.getCurrentRate('CLUSDT');
     
-    let startingCapital = paperEngine.settings.startingCapitalINR || 82978;
+    let startingCapital = paperEngine.settings.startingCapitalINR || 119923.61;
     paperEngine.settings.startingCapitalINR = startingCapital;
 
     let liveOpenPositions = [];
@@ -985,7 +982,7 @@ class MudrexLiveAdapter {
 
 
   resetLiveEngine() {
-    this.settings.contractQuantity = 5.0;
+    this.settings.contractQuantity = 1.0;
     this.liveOpenPositions = [];
     this.liveClosedPositions = [];
     this.processedRates.clear();

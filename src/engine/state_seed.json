@@ -1,7 +1,7 @@
 {
   "settings": {
-    "startingCapitalINR": 82978,
-    "contractQuantity": 5,
+    "startingCapitalINR": 119923.61,
+    "contractQuantity": 1,
     "leverage": 5,
     "instrument": "CLUSDT",
     "profitTargetMode": "PRICE_MOVE",
@@ -10,7 +10,7 @@
     "targetDisabled": false,
     "maxActivePairs": 500,
     "dailyLossCircuitBreakerINR": 2000,
-    "takerFeeRate": 0.0005,
+    "takerFeeRate": 0.00075,
     "gstRate": 0.18,
     "slippageBufferINR": 5,
     "usdInrRate": 102,
@@ -23,8 +23,8 @@
   "closedPositions": [],
   "auditLogs": [
     {
-      "id": "LOG-1791833690692-504",
-      "timestamp": "2026-10-12T19:34:50.692Z",
+      "id": "LOG-1791839412631-413",
+      "timestamp": "2026-10-12T21:10:12.631Z",
       "event": "ENGINE_RESET",
       "details": "All engine paper positions, processed rates, and history reset to ₹1,00,000 capital."
     }

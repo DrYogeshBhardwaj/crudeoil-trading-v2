@@ -136,7 +136,7 @@ class DatabaseManager {
         if (!finalState.settings) finalState.settings = {};
         finalState.settings.strategyMode = 'ALTERNATING_STAGGERED';
         finalState.settings.maxActivePairs = 500;
-        finalState.settings.startingCapitalINR = 82978;
+        finalState.settings.startingCapitalINR = 119923.61;
         finalState.settings.tradingMode = 'LIVE';
         finalState.settings.realOrdersDisabled = false;
         return finalState;
@@ -250,7 +250,7 @@ class DatabaseManager {
       if (stateToArchive && stateToArchive.closedPositions && stateToArchive.closedPositions.length > 0) {
         existingArchive.push({
           archivedAt: new Date().toISOString(),
-          startingCapitalINR: stateToArchive.settings ? stateToArchive.settings.startingCapitalINR : 82978,
+          startingCapitalINR: stateToArchive.settings ? stateToArchive.settings.startingCapitalINR : 119923.61,
           closedPositionsCount: stateToArchive.closedPositions.length,
           closedPositions: stateToArchive.closedPositions,
           auditLogs: stateToArchive.auditLogs || []
@@ -282,8 +282,8 @@ class DatabaseManager {
     }
     const cleanSeed = {
       settings: {
-        startingCapitalINR: 82978,
-        contractQuantity: 5.0,
+        startingCapitalINR: 119923.61,
+        contractQuantity: 1.0,
         leverage: 5,
         profitTargetMove: 1.0,
         profitTargetMode: "PRICE_MOVE",
