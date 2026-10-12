@@ -581,7 +581,7 @@ function renderClosedPositions(positions, symbol) {
       const grossProfitUSD = typeof pos.grossProfitUSD === 'number' ? pos.grossProfitUSD : 0;
       const totalChargesINR = typeof pos.totalChargesINR === 'number' ? pos.totalChargesINR : 0;
       const netProfitINR = typeof pos.netProfitINR === 'number' ? pos.netProfitINR : 0;
-      const durationSec = typeof pos.holdingDurationSec === 'number' ? pos.holdingDurationSec : 0;
+      const netProfitUSD = typeof pos.netProfitUSD === 'number' ? pos.netProfitUSD : (pos.usdInrRate ? netProfitINR / pos.usdInrRate : netProfitINR / 86.5);
 
       const grossClass = grossProfitUSD >= 0 ? 'text-green' : 'text-red';
       const netClass = netProfitINR >= 0 ? 'text-green' : 'text-red';
@@ -600,7 +600,10 @@ function renderClosedPositions(positions, symbol) {
           <td>₹${totalChargesINR.toFixed(2)}</td>
           <td class="${netClass}" style="font-weight:700;">₹${netProfitINR >= 0 ? '+' : ''}${netProfitINR.toFixed(2)}</td>
           <td><span class="badge-reason">${pos.exitReason || 'TARGET HIT'}</span></td>
-          <td>${durationSec}s</td>
+          <td class="${netClass}" style="font-size: 1.05rem; font-weight: 800; font-family: monospace; white-space: nowrap; background: rgba(15, 23, 42, 0.6); border-left: 2px solid ${netProfitINR >= 0 ? '#10b981' : '#ef4444'};">
+            <span>₹${netProfitINR >= 0 ? '+' : ''}${netProfitINR.toFixed(2)}</span>
+            <span style="font-size: 0.76rem; opacity: 0.85; display: block;">($${netProfitUSD >= 0 ? '+' : ''}${netProfitUSD.toFixed(4)} USD)</span>
+          </td>
         </tr>
       `;
     }
