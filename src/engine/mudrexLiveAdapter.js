@@ -31,10 +31,10 @@ class MudrexLiveAdapter {
       const storage = require('./storage');
       const saved = storage.loadState();
       if (saved) {
-        if (saved.mudrexApiKey && !process.env.MUDREX_API_KEY) {
+        if (saved.mudrexApiKey && !saved.mudrexApiKey.includes('*') && !process.env.MUDREX_API_KEY) {
           process.env.MUDREX_API_KEY = saved.mudrexApiKey;
         }
-        if (saved.mudrexApiSecret && !process.env.MUDREX_API_SECRET) {
+        if (saved.mudrexApiSecret && !saved.mudrexApiSecret.includes('*') && !process.env.MUDREX_API_SECRET) {
           process.env.MUDREX_API_SECRET = saved.mudrexApiSecret;
         }
         if (Array.isArray(saved.userClosedRealPositionIds)) {
@@ -262,16 +262,18 @@ class MudrexLiveAdapter {
   }
 
   getHeaders() {
-    const apiSecret = (
+    let apiSecret = (
       process.env.MUDREX_API_SECRET ||
       process.env.MUDREX_SECRET ||
       process.env.MUDREX_SECRET_KEY || ''
     ).trim();
+    if (apiSecret.includes('*')) apiSecret = '';
 
-    const apiKey = (
+    let apiKey = (
       process.env.MUDREX_API_KEY ||
       process.env.MUDREX_KEY || ''
     ).trim();
+    if (apiKey.includes('*')) apiKey = '';
 
     const headers = {
       'X-Authentication': apiSecret,

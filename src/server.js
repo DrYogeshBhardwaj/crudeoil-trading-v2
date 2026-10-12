@@ -189,8 +189,8 @@ app.get('/api/mudrex/auth-check', async (req, res) => {
 app.post('/api/mudrex/save-keys', express.json(), async (req, res) => {
   try {
     const { apiKey, apiSecret } = req.body;
-    if (apiKey) process.env.MUDREX_API_KEY = apiKey.trim();
-    if (apiSecret) process.env.MUDREX_API_SECRET = apiSecret.trim();
+    if (apiKey && !apiKey.includes('*')) process.env.MUDREX_API_KEY = apiKey.trim();
+    if (apiSecret && !apiSecret.includes('*')) process.env.MUDREX_API_SECRET = apiSecret.trim();
 
     const mudrexLive = require('./engine/mudrexLiveAdapter');
     mudrexLive.rateLimitUntil = 0;
