@@ -98,8 +98,8 @@ class MudrexLiveAdapter {
       if (!paperEngine.isEngineRunning) return;
       if (paperEngine.settings.tradingMode !== 'LIVE') return;
 
-      const symbol = tick.symbol || paperEngine.settings.instrument || 'CLUSDT';
-      if (symbol !== paperEngine.settings.instrument) return;
+      const symbol = tick.symbol || 'CLUSDT';
+      if (symbol !== 'CLUSDT') return;
 
       const price = tick.price;
       if (!price) return;
@@ -621,7 +621,7 @@ class MudrexLiveAdapter {
   async getLiveMetrics() {
     const rateFeed = require('./rateFeed');
     const paperEngine = require('./paperEngine');
-    const rateInfo = rateFeed.getCurrentRate(paperEngine.settings.instrument || 'CLUSDT');
+    const rateInfo = rateFeed.getCurrentRate('CLUSDT');
     
     let startingCapital = paperEngine.settings.startingCapitalINR || 100000;
     let baseWalletBalance = startingCapital;
