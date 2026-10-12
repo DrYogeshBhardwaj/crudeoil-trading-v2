@@ -607,8 +607,8 @@ function renderDashboard(data) {
     if (nearestSellTarget !== null) distSell = livePrice - nearestSellTarget;
   }
 
-  if (newPrice) {
-    recordPriceTick(newPrice);
+  if (livePrice) {
+    recordPriceTick(livePrice);
   }
 
   const isMcxSymbol = window.location.pathname.includes('dhan') || currentSymbol === 'XAGUSDT';
