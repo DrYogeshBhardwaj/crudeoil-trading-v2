@@ -563,7 +563,7 @@ function renderActivePositions(positions, symbol) {
           <td>
             <strong style="font-size:0.85rem;">${pos.pairId || 'N/A'}</strong>
             <span style="display:block;"><code style="color:var(--accent-cyan); font-size:0.75rem;">${pos.positionId || 'N/A'}</code></span>
-            ${pos.apiStatus ? `<span style="display:block; font-size:0.62rem; color:${pos.apiStatus.includes('TRANSMITTED') ? '#a7f3d0' : (pos.apiStatus.includes('SENDING') ? '#38bdf8' : '#f87171')}; font-weight:700;">📡 ${pos.apiStatus}</span>` : ''}
+            ${pos.apiStatus && !pos.apiStatus.includes('REAL_ORDERS_DISABLED') ? `<span style="display:block; font-size:0.62rem; color:${pos.apiStatus.includes('TRANSMITTED') ? '#a7f3d0' : (pos.apiStatus.includes('SENDING') ? '#38bdf8' : '#f87171')}; font-weight:700;">📡 ${pos.apiStatus}</span>` : ''}
           </td>
           <td>
             <div style="font-size:0.78rem; color:var(--text-muted);">$${entryPrice.toFixed(priceDecimals)}</div>

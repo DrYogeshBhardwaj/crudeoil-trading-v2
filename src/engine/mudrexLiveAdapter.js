@@ -638,8 +638,11 @@ class MudrexLiveAdapter {
     let liveOpenPositions = this.liveOpenPositions || [];
     let liveClosedPositions = this.liveClosedPositions || [];
 
-    // Auto-retry transmitting positions stuck with old API errors or unassigned Order IDs
+    // Auto-retry transmitting positions stuck with unassigned Order IDs or errors
     for (const pos of liveOpenPositions) {
+      if (pos.apiStatus?.includes('REAL_ORDERS_DISABLED')) {
+        delete pos.apiStatus;
+      }
       if (pos.status === 'OPEN' && (!pos.mudrexOrderId || pos.apiStatus?.includes('API_ERROR') || pos.apiStatus?.includes('SENDING'))) {
         if (!pos.lastRetryTime || Date.now() - pos.lastRetryTime > 4000) {
           pos.lastRetryTime = Date.now();
