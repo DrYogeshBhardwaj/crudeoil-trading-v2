@@ -595,18 +595,29 @@ function renderDashboard(data) {
   const floatNetStr = `₹${summary.floatingNetINR.toFixed(2)}`;
   const floatNetClass = summary.floatingNetINR >= 0 ? 'text-green' : 'text-red';
 
-  // Update Main CLUSDT Live Rate Text (VERY LARGE BOLD TEXT)
+  // Update 3 Large 2.4rem Callouts (Live Rate, Green BUY Target Exit, Red SELL Target Exit)
   const mainCrudeRateEl = document.getElementById('mainCrudeLiveRate');
-  if (mainCrudeRateEl) {
-    mainCrudeRateEl.innerText = liveRateStr;
-    mainCrudeRateEl.style.color = (tickHistory.length >= 2 && tickHistory[tickHistory.length - 1].price >= tickHistory[0].price) ? '#38bdf8' : '#38bdf8';
-  }
+  if (mainCrudeRateEl) mainCrudeRateEl.innerText = liveRateStr;
   const mainCrudeRateIndexEl = document.getElementById('mainCrudeLiveRateIndex');
   if (mainCrudeRateIndexEl) mainCrudeRateIndexEl.innerText = liveRateStr;
 
   const symbolLabelText = `🛢️ ${symbolLabels[currentSymbol] || currentSymbol} LIVE RATE`;
   if (document.getElementById('unifiedSymbolLabel')) document.getElementById('unifiedSymbolLabel').innerText = symbolLabelText;
   if (document.getElementById('unifiedSymbolLabelIndex')) document.getElementById('unifiedSymbolLabelIndex').innerText = symbolLabelText;
+
+  // Green BUY Target Exit Callout
+  if (document.getElementById('mainBuyTargetRate')) document.getElementById('mainBuyTargetRate').innerText = buyTargetStr;
+  if (document.getElementById('mainBuyTargetRateIndex')) document.getElementById('mainBuyTargetRateIndex').innerText = buyTargetStr;
+  const buyDistText = distBuy !== null ? `+$${distBuy.toFixed(priceDec)} to exit` : '--';
+  if (document.getElementById('mainBuyTargetDist')) document.getElementById('mainBuyTargetDist').innerText = buyDistText;
+  if (document.getElementById('mainBuyTargetDistIndex')) document.getElementById('mainBuyTargetDistIndex').innerText = buyDistText;
+
+  // Red SELL Target Exit Callout
+  if (document.getElementById('mainSellTargetRate')) document.getElementById('mainSellTargetRate').innerText = sellTargetStr;
+  if (document.getElementById('mainSellTargetRateIndex')) document.getElementById('mainSellTargetRateIndex').innerText = sellTargetStr;
+  const sellDistText = distSell !== null ? `-$${distSell.toFixed(priceDec)} to exit` : '--';
+  if (document.getElementById('mainSellTargetDist')) document.getElementById('mainSellTargetDist').innerText = sellDistText;
+  if (document.getElementById('mainSellTargetDistIndex')) document.getElementById('mainSellTargetDistIndex').innerText = sellDistText;
 
   // Single Line Unified Metrics
   const uFloatEl = document.getElementById('unifiedFloatingNet');
@@ -623,14 +634,6 @@ function renderDashboard(data) {
   const actPairsText = `${summary.activePairsCount} / ${summary.maxActivePairs}`;
   if (document.getElementById('unifiedActivePairs')) document.getElementById('unifiedActivePairs').innerText = actPairsText;
   if (document.getElementById('unifiedActivePairsIndex')) document.getElementById('unifiedActivePairsIndex').innerText = actPairsText;
-
-  const buyTargetFull = distBuy !== null ? `${buyTargetStr} ${buyDistStr}` : buyTargetStr;
-  if (document.getElementById('unifiedBuyTarget')) document.getElementById('unifiedBuyTarget').innerText = buyTargetFull;
-  if (document.getElementById('unifiedBuyTargetIndex')) document.getElementById('unifiedBuyTargetIndex').innerText = buyTargetFull;
-
-  const sellTargetFull = distSell !== null ? `${sellTargetStr} ${sellDistStr}` : sellTargetStr;
-  if (document.getElementById('unifiedSellTarget')) document.getElementById('unifiedSellTarget').innerText = sellTargetFull;
-  if (document.getElementById('unifiedSellTargetIndex')) document.getElementById('unifiedSellTargetIndex').innerText = sellTargetFull;
 
   // Render Canvas Charts
   drawLiveCanvasChart('livePriceCanvas', livePrice, nearestBuyTarget, nearestSellTarget);
