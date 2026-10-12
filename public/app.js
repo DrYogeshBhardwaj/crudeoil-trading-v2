@@ -518,13 +518,25 @@ function renderActivePositions(positions, symbol) {
   const sellTbody = document.getElementById('sellPositionsTbody');
   const buyBadge = document.getElementById('buyPositionsBadge');
   const sellBadge = document.getElementById('sellPositionsBadge');
+  const buyNetPlEl = document.getElementById('buyPositionsNetPL');
+  const sellNetPlEl = document.getElementById('sellPositionsNetPL');
   const singleTbody = document.getElementById('activePositionsTbody');
 
   const buyPositions = (positions || []).filter(p => p.direction === 'BUY');
   const sellPositions = (positions || []).filter(p => p.direction === 'SELL');
 
+  const totalBuyNetINR = buyPositions.reduce((sum, p) => sum + (typeof p.floatingNetINR === 'number' ? p.floatingNetINR : 0), 0);
+  const totalSellNetINR = sellPositions.reduce((sum, p) => sum + (typeof p.floatingNetINR === 'number' ? p.floatingNetINR : 0), 0);
+
   if (buyBadge) buyBadge.innerText = `${buyPositions.length} Active`;
   if (sellBadge) sellBadge.innerText = `${sellPositions.length} Active`;
+
+  if (buyNetPlEl) {
+    buyNetPlEl.innerHTML = `NET P/L: <strong class="${totalBuyNetINR >= 0 ? 'text-green' : 'text-red'}">₹${totalBuyNetINR >= 0 ? '+' : ''}${totalBuyNetINR.toFixed(2)}</strong>`;
+  }
+  if (sellNetPlEl) {
+    sellNetPlEl.innerHTML = `NET P/L: <strong class="${totalSellNetINR >= 0 ? 'text-green' : 'text-red'}">₹${totalSellNetINR >= 0 ? '+' : ''}${totalSellNetINR.toFixed(2)}</strong>`;
+  }
 
   // Sort by Next Exit target distance ascending (closest target exit first)
   buyPositions.sort((a, b) => getDistToExit(a) - getDistToExit(b));
@@ -545,9 +557,6 @@ function renderActivePositions(positions, symbol) {
 
       const dist = targetPrice !== null ? Math.abs(targetPrice - currentPrice) : null;
       const netClass = floatingNetINR >= 0 ? 'text-green' : 'text-red';
-      const badgeBg = isBuyTable ? 'rgba(16, 185, 129, 0.15)' : 'rgba(239, 68, 68, 0.15)';
-      const badgeColor = isBuyTable ? '#a7f3d0' : '#fca5a5';
-      const badgeBorder = isBuyTable ? '1px solid #10b981' : '1px solid #ef4444';
 
       rowsHtml += `
         <tr>
@@ -557,17 +566,18 @@ function renderActivePositions(positions, symbol) {
             ${pos.apiStatus ? `<span style="display:block; font-size:0.62rem; color:${pos.apiStatus.includes('TRANSMITTED') ? '#a7f3d0' : (pos.apiStatus.includes('SENDING') ? '#38bdf8' : '#f87171')}; font-weight:700;">📡 ${pos.apiStatus}</span>` : ''}
           </td>
           <td>
-            <div style="font-size:0.8rem; color:var(--text-muted);">$${entryPrice.toFixed(priceDecimals)}</div>
-            <div style="font-size:0.85rem; font-weight:700; color:#fff;">➔ $${currentPrice.toFixed(priceDecimals)}</div>
+            <div style="font-size:0.78rem; color:var(--text-muted);">$${entryPrice.toFixed(priceDecimals)}</div>
+            <div style="font-size:0.88rem; font-weight:700; color:#fff;">➔ $${currentPrice.toFixed(priceDecimals)}</div>
           </td>
           <td>
             ${targetPrice !== null ? `
-              <span class="target-price-badge" style="font-size:0.78rem; background:${badgeBg}; color:${badgeColor}; border:${badgeBorder}; padding:2px 6px; border-radius:4px; font-weight:700;">$${targetPrice.toFixed(priceDecimals)}</span>
-              <span style="display:block; font-size:0.68rem; color:${badgeColor}; margin-top:2px;">$${dist.toFixed(priceDecimals)} away</span>
+              <div style="font-size:1.05rem; font-weight:800; color:#f59e0b; font-family:monospace;">$${targetPrice.toFixed(priceDecimals)}</div>
+              <div style="font-size:0.7rem; color:var(--text-muted);">$${dist.toFixed(priceDecimals)} to exit</div>
             ` : '<span style="color:var(--text-dim)">DISABLED</span>'}
           </td>
           <td style="text-align: right;">
-            <div class="${netClass}" style="font-size:1.05rem; font-weight:800; font-family:monospace;">₹${floatingNetINR >= 0 ? '+' : ''}${floatingNetINR.toFixed(2)}</div>
+            <div class="${netClass}" style="font-size:1.08rem; font-weight:800; font-family:monospace;">₹${floatingNetINR >= 0 ? '+' : ''}${floatingNetINR.toFixed(2)}</div>
+            <div style="font-size:0.68rem; color:var(--text-muted);">NET P/L (INR)</div>
           </td>
           <td style="text-align: center;">
             <button class="btn btn-danger" style="padding: 3px 8px; font-size: 0.72rem; font-weight:700;" onclick="manualClose('${pos.positionId}')">Close</button>

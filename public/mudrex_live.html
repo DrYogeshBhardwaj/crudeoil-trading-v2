@@ -255,18 +255,18 @@
           <div class="active-table-card buy-card">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; padding-bottom: 6px; border-bottom: 1px solid rgba(16, 185, 129, 0.25);">
               <h4 style="margin: 0; color: #10b981; font-size: 0.95rem; font-weight: 800; display: flex; align-items: center; gap: 8px;">
-                <span>🟢 BUY Positions (Long)</span>
+                <span>🟢 BUY Positions P/L (Long)</span>
                 <span id="buyPositionsBadge" class="badge-direction buy" style="font-size: 0.7rem;">0 Active</span>
               </h4>
-              <span style="font-size: 0.72rem; color: #a7f3d0; font-weight: 600;">🎯 Sorted by Next Exit</span>
+              <span id="buyPositionsNetPL" style="font-size: 0.85rem; font-weight: 800; color: #10b981;">NET P/L: ₹0.00</span>
             </div>
             <table class="data-table" id="buyPositionsTable">
               <thead>
                 <tr>
                   <th>Pair / Position ID</th>
                   <th>Entry ➔ Current</th>
-                  <th>Next Exit 🎯</th>
-                  <th style="text-align: right;">Floating Net P/L</th>
+                  <th>Target Exit 🎯</th>
+                  <th style="text-align: right;">Net Floating P/L (INR)</th>
                   <th style="text-align: center;">Action</th>
                 </tr>
               </thead>
@@ -282,18 +282,18 @@
           <div class="active-table-card sell-card">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; padding-bottom: 6px; border-bottom: 1px solid rgba(239, 68, 68, 0.25);">
               <h4 style="margin: 0; color: #ef4444; font-size: 0.95rem; font-weight: 800; display: flex; align-items: center; gap: 8px;">
-                <span>🔴 SELL Positions (Short)</span>
+                <span>🔴 SELL Positions P/L (Short)</span>
                 <span id="sellPositionsBadge" class="badge-direction sell" style="font-size: 0.7rem;">0 Active</span>
               </h4>
-              <span style="font-size: 0.72rem; color: #fca5a5; font-weight: 600;">🎯 Sorted by Next Exit</span>
+              <span id="sellPositionsNetPL" style="font-size: 0.85rem; font-weight: 800; color: #ef4444;">NET P/L: ₹0.00</span>
             </div>
             <table class="data-table" id="sellPositionsTable">
               <thead>
                 <tr>
                   <th>Pair / Position ID</th>
                   <th>Entry ➔ Current</th>
-                  <th>Next Exit 🎯</th>
-                  <th style="text-align: right;">Floating Net P/L</th>
+                  <th>Target Exit 🎯</th>
+                  <th style="text-align: right;">Net Floating P/L (INR)</th>
                   <th style="text-align: center;">Action</th>
                 </tr>
               </thead>
@@ -479,6 +479,6 @@
     </div>
   </div>
 
-  <script src="app.js?v=20261011_v3"></script>
+  <script src="app.js?v=20261012_v6"></script>
 </body>
 </html>
