@@ -902,7 +902,7 @@ table.data-table tr:hover {
   margin-top: 14px;
 }
 
-@media (max-width: 1024px) {
+@media (max-width: 768px) {
   .active-tables-container {
     grid-template-columns: 1fr;
   }
