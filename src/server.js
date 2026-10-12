@@ -52,11 +52,11 @@ app.get('/health', (req, res) => {
   }
 });
 
-// Express Page Routes
-app.get('/dhan-mcx', (req, res) => res.sendFile(path.join(__dirname, '../public/dhan_mcx.html')));
-app.get('/mcx-calc', (req, res) => res.sendFile(path.join(__dirname, '../public/mcx_calc.html')));
-app.get('/paper-calc', (req, res) => res.sendFile(path.join(__dirname, '../public/paper_calc.html')));
-app.get('/mudrex-live', (req, res) => res.sendFile(path.join(__dirname, '../public/mudrex_live.html')));
+// Express Page Routes (With Aliases)
+app.get(['/dhan-mcx', '/dhan_mcx', '/dhan_mcx.html', '/dhan-mcx.html'], (req, res) => res.sendFile(path.join(__dirname, '../public/dhan_mcx.html')));
+app.get(['/mcx-calc', '/mcx_calc', '/mcx_calc.html', '/mcx-calc.html'], (req, res) => res.sendFile(path.join(__dirname, '../public/mcx_calc.html')));
+app.get(['/paper-calc', '/paper_calc', '/paper_calc.html', '/paper-calc.html'], (req, res) => res.sendFile(path.join(__dirname, '../public/paper_calc.html')));
+app.get(['/mudrex-live', '/mudrex_live', '/mudrex_live.html', '/mudrex-live.html'], (req, res) => res.sendFile(path.join(__dirname, '../public/mudrex_live.html')));
 
 // 1. Dashboard Metrics
 app.get('/api/metrics', (req, res) => {
