@@ -12,7 +12,7 @@ class PaperEngine {
       profitTargetMode: 'PRICE_MOVE',
       profitTargetMove: 1000, // ₹1,000 default target move for MCX Silver
       targetDisabled: false,
-      maxActivePairs: 50,
+      maxActivePairs: 100,
       dailyLossCircuitBreakerINR: 2000,
       takerFeeRate: 0.00059, // 0.059%
       gstRate: 0.18, // 18% GST on fees
