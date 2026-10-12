@@ -14,7 +14,7 @@ class PaperEngine {
       targetDisabled: false,
       maxActivePairs: 25,
       dailyLossCircuitBreakerINR: 2000,
-      takerFeeRate: 0.0005, // 0.05%
+      takerFeeRate: 0.00059, // 0.059% (Matches Mudrex exact ₹5.41 fee per order)
       gstRate: 0.18, // 18% GST on fees
       tradingMode: 'LIVE', // 'PAPER' (Simulated) or 'LIVE' (Real Mudrex Orders)
       realOrdersDisabled: false
