@@ -1573,6 +1573,11 @@ function saveAndConnectMudrexKeys() {
     return;
   }
 
+  if (apiSecret.includes('*')) {
+    if (container) container.innerHTML = '<div style="color:#f87171; font-weight:700;">⚠️ Please paste your actual Mudrex API Secret Key. The Secret Key box contains asterisks (***) from browser auto-fill.</div>';
+    return;
+  }
+
   if (container) container.innerHTML = '<span style="color:var(--accent-cyan)">Saving and testing Mudrex API credentials...</span>';
 
   fetch('/api/mudrex/save-keys', {
