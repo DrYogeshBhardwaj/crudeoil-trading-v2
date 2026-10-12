@@ -775,7 +775,7 @@ class MudrexLiveAdapter {
         totalEquityINR,
         marginUsedINR,
         availableMarginINR: Math.max(0, totalEquityINR - marginUsedINR),
-        activePairsCount: new Set(liveOpenPositions.map(p => p.pairId || (p.positionId ? p.positionId.replace(/-(BUY|SELL).*/, '').replace(/^P-/, 'PAIR-') : p.id))).size || Math.ceil(liveOpenPositions.length / 2),
+        activePairsCount: Math.max(activeBuyCount, activeSellCount),
         maxActivePairs: paperEngine.settings.maxActivePairs || 25,
         activeBuyCount,
         activeSellCount,
