@@ -277,11 +277,13 @@ class MudrexLiveAdapter {
 
     const headers = {
       'X-Authentication': apiSecret,
+      'x-authentication': apiSecret,
       'Content-Type': 'application/json',
       'User-Agent': 'Mudrex-Node-Live-Engine/1.0'
     };
     if (apiKey) {
       headers['X-Api-Key'] = apiKey;
+      headers['x-api-key'] = apiKey;
     }
     return headers;
   }
@@ -382,7 +384,7 @@ class MudrexLiveAdapter {
       this.rateLimitUntil = 0;
     }
     const headers = this.getHeaders();
-    if (!headers['X-Authentication']) {
+    if (!headers['X-Authentication'] && !headers['x-authentication']) {
       return { success: false, error: 'MUDREX_API_SECRET missing in environment variables.' };
     }
 
@@ -392,6 +394,13 @@ class MudrexLiveAdapter {
     let spotRaw = null;
 
     let futRes = await this.request('GET', `${this.baseUrl}/futures/funds?trade_currency=INR`);
+    if (!futRes.success) {
+      futRes = await this.request('GET', `${this.v2Url}/futures/funds`);
+    }
+    if (!futRes.success) {
+      futRes = await this.request('GET', `${this.baseUrl}/futures/funds`);
+    }
+
     if (futRes.success) {
       futBal = this.parseBalanceValue(futRes.data);
       futRaw = futRes.data;

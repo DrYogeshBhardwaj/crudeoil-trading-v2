@@ -1596,9 +1596,8 @@ function saveAndConnectMudrexKeys() {
     } else {
       const errMsg = (res.auth && res.auth.error) ? res.auth.error : (res.error || 'Invalid API Secret Key');
       if (container) {
-        container.innerHTML = `<div style="color:#fbbf24; font-weight:700;">⚠️ Mudrex API Connection Notice: ${errMsg}</div>`;
+        container.innerHTML = `<div style="color:#f87171; font-weight:700;">⚠️ Mudrex API Error: ${errMsg}</div>`;
       }
-      checkMudrexAuthStatus();
     }
   })
   .catch(err => {
