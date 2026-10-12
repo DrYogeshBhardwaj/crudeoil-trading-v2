@@ -160,7 +160,13 @@ class MudrexLiveAdapter {
       let bMove = this.settings.buyTargetMove || this.settings.profitTargetMove || 0.20;
       let sMove = this.settings.sellTargetMove || this.settings.profitTargetMove || 0.20;
 
-      if (this.settings.autoAiTargetMode) {
+      if (this.settings.strategyMode === 'ALTERNATING_STAGGERED') {
+        const altIdx = paperEngine.pairs ? paperEngine.pairs.length % 4 : 0;
+        if (altIdx === 0) { bMove = 0.20; sMove = 0.20; }
+        else if (altIdx === 1) { bMove = 0.20; sMove = 0.30; }
+        else if (altIdx === 2) { bMove = 0.30; sMove = 0.20; }
+        else { bMove = 0.15; sMove = 0.25; }
+      } else if (this.settings.autoAiTargetMode) {
         const aiInfo = this.calculateAiTargets();
         bMove = aiInfo.buyTargetMove;
         sMove = aiInfo.sellTargetMove;

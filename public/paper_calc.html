@@ -168,6 +168,7 @@
           <div style="margin-bottom: 14px;">
             <select id="pcTargetStrategyMode" class="form-control" onchange="onTargetStrategyModeChange(); runPaperCalculator();" style="font-weight: 800; font-size: 0.98rem; background: #0f172a; color: #38bdf8; border: 1px solid #0284c7;">
               <option value="AI_DYNAMIC" selected>🤖 AUTO AI DYNAMIC MODE (Adapts Targets Based on Real-Time Trend Tick-by-Tick)</option>
+              <option value="ALTERNATING_STAGGERED">🔄 ALTERNATING SMALL TARGETS (Staggered $0.15 / $0.20 / $0.25 / $0.30 per Pair)</option>
               <option value="MANUAL_FIXED">⚙️ CUSTOM FIXED TARGETS (Specify Independent BUY & SELL Targets)</option>
             </select>
           </div>
@@ -186,6 +187,7 @@
           <div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-top: 14px;">
             <span style="font-size: 0.72rem; color: var(--text-muted); font-weight: 700;">Quick Presets:</span>
             <button type="button" class="pill-btn" style="background: rgba(16, 185, 129, 0.25); color: #34d399; border-color: #10b981; font-weight: 800;" onclick="selectStrategyMode('AI_DYNAMIC')">🤖 AUTO AI DYNAMIC MODE</button>
+            <button type="button" class="pill-btn" style="background: rgba(168, 85, 247, 0.25); color: #c084fc; border-color: #a855f7; font-weight: 800;" onclick="selectStrategyMode('ALTERNATING_STAGGERED')">🔄 ALTERNATING SMALL TARGETS</button>
             <button type="button" class="pill-btn" onclick="selectStrategyMode('MANUAL_FIXED', '0.20', '0.20')">$0.20 Both (Default)</button>
             <button type="button" class="pill-btn" onclick="selectStrategyMode('MANUAL_FIXED', '0.20', '0.30')">BUY $0.20 / SELL $0.30</button>
             <button type="button" class="pill-btn" onclick="selectStrategyMode('MANUAL_FIXED', '0.30', '0.20')">BUY $0.30 / SELL $0.20</button>
@@ -281,6 +283,16 @@
           aiBadge.style.background = 'rgba(16, 185, 129, 0.25)';
           aiBadge.style.borderColor = '#10b981';
           aiBadge.style.color = '#a7f3d0';
+        }
+        if (bEl) { bEl.disabled = true; bEl.style.opacity = '0.5'; }
+        if (sEl) { sEl.disabled = true; sEl.style.opacity = '0.5'; }
+      } else if (mode === 'ALTERNATING_STAGGERED') {
+        if (aiBadge) {
+          aiBadge.style.display = 'inline-block';
+          aiBadge.innerText = '🔄 ALTERNATING SMALL TARGETS ACTIVE (Staggered $0.15 / $0.20 / $0.25 / $0.30 per Pair)';
+          aiBadge.style.background = 'rgba(168, 85, 247, 0.25)';
+          aiBadge.style.borderColor = '#a855f7';
+          aiBadge.style.color = '#c084fc';
         }
         if (bEl) { bEl.disabled = true; bEl.style.opacity = '0.5'; }
         if (sEl) { sEl.disabled = true; sEl.style.opacity = '0.5'; }

@@ -274,7 +274,13 @@ class HistoricalBacktester {
           let bTargetMove = buyTargetMove !== undefined && buyTargetMove !== null ? Number(buyTargetMove) : (targetMove || 0.20);
           let sTargetMove = sellTargetMove !== undefined && sellTargetMove !== null ? Number(sellTargetMove) : (targetMove || 0.20);
 
-          if (autoAiTargetMode) {
+          if (config.strategyMode === 'ALTERNATING_STAGGERED') {
+            const altIdx = pairs.length % 4;
+            if (altIdx === 0) { bTargetMove = 0.20; sTargetMove = 0.20; }
+            else if (altIdx === 1) { bTargetMove = 0.20; sTargetMove = 0.30; }
+            else if (altIdx === 2) { bTargetMove = 0.30; sTargetMove = 0.20; }
+            else { bTargetMove = 0.15; sTargetMove = 0.25; }
+          } else if (autoAiTargetMode) {
             const aiTargets = this.calculateAiTargetsFromHistory(recentSubTicks, curMax48h, curMin48h);
             bTargetMove = aiTargets.buyTargetMove;
             sTargetMove = aiTargets.sellTargetMove;
