@@ -5,18 +5,18 @@ const mudrexLive = require('./mudrexLiveAdapter');
 class PaperEngine {
   constructor() {
     this.settings = {
-      startingCapitalINR: 100000,
-      contractQuantity: 2.0, // 2 Barrels default for CLUSDT
+      startingCapitalINR: 350000,
+      contractQuantity: 1.0, // 1 kg / 1 Lot default for XAGUSDT Silver
       leverage: 5,
-      instrument: 'CLUSDT',
+      instrument: 'XAGUSDT',
       profitTargetMode: 'PRICE_MOVE',
-      profitTargetMove: 1.00, // $1.00 default for Crude Oil (CLUSDT)
+      profitTargetMove: 1000, // ₹1,000 default target move for MCX Silver
       targetDisabled: false,
-      maxActivePairs: 25,
+      maxActivePairs: 50,
       dailyLossCircuitBreakerINR: 2000,
-      takerFeeRate: 0.00059, // 0.059% (Matches Mudrex exact ₹5.41 fee per order)
+      takerFeeRate: 0.00059, // 0.059%
       gstRate: 0.18, // 18% GST on fees
-      tradingMode: 'LIVE', // 'PAPER' (Simulated) or 'LIVE' (Real Mudrex Orders)
+      tradingMode: 'LIVE', // 'PAPER' (Simulated) or 'LIVE' (Real Orders)
       realOrdersDisabled: false
     };
 

@@ -1284,9 +1284,13 @@ function closeSettingsModal() {
 }
 
 function saveModalSettings() {
-  const capital = parseFloat(document.getElementById('modalStartingCapital').value) || 50000;
-  const qty = parseFloat(document.getElementById('modalContractQuantity').value) || 1.0;
-  const lev = parseInt(document.getElementById('modalLeverage').value) || 5;
+  const capitalInput = document.getElementById('modalStartingCapital');
+  const qtyInput = document.getElementById('modalContractQuantity');
+  const levInput = document.getElementById('modalLeverage');
+
+  const capital = capitalInput ? parseFloat(capitalInput.value) || 350000 : 350000;
+  const qty = qtyInput ? parseFloat(qtyInput.value) || 1.0 : 1.0;
+  const lev = levInput ? parseInt(levInput.value) || 5 : 5;
 
   fetch('/api/settings', {
     method: 'POST',
@@ -1301,6 +1305,9 @@ function saveModalSettings() {
   .then(res => {
     closeSettingsModal();
     fetchMetricsFallback();
+  })
+  .catch(() => {
+    closeSettingsModal();
   });
 }
 
