@@ -137,6 +137,15 @@ class MudrexLiveAdapter {
       return { success: false, error: 'REAL_ORDERS_DISABLED' };
     }
 
+    // Pre-flight check: Verify Mudrex Futures Wallet Available Balance
+    try {
+      const auth = await this.testAuthentication();
+      if (auth && auth.success && auth.futuresBalance === 0) {
+        console.warn('[Mudrex Live Adapter] Order pre-flight rejected: Mudrex Futures Wallet Available Balance is ₹0.00 INR.');
+        return { success: false, error: 'INSUFFICIENT_MUDREX_FUTURES_MARGIN (Mudrex Futures Wallet balance is ₹0.00 INR. Transfer funds to Futures wallet)' };
+      }
+    } catch (authErr) {}
+
     const rawSym = (symbol || 'CLUSDT').toUpperCase();
     const symb = rawSym === 'CL-USDT' ? 'CLUSDT' : rawSym;
     const dashSymb = rawSym === 'CLUSDT' ? 'CL-USDT' : rawSym;
