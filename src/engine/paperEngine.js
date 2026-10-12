@@ -478,7 +478,7 @@ class PaperEngine {
       quantity,
       contractMultiplier: multiplier,
       targetExitPrice: buyTarget,
-      targetMove,
+      targetMove: bMove,
       status: 'OPEN',
       entryFeeUSD: estEntryFeeUSD,
       usdInrRateAtEntry: usdInrRate
@@ -495,7 +495,7 @@ class PaperEngine {
       quantity,
       contractMultiplier: multiplier,
       targetExitPrice: sellTarget,
-      targetMove,
+      targetMove: sMove,
       status: 'OPEN',
       entryFeeUSD: estEntryFeeUSD,
       usdInrRateAtEntry: usdInrRate
