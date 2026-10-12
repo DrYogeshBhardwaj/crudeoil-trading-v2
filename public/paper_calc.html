@@ -345,7 +345,7 @@
           const isClosedMsg = res.isMarketClosed 
             ? `🔒 <strong>MARKET CLOSED:</strong> ${res.message}` 
             : `⚠️ ${res.message || res.error}`;
-          container.innerHTML = `<div style="background: rgba(245, 158, 11, 0.15); border: 1px solid rgba(245, 158, 11, 0.4); color: #fef08a; padding: 18px; border-radius: 12px; font-weight: 700; font-size: 0.95rem;">${isClosedMsg}</div>`;
+          container.innerHTML = `<div style="background: rgba(239, 68, 68, 0.2); border: 1px solid rgba(239, 68, 68, 0.6); color: #fca5a5; padding: 18px; border-radius: 12px; font-weight: 700; font-size: 0.95rem; box-shadow: 0 4px 15px rgba(239, 68, 68, 0.2);">${isClosedMsg}</div>`;
           return;
         }
 
@@ -430,9 +430,9 @@
         for (const dr of res.dailyReports) {
           if (dr.isMarketClosed) {
             html += `
-              <tr style="background: rgba(245, 158, 11, 0.08);">
+              <tr style="background: rgba(239, 68, 68, 0.1);">
                 <td><strong>${dr.dateStr}</strong></td>
-                <td colspan="6"><span style="color: #fef08a; font-weight: 700; background: rgba(245, 158, 11, 0.2); padding: 4px 10px; border-radius: 6px;">🔒 MARKET CLOSED (${dr.marketClosedReason || 'Weekend / Holiday'})</span></td>
+                <td colspan="6"><span style="color: #fca5a5; font-weight: 700; background: rgba(239, 68, 68, 0.25); border: 1px solid rgba(239, 68, 68, 0.4); padding: 4px 10px; border-radius: 6px;">🔒 MARKET CLOSED (${dr.marketClosedReason || 'Weekend / Holiday'})</span></td>
               </tr>
             `;
           } else {
