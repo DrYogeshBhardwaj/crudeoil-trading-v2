@@ -672,7 +672,15 @@ class MudrexLiveAdapter {
       } catch (e) {}
     }
 
-    liveOpenPositions = liveOpenPositions.filter(p => !this.userClosedRealPositionIds.has(p.positionId) && !this.userClosedRealPositionIds.has(p.pairId));
+    // Only filter out real exchange positions that user manually closed
+    liveOpenPositions = liveOpenPositions.filter(p => {
+      if (p.apiStatus === 'REAL_MUDREX_POSITION' || (p.positionId && p.positionId.length > 20)) {
+        if (this.userClosedRealPositionIds.has(p.positionId) || this.userClosedRealPositionIds.has(p.pairId)) {
+          return false;
+        }
+      }
+      return true;
+    });
 
     this.liveOpenPositions = liveOpenPositions;
     this.liveClosedPositions = liveClosedPositions;
