@@ -706,7 +706,8 @@ function renderDashboard(data) {
   renderActivePositions(openPositions, settings.instrument);
   renderClosedPositions(closedPositions, settings.instrument);
   
-  if (document.getElementById('tabLogs').classList.contains('active')) {
+  const logsTab = document.getElementById('tabLogs') || document.getElementById('tabContentAuditLogs');
+  if (logsTab && logsTab.classList.contains('active')) {
     renderAuditLogs(auditLogs);
   }
 }
