@@ -974,7 +974,7 @@ class PaperEngine {
   resetAllData() {
     this.settings.startingCapitalINR = 350000;
     this.settings.profitTargetMode = 'PRICE_MOVE';
-    this.settings.strategyMode = 'SINGLE';
+    this.settings.strategyMode = 'ALTERNATING_STAGGERED';
     delete this.settings.buyTargetMove;
     delete this.settings.sellTargetMove;
     this.pairs = [];

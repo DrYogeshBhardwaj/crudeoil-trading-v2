@@ -1709,3 +1709,23 @@ window.executeManualTrade = async function() {
     alert(`❌ Error executing trade: ${err.message}`);
   }
 };
+
+window.resetAllDataConfirm = async function() {
+  if (!confirm('⚠️ Are you sure you want to RESET ALL ENGINE DATA?\n\nThis will clear all active pairs, closed trade history, and reset virtual capital to ₹3,50,000.')) {
+    return;
+  }
+  try {
+    const res = await fetch('/api/reset-data', { method: 'POST' });
+    const data = await res.json();
+    if (data.success) {
+      alert('✅ All engine positions and trading history reset successfully!');
+      if (typeof fetchMetricsFallback === 'function') fetchMetricsFallback();
+      if (typeof fetchDashboardMetrics === 'function') fetchDashboardMetrics();
+    } else {
+      alert('❌ Reset failed: ' + (data.error || 'Unknown error'));
+    }
+  } catch (err) {
+    alert('❌ Error resetting data: ' + err.message);
+  }
+};
+window.resetData = window.resetAllDataConfirm;
