@@ -767,17 +767,7 @@ class MudrexLiveAdapter {
     const paperEngine = require('./paperEngine');
     const rateInfo = rateFeed.getCurrentRate('CLUSDT');
     
-    let startingCapital = paperEngine.settings.startingCapitalINR || 100000;
-    let baseWalletBalance = startingCapital;
-    let isRealAuth = false;
-
-    try {
-      const auth = await this.testAuthentication();
-      if (auth.success && (auth.futuresBalance > 0 || auth.totalPortfolioBalance > 0)) {
-        baseWalletBalance = auth.futuresBalance > 0 ? auth.futuresBalance : auth.totalPortfolioBalance;
-        isRealAuth = true;
-      }
-    } catch (e) {}
+    let startingCapital = paperEngine.settings.startingCapitalINR || 350000;
 
     let liveOpenPositions = [];
 
@@ -855,9 +845,10 @@ class MudrexLiveAdapter {
       marginUsedINR += (pos.entryPrice * qty * (rateInfo.usdInrRate || 86.5)) / (paperEngine.settings.leverage || 5);
     }
 
-    let displayStartingCap = isRealAuth ? baseWalletBalance : startingCapital;
-    let realizedBalanceINR = isRealAuth ? baseWalletBalance : (startingCapital + realizedNetINR);
+    let displayStartingCap = startingCapital;
+    let realizedBalanceINR = startingCapital + realizedNetINR;
     let totalEquityINR = realizedBalanceINR + floatingNetINR;
+    let availableMarginINR = Math.max(0, realizedBalanceINR - marginUsedINR);
 
     const closedCount = liveClosedPositions.length;
     const totalTrades = winCount + lossCount;
