@@ -9,6 +9,7 @@ class MudrexLiveAdapter {
     this.liveClosedPositions = [];
     this.processedRates = new Set();
     this.pairCounter = 1;
+    this.userClosedRealPositionIds = new Set();
 
     this.initFromStorage();
 
@@ -483,6 +484,7 @@ class MudrexLiveAdapter {
     this.liveOpenPositions = [];
     this.liveClosedPositions = [];
     this.processedRates.clear();
+    this.userClosedRealPositionIds.clear();
     this.pairCounter = 1;
   }
 
@@ -494,9 +496,16 @@ class MudrexLiveAdapter {
     const exitPrice = rateInfo.price || 90.61;
     const usdInrRate = rateInfo.usdInrRate || 86.5;
 
+    if (positionId) {
+      this.userClosedRealPositionIds.add(positionId);
+    }
+
     for (let i = this.liveOpenPositions.length - 1; i >= 0; i--) {
       const pos = this.liveOpenPositions[i];
-      if (pos.positionId === positionId || pos.id === positionId) {
+      if (pos.positionId === positionId || pos.id === positionId || pos.pairId === positionId) {
+        if (pos.positionId) this.userClosedRealPositionIds.add(pos.positionId);
+        if (pos.pairId) this.userClosedRealPositionIds.add(pos.pairId);
+
         pos.status = 'CLOSED';
         pos.exitPrice = exitPrice;
         pos.exitTime = new Date().toISOString();
@@ -540,7 +549,20 @@ class MudrexLiveAdapter {
             list = [res.data];
           }
 
-          const parsedPositions = list.map((item, idx) => {
+          const activeList = list.filter(item => {
+            if (!item || typeof item !== 'object') return false;
+            const statusStr = String(item.status || item.position_status || item.state || item.order_status || '').toUpperCase();
+            if (['CLOSED', 'FILLED', 'CANCELLED', 'EXPIRED', 'COMPLETED', 'REJECTED', 'DONE', 'INACTIVE'].includes(statusStr)) {
+              return false;
+            }
+            if (item.closed === true || item.is_closed === true) return false;
+            if (item.quantity !== undefined && Number(item.quantity || item.qty || 0) <= 0) return false;
+            const posId = item.position_id || item.id || item.order_id;
+            if (posId && this.userClosedRealPositionIds.has(posId)) return false;
+            return true;
+          });
+
+          const parsedPositions = activeList.map((item, idx) => {
             const direction = (item.side || item.direction || item.order_type || 'BUY').toUpperCase().includes('SHORT') || (item.side === 'SELL') ? 'SELL' : 'BUY';
             const entryPrice = Number(item.entry_price || item.price || item.entryPrice || 91.15);
             const qty = Number(item.quantity || item.qty || 1.0);
