@@ -1541,9 +1541,19 @@ function checkMudrexAuthStatus() {
           </div>
         `;
       } else {
+        let cleanErr = 'Mudrex API Secret Key missing or invalid.';
+        if (typeof res.error === 'string') {
+          if (res.error.includes('3100') || res.error.includes('Invalid Authentication')) {
+            cleanErr = 'Invalid Mudrex API Secret Key. Please verify your Secret Key.';
+          } else if (res.error.includes('MUDREX_API_SECRET missing')) {
+            cleanErr = 'Mudrex API Secret Key not configured.';
+          } else {
+            cleanErr = res.error;
+          }
+        }
         container.innerHTML = `
-          <div style="color:#f87171; font-weight:700;">⚠️ MUDREX LIVE API AUTHENTICATION REQUIRED</div>
-          <div style="color:var(--text-muted); margin-top:4px; font-size:0.78rem;">${res.error || 'MUDREX_API_SECRET missing in environment.'}</div>
+          <div style="color:#fbbf24; font-weight:700;">💡 PURE PAPER SIMULATION ACTIVE (MUDREX REAL API NOT CONNECTED)</div>
+          <div style="color:var(--text-muted); margin-top:4px; font-size:0.8rem;">${cleanErr} Click <strong>🔑 Mudrex API Keys</strong> above to connect your Mudrex Account for Real Execution.</div>
         `;
       }
     })

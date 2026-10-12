@@ -427,7 +427,14 @@ class MudrexLiveAdapter {
       };
     }
 
-    return spotRes.error ? spotRes : (futRes.error ? futRes : { success: false, error: 'Failed to authenticate with Mudrex API' });
+    if (!spotRes.success && !futRes.success) {
+      let errStr = spotRes.error || futRes.error || 'Failed to authenticate with Mudrex API';
+      if (typeof errStr === 'object') errStr = JSON.stringify(errStr);
+      if (errStr.includes('3100') || errStr.includes('Invalid Authentication')) {
+        errStr = 'Invalid Mudrex API Secret Key. Please verify your Secret Key.';
+      }
+      return { success: false, error: errStr };
+    }
   }
 
   async fetchWalletBalance() {
