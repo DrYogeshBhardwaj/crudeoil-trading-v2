@@ -130,33 +130,14 @@ class DatabaseManager {
         } catch (e) {}
       }
 
-      if (jsonBackupState) {
-        if (!dbState) return jsonBackupState;
-
-        // Merge closedPositions from JSON backup if SQLite has fewer
-        if (Array.isArray(jsonBackupState.closedPositions) && jsonBackupState.closedPositions.length > dbState.closedPositions.length) {
-          console.log(`[DBMS] Merging ${jsonBackupState.closedPositions.length} closed positions from JSON backup.`);
-          const existingClosedIds = new Set(dbState.closedPositions.map(c => c.positionId));
-          for (const cp of jsonBackupState.closedPositions) {
-            if (!existingClosedIds.has(cp.positionId)) {
-              dbState.closedPositions.push(cp);
-              existingClosedIds.add(cp.positionId);
-            }
-          }
-        }
-        if (Array.isArray(jsonBackupState.liveClosedPositions) && (!dbState.liveClosedPositions || jsonBackupState.liveClosedPositions.length > dbState.liveClosedPositions.length)) {
-          const existingLiveClosedIds = new Set((dbState.liveClosedPositions || []).map(c => c.positionId));
-          dbState.liveClosedPositions = dbState.liveClosedPositions || [];
-          for (const cp of jsonBackupState.liveClosedPositions) {
-            if (!existingLiveClosedIds.has(cp.positionId)) {
-              dbState.liveClosedPositions.push(cp);
-              existingLiveClosedIds.add(cp.positionId);
-            }
-          }
-        }
+      let finalState = dbState || jsonBackupState;
+      if (finalState) {
+        finalState.isEngineRunning = true;
+        if (!finalState.settings) finalState.settings = {};
+        finalState.settings.strategyMode = 'ALTERNATING_STAGGERED';
+        finalState.settings.maxActivePairs = 50;
+        return finalState;
       }
-
-      if (dbState) return dbState;
     } catch (err) {
       console.error('[DBMS] Error loading state from DBMS:', err);
     }
