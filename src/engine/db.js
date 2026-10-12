@@ -135,7 +135,7 @@ class DatabaseManager {
         finalState.isEngineRunning = true;
         if (!finalState.settings) finalState.settings = {};
         finalState.settings.strategyMode = 'ALTERNATING_STAGGERED';
-        finalState.settings.maxActivePairs = 300;
+        finalState.settings.maxActivePairs = 500;
         finalState.settings.startingCapitalINR = 82978;
         finalState.settings.tradingMode = 'LIVE';
         finalState.settings.realOrdersDisabled = false;
@@ -289,7 +289,7 @@ class DatabaseManager {
         profitTargetMode: "PRICE_MOVE",
         strategyMode: "ALTERNATING_STAGGERED",
         priceMatchingTolerance: 0.0001,
-        maxActivePairs: 300,
+        maxActivePairs: 500,
         tradingMode: "LIVE",
         realOrdersDisabled: false,
         instrument: "CLUSDT",

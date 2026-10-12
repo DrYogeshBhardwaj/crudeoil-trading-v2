@@ -8,7 +8,7 @@
     "profitTargetMove": 1,
     "autoAiTargetMode": true,
     "targetDisabled": false,
-    "maxActivePairs": 300,
+    "maxActivePairs": 500,
     "dailyLossCircuitBreakerINR": 2000,
     "takerFeeRate": 0.0005,
     "gstRate": 0.18,
@@ -23,8 +23,8 @@
   "closedPositions": [],
   "auditLogs": [
     {
-      "id": "LOG-1791830062402-651",
-      "timestamp": "2026-10-12T18:34:22.402Z",
+      "id": "LOG-1791830412159-859",
+      "timestamp": "2026-10-12T18:40:12.159Z",
       "event": "ENGINE_RESET",
       "details": "All engine paper positions, processed rates, and history reset to ₹1,00,000 capital."
     }
