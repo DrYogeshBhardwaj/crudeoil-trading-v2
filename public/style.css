@@ -902,26 +902,72 @@ table.data-table tr:hover {
   margin-top: 14px;
 }
 
+/* Enhanced Mobile Responsiveness for Summary Cards, KPI Grids, & Forms */
 @media (max-width: 768px) {
-  .active-tables-container {
-    grid-template-columns: 1fr;
+  .kpi-grid {
+    grid-template-columns: repeat(2, 1fr) !important;
+    gap: 10px !important;
+  }
+
+  .kpi-card {
+    padding: 12px !important;
+    border-radius: 10px !important;
+  }
+
+  .kpi-card .kpi-value {
+    font-size: 1.15rem !important;
+  }
+
+  .kpi-card .kpi-title {
+    font-size: 0.7rem !important;
+  }
+
+  .form-grid {
+    grid-template-columns: 1fr !important;
+    gap: 12px !important;
+  }
+
+  .calc-hero {
+    padding: 14px !important;
+    border-radius: 12px !important;
+  }
+
+  .fee-formula-box {
+    font-size: 0.78rem !important;
+    padding: 10px 12px !important;
+  }
+
+  .safety-banner {
+    font-size: 0.7rem !important;
+    padding: 4px 8px !important;
+  }
+
+  header.app-header {
+    flex-direction: column !important;
+    gap: 10px !important;
+    align-items: stretch !important;
+    padding: 10px 14px !important;
+  }
+
+  .header-actions {
+    display: flex !important;
+    flex-wrap: wrap !important;
+    gap: 6px !important;
+    justify-content: space-between !important;
+  }
+
+  .header-actions .btn {
+    flex: 1 1 auto !important;
+    text-align: center !important;
+    padding: 6px 10px !important;
+    font-size: 0.75rem !important;
   }
 }
 
-.active-table-card {
-  border-radius: 8px;
-  padding: 12px;
-  overflow-x: auto;
-}
-
-.active-table-card.buy-card {
-  background: rgba(16, 185, 129, 0.04);
-  border: 1px solid rgba(16, 185, 129, 0.25);
-}
-
-.active-table-card.sell-card {
-  background: rgba(239, 68, 68, 0.04);
-  border: 1px solid rgba(239, 68, 68, 0.25);
+@media (max-width: 480px) {
+  .kpi-grid {
+    grid-template-columns: 1fr !important;
+  }
 }
 
 
