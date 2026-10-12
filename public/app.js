@@ -215,6 +215,180 @@ function fetchMetricsFallback() {
     .catch(e => console.error('Metrics fetch error:', e));
 }
 
+let tickHistory = [];
+
+function recordPriceTick(price) {
+  if (typeof price !== 'number' || isNaN(price) || price <= 0) return;
+  const now = Date.now();
+  if (tickHistory.length === 0 || tickHistory[tickHistory.length - 1].price !== price || (now - tickHistory[tickHistory.length - 1].time) > 2000) {
+    tickHistory.push({ time: now, price });
+    if (tickHistory.length > 150) {
+      tickHistory.shift();
+    }
+  }
+}
+
+function drawLiveCanvasChart(canvasId, livePrice, nearestBuyTarget, nearestSellTarget) {
+  const canvas = document.getElementById(canvasId);
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
+  
+  const rect = canvas.getBoundingClientRect();
+  if (rect.width === 0 || rect.height === 0) return;
+
+  const dpr = window.devicePixelRatio || 1;
+  canvas.width = rect.width * dpr;
+  canvas.height = rect.height * dpr;
+  ctx.scale(dpr, dpr);
+
+  const w = rect.width;
+  const h = rect.height;
+
+  const bgGrad = ctx.createLinearGradient(0, 0, 0, h);
+  bgGrad.addColorStop(0, '#090d16');
+  bgGrad.addColorStop(1, '#05070c');
+  ctx.fillStyle = bgGrad;
+  ctx.fillRect(0, 0, w, h);
+
+  if (tickHistory.length < 2) {
+    ctx.fillStyle = '#64748b';
+    ctx.font = '600 13px Inter, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('⚡ Connecting to Live Stream & Plotting Ticks...', w / 2, h / 2);
+    return;
+  }
+
+  const paddingRight = 95;
+  const paddingTop = 20;
+  const paddingBottom = 25;
+  const paddingLeft = 15;
+
+  const chartWidth = w - paddingLeft - paddingRight;
+  const chartHeight = h - paddingTop - paddingBottom;
+
+  let minPrice = Infinity;
+  let maxPrice = -Infinity;
+
+  tickHistory.forEach(t => {
+    if (t.price < minPrice) minPrice = t.price;
+    if (t.price > maxPrice) maxPrice = t.price;
+  });
+
+  if (nearestBuyTarget && nearestBuyTarget > maxPrice) maxPrice = nearestBuyTarget;
+  if (nearestSellTarget && nearestSellTarget < minPrice) minPrice = nearestSellTarget;
+
+  const priceRange = maxPrice - minPrice || 0.40;
+  minPrice = Math.max(0, minPrice - priceRange * 0.12);
+  maxPrice = maxPrice + priceRange * 0.12;
+
+  const getX = (i) => paddingLeft + (i / (tickHistory.length - 1)) * chartWidth;
+  const getY = (p) => paddingTop + (1 - (p - minPrice) / (maxPrice - minPrice)) * chartHeight;
+
+  // Horizontal Grid Lines
+  ctx.strokeStyle = 'rgba(255, 255, 255, 0.05)';
+  ctx.lineWidth = 1;
+  ctx.font = '11px monospace';
+  ctx.fillStyle = '#64748b';
+  ctx.textAlign = 'left';
+
+  const gridSteps = 4;
+  for (let step = 0; step <= gridSteps; step++) {
+    const val = minPrice + (step / gridSteps) * (maxPrice - minPrice);
+    const y = getY(val);
+
+    ctx.beginPath();
+    ctx.moveTo(paddingLeft, y);
+    ctx.lineTo(w - paddingRight, y);
+    ctx.stroke();
+
+    ctx.fillText(`$${val.toFixed(2)}`, w - paddingRight + 8, y + 4);
+  }
+
+  // Gradient under curve
+  const isUp = tickHistory[tickHistory.length - 1].price >= tickHistory[0].price;
+  const strokeColor = isUp ? '#10b981' : '#38bdf8';
+
+  const areaGrad = ctx.createLinearGradient(0, paddingTop, 0, h - paddingBottom);
+  areaGrad.addColorStop(0, isUp ? 'rgba(16, 185, 129, 0.3)' : 'rgba(56, 189, 248, 0.3)');
+  areaGrad.addColorStop(1, 'rgba(15, 23, 42, 0.0)');
+
+  ctx.beginPath();
+  ctx.moveTo(getX(0), getY(tickHistory[0].price));
+  for (let i = 1; i < tickHistory.length; i++) {
+    ctx.lineTo(getX(i), getY(tickHistory[i].price));
+  }
+  ctx.lineTo(getX(tickHistory.length - 1), h - paddingBottom);
+  ctx.lineTo(getX(0), h - paddingBottom);
+  ctx.closePath();
+  ctx.fillStyle = areaGrad;
+  ctx.fill();
+
+  // Price Line
+  ctx.beginPath();
+  ctx.strokeStyle = strokeColor;
+  ctx.lineWidth = 2.5;
+  ctx.moveTo(getX(0), getY(tickHistory[0].price));
+  for (let i = 1; i < tickHistory.length; i++) {
+    ctx.lineTo(getX(i), getY(tickHistory[i].price));
+  }
+  ctx.stroke();
+
+  // Draw BUY Target Line
+  if (nearestBuyTarget) {
+    const buyY = getY(nearestBuyTarget);
+    ctx.setLineDash([6, 4]);
+    ctx.strokeStyle = '#10b981';
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.moveTo(paddingLeft, buyY);
+    ctx.lineTo(w - paddingRight, buyY);
+    ctx.stroke();
+    ctx.setLineDash([]);
+
+    ctx.fillStyle = '#10b981';
+    ctx.font = 'bold 11px Inter, sans-serif';
+    ctx.fillText(`🎯 BUY $${nearestBuyTarget.toFixed(2)}`, w - paddingRight + 8, buyY + 4);
+  }
+
+  // Draw SELL Target Line
+  if (nearestSellTarget) {
+    const sellY = getY(nearestSellTarget);
+    ctx.setLineDash([6, 4]);
+    ctx.strokeStyle = '#ef4444';
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.moveTo(paddingLeft, sellY);
+    ctx.lineTo(w - paddingRight, sellY);
+    ctx.stroke();
+    ctx.setLineDash([]);
+
+    ctx.fillStyle = '#ef4444';
+    ctx.font = 'bold 11px Inter, sans-serif';
+    ctx.fillText(`🎯 SELL $${nearestSellTarget.toFixed(2)}`, w - paddingRight + 8, sellY + 4);
+  }
+
+  // Current Live Price Pulse Point
+  const lastI = tickHistory.length - 1;
+  const lastX = getX(lastI);
+  const lastY = getY(tickHistory[lastI].price);
+
+  ctx.beginPath();
+  ctx.arc(lastX, lastY, 5, 0, Math.PI * 2);
+  ctx.fillStyle = strokeColor;
+  ctx.fill();
+  ctx.lineWidth = 2;
+  ctx.strokeStyle = '#ffffff';
+  ctx.stroke();
+
+  // Live Price Badge on Y-Axis
+  ctx.fillStyle = strokeColor;
+  ctx.fillRect(w - paddingRight + 2, lastY - 11, 84, 22);
+
+  ctx.fillStyle = '#0f172a';
+  ctx.font = 'bold 12px monospace';
+  ctx.fillText(`$${tickHistory[lastI].price.toFixed(2)}`, w - paddingRight + 8, lastY + 4);
+}
+
 function renderDashboard(data) {
   const { rateFeedInfo, summary, settings, engineStatus, pauseReason, isEngineRunning, lastProcessedRate, processedRatesCount, openPositions, closedPositions, auditLogs } = data;
 
@@ -372,49 +546,58 @@ function renderDashboard(data) {
     if (nearestSellTarget !== null) distSell = livePrice - nearestSellTarget;
   }
 
+  if (newPrice) {
+    recordPriceTick(newPrice);
+  }
+
   const liveRateStr = livePrice ? `$${livePrice.toFixed(priceDec)}` : 'FETCHING...';
   const buyTargetStr = nearestBuyTarget !== null ? `$${nearestBuyTarget.toFixed(priceDec)}` : 'No Target';
-  const buyDistStr = distBuy !== null ? `(Move +$${distBuy.toFixed(priceDec)} to exit)` : '';
+  const buyDistStr = distBuy !== null ? `(+$${distBuy.toFixed(priceDec)})` : '';
   const sellTargetStr = nearestSellTarget !== null ? `$${nearestSellTarget.toFixed(priceDec)}` : 'No Target';
-  const sellDistStr = distSell !== null ? `(Move -$${distSell.toFixed(priceDec)} to exit)` : '';
+  const sellDistStr = distSell !== null ? `(-$${distSell.toFixed(priceDec)})` : '';
   const floatNetStr = `₹${summary.floatingNetINR.toFixed(2)}`;
   const floatNetClass = summary.floatingNetINR >= 0 ? 'text-green' : 'text-red';
 
-  // Active Tab Quick Bar & Mudrex Live Quick Bar
-  if (document.getElementById('quickRateVal')) document.getElementById('quickRateVal').innerText = liveRateStr;
-  if (document.getElementById('quickBuyTargetVal')) document.getElementById('quickBuyTargetVal').innerText = buyTargetStr;
-  if (document.getElementById('quickBuyDistVal')) document.getElementById('quickBuyDistVal').innerText = buyDistStr;
-  if (document.getElementById('quickSellTargetVal')) document.getElementById('quickSellTargetVal').innerText = sellTargetStr;
-  if (document.getElementById('quickSellDistVal')) document.getElementById('quickSellDistVal').innerText = sellDistStr;
-  const qFloatEl = document.getElementById('quickFloatingNetVal');
-  if (qFloatEl) {
-    qFloatEl.innerText = floatNetStr;
-    qFloatEl.className = `quick-tracker-val ${floatNetClass}`;
+  // Update Main CLUSDT Live Rate Text (VERY LARGE BOLD TEXT)
+  const mainCrudeRateEl = document.getElementById('mainCrudeLiveRate');
+  if (mainCrudeRateEl) {
+    mainCrudeRateEl.innerText = liveRateStr;
+    mainCrudeRateEl.style.color = (tickHistory.length >= 2 && tickHistory[tickHistory.length - 1].price >= tickHistory[0].price) ? '#38bdf8' : '#38bdf8';
+  }
+  const mainCrudeRateIndexEl = document.getElementById('mainCrudeLiveRateIndex');
+  if (mainCrudeRateIndexEl) mainCrudeRateIndexEl.innerText = liveRateStr;
+
+  const symbolLabelText = `🛢️ ${symbolLabels[currentSymbol] || currentSymbol} LIVE RATE`;
+  if (document.getElementById('unifiedSymbolLabel')) document.getElementById('unifiedSymbolLabel').innerText = symbolLabelText;
+  if (document.getElementById('unifiedSymbolLabelIndex')) document.getElementById('unifiedSymbolLabelIndex').innerText = symbolLabelText;
+
+  // Single Line Unified Metrics
+  const uFloatEl = document.getElementById('unifiedFloatingNet');
+  if (uFloatEl) {
+    uFloatEl.innerText = floatNetStr;
+    uFloatEl.className = floatNetClass;
+  }
+  const uFloatIndexEl = document.getElementById('unifiedFloatingNetIndex');
+  if (uFloatIndexEl) {
+    uFloatIndexEl.innerText = floatNetStr;
+    uFloatIndexEl.className = floatNetClass;
   }
 
-  // Mudrex Live Terminal Tab Quick Bar
-  if (document.getElementById('mudrexLiveRateVal')) document.getElementById('mudrexLiveRateVal').innerText = liveRateStr;
-  if (document.getElementById('mudrexLiveBuyTargetVal')) document.getElementById('mudrexLiveBuyTargetVal').innerText = buyTargetStr;
-  if (document.getElementById('mudrexLiveBuyDistVal')) document.getElementById('mudrexLiveBuyDistVal').innerText = buyDistStr;
-  if (document.getElementById('mudrexLiveSellTargetVal')) document.getElementById('mudrexLiveSellTargetVal').innerText = sellTargetStr;
-  if (document.getElementById('mudrexLiveSellDistVal')) document.getElementById('mudrexLiveSellDistVal').innerText = sellDistStr;
-  const mLFloatEl = document.getElementById('mudrexLiveFloatNetVal');
-  if (mLFloatEl) {
-    mLFloatEl.innerText = floatNetStr;
-    mLFloatEl.className = `quick-tracker-val ${floatNetClass}`;
-  }
+  const actPairsText = `${summary.activePairsCount} / ${summary.maxActivePairs}`;
+  if (document.getElementById('unifiedActivePairs')) document.getElementById('unifiedActivePairs').innerText = actPairsText;
+  if (document.getElementById('unifiedActivePairsIndex')) document.getElementById('unifiedActivePairsIndex').innerText = actPairsText;
 
-  // Sticky Bottom Dock
-  if (document.getElementById('dockMarketRate')) document.getElementById('dockMarketRate').innerText = liveRateStr;
-  if (document.getElementById('dockBuyTarget')) document.getElementById('dockBuyTarget').innerText = buyTargetStr;
-  if (document.getElementById('dockBuyDist')) document.getElementById('dockBuyDist').innerText = buyDistStr;
-  if (document.getElementById('dockSellTarget')) document.getElementById('dockSellTarget').innerText = sellTargetStr;
-  if (document.getElementById('dockSellDist')) document.getElementById('dockSellDist').innerText = sellDistStr;
-  const dFloatEl = document.getElementById('dockFloatingNet');
-  if (dFloatEl) {
-    dFloatEl.innerText = floatNetStr;
-    dFloatEl.className = `dock-val ${floatNetClass}`;
-  }
+  const buyTargetFull = distBuy !== null ? `${buyTargetStr} ${buyDistStr}` : buyTargetStr;
+  if (document.getElementById('unifiedBuyTarget')) document.getElementById('unifiedBuyTarget').innerText = buyTargetFull;
+  if (document.getElementById('unifiedBuyTargetIndex')) document.getElementById('unifiedBuyTargetIndex').innerText = buyTargetFull;
+
+  const sellTargetFull = distSell !== null ? `${sellTargetStr} ${sellDistStr}` : sellTargetStr;
+  if (document.getElementById('unifiedSellTarget')) document.getElementById('unifiedSellTarget').innerText = sellTargetFull;
+  if (document.getElementById('unifiedSellTargetIndex')) document.getElementById('unifiedSellTargetIndex').innerText = sellTargetFull;
+
+  // Render Canvas Charts
+  drawLiveCanvasChart('livePriceCanvas', livePrice, nearestBuyTarget, nearestSellTarget);
+  drawLiveCanvasChart('livePriceCanvasIndex', livePrice, nearestBuyTarget, nearestSellTarget);
 
   // Closed Positions History Top Summary Bar
   if (document.getElementById('closedSummaryCount')) document.getElementById('closedSummaryCount').innerText = `${summary.closedPositionsCount}`;

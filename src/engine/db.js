@@ -184,7 +184,7 @@ class DatabaseManager {
         // Sync Active Pairs
         this.db.prepare('DELETE FROM active_pairs').run();
         if (Array.isArray(state.pairs)) {
-          const insertPair = this.db.prepare('INSERT INTO active_pairs (pair_id, symbol, created_time, created_timestamp, entry_rate, status, data) VALUES (?, ?, ?, ?, ?, ?, ?)');
+          const insertPair = this.db.prepare('INSERT OR REPLACE INTO active_pairs (pair_id, symbol, created_time, created_timestamp, entry_rate, status, data) VALUES (?, ?, ?, ?, ?, ?, ?)');
           for (const pair of state.pairs) {
             insertPair.run(
               pair.pairId,
