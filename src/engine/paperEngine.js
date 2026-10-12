@@ -445,16 +445,16 @@ class PaperEngine {
     const pairSeq = (this.pairs.length + 1).toString().padStart(4, '0');
     const pairId = `PAIR-${pairSeq}`;
     
-    let bMove = this.settings.buyTargetMove || this.settings.profitTargetMove || 0.20;
-    let sMove = this.settings.sellTargetMove || this.settings.profitTargetMove || 0.20;
+    let bMove = (this.settings.profitTargetMode === 'PRICE_MOVE' && this.settings.profitTargetMove !== undefined) ? this.settings.profitTargetMove : (this.settings.buyTargetMove || this.settings.profitTargetMove || 0.20);
+    let sMove = (this.settings.profitTargetMode === 'PRICE_MOVE' && this.settings.profitTargetMove !== undefined) ? this.settings.profitTargetMove : (this.settings.sellTargetMove || this.settings.profitTargetMove || 0.20);
 
-    if (this.settings.strategyMode === 'ALTERNATING_STAGGERED') {
+    if (this.settings.profitTargetMode === 'STRATEGY' || (this.settings.strategyMode === 'ALTERNATING_STAGGERED' && this.settings.profitTargetMode !== 'PRICE_MOVE')) {
       const altIdx = this.pairs.length % 4;
       if (altIdx === 0) { bMove = 0.20; sMove = 0.20; }
       else if (altIdx === 1) { bMove = 0.20; sMove = 0.30; }
       else if (altIdx === 2) { bMove = 0.30; sMove = 0.20; }
       else { bMove = 0.15; sMove = 0.25; }
-    } else if (this.settings.autoAiTargetMode) {
+    } else if (this.settings.autoAiTargetMode && this.settings.profitTargetMode !== 'PRICE_MOVE') {
       try {
         const mudrexLive = require('./mudrexLiveAdapter');
         const aiInfo = mudrexLive.calculateAiTargets();
@@ -909,6 +909,10 @@ class PaperEngine {
 
   resetAllData() {
     this.settings.startingCapitalINR = 100000;
+    this.settings.profitTargetMode = 'PRICE_MOVE';
+    this.settings.strategyMode = 'SINGLE';
+    delete this.settings.buyTargetMove;
+    delete this.settings.sellTargetMove;
     this.pairs = [];
     this.closedPositions = [];
     this.auditLogs = [];
