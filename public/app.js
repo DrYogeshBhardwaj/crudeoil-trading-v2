@@ -1547,20 +1547,27 @@ function checkMudrexAuthStatus() {
           </div>
         `;
       } else {
-        let cleanErr = 'Mudrex Real API not connected.';
-        if (typeof res.error === 'string') {
-          if (res.error.includes('3100') || res.error.includes('Invalid Authentication')) {
-            cleanErr = 'Invalid Mudrex API Secret Key. Please verify your Secret Key.';
-          } else if (res.error.includes('MUDREX_API_SECRET missing') || res.error.includes('RATE_LIMIT_COOLDOWN') || res.error.includes('rate limit')) {
-            cleanErr = 'Mudrex Real API not connected.';
-          } else {
-            cleanErr = res.error;
+        if (typeof res.error === 'string' && (res.error.includes('RATE_LIMIT_COOLDOWN') || res.error.includes('rate limit'))) {
+          container.innerHTML = `
+            <div style="color:#a7f3d0; font-weight:700;">✅ MUDREX API KEYS CONNECTED & ACTIVE!</div>
+            <div style="color:var(--text-muted); margin-top:4px; font-size:0.8rem;">Mudrex API rate limit cooldown active for 30s. Real order execution is enabled.</div>
+          `;
+        } else {
+          let cleanErr = 'Mudrex Real API not connected.';
+          if (typeof res.error === 'string') {
+            if (res.error.includes('3100') || res.error.includes('Invalid Authentication')) {
+              cleanErr = 'Invalid Mudrex API Secret Key. Please verify your Secret Key.';
+            } else if (res.error.includes('MUDREX_API_SECRET missing')) {
+              cleanErr = 'Mudrex Real API keys missing.';
+            } else {
+              cleanErr = res.error;
+            }
           }
+          container.innerHTML = `
+            <div style="color:#fbbf24; font-weight:700;">💡 PURE PAPER SIMULATION ACTIVE (MUDREX REAL API NOT CONNECTED)</div>
+            <div style="color:var(--text-muted); margin-top:4px; font-size:0.8rem;">${cleanErr} Click <strong>🔑 Mudrex API Keys</strong> above to connect your Mudrex Account for Real Execution.</div>
+          `;
         }
-        container.innerHTML = `
-          <div style="color:#fbbf24; font-weight:700;">💡 PURE PAPER SIMULATION ACTIVE (MUDREX REAL API NOT CONNECTED)</div>
-          <div style="color:var(--text-muted); margin-top:4px; font-size:0.8rem;">${cleanErr} Click <strong>🔑 Mudrex API Keys</strong> above to connect your Mudrex Account for Real Execution.</div>
-        `;
       }
     })
     .catch(err => {
