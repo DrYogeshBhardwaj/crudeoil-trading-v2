@@ -722,11 +722,12 @@ class MudrexLiveAdapter {
         const realPosRes = await this.fetchPositions();
         if (realPosRes.success && Array.isArray(realPosRes.data)) {
           const freshRealIds = new Set(realPosRes.data.map(p => p.positionId));
+          // Keep only real positions fetched from Mudrex API
           this.liveOpenPositions = (this.liveOpenPositions || []).filter(p => {
             if (p.apiStatus === 'REAL_MUDREX_POSITION') {
               return freshRealIds.has(p.positionId);
             }
-            return true;
+            return false; // Purge paper simulation positions from Mudrex Live Terminal
           });
 
           for (const rPos of realPosRes.data) {
@@ -744,41 +745,13 @@ class MudrexLiveAdapter {
       liveOpenPositions = [...this.liveOpenPositions];
     }
 
-    // Merge paperEngine active and closed positions into live terminal metrics
-    const paperMetrics = paperEngine.getDashboardMetrics();
-    const paperPositions = paperMetrics.openPositions || [];
-    const paperClosed = paperMetrics.closedPositions || [];
-
-    // Build strict set of currently active open paper position IDs and closed position IDs
-    const activePaperPosIds = new Set(paperPositions.map(p => p.positionId));
-    const paperClosedPosIds = new Set(paperClosed.map(c => c.positionId));
-
-    // Purge any closed positions from liveOpenPositions
-    liveOpenPositions = (liveOpenPositions || []).filter(p => {
-      if (paperClosedPosIds.has(p.positionId)) return false;
-      if (p.status === 'CLOSED') return false;
-      if (p.apiStatus === 'REAL_MUDREX_POSITION') return true;
-      return activePaperPosIds.has(p.positionId);
-    });
-
-    // Sync current active paper positions
-    const existingPosIds = new Set(liveOpenPositions.map(p => p.positionId));
-    for (const pPos of paperPositions) {
-      if (pPos.status === 'OPEN' && !existingPosIds.has(pPos.positionId)) {
-        liveOpenPositions.push(pPos);
-        existingPosIds.add(pPos.positionId);
-      }
+    // Filter liveClosedPositions to remove old mock paper entries if real auth is active
+    if (isRealAuth) {
+      liveClosedPositions = (liveClosedPositions || []).filter(p => p.apiStatus === 'REAL_MUDREX_POSITION' || p.exitReason?.includes('MUDREX'));
     }
 
     this.liveOpenPositions = liveOpenPositions;
-
-    const existingClosedIds = new Set(liveClosedPositions.map(p => p.positionId));
-    for (const pCls of paperClosed) {
-      if (!existingClosedIds.has(pCls.positionId)) {
-        liveClosedPositions.push(pCls);
-        existingClosedIds.add(pCls.positionId);
-      }
-    }
+    this.liveClosedPositions = liveClosedPositions;
 
     let realizedGrossUSD = 0, realizedNetINR = 0;
     let winCount = 0, lossCount = 0;

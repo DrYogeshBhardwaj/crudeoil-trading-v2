@@ -45,9 +45,9 @@ class PaperEngine {
       realizedNetProfitINR: 0
     };
 
-    this.isEngineRunning = true;
-    this.engineStatus = 'RUNNING';
-    this.pauseReason = '';
+    this.isEngineRunning = false;
+    this.engineStatus = 'PAUSED';
+    this.pauseReason = 'ENGINE PAUSED BY USER — MANUAL MONITORING MODE ACTIVE';
 
     // Load persisted state if exists
     this.initFromStorage();
