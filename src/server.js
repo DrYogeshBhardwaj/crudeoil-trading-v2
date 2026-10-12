@@ -63,7 +63,7 @@ app.get(['/mudrex-crude-calc', '/mudrex_crude_calc', '/mudrex_crude_calc.html', 
 // 1. Dashboard Metrics (Supporting Mudrex Live Mode)
 app.get(['/api/metrics', '/api/mudrex/metrics', '/api/mudrex-metrics'], async (req, res) => {
   try {
-    const isMudrexLive = req.path.includes('mudrex') || req.query.mode === 'mudrex_live' || (req.headers.referer && (req.headers.referer.includes('mudrex_live') || req.headers.referer.includes('mudrex-live')));
+    const isMudrexLive = (req.path.includes('mudrex') && !req.path.includes('calc')) || req.query.mode === 'mudrex_live' || (req.headers.referer && (req.headers.referer.includes('mudrex_live') || req.headers.referer.includes('mudrex-live')) && !req.headers.referer.includes('calc'));
     let metrics;
     if (isMudrexLive) {
       const mudrexLive = require('./engine/mudrexLiveAdapter');
@@ -222,6 +222,11 @@ app.get('/paper-calc', (req, res) => {
 // Standalone MCX Commodity Trading Calculator Page Route
 app.get('/mcx-calc', (req, res) => {
   res.sendFile(path.join(__dirname, '../public/mcx_calc.html'));
+});
+
+// Standalone Mudrex Crude Calculator Page Route
+app.get(['/mudrex_crude_calc', '/mudrex-crude-calc'], (req, res) => {
+  res.sendFile(path.join(__dirname, '../public/mudrex_crude_calc.html'));
 });
 
 // Mudrex Live API Authentication Check Endpoint
