@@ -195,8 +195,17 @@
         </div>
 
         <div class="form-group">
-          <label style="color: var(--text-muted); font-weight: 600;">Max Active Pairs Cap</label>
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+            <label style="color: var(--accent-cyan); font-weight: 700;">Max Active Pairs Cap</label>
+            <span id="pairsCapInfo" style="font-size: 0.72rem; color: #a7f3d0; font-weight: 700;">(50 Pairs = High Growth)</span>
+          </div>
           <input type="number" id="pcMaxPairs" class="form-control" value="25" min="1" max="500" onchange="runPaperCalculator()">
+          <div style="display: flex; gap: 6px; margin-top: 6px; flex-wrap: wrap;">
+            <button type="button" class="pill-btn" onclick="setMaxPairsVal(10)">10 Pairs</button>
+            <button type="button" class="pill-btn" onclick="setMaxPairsVal(25)">25 Pairs</button>
+            <button type="button" class="pill-btn" style="background: rgba(16, 185, 129, 0.25); color: #34d399; border-color: #10b981; font-weight: 800;" onclick="setMaxPairsVal(50)">🔥 50 Pairs</button>
+            <button type="button" class="pill-btn" onclick="setMaxPairsVal(100)">⚡ 100 Pairs</button>
+          </div>
         </div>
 
         <div class="form-group">
@@ -307,6 +316,12 @@
 
     function setPcTargetVal(val) {
       setPcCustomTargets(val, val);
+    }
+
+    function setMaxPairsVal(val) {
+      const el = document.getElementById('pcMaxPairs');
+      if (el) el.value = val;
+      runPaperCalculator();
     }
 
     function onPcSymbolChange() {
