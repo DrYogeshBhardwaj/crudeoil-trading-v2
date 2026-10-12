@@ -5,7 +5,7 @@ class PaperEngine {
   constructor() {
     this.settings = {
       startingCapitalINR: 350000,
-      contractQuantity: 2.0,
+      contractQuantity: 5.0,
       leverage: 5,
       instrument: 'CLUSDT',
       profitTargetMode: 'PRICE_MOVE',
@@ -982,7 +982,7 @@ class PaperEngine {
 
   resetAllData() {
     this.settings.startingCapitalINR = 350000;
-    this.settings.contractQuantity = 2.0;
+    this.settings.contractQuantity = 5.0;
     this.settings.profitTargetMode = 'PRICE_MOVE';
     this.settings.strategyMode = 'ALTERNATING_STAGGERED';
     delete this.settings.buyTargetMove;

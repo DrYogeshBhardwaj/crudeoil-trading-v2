@@ -23,7 +23,7 @@ class MudrexLiveAdapter {
       autoAiTargetMode: true,
       targetDisabled: false,
       maxActivePairs: 25,
-      contractQuantity: 2.0,
+      contractQuantity: 5.0,
       leverage: 5,
       takerFeeRate: 0.00075, // 0.075% strict fee
       gstRate: 0.18, // 18% GST on fees
@@ -833,7 +833,7 @@ class MudrexLiveAdapter {
 
 
   resetLiveEngine() {
-    this.settings.contractQuantity = 2.0;
+    this.settings.contractQuantity = 5.0;
     this.liveOpenPositions = [];
     this.liveClosedPositions = [];
     this.processedRates.clear();

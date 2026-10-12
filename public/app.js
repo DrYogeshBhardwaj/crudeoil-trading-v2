@@ -681,7 +681,7 @@ function renderDashboard(data) {
   const usdInrInput = document.getElementById('settingUsdInr');
   if (usdInrInput) usdInrInput.value = settings.usdInrRate || usdInrRate;
   const qtyEl = document.getElementById('modalContractQuantity');
-  if (qtyEl) qtyEl.value = (settings.contractQuantity !== undefined && settings.contractQuantity !== null) ? settings.contractQuantity.toString() : '2.0';
+  if (qtyEl) qtyEl.value = (settings.contractQuantity !== undefined && settings.contractQuantity !== null) ? settings.contractQuantity.toString() : '5.0';
 
   // Tabs count badges
   const actTab = document.getElementById('tabActiveCount');
@@ -990,16 +990,25 @@ function renderActivePositions(positions, symbol, isDhanPage = false, pricePrefi
   const totalBuyNetINR = buyPositions.reduce((sum, p) => sum + (typeof p.floatingNetINR === 'number' ? p.floatingNetINR : 0), 0);
   const totalSellNetINR = sellPositions.reduce((sum, p) => sum + (typeof p.floatingNetINR === 'number' ? p.floatingNetINR : 0), 0);
 
-  const buy1B = buyPositions.filter(p => (p.quantity || 1.0) < 2).length;
-  const buy2B = buyPositions.filter(p => (p.quantity || 1.0) >= 2).length;
-  const sell1B = sellPositions.filter(p => (p.quantity || 1.0) < 2).length;
-  const sell2B = sellPositions.filter(p => (p.quantity || 1.0) >= 2).length;
+  const buyCounts = {};
+  buyPositions.forEach(p => {
+    const q = p.quantity || 5.0;
+    buyCounts[q] = (buyCounts[q] || 0) + 1;
+  });
+  const sellCounts = {};
+  sellPositions.forEach(p => {
+    const q = p.quantity || 5.0;
+    sellCounts[q] = (sellCounts[q] || 0) + 1;
+  });
+
+  const buyDetailStr = Object.entries(buyCounts).map(([q, count]) => `${count}x ${q}-B`).join(', ');
+  const sellDetailStr = Object.entries(sellCounts).map(([q, count]) => `${count}x ${q}-B`).join(', ');
 
   if (buyBadge) {
-    buyBadge.innerText = buy2B > 0 ? `${buyPositions.length} Active (${buy1B} 1-B, ${buy2B} 2-B)` : `${buyPositions.length} Active`;
+    buyBadge.innerText = buyPositions.length > 0 ? `${buyPositions.length} Active (${buyDetailStr})` : `0 Active`;
   }
   if (sellBadge) {
-    sellBadge.innerText = sell2B > 0 ? `${sellPositions.length} Active (${sell1B} 1-B, ${sell2B} 2-B)` : `${sellPositions.length} Active`;
+    sellBadge.innerText = sellPositions.length > 0 ? `${sellPositions.length} Active (${sellDetailStr})` : `0 Active`;
   }
 
   const totalBuyNetUSD = totalBuyNetINR / usdRate;
@@ -1052,10 +1061,10 @@ function renderActivePositions(positions, symbol, isDhanPage = false, pricePrefi
       const floatingNetINR = typeof pos.floatingNetINR === 'number' ? pos.floatingNetINR : 0;
       const posFloatingNetUSD = floatingNetINR / usdRate;
 
-      const qtyVal = typeof pos.quantity === 'number' ? pos.quantity : 1.0;
-      const qtyLabel = qtyVal >= 2 ? '2 Barrels' : '1 Barrel';
-      const qtyBg = qtyVal >= 2 ? 'rgba(245, 158, 11, 0.25)' : 'rgba(56, 189, 248, 0.25)';
-      const qtyColor = qtyVal >= 2 ? '#f59e0b' : '#38bdf8';
+      const qtyVal = typeof pos.quantity === 'number' ? pos.quantity : 5.0;
+      const qtyLabel = `${qtyVal} Barrel${qtyVal > 1 ? 's' : ''}`;
+      const qtyBg = qtyVal >= 5 ? 'rgba(245, 158, 11, 0.25)' : 'rgba(56, 189, 248, 0.25)';
+      const qtyColor = qtyVal >= 5 ? '#f59e0b' : '#38bdf8';
 
       const dist = targetPrice !== null ? Math.abs(targetPrice - currentPrice) : null;
       const distUSD = dist !== null ? (dist / priceMultiplier) : null;
@@ -1636,7 +1645,7 @@ function saveModalSettings() {
   const usdInrInput = document.getElementById('settingUsdInr');
 
   const capital = capitalInput ? parseFloat(capitalInput.value) || 350000 : 350000;
-  const qty = qtyInput ? parseFloat(qtyInput.value) || 2.0 : 2.0;
+  const qty = qtyInput ? parseFloat(qtyInput.value) || 5.0 : 5.0;
   const lev = levInput ? parseInt(levInput.value) || 5 : 5;
   const targetVal = targetSelect ? targetSelect.value : '0.20';
   const targetDisabled = targetVal === 'DISABLED';
