@@ -767,7 +767,8 @@ class MudrexLiveAdapter {
     const paperEngine = require('./paperEngine');
     const rateInfo = rateFeed.getCurrentRate('CLUSDT');
     
-    let startingCapital = paperEngine.settings.startingCapitalINR || 350000;
+    let startingCapital = Math.max(350000, paperEngine.settings.startingCapitalINR || 350000);
+    paperEngine.settings.startingCapitalINR = startingCapital;
 
     let liveOpenPositions = [];
 

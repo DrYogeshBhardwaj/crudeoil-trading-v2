@@ -825,7 +825,9 @@ class PaperEngine {
       }
     }
 
-    const realizedBalanceINR = this.settings.startingCapitalINR + realizedNetINR;
+    const startingCap = Math.max(350000, this.settings.startingCapitalINR || 350000);
+    this.settings.startingCapitalINR = startingCap;
+    const realizedBalanceINR = startingCap + realizedNetINR;
     const totalEquityINR = realizedBalanceINR + floatingNetINR;
     const availableMarginINR = Math.max(0, totalEquityINR - marginUsedINR);
     const activePairsCount = this.getActivePairsCount();
