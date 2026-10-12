@@ -898,7 +898,7 @@ class MudrexLiveAdapter {
         floatingNetINR,
         totalEquityINR,
         marginUsedINR,
-        availableMarginINR: Math.max(0, totalEquityINR - marginUsedINR),
+        availableMarginINR: Math.max(0, (displayStartingCap || 350000) - marginUsedINR),
         activePairsCount: realActivePairsCount,
         maxActivePairs: paperEngine.settings.maxActivePairs || 25,
         pairs1B,

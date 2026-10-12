@@ -342,17 +342,19 @@ class PaperEngine {
     }
 
     // 6. Check Available Margin for NEW Pair (1 BUY + 1 SELL of 2 Barrels)
-    const metrics = this.getDashboardMetrics();
     const qty = this.settings.contractQuantity || 2.0;
     const mult = this.contractMultipliers[symbol] || 1.0;
-    const leverage = this.settings.leverage;
+    const leverage = this.settings.leverage || 5;
     const reqMarginPairINR = ((normalizedPrice * qty * mult * usdInrRate) / leverage) * 2;
 
-    if (metrics.summary.availableMarginINR < reqMarginPairINR) {
+    const paperMarginUsedINR = activePairs.length * reqMarginPairINR;
+    const paperAvailableMarginINR = Math.max(0, (this.settings.startingCapitalINR || 350000) - paperMarginUsedINR);
+
+    if (paperAvailableMarginINR < reqMarginPairINR) {
       this.engineStatus = 'PAUSED';
-      this.pauseReason = `PAUSED — INSUFFICIENT MARGIN (Required: ₹${reqMarginPairINR.toFixed(2)}, Available: ₹${metrics.summary.availableMarginINR.toFixed(2)})`;
+      this.pauseReason = `PAUSED — INSUFFICIENT MARGIN (Required: ₹${reqMarginPairINR.toFixed(2)}, Available: ₹${paperAvailableMarginINR.toFixed(2)})`;
       if (this.lastSkippedRate !== `MARGIN-${normalizedPrice}`) {
-        this.logAudit('ENTRY_REJECTED', `ENTRY REJECTED — INSUFFICIENT MARGIN (Required ₹${reqMarginPairINR.toFixed(2)} for 2 Barrels Pair, Available: ₹${metrics.summary.availableMarginINR.toFixed(2)})`);
+        this.logAudit('ENTRY_REJECTED', `ENTRY REJECTED — INSUFFICIENT MARGIN (Required ₹${reqMarginPairINR.toFixed(2)} for 2 Barrels Pair, Available: ₹${paperAvailableMarginINR.toFixed(2)})`);
         this.lastSkippedRate = `MARGIN-${normalizedPrice}`;
       }
       return;
