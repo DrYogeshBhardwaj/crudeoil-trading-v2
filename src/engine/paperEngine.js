@@ -250,7 +250,7 @@ class PaperEngine {
       return;
     }
 
-    if (this.pauseReason && this.pauseReason.includes('STALE MARKET FEED')) {
+    if (this.isEngineRunning && (this.engineStatus === 'PAUSED' || (this.pauseReason && this.pauseReason.includes('STALE MARKET FEED')))) {
       this.engineStatus = 'RUNNING';
       this.pauseReason = '';
       this.logAudit('FEED_RESUMED', `Market feed for ${symbol} recovered. Resuming new pair creation.`);
