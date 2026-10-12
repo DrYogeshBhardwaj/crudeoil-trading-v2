@@ -410,10 +410,16 @@ class MudrexLiveAdapter {
     return { success: false, error: auth.error || 'Failed to fetch Mudrex wallet balance' };
   }
 
+  isRealExecutionEnabled() {
+    if (process.env.DISABLE_REAL_MUDREX_ORDERS === 'true') return false;
+    if (process.env.ENABLE_REAL_MUDREX_ORDERS === 'true' || process.env.ENABLE_REAL_MUDREX_ORDERS === '1') return true;
+    const paperEngine = require('./paperEngine');
+    return paperEngine.settings.realOrdersDisabled === false;
+  }
+
   async createRealOrder({ symbol, side, quantity, leverage, targetPrice }) {
-    // HARD SAFETY LOCK: NEVER PLACE REAL ORDERS UNLESS EXPLICITLY PERMITTED BY ENV VARIABLE
-    if (process.env.ENABLE_REAL_MUDREX_ORDERS !== 'true') {
-      console.log('[Mudrex Live Adapter] HARD LOCK: Real order placement is strictly DISABLED. Pure paper mode active.');
+    if (!this.isRealExecutionEnabled()) {
+      console.log('[Mudrex Live Adapter] Real order execution disabled. Pure paper mode active.');
       return { success: false, error: 'REAL_ORDERS_DISABLED_PURE_PAPER_MODE' };
     }
 
@@ -453,9 +459,8 @@ class MudrexLiveAdapter {
   }
 
   async closeRealPosition(positionId, symbol = 'CLUSDT') {
-    // HARD SAFETY LOCK: NEVER CLOSE REAL POSITIONS UNLESS EXPLICITLY PERMITTED BY ENV VARIABLE
-    if (process.env.ENABLE_REAL_MUDREX_ORDERS !== 'true') {
-      console.log('[Mudrex Live Adapter] HARD LOCK: Real position closing is strictly DISABLED. Pure paper mode active.');
+    if (!this.isRealExecutionEnabled()) {
+      console.log('[Mudrex Live Adapter] Real position closing disabled. Pure paper mode active.');
       return { success: false, error: 'REAL_ORDERS_DISABLED_PURE_PAPER_MODE' };
     }
 

@@ -16,8 +16,8 @@ class PaperEngine {
       dailyLossCircuitBreakerINR: 2000,
       takerFeeRate: 0.0005, // 0.05%
       gstRate: 0.18, // 18% GST on fees
-      tradingMode: 'PAPER', // 'PAPER' (Simulated) or 'LIVE' (Real Mudrex Orders)
-      realOrdersDisabled: true
+      tradingMode: 'LIVE', // 'PAPER' (Simulated) or 'LIVE' (Real Mudrex Orders)
+      realOrdersDisabled: false
     };
 
     this.contractMultipliers = {
