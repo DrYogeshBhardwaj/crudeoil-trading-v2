@@ -44,12 +44,112 @@ class MudrexLiveAdapter {
   }
 
   updateSettings(newSettings) {
+    if (newSettings) {
+      if (newSettings.mudrexApiKey && !newSettings.mudrexApiKey.includes('*')) {
+        this.mudrexApiKey = newSettings.mudrexApiKey.trim();
+        process.env.MUDREX_API_KEY = this.mudrexApiKey;
+      }
+      if (newSettings.mudrexApiSecret && !newSettings.mudrexApiSecret.includes('*')) {
+        this.mudrexApiSecret = newSettings.mudrexApiSecret.trim();
+        process.env.MUDREX_API_SECRET = this.mudrexApiSecret;
+      }
+    }
     this.settings = { ...this.settings, ...newSettings };
     try {
       const paperEngine = require('./paperEngine');
       paperEngine.updateSettings(newSettings);
     } catch (e) {}
     this.saveState();
+  }
+
+  isRealExecutionEnabled() {
+    if (process.env.DISABLE_REAL_MUDREX_ORDERS === 'true') return false;
+    const key = (
+      process.env.MUDREX_API_KEY ||
+      process.env.MUDREX_KEY ||
+      this.mudrexApiKey || ''
+    ).trim();
+    const secret = (
+      process.env.MUDREX_API_SECRET ||
+      process.env.MUDREX_SECRET ||
+      process.env.MUDREX_SECRET_KEY ||
+      this.mudrexApiSecret || ''
+    ).trim();
+    if (!key || !secret) return false;
+    return true;
+  }
+
+  getHeaders() {
+    let apiSecret = (
+      process.env.MUDREX_API_SECRET ||
+      process.env.MUDREX_SECRET ||
+      process.env.MUDREX_SECRET_KEY ||
+      this.mudrexApiSecret || ''
+    ).trim();
+    if (apiSecret.includes('*')) apiSecret = '';
+
+    let apiKey = (
+      process.env.MUDREX_API_KEY ||
+      process.env.MUDREX_KEY ||
+      this.mudrexApiKey || ''
+    ).trim();
+    if (apiKey.includes('*')) apiKey = '';
+
+    const headers = {
+      'X-Authentication': apiSecret,
+      'x-authentication': apiSecret,
+      'Content-Type': 'application/json',
+      'User-Agent': 'Mudrex-Node-Live-Engine/1.0'
+    };
+    if (apiKey) {
+      headers['X-Api-Key'] = apiKey;
+      headers['x-api-key'] = apiKey;
+    }
+    return headers;
+  }
+
+  async createRealOrder({ symbol, side, quantity, leverage, targetPrice }) {
+    if (!this.isRealExecutionEnabled()) {
+      console.log('[Mudrex Live Adapter] Real order execution disabled. MUDREX_API_KEY/SECRET missing in environment.');
+      return { success: false, error: 'REAL_ORDERS_DISABLED_MISSING_API_KEYS' };
+    }
+
+    const rawSym = (symbol || 'CLUSDT').toUpperCase();
+    const symb = rawSym === 'CL-USDT' ? 'CLUSDT' : rawSym;
+    const dashSymb = rawSym === 'CLUSDT' ? 'CL-USDT' : rawSym;
+    const sideUpper = (side || 'BUY').toUpperCase();
+    const orderType = (sideUpper === 'BUY' || sideUpper === 'LONG') ? 'LONG' : 'SHORT';
+    const qty = String(quantity || 5.0);
+    const lev = String(leverage || 5);
+
+    const body = {
+      trade_currency: 'INR',
+      symbol: symb,
+      side: sideUpper === 'BUY' ? 'BUY' : 'SELL',
+      order_type: orderType,
+      trigger_type: 'MARKET',
+      type: 'MARKET',
+      quantity: qty,
+      leverage: lev,
+      reduce_only: false
+    };
+
+    if (targetPrice) {
+      body.takeprofit_price = String(targetPrice);
+      body.is_takeprofit = true;
+    }
+
+    const url = `${this.baseUrl}/futures/${symb}/order?is_symbol=true&trade_currency=INR`;
+    console.log(`[Mudrex Live Adapter] Sending Real Order POST to ${url}:`, body);
+    let res = await this.request('POST', url, body);
+    if (!res.success) {
+      const altUrl = `${this.baseUrl}/futures/${dashSymb}/order?is_symbol=true&trade_currency=INR`;
+      console.log(`[Mudrex Live Adapter] Retrying with symbol variant ${dashSymb} via ${altUrl}...`);
+      body.symbol = dashSymb;
+      res = await this.request('POST', altUrl, body);
+    }
+    console.log(`[Mudrex Live Adapter] Real Order Result:`, res);
+    return res;
   }
 
   initFromStorage() {
