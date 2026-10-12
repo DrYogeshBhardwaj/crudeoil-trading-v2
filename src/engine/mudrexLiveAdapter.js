@@ -796,7 +796,7 @@ class MudrexLiveAdapter {
       }
     }
 
-    if (this.isRealExecutionEnabled()) {
+    if (this.settings.syncRealMudrexPositions && this.isRealExecutionEnabled()) {
       try {
         const realPosRes = await this.fetchPositions();
         if (realPosRes.success && Array.isArray(realPosRes.data)) {
