@@ -10,6 +10,9 @@ class MudrexLiveAdapter {
     this.processedRates = new Set();
     this.pairCounter = 1;
     this.userClosedRealPositionIds = new Set();
+    this.rateLimitUntil = 0;
+    this.lastFetchPositionsTime = 0;
+    this.lastFetchPositionsRes = null;
 
     this.initFromStorage();
 
@@ -276,6 +279,10 @@ class MudrexLiveAdapter {
   }
 
   request(method, urlStr, bodyData = null) {
+    if (Date.now() < this.rateLimitUntil) {
+      return Promise.resolve({ success: false, statusCode: 429, error: 'RATE_LIMIT_COOLDOWN_ACTIVE (Mudrex API paused for 30s)' });
+    }
+
     return new Promise((resolve, reject) => {
       const url = new URL(urlStr);
       const headers = this.getHeaders();
@@ -297,21 +304,29 @@ class MudrexLiveAdapter {
         let rawData = '';
         res.on('data', chunk => { rawData += chunk; });
         res.on('end', () => {
+          let result;
           try {
             const parsed = JSON.parse(rawData);
             if (res.statusCode >= 200 && res.statusCode < 300) {
-              resolve({ success: true, statusCode: res.statusCode, data: parsed });
+              result = { success: true, statusCode: res.statusCode, data: parsed };
             } else {
               const errMsg = parsed.message || parsed.text || parsed.error || JSON.stringify(parsed);
-              resolve({ success: false, statusCode: res.statusCode, error: errMsg });
+              result = { success: false, statusCode: res.statusCode, error: errMsg };
             }
           } catch (e) {
             if (res.statusCode >= 200 && res.statusCode < 300) {
-              resolve({ success: true, statusCode: res.statusCode, data: rawData });
+              result = { success: true, statusCode: res.statusCode, data: rawData };
             } else {
-              resolve({ success: false, statusCode: res.statusCode, error: rawData });
+              result = { success: false, statusCode: res.statusCode, error: rawData };
             }
           }
+
+          if (!result.success && result.error && (String(result.error).includes('5002') || String(result.error).includes('rate limit') || res.statusCode === 429)) {
+            console.warn('[Mudrex Live Adapter] Rate limit (5002) detected from Mudrex API! Cooldown active for 30s.');
+            this.rateLimitUntil = Date.now() + 30000;
+          }
+
+          resolve(result);
         });
       });
 
@@ -544,6 +559,11 @@ class MudrexLiveAdapter {
   }
 
   async fetchPositions() {
+    const now = Date.now();
+    if (this.lastFetchPositionsRes && (now - this.lastFetchPositionsTime < 15000)) {
+      return this.lastFetchPositionsRes;
+    }
+
     const symbol = 'CLUSDT';
     const endpoints = [
       `${this.baseUrl}/futures/positions?trade_currency=INR`,
@@ -609,13 +629,19 @@ class MudrexLiveAdapter {
               apiStatus: 'REAL_MUDREX_POSITION'
             };
           }).filter(Boolean);
-          return { success: true, data: parsedPositions };
+          const resObj = { success: true, data: parsedPositions };
+          this.lastFetchPositionsRes = resObj;
+          this.lastFetchPositionsTime = Date.now();
+          return resObj;
         }
       } catch (e) {
         console.warn(`[Mudrex Live Adapter] Error querying ${url}:`, e.message);
       }
     }
-    return { success: false, data: [] };
+    const fallbackRes = { success: false, data: [] };
+    this.lastFetchPositionsRes = fallbackRes;
+    this.lastFetchPositionsTime = Date.now();
+    return fallbackRes;
   }
 
   async getLiveMetrics() {
@@ -638,31 +664,10 @@ class MudrexLiveAdapter {
     let liveOpenPositions = this.liveOpenPositions || [];
     let liveClosedPositions = this.liveClosedPositions || [];
 
-    // Auto-retry transmitting positions stuck with unassigned Order IDs or errors
+    // Clean up any stale flags
     for (const pos of liveOpenPositions) {
       if (pos.apiStatus?.includes('REAL_ORDERS_DISABLED')) {
         delete pos.apiStatus;
-      }
-      if (pos.status === 'OPEN' && (!pos.mudrexOrderId || pos.apiStatus?.includes('API_ERROR') || pos.apiStatus?.includes('SENDING'))) {
-        if (!pos.lastRetryTime || Date.now() - pos.lastRetryTime > 4000) {
-          pos.lastRetryTime = Date.now();
-          pos.apiStatus = 'SENDING_TO_MUDREX';
-          const qty = paperEngine.settings.contractQuantity || 1.0;
-          const lev = paperEngine.settings.leverage || 5;
-
-          this.createRealOrder({ symbol: pos.symbol || 'CLUSDT', side: pos.direction, quantity: qty, leverage: lev })
-            .then(res => {
-              if (res.success) {
-                pos.mudrexOrderId = this.extractOrderId(res.data);
-                pos.apiStatus = 'TRANSMITTED_TO_MUDREX';
-              } else {
-                pos.apiStatus = 'API_ERROR: ' + (typeof res.error === 'object' ? JSON.stringify(res.error) : (res.error || 'Failed'));
-              }
-            })
-            .catch(err => {
-              pos.apiStatus = 'NETWORK_ERROR';
-            });
-        }
       }
     }
 
