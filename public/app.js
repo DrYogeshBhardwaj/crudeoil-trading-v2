@@ -414,65 +414,81 @@ function renderDashboard(data) {
     XAGUSDT: 'XAGUSDT — Silver',
     BTCUSDT: 'BTCUSDT — Bitcoin'
   };
-  document.getElementById('currentSymbolLabel').innerText = symbolLabels[currentSymbol] || currentSymbol;
+  const symbolLblEl = document.getElementById('currentSymbolLabel');
+  if (symbolLblEl) symbolLblEl.innerText = symbolLabels[currentSymbol] || currentSymbol;
 
   const priceDecimals = currentSymbol === 'BTCUSDT' ? 2 : (currentSymbol === 'XAGUSDT' ? 4 : 2);
   const tickerPriceEl = document.getElementById('liveTickerPrice');
-  const oldPrice = parseFloat(tickerPriceEl.innerText.replace('$', '')) || 0;
-  const newPrice = rateFeedInfo.price;
+  if (tickerPriceEl) {
+    const oldPrice = parseFloat(tickerPriceEl.innerText.replace(/[$₹,]/g, '')) || 0;
+    const newPrice = rateFeedInfo.price;
 
-  if (newPrice) {
-    tickerPriceEl.innerText = '$' + newPrice.toFixed(priceDecimals);
-    if (newPrice > oldPrice) {
-      tickerPriceEl.className = 'ticker-value up';
-    } else if (newPrice < oldPrice) {
-      tickerPriceEl.className = 'ticker-value down';
+    if (newPrice) {
+      const isMcx = window.location.pathname.includes('dhan') || currentSymbol === 'XAGUSDT';
+      const prefix = isMcx ? '₹' : '$';
+      tickerPriceEl.innerText = prefix + newPrice.toFixed(priceDecimals);
+      if (newPrice > oldPrice) {
+        tickerPriceEl.className = 'ticker-value up';
+      } else if (newPrice < oldPrice) {
+        tickerPriceEl.className = 'ticker-value down';
+      }
+    } else {
+      tickerPriceEl.innerText = 'FETCHING...';
+      tickerPriceEl.className = 'ticker-value';
     }
-  } else {
-    tickerPriceEl.innerText = 'FETCHING...';
-    tickerPriceEl.className = 'ticker-value';
   }
 
   const tickTimeStr = rateFeedInfo.lastTickTimeString || 'N/A';
   const ageMs = rateFeedInfo.tickAgeMs !== null && rateFeedInfo.tickAgeMs !== undefined ? rateFeedInfo.tickAgeMs : 0;
   const ageSec = (ageMs / 1000).toFixed(1);
-  document.getElementById('tickTimeAgeDisplay').innerText = `${tickTimeStr} (${ageMs < 2000 ? ageMs + 'ms' : ageSec + 's'})`;
+  const tickTimeEl = document.getElementById('tickTimeAgeDisplay');
+  if (tickTimeEl) tickTimeEl.innerText = `${tickTimeStr} (${ageMs < 2000 ? ageMs + 'ms' : ageSec + 's'})`;
 
-  document.getElementById('lastProcessedRateDisplay').innerText = lastProcessedRate ? `$${lastProcessedRate.toFixed(priceDecimals)}` : 'NONE';
-  document.getElementById('usdInrDisplay').innerText = `₹${rateFeedInfo.usdInrRate.toFixed(2)}`;
+  const lastProcEl = document.getElementById('lastProcessedRateDisplay');
+  if (lastProcEl) {
+    const isMcx = window.location.pathname.includes('dhan') || currentSymbol === 'XAGUSDT';
+    const prefix = isMcx ? '₹' : '$';
+    lastProcEl.innerText = lastProcessedRate ? `${prefix}${lastProcessedRate.toFixed(priceDecimals)}` : 'NONE';
+  }
+
+  const usdInrEl = document.getElementById('usdInrDisplay');
+  if (usdInrEl) usdInrEl.innerText = `₹${rateFeedInfo.usdInrRate.toFixed(2)}`;
 
   // Feed Status Badge
   const feedBadge = document.getElementById('feedStatusBadge');
   const feedText = document.getElementById('feedStatusText');
   const statusStr = rateFeedInfo.status;
 
-  if (statusStr === 'LIVE') {
-    feedBadge.className = 'status-badge live';
-    feedText.innerText = 'LIVE FEED';
-  } else if (statusStr === 'STALE') {
-    feedBadge.className = 'status-badge stale';
-    feedText.innerText = 'STALE FEED';
-  } else {
-    feedBadge.className = 'status-badge stale';
-    feedText.innerText = statusStr;
+  if (feedBadge && feedText) {
+    if (statusStr === 'LIVE') {
+      feedBadge.className = 'status-badge live';
+      feedText.innerText = 'LIVE FEED';
+    } else if (statusStr === 'STALE') {
+      feedBadge.className = 'status-badge stale';
+      feedText.innerText = 'STALE FEED';
+    } else {
+      feedBadge.className = 'status-badge stale';
+      feedText.innerText = statusStr;
+    }
   }
 
   // Main Engine Control Button
-  const mainStartBtn = document.getElementById('mudrexStartEngineMainBtn') || document.getElementById('mudrexLiveStartBtn');
+  const mainStartBtn = document.getElementById('mudrexStartEngineMainBtn') || document.getElementById('mudrexLiveStartBtn') || document.getElementById('toggleEngineBtn');
+  const isDhanPage = window.location.pathname.includes('dhan');
 
   if (isEngineRunning) {
     if (mainStartBtn) {
-      mainStartBtn.innerHTML = '<span>⏸ PAUSE ENGINE</span>';
+      mainStartBtn.innerHTML = isDhanPage ? '<span>⏸ PAUSE DHAN ENGINE</span>' : '<span>⏸ PAUSE ENGINE</span>';
       mainStartBtn.style.background = 'linear-gradient(135deg, #ef4444, #b91c1c)';
       mainStartBtn.style.border = '1px solid #f87171';
       mainStartBtn.style.boxShadow = '0 0 16px rgba(239, 68, 68, 0.5)';
     }
   } else {
     if (mainStartBtn) {
-      mainStartBtn.innerHTML = '<span>🚀 START ENGINE</span>';
-      mainStartBtn.style.background = 'linear-gradient(135deg, #10b981, #047857)';
+      mainStartBtn.innerHTML = isDhanPage ? '<span>🚀 START DHAN ENGINE</span>' : '<span>🚀 START ENGINE</span>';
+      mainStartBtn.style.background = isDhanPage ? 'linear-gradient(135deg, #00d09c, #008765)' : 'linear-gradient(135deg, #10b981, #047857)';
       mainStartBtn.style.border = '1px solid #34d399';
-      mainStartBtn.style.boxShadow = '0 0 16px rgba(16, 185, 129, 0.5)';
+      mainStartBtn.style.boxShadow = isDhanPage ? '0 0 16px var(--dhan-glow)' : '0 0 16px rgba(16, 185, 129, 0.5)';
     }
   }
 
@@ -1274,6 +1290,7 @@ function toggleEngineState() {
       alert('Network error while toggling engine state.');
     });
 }
+window.toggleEngineState = toggleEngineState;
 
 function openSettingsModal() {
   document.getElementById('settingsModal').style.display = 'flex';
