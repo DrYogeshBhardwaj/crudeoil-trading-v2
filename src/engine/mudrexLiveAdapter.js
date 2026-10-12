@@ -371,7 +371,10 @@ class MudrexLiveAdapter {
     return 'EXECUTED';
   }
 
-  async testAuthentication() {
+  async testAuthentication(force = false) {
+    if (force) {
+      this.rateLimitUntil = 0;
+    }
     const headers = this.getHeaders();
     if (!headers['X-Authentication']) {
       return { success: false, error: 'MUDREX_API_SECRET missing in environment variables.' };

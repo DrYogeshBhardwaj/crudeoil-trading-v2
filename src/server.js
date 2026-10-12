@@ -193,8 +193,9 @@ app.post('/api/mudrex/save-keys', express.json(), async (req, res) => {
     if (apiSecret) process.env.MUDREX_API_SECRET = apiSecret.trim();
 
     const mudrexLive = require('./engine/mudrexLiveAdapter');
+    mudrexLive.rateLimitUntil = 0;
     mudrexLive.saveState();
-    const auth = await mudrexLive.testAuthentication();
+    const auth = await mudrexLive.testAuthentication(true);
     res.json({ success: true, auth });
   } catch (err) {
     res.status(500).json({ success: false, error: err.message });

@@ -1556,12 +1556,13 @@ function saveAndConnectMudrexKeys() {
   const apiKey = (document.getElementById('inputMudrexApiKey')?.value || '').trim();
   const apiSecret = (document.getElementById('inputMudrexApiSecret')?.value || '').trim();
 
+  const container = document.getElementById('mudrexAuthStatusContainer');
+
   if (!apiKey && !apiSecret) {
-    alert('Please paste your Mudrex API Key and Secret Key.');
+    if (container) container.innerHTML = '<div style="color:#f87171; font-weight:700;">⚠️ Please enter both Mudrex API Key and Secret Key.</div>';
     return;
   }
 
-  const container = document.getElementById('mudrexAuthStatusContainer');
   if (container) container.innerHTML = '<span style="color:var(--accent-cyan)">Saving and testing Mudrex API credentials...</span>';
 
   fetch('/api/mudrex/save-keys', {
@@ -1572,16 +1573,22 @@ function saveAndConnectMudrexKeys() {
   .then(r => r.json())
   .then(res => {
     if (res.success && res.auth && res.auth.success) {
-      alert('✅ Mudrex API Keys Connected Successfully!');
+      if (container) {
+        container.innerHTML = `<div style="color:#10b981; font-weight:700;">✅ Mudrex API Keys Connected & Verified Successfully!</div>`;
+      }
       checkMudrexAuthStatus();
       fetchMetricsFallback();
     } else {
       const errMsg = (res.auth && res.auth.error) ? res.auth.error : (res.error || 'Invalid API Secret Key');
-      alert('⚠️ Mudrex API Connection Failed: ' + errMsg);
+      if (container) {
+        container.innerHTML = `<div style="color:#fbbf24; font-weight:700;">⚠️ Mudrex API Connection Notice: ${errMsg}</div>`;
+      }
       checkMudrexAuthStatus();
     }
   })
   .catch(err => {
-    alert('Error connecting API keys: ' + err.message);
+    if (container) {
+      container.innerHTML = `<div style="color:#f87171; font-weight:700;">Error connecting API keys: ${err.message}</div>`;
+    }
   });
 }
