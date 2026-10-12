@@ -73,10 +73,11 @@ class PaperEngine {
     const saved = storage.loadState();
     if (saved) {
       if (saved.settings) this.settings = { ...this.settings, ...saved.settings };
-      this.settings.contractQuantity = 2.0; // 2 Barrels for new pairs per user instruction
-      if (!saved.settings?.startingCapitalINR || saved.settings?.startingCapitalINR === 200000) {
-        this.settings.startingCapitalINR = 100000;
-      }
+      this.settings.instrument = 'XAGUSDT'; // MCX Silver default
+      this.settings.startingCapitalINR = 350000; // ₹3.5 Lakh virtual capital
+      this.settings.maxActivePairs = 100; // 100 Active Pairs Cap
+      this.settings.profitTargetMove = 1000; // ₹1,000 target move for Silver
+      this.settings.contractQuantity = 1.0; // 1 Lot Silver
       if (saved.pairs) this.pairs = saved.pairs;
       if (saved.closedPositions) this.closedPositions = saved.closedPositions;
       if (saved.auditLogs) this.auditLogs = saved.auditLogs.slice(-500);
@@ -682,7 +683,10 @@ class PaperEngine {
     let realizedNetUSD = 0, realizedNetINR = 0;
     let winCount = 0, lossCount = 0;
 
-    for (const cp of this.closedPositions) {
+    const activeSymbol = this.settings.instrument;
+    const filteredClosedPositions = this.closedPositions.filter(cp => !cp.symbol || cp.symbol === activeSymbol);
+
+    for (const cp of filteredClosedPositions) {
       realizedGrossUSD += cp.grossProfitUSD;
       realizedGrossINR += cp.grossProfitINR;
       realizedChargesUSD += cp.totalChargesUSD;
@@ -701,14 +705,15 @@ class PaperEngine {
     let marginUsedINR = 0;
 
     const qty = this.settings.contractQuantity;
-    const mult = this.contractMultipliers[this.settings.instrument] || 1.0;
+    const mult = this.contractMultipliers[activeSymbol] || 1.0;
     const feeRate = this.settings.takerFeeRate;
     const gstRate = this.settings.gstRate;
     const leverage = this.settings.leverage;
 
     const openPositionsList = [];
+    const activePairs = this.pairs.filter(p => !p.symbol || p.symbol === activeSymbol);
 
-    for (const pair of this.pairs) {
+    for (const pair of activePairs) {
       if (pair.status === 'CLOSED') continue;
 
       const positions = [pair.buyPosition, pair.sellPosition];
@@ -847,17 +852,17 @@ class PaperEngine {
         pairs2B,
         activeBuyCount,
         activeSellCount,
-        closedPositionsCount: this.closedPositions.length,
+        closedPositionsCount: filteredClosedPositions.length,
         winCount,
         lossCount,
-        winRate: this.closedPositions.length > 0 ? Number(((winCount / this.closedPositions.length) * 100).toFixed(1)) : 0,
+        winRate: filteredClosedPositions.length > 0 ? Number(((winCount / filteredClosedPositions.length) * 100).toFixed(1)) : 0,
         
         dailyRealizedLossINR: Number(this.dailyTracker.realizedNetLossINR.toFixed(2)),
         dailyLossLimitINR: this.settings.dailyLossCircuitBreakerINR
       },
       openPositions: openPositionsList,
-      pairs: this.pairs.filter(p => p.status === 'ACTIVE'),
-      closedPositions: this.closedPositions.slice().reverse().slice(0, 100),
+      pairs: this.pairs.filter(p => p.status === 'ACTIVE' && (!p.symbol || p.symbol === activeSymbol)),
+      closedPositions: filteredClosedPositions.slice().reverse().slice(0, 100),
       auditLogs: this.auditLogs
     };
   }
