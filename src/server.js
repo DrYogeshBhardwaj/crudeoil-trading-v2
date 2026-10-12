@@ -154,6 +154,28 @@ app.post('/api/reset-data', (req, res) => {
   }
 });
 
+// 4c. Export Trade History & Archive Backup
+app.get('/api/export-history', (req, res) => {
+  try {
+    const fs = require('fs');
+    const path = require('path');
+    const DATA_DIR = process.env.RAILWAY_VOLUME_MOUNT_PATH || process.env.DATA_DIR || path.join(__dirname, '../data');
+    const archiveFile = path.join(DATA_DIR, 'archive_history.json');
+    let archives = [];
+    if (fs.existsSync(archiveFile)) {
+      try { archives = JSON.parse(fs.readFileSync(archiveFile, 'utf8')); } catch (e) {}
+    }
+    const current = paperEngine.getEngineStatus();
+    res.json({
+      success: true,
+      currentSessionClosedPositions: current.closedPositions || [],
+      archives
+    });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
 // 5. Manual Close Position
 app.post('/api/manual-close', (req, res) => {
   try {

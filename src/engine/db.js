@@ -236,6 +236,32 @@ class DatabaseManager {
   }
 
   resetAll() {
+    // 1. Permanently Archive Closed Positions & Audit Logs before resetting state
+    try {
+      this.ensureDirectory();
+      const archiveFile = path.join(DATA_DIR, 'archive_history.json');
+      let existingArchive = [];
+      if (fs.existsSync(archiveFile)) {
+        try {
+          existingArchive = JSON.parse(fs.readFileSync(archiveFile, 'utf8'));
+        } catch (e) {}
+      }
+      const stateToArchive = this.loadState();
+      if (stateToArchive && stateToArchive.closedPositions && stateToArchive.closedPositions.length > 0) {
+        existingArchive.push({
+          archivedAt: new Date().toISOString(),
+          startingCapitalINR: stateToArchive.settings ? stateToArchive.settings.startingCapitalINR : 82978,
+          closedPositionsCount: stateToArchive.closedPositions.length,
+          closedPositions: stateToArchive.closedPositions,
+          auditLogs: stateToArchive.auditLogs || []
+        });
+        fs.writeFileSync(archiveFile, JSON.stringify(existingArchive, null, 2), 'utf8');
+        console.log(`[DBMS] Archived ${stateToArchive.closedPositions.length} closed positions to ${archiveFile}`);
+      }
+    } catch (archiveErr) {
+      console.error('[DBMS] Archive Error:', archiveErr);
+    }
+
     if (this.db) {
       try {
         this.db.exec(`
@@ -256,14 +282,15 @@ class DatabaseManager {
     }
     const cleanSeed = {
       settings: {
-        startingCapitalINR: 350000,
-        contractQuantity: 2,
+        startingCapitalINR: 82978,
+        contractQuantity: 5.0,
         leverage: 5,
-        profitTargetMove: 0.20,
+        profitTargetMove: 1.0,
         profitTargetMode: "PRICE_MOVE",
         strategyMode: "ALTERNATING_STAGGERED",
         priceMatchingTolerance: 0.0001,
-        maxActivePairs: 50,
+        maxActivePairs: 300,
+        tradingMode: "LIVE",
         realOrdersDisabled: false,
         instrument: "CLUSDT",
         takerFeeRate: 0.00075,
@@ -274,8 +301,13 @@ class DatabaseManager {
       },
       pairs: [],
       closedPositions: [],
-      auditLogs: [],
-      processedRates: { CLUSDT: [] },
+      auditLogs: [{
+        id: `LOG-${Date.now()}`,
+        timestamp: new Date().toISOString(),
+        event: "ENGINE_RESET",
+        details: "All engine positions, processed rates, and history reset to ₹82,978 capital. LIVE Mudrex API trading mode activated."
+      }],
+      processedRates: { CLUSDT: [], XAGUSDT: [], BTCUSDT: [] },
       lastProcessedRate: null,
       dailyTracker: {
         dateKey: new Date().toISOString().split('T')[0],
