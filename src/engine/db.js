@@ -135,7 +135,8 @@ class DatabaseManager {
         finalState.isEngineRunning = true;
         if (!finalState.settings) finalState.settings = {};
         finalState.settings.strategyMode = 'ALTERNATING_STAGGERED';
-        finalState.settings.maxActivePairs = 50;
+        finalState.settings.maxActivePairs = 300;
+        finalState.settings.startingCapitalINR = 82978;
         return finalState;
       }
     } catch (err) {

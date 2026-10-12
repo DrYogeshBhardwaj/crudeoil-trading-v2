@@ -83,8 +83,9 @@ class PaperEngine {
           this.settings.contractQuantity = savedQty;
         }
       }
-      this.settings.startingCapitalINR = 350000; // ₹3.5 Lakh virtual capital
-      this.settings.maxActivePairs = 50; // 50 Active Pairs Cap
+      this.settings.startingCapitalINR = 82978; // ₹82,978 INR capital (Live Mudrex balance)
+      this.settings.maxActivePairs = 300; // 300 Active Pairs Cap
+      this.settings.profitTargetMove = 1.0; // $1.00 Target Move
       this.settings.strategyMode = 'ALTERNATING_STAGGERED';
       if (saved.pairs) this.pairs = saved.pairs;
       if (saved.closedPositions) this.closedPositions = saved.closedPositions;
@@ -981,7 +982,9 @@ class PaperEngine {
   }
 
   resetAllData() {
-    this.settings.startingCapitalINR = 350000;
+    this.settings.startingCapitalINR = 82978;
+    this.settings.maxActivePairs = 300;
+    this.settings.profitTargetMove = 1.0;
     this.settings.contractQuantity = 5.0;
     this.settings.profitTargetMode = 'PRICE_MOVE';
     this.settings.strategyMode = 'ALTERNATING_STAGGERED';
