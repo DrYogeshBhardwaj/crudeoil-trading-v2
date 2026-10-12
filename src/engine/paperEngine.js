@@ -48,9 +48,9 @@ class PaperEngine {
       realizedNetProfitINR: 0
     };
 
-    this.isEngineRunning = false;
-    this.engineStatus = 'PAUSED';
-    this.pauseReason = 'ENGINE PAUSED BY USER — MANUAL MONITORING MODE ACTIVE';
+    this.isEngineRunning = true;
+    this.engineStatus = 'RUNNING';
+    this.pauseReason = '';
 
     // Load persisted state if exists
     this.initFromStorage();
@@ -77,14 +77,15 @@ class PaperEngine {
     if (saved) {
       if (saved.settings) this.settings = { ...this.settings, ...saved.settings };
       this.settings.startingCapitalINR = 350000; // ₹3.5 Lakh virtual capital
-      this.settings.maxActivePairs = 100; // 100 Active Pairs Cap
+      this.settings.maxActivePairs = 50; // 50 Active Pairs Cap
+      this.settings.strategyMode = this.settings.strategyMode || 'ALTERNATING_STAGGERED';
       if (saved.pairs) this.pairs = saved.pairs;
       if (saved.closedPositions) this.closedPositions = saved.closedPositions;
       if (saved.auditLogs) this.auditLogs = saved.auditLogs.slice(-500);
       if (saved.dailyTracker) this.dailyTracker = saved.dailyTracker;
-      this.isEngineRunning = false;
-      this.engineStatus = 'PAUSED';
-      this.pauseReason = 'ENGINE PAUSED BY USER — MANUAL MONITORING MODE ACTIVE';
+      this.isEngineRunning = true;
+      this.engineStatus = 'RUNNING';
+      this.pauseReason = '';
       if (saved.lastProcessedRate !== undefined) this.lastProcessedRate = saved.lastProcessedRate;
 
       if (saved.processedRates) {

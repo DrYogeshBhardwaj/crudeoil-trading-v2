@@ -404,22 +404,28 @@
           </select>
         </div>
         <div class="form-group">
-          <label style="color:#fff; font-weight:700;">Profit Target Move ($)</label>
+          <label style="color:#fff; font-weight:700;">Profit Target Strategy Mode</label>
+          <select id="settingStrategyMode" class="form-control" onchange="applySettingChange()" style="font-weight: 800; color: #38bdf8;">
+            <option value="ALTERNATING_STAGGERED" selected>🔄 ALTERNATING SMALL TARGETS (Staggered $0.15 / $0.20 / $0.25 / $0.30 per Pair)</option>
+            <option value="AI_DYNAMIC">🤖 AUTO AI DYNAMIC MODE (Adapts Targets Based on Real-Time Trend Tick-by-Tick)</option>
+            <option value="MANUAL_FIXED">⚙️ CUSTOM FIXED TARGETS (Specify Independent BUY & SELL Targets)</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label style="color:#fff; font-weight:700;">Fixed Profit Target Move ($)</label>
           <select id="settingTargetMove" class="form-control" onchange="applySettingChange()">
-            <option value="0.05">$0.05 Target Move</option>
-            <option value="0.10">$0.10 Target Move</option>
             <option value="0.15">$0.15 Target Move</option>
-            <option value="0.20">$0.20 Target Move</option>
+            <option value="0.20" selected>$0.20 Target Move (Default Small Target)</option>
             <option value="0.25">$0.25 Target Move</option>
+            <option value="0.30">$0.30 Target Move</option>
             <option value="0.50">$0.50 Target Move</option>
-            <option value="1.00" selected>$1.00 Target Move (Crude Standard)</option>
-            <option value="1.15">$1.15 Target Move (Silver Standard)</option>
+            <option value="1.00">$1.00 Target Move (Crude Standard)</option>
             <option value="DISABLED">Disabled (No Auto Target)</option>
           </select>
         </div>
         <div class="form-group">
           <label style="color:#fff; font-weight:700;">Max Active Pairs Cap</label>
-          <input type="number" id="settingMaxPairs" class="form-control" value="25" min="1" max="500" onchange="applySettingChange()">
+          <input type="number" id="settingMaxPairs" class="form-control" value="50" min="1" max="500" onchange="applySettingChange()">
         </div>
         <div class="form-group">
           <label style="color:#fff; font-weight:700;">USD-INR Rate (₹)</label>

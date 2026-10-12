@@ -1417,15 +1417,18 @@ function closeSettingsModal() {
 
 function applySettingChange() {
   const targetSelect = document.getElementById('settingTargetMove');
+  const strategyModeSelect = document.getElementById('settingStrategyMode');
   const instSelect = document.getElementById('settingInstrument');
   const maxPairsInput = document.getElementById('settingMaxPairs');
   const usdInrInput = document.getElementById('settingUsdInr');
 
-  const targetVal = targetSelect ? targetSelect.value : '1000';
+  const targetVal = targetSelect ? targetSelect.value : '0.20';
   const targetDisabled = targetVal === 'DISABLED';
-  const profitTargetMove = targetDisabled ? 1.0 : (parseFloat(targetVal) || 1.0);
+  const profitTargetMove = targetDisabled ? 0.20 : (parseFloat(targetVal) || 0.20);
+  const strategyMode = strategyModeSelect ? strategyModeSelect.value : 'ALTERNATING_STAGGERED';
+  const autoAiTargetMode = (strategyMode === 'AI_DYNAMIC');
   const instrument = instSelect ? instSelect.value : 'CLUSDT';
-  const maxActivePairs = maxPairsInput ? parseInt(maxPairsInput.value) || 100 : 100;
+  const maxActivePairs = maxPairsInput ? parseInt(maxPairsInput.value) || 50 : 50;
   const usdInrRate = usdInrInput ? parseFloat(usdInrInput.value) || 86.5 : 86.5;
 
   const isMudrexPage = window.location.pathname.includes('mudrex') || !!document.getElementById('mudrexLiveStartBtn');
@@ -1436,6 +1439,8 @@ function applySettingChange() {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
       instrument,
+      strategyMode,
+      autoAiTargetMode,
       profitTargetMove,
       targetDisabled,
       maxActivePairs,
@@ -1456,18 +1461,21 @@ function saveModalSettings() {
   const qtyInput = document.getElementById('modalContractQuantity');
   const levInput = document.getElementById('modalLeverage');
   const targetSelect = document.getElementById('settingTargetMove');
+  const strategyModeSelect = document.getElementById('settingStrategyMode');
   const instSelect = document.getElementById('settingInstrument');
   const maxPairsInput = document.getElementById('settingMaxPairs');
   const usdInrInput = document.getElementById('settingUsdInr');
 
   const capital = capitalInput ? parseFloat(capitalInput.value) || 350000 : 350000;
-  const qty = qtyInput ? parseFloat(qtyInput.value) || 1.0 : 1.0;
+  const qty = qtyInput ? parseFloat(qtyInput.value) || 2.0 : 2.0;
   const lev = levInput ? parseInt(levInput.value) || 5 : 5;
-  const targetVal = targetSelect ? targetSelect.value : '1000';
+  const targetVal = targetSelect ? targetSelect.value : '0.20';
   const targetDisabled = targetVal === 'DISABLED';
-  const profitTargetMove = targetDisabled ? 1.0 : (parseFloat(targetVal) || 1.0);
+  const profitTargetMove = targetDisabled ? 0.20 : (parseFloat(targetVal) || 0.20);
+  const strategyMode = strategyModeSelect ? strategyModeSelect.value : 'ALTERNATING_STAGGERED';
+  const autoAiTargetMode = (strategyMode === 'AI_DYNAMIC');
   const instrument = instSelect ? instSelect.value : 'CLUSDT';
-  const maxActivePairs = maxPairsInput ? parseInt(maxPairsInput.value) || 100 : 100;
+  const maxActivePairs = maxPairsInput ? parseInt(maxPairsInput.value) || 50 : 50;
   const usdInrRate = usdInrInput ? parseFloat(usdInrInput.value) || 86.5 : 86.5;
 
   const isMudrexPage = window.location.pathname.includes('mudrex') || !!document.getElementById('mudrexLiveStartBtn');
@@ -1478,6 +1486,8 @@ function saveModalSettings() {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
       instrument,
+      strategyMode,
+      autoAiTargetMode,
       profitTargetMove,
       targetDisabled,
       maxActivePairs,
