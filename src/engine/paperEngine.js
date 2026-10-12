@@ -10,7 +10,10 @@ class PaperEngine {
       leverage: 5,
       instrument: 'CLUSDT',
       profitTargetMode: 'PRICE_MOVE',
-      profitTargetMove: 0.2,
+      profitTargetMove: 0.20,
+      buyTargetMove: 0.20,
+      sellTargetMove: 0.20,
+      autoAiTargetMode: true,
       targetDisabled: false,
       maxActivePairs: 100,
       dailyLossCircuitBreakerINR: 2000,
@@ -439,12 +442,22 @@ class PaperEngine {
     const pairSeq = (this.pairs.length + 1).toString().padStart(4, '0');
     const pairId = `PAIR-${pairSeq}`;
     
-    const targetMove = this.settings.targetDisabled ? null : this.settings.profitTargetMove;
+    let bMove = this.settings.buyTargetMove || this.settings.profitTargetMove || 0.20;
+    let sMove = this.settings.sellTargetMove || this.settings.profitTargetMove || 0.20;
+
+    if (this.settings.autoAiTargetMode) {
+      try {
+        const mudrexLive = require('./mudrexLiveAdapter');
+        const aiInfo = mudrexLive.calculateAiTargets();
+        bMove = aiInfo.buyTargetMove;
+        sMove = aiInfo.sellTargetMove;
+      } catch (e) {}
+    }
     
-    // BUY Target: Entry + Target Move
-    const buyTarget = targetMove ? this.normalizePrice(entryPrice + targetMove, symbol) : null;
-    // SELL Target: Entry - Target Move
-    const sellTarget = targetMove ? this.normalizePrice(entryPrice - targetMove, symbol) : null;
+    // BUY Target: Entry + BUY Target Move
+    const buyTarget = this.settings.targetDisabled ? null : this.normalizePrice(entryPrice + bMove, symbol);
+    // SELL Target: Entry - SELL Target Move
+    const sellTarget = this.settings.targetDisabled ? null : this.normalizePrice(entryPrice - sMove, symbol);
 
     const quantity = this.settings.contractQuantity;
     const multiplier = this.contractMultipliers[symbol] || 1.0;

@@ -13,10 +13,14 @@ class MudrexLiveAdapter {
     this.rateLimitUntil = 0;
     this.lastFetchPositionsTime = 0;
     this.lastFetchPositionsRes = null;
+    this.recentPrices = [];
 
     this.settings = {
       instrument: 'CLUSDT',
-      profitTargetMove: 1.00,
+      profitTargetMove: 0.20,
+      buyTargetMove: 0.20,
+      sellTargetMove: 0.20,
+      autoAiTargetMode: true,
       targetDisabled: false,
       maxActivePairs: 25,
       contractQuantity: 1.0,
@@ -114,6 +118,28 @@ class MudrexLiveAdapter {
     }
   }
 
+  calculateAiTargets() {
+    if (!this.recentPrices || this.recentPrices.length < 3) {
+      return { trend: 'SIDEWAYS / RANGE ↔️', buyTargetMove: 0.20, sellTargetMove: 0.20 };
+    }
+    const len = this.recentPrices.length;
+    const oldest = this.recentPrices[0];
+    const newest = this.recentPrices[len - 1];
+    const diff = newest - oldest;
+
+    if (diff >= 0.08) {
+      return { trend: 'STRONG UPTREND ↗️', buyTargetMove: 0.35, sellTargetMove: 0.15 };
+    } else if (diff >= 0.02) {
+      return { trend: 'MODERATE UPTREND ↗️', buyTargetMove: 0.30, sellTargetMove: 0.20 };
+    } else if (diff <= -0.08) {
+      return { trend: 'STRONG DOWNTREND ↘️', buyTargetMove: 0.15, sellTargetMove: 0.35 };
+    } else if (diff <= -0.02) {
+      return { trend: 'MODERATE DOWNTREND ↘️', buyTargetMove: 0.20, sellTargetMove: 0.30 };
+    } else {
+      return { trend: 'SIDEWAYS / RANGE ↔️', buyTargetMove: 0.20, sellTargetMove: 0.20 };
+    }
+  }
+
   processLiveTick(tick) {
     try {
       const paperEngine = require('./paperEngine');
@@ -127,7 +153,19 @@ class MudrexLiveAdapter {
       const decimals = symbol === 'BTCUSDT' ? 2 : (symbol === 'XAGUSDT' ? 4 : 2);
       const normPrice = Number(price.toFixed(decimals));
 
-      const targetMove = this.settings.targetDisabled ? null : (this.settings.profitTargetMove || 1.00);
+      if (!this.recentPrices) this.recentPrices = [];
+      this.recentPrices.push(normPrice);
+      if (this.recentPrices.length > 20) this.recentPrices.shift();
+
+      let bMove = this.settings.buyTargetMove || this.settings.profitTargetMove || 0.20;
+      let sMove = this.settings.sellTargetMove || this.settings.profitTargetMove || 0.20;
+
+      if (this.settings.autoAiTargetMode) {
+        const aiInfo = this.calculateAiTargets();
+        bMove = aiInfo.buyTargetMove;
+        sMove = aiInfo.sellTargetMove;
+      }
+
       const time = tick.time || Date.now();
       const usdInrRate = tick.usdInrRate || this.settings.usdInrRate || 86.5;
 
@@ -194,8 +232,8 @@ class MudrexLiveAdapter {
         const pairSeq = (this.pairCounter++).toString().padStart(4, '0');
         const pairId = `PAIR-${pairSeq}`;
 
-        const buyTarget = targetMove ? Number((normPrice + targetMove).toFixed(decimals)) : null;
-        const sellTarget = targetMove ? Number((normPrice - targetMove).toFixed(decimals)) : null;
+        const buyTarget = this.settings.targetDisabled ? null : Number((normPrice + bMove).toFixed(decimals));
+        const sellTarget = this.settings.targetDisabled ? null : Number((normPrice - sMove).toFixed(decimals));
 
         const buyPos = {
           pairId,
@@ -866,6 +904,7 @@ class MudrexLiveAdapter {
         dailyRealizedLossINR: 0,
         dailyLossLimitINR: 2000
       },
+      aiTargetInfo: this.calculateAiTargets(),
       openPositions: liveOpenPositions,
       closedPositions: liveClosedPositions,
       auditLogs: []
