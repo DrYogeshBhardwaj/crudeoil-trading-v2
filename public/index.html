@@ -272,29 +272,62 @@
           </div>
         </div>
 
-        <table class="data-table" id="activePositionsTable">
-          <thead>
-            <tr>
-              <th class="sortable" data-key="pairId" onclick="sortTable('active', 'pairId')">Pair ID</th>
-              <th class="sortable" data-key="positionId" onclick="sortTable('active', 'positionId')">Position ID</th>
-              <th class="sortable" data-key="direction" onclick="sortTable('active', 'direction')">Type</th>
-              <th class="sortable" data-key="entryTime" onclick="sortTable('active', 'entryTime')">Entry Time</th>
-              <th class="sortable" data-key="entryPrice" onclick="sortTable('active', 'entryPrice')">Entry Price</th>
-              <th class="sortable" data-key="currentPrice" onclick="sortTable('active', 'currentPrice')">Current Price</th>
-              <th class="sortable" data-key="targetExitPrice" onclick="sortTable('active', 'targetExitPrice')">Target Price 🎯</th>
-              <th class="sortable" data-key="floatingGrossUSD" onclick="sortTable('active', 'floatingGrossUSD')">Floating Gross (USD)</th>
-              <th class="sortable" data-key="floatingChargesINR" onclick="sortTable('active', 'floatingChargesINR')">Est. Charges (INR)</th>
-              <th class="sortable" data-key="floatingNetINR" onclick="sortTable('active', 'floatingNetINR')">Floating Net P/L (INR)</th>
-              <th class="sortable" data-key="status" onclick="sortTable('active', 'status')">Status</th>
-              <th>Action</th>
-            </tr>
-          </thead>
-          <tbody id="activePositionsTbody">
-            <tr>
-              <td colspan="12" style="text-align: center; color: var(--text-dim); padding: 24px;">No active open positions. Engine will open 1 pair per unique market rate.</td>
-            </tr>
-          </tbody>
-        </table>
+        <!-- 2 Side-by-Side Tables Container for BUY & SELL Positions -->
+        <div class="active-tables-container">
+          <!-- BUY Positions Table -->
+          <div class="active-table-card buy-card">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; padding-bottom: 6px; border-bottom: 1px solid rgba(16, 185, 129, 0.25);">
+              <h4 style="margin: 0; color: #10b981; font-size: 0.95rem; font-weight: 800; display: flex; align-items: center; gap: 8px;">
+                <span>🟢 BUY Positions (Long)</span>
+                <span id="buyPositionsBadge" class="badge-direction buy" style="font-size: 0.7rem;">0 Active</span>
+              </h4>
+              <span style="font-size: 0.72rem; color: #a7f3d0; font-weight: 600;">🎯 Sorted by Next Exit</span>
+            </div>
+            <table class="data-table" id="buyPositionsTable">
+              <thead>
+                <tr>
+                  <th>Pair / Position ID</th>
+                  <th>Entry ➔ Current</th>
+                  <th>Next Exit 🎯</th>
+                  <th style="text-align: right;">Floating Net P/L</th>
+                  <th style="text-align: center;">Action</th>
+                </tr>
+              </thead>
+              <tbody id="buyPositionsTbody">
+                <tr>
+                  <td colspan="5" style="text-align: center; color: var(--text-dim); padding: 18px;">No active BUY positions.</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <!-- SELL Positions Table -->
+          <div class="active-table-card sell-card">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; padding-bottom: 6px; border-bottom: 1px solid rgba(239, 68, 68, 0.25);">
+              <h4 style="margin: 0; color: #ef4444; font-size: 0.95rem; font-weight: 800; display: flex; align-items: center; gap: 8px;">
+                <span>🔴 SELL Positions (Short)</span>
+                <span id="sellPositionsBadge" class="badge-direction sell" style="font-size: 0.7rem;">0 Active</span>
+              </h4>
+              <span style="font-size: 0.72rem; color: #fca5a5; font-weight: 600;">🎯 Sorted by Next Exit</span>
+            </div>
+            <table class="data-table" id="sellPositionsTable">
+              <thead>
+                <tr>
+                  <th>Pair / Position ID</th>
+                  <th>Entry ➔ Current</th>
+                  <th>Next Exit 🎯</th>
+                  <th style="text-align: right;">Floating Net P/L</th>
+                  <th style="text-align: center;">Action</th>
+                </tr>
+              </thead>
+              <tbody id="sellPositionsTbody">
+                <tr>
+                  <td colspan="5" style="text-align: center; color: var(--text-dim); padding: 18px;">No active SELL positions.</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
       </div>
 
       <!-- Tab 2: Closed Positions History -->
@@ -338,7 +371,7 @@
               <th class="sortable" data-key="totalChargesINR" onclick="sortTable('closed', 'totalChargesINR')">Total Charges (INR)</th>
               <th class="sortable" data-key="netProfitINR" onclick="sortTable('closed', 'netProfitINR')">Net P/L (INR)</th>
               <th class="sortable" data-key="exitReason" onclick="sortTable('closed', 'exitReason')">Exit Reason</th>
-              <th class="sortable" data-key="netProfitINR" onclick="sortTable('closed', 'netProfitINR')" style="background: rgba(16, 185, 129, 0.15); color: #a7f3d0; font-weight: 800;">💎 Net Pure Profit (INR / USD)</th>
+              <th class="sortable" data-key="netProfitINR" onclick="sortTable('closed', 'netProfitINR')" style="background: rgba(16, 185, 129, 0.15); color: #a7f3d0; font-weight: 800; text-align: center;">💎 Net Pure Profit (INR)</th>
             </tr>
           </thead>
           <tbody id="closedPositionsTbody">

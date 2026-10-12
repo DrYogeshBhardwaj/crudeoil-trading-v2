@@ -507,57 +507,137 @@ function updateTableHeaderClasses(tableId, activeKey, activeDir) {
   });
 }
 
-function renderActivePositions(positions, symbol) {
-  updateTableHeaderClasses('activePositionsTable', activeSortKey, activeSortDir);
-  const tbody = document.getElementById('activePositionsTbody');
-  if (!tbody) return;
+function getDistToExit(pos) {
+  if (!pos || typeof pos.targetExitPrice !== 'number') return 999999;
+  const curr = typeof pos.currentPrice === 'number' ? pos.currentPrice : pos.entryPrice;
+  return Math.abs(pos.targetExitPrice - curr);
+}
 
-  let html = '';
-  if (!positions || positions.length === 0) {
-    html = `<tr><td colspan="12" style="text-align: center; color: var(--text-dim); padding: 24px;">No active open positions. Engine will open 1 pair per unique market rate.</td></tr>`;
-  } else {
-    const sortedPositions = sortDataArray(positions, activeSortKey, activeSortDir);
-    for (const pos of sortedPositions) {
-      const posSym = pos.symbol || symbol || 'CLUSDT';
-      const priceDecimals = posSym === 'BTCUSDT' ? 2 : (posSym === 'XAGUSDT' ? 4 : 2);
-      const isBuy = pos.direction === 'BUY';
+function renderActivePositions(positions, symbol) {
+  const buyTbody = document.getElementById('buyPositionsTbody');
+  const sellTbody = document.getElementById('sellPositionsTbody');
+  const buyBadge = document.getElementById('buyPositionsBadge');
+  const sellBadge = document.getElementById('sellPositionsBadge');
+  const singleTbody = document.getElementById('activePositionsTbody');
+
+  const buyPositions = (positions || []).filter(p => p.direction === 'BUY');
+  const sellPositions = (positions || []).filter(p => p.direction === 'SELL');
+
+  if (buyBadge) buyBadge.innerText = `${buyPositions.length} Active`;
+  if (sellBadge) sellBadge.innerText = `${sellPositions.length} Active`;
+
+  // Sort by Next Exit target distance ascending (closest target exit first)
+  buyPositions.sort((a, b) => getDistToExit(a) - getDistToExit(b));
+  sellPositions.sort((a, b) => getDistToExit(a) - getDistToExit(b));
+
+  const priceDecimals = symbol === 'BTCUSDT' ? 2 : (symbol === 'XAGUSDT' ? 4 : 2);
+
+  const renderSideRows = (posList, isBuyTable) => {
+    if (posList.length === 0) {
+      return `<tr><td colspan="5" style="text-align: center; color: var(--text-dim); padding: 18px;">No active ${isBuyTable ? 'BUY' : 'SELL'} positions.</td></tr>`;
+    }
+    let rowsHtml = '';
+    for (const pos of posList) {
       const entryPrice = typeof pos.entryPrice === 'number' ? pos.entryPrice : 0;
       const currentPrice = typeof pos.currentPrice === 'number' ? pos.currentPrice : entryPrice;
       const targetPrice = typeof pos.targetExitPrice === 'number' ? pos.targetExitPrice : null;
-      const floatingGrossUSD = typeof pos.floatingGrossUSD === 'number' ? pos.floatingGrossUSD : 0;
-      const floatingChargesINR = typeof pos.floatingChargesINR === 'number' ? pos.floatingChargesINR : 0;
       const floatingNetINR = typeof pos.floatingNetINR === 'number' ? pos.floatingNetINR : 0;
 
-      const grossClass = floatingGrossUSD >= 0 ? 'text-green' : 'text-red';
+      const dist = targetPrice !== null ? Math.abs(targetPrice - currentPrice) : null;
       const netClass = floatingNetINR >= 0 ? 'text-green' : 'text-red';
+      const badgeBg = isBuyTable ? 'rgba(16, 185, 129, 0.15)' : 'rgba(239, 68, 68, 0.15)';
+      const badgeColor = isBuyTable ? '#a7f3d0' : '#fca5a5';
+      const badgeBorder = isBuyTable ? '1px solid #10b981' : '1px solid #ef4444';
 
-      html += `
+      rowsHtml += `
         <tr>
-          <td><strong>${pos.pairId || 'N/A'}</strong></td>
           <td>
-            <code style="color:var(--accent-cyan);">${pos.positionId || 'N/A'}</code> 
-            <span style="font-size:0.65rem; color:var(--text-dim);">(${posSym})</span>
+            <strong style="font-size:0.85rem;">${pos.pairId || 'N/A'}</strong>
+            <span style="display:block;"><code style="color:var(--accent-cyan); font-size:0.75rem;">${pos.positionId || 'N/A'}</code></span>
             ${pos.apiStatus ? `<span style="display:block; font-size:0.62rem; color:${pos.apiStatus.includes('TRANSMITTED') ? '#a7f3d0' : (pos.apiStatus.includes('SENDING') ? '#38bdf8' : '#f87171')}; font-weight:700;">📡 ${pos.apiStatus}</span>` : ''}
           </td>
-          <td><span class="badge-direction ${isBuy ? 'buy' : 'sell'}">${pos.direction || 'BUY'}</span></td>
-          <td>${pos.entryTime ? new Date(pos.entryTime).toLocaleTimeString() : 'N/A'}</td>
-          <td>$${entryPrice.toFixed(priceDecimals)}</td>
-          <td>$${currentPrice.toFixed(priceDecimals)}</td>
-          <td>${targetPrice !== null ? `<span class="target-price-badge">$${targetPrice.toFixed(priceDecimals)}</span>` : '<span style="color:var(--text-dim)">DISABLED</span>'}</td>
-          <td class="${grossClass}">$${floatingGrossUSD >= 0 ? '+' : ''}${floatingGrossUSD.toFixed(4)}</td>
-          <td>₹${floatingChargesINR.toFixed(2)}</td>
-          <td class="${netClass}" style="font-weight:700;">₹${floatingNetINR >= 0 ? '+' : ''}${floatingNetINR.toFixed(2)}</td>
-          <td><span class="status-badge live" style="padding:2px 6px; font-size:0.7rem;">OPEN</span></td>
           <td>
-            <button class="btn btn-danger" style="padding: 2px 8px; font-size: 0.72rem;" onclick="manualClose('${pos.positionId}')">Close</button>
+            <div style="font-size:0.8rem; color:var(--text-muted);">$${entryPrice.toFixed(priceDecimals)}</div>
+            <div style="font-size:0.85rem; font-weight:700; color:#fff;">➔ $${currentPrice.toFixed(priceDecimals)}</div>
+          </td>
+          <td>
+            ${targetPrice !== null ? `
+              <span class="target-price-badge" style="font-size:0.78rem; background:${badgeBg}; color:${badgeColor}; border:${badgeBorder}; padding:2px 6px; border-radius:4px; font-weight:700;">$${targetPrice.toFixed(priceDecimals)}</span>
+              <span style="display:block; font-size:0.68rem; color:${badgeColor}; margin-top:2px;">$${dist.toFixed(priceDecimals)} away</span>
+            ` : '<span style="color:var(--text-dim)">DISABLED</span>'}
+          </td>
+          <td style="text-align: right;">
+            <div class="${netClass}" style="font-size:1.05rem; font-weight:800; font-family:monospace;">₹${floatingNetINR >= 0 ? '+' : ''}${floatingNetINR.toFixed(2)}</div>
+          </td>
+          <td style="text-align: center;">
+            <button class="btn btn-danger" style="padding: 3px 8px; font-size: 0.72rem; font-weight:700;" onclick="manualClose('${pos.positionId}')">Close</button>
           </td>
         </tr>
       `;
     }
+    return rowsHtml;
+  };
+
+  if (buyTbody) {
+    const buyHtml = renderSideRows(buyPositions, true);
+    if (buyTbody.innerHTML !== buyHtml) buyTbody.innerHTML = buyHtml;
   }
 
-  if (tbody.innerHTML !== html) {
-    tbody.innerHTML = html;
+  if (sellTbody) {
+    const sellHtml = renderSideRows(sellPositions, false);
+    if (sellTbody.innerHTML !== sellHtml) sellTbody.innerHTML = sellHtml;
+  }
+
+  // Fallback if old single table body is present
+  if (singleTbody) {
+    updateTableHeaderClasses('activePositionsTable', activeSortKey, activeSortDir);
+    let html = '';
+    if (!positions || positions.length === 0) {
+      html = `<tr><td colspan="12" style="text-align: center; color: var(--text-dim); padding: 24px;">No active open positions. Engine will open 1 pair per unique market rate.</td></tr>`;
+    } else {
+      const sortedPositions = sortDataArray(positions, activeSortKey, activeSortDir);
+      for (const pos of sortedPositions) {
+        const posSym = pos.symbol || symbol || 'CLUSDT';
+        const priceDecimals = posSym === 'BTCUSDT' ? 2 : (posSym === 'XAGUSDT' ? 4 : 2);
+        const isBuy = pos.direction === 'BUY';
+        const entryPrice = typeof pos.entryPrice === 'number' ? pos.entryPrice : 0;
+        const currentPrice = typeof pos.currentPrice === 'number' ? pos.currentPrice : entryPrice;
+        const targetPrice = typeof pos.targetExitPrice === 'number' ? pos.targetExitPrice : null;
+        const floatingGrossUSD = typeof pos.floatingGrossUSD === 'number' ? pos.floatingGrossUSD : 0;
+        const floatingChargesINR = typeof pos.floatingChargesINR === 'number' ? pos.floatingChargesINR : 0;
+        const floatingNetINR = typeof pos.floatingNetINR === 'number' ? pos.floatingNetINR : 0;
+
+        const grossClass = floatingGrossUSD >= 0 ? 'text-green' : 'text-red';
+        const netClass = floatingNetINR >= 0 ? 'text-green' : 'text-red';
+
+        html += `
+          <tr>
+            <td><strong>${pos.pairId || 'N/A'}</strong></td>
+            <td>
+              <code style="color:var(--accent-cyan);">${pos.positionId || 'N/A'}</code> 
+              <span style="font-size:0.65rem; color:var(--text-dim);">(${posSym})</span>
+              ${pos.apiStatus ? `<span style="display:block; font-size:0.62rem; color:${pos.apiStatus.includes('TRANSMITTED') ? '#a7f3d0' : (pos.apiStatus.includes('SENDING') ? '#38bdf8' : '#f87171')}; font-weight:700;">📡 ${pos.apiStatus}</span>` : ''}
+            </td>
+            <td><span class="badge-direction ${isBuy ? 'buy' : 'sell'}">${pos.direction || 'BUY'}</span></td>
+            <td>${pos.entryTime ? new Date(pos.entryTime).toLocaleTimeString() : 'N/A'}</td>
+            <td>$${entryPrice.toFixed(priceDecimals)}</td>
+            <td>$${currentPrice.toFixed(priceDecimals)}</td>
+            <td>${targetPrice !== null ? `<span class="target-price-badge">$${targetPrice.toFixed(priceDecimals)}</span>` : '<span style="color:var(--text-dim)">DISABLED</span>'}</td>
+            <td class="${grossClass}">$${floatingGrossUSD >= 0 ? '+' : ''}${floatingGrossUSD.toFixed(4)}</td>
+            <td>₹${floatingChargesINR.toFixed(2)}</td>
+            <td class="${netClass}" style="font-weight:700;">₹${floatingNetINR >= 0 ? '+' : ''}${floatingNetINR.toFixed(2)}</td>
+            <td><span class="status-badge live" style="padding:2px 6px; font-size:0.7rem;">OPEN</span></td>
+            <td>
+              <button class="btn btn-danger" style="padding: 2px 8px; font-size: 0.72rem;" onclick="manualClose('${pos.positionId}')">Close</button>
+            </td>
+          </tr>
+        `;
+      }
+    }
+
+    if (singleTbody.innerHTML !== html) {
+      singleTbody.innerHTML = html;
+    }
   }
 }
 
@@ -581,7 +661,6 @@ function renderClosedPositions(positions, symbol) {
       const grossProfitUSD = typeof pos.grossProfitUSD === 'number' ? pos.grossProfitUSD : 0;
       const totalChargesINR = typeof pos.totalChargesINR === 'number' ? pos.totalChargesINR : 0;
       const netProfitINR = typeof pos.netProfitINR === 'number' ? pos.netProfitINR : 0;
-      const netProfitUSD = typeof pos.netProfitUSD === 'number' ? pos.netProfitUSD : (pos.usdInrRate ? netProfitINR / pos.usdInrRate : netProfitINR / 86.5);
 
       const grossClass = grossProfitUSD >= 0 ? 'text-green' : 'text-red';
       const netClass = netProfitINR >= 0 ? 'text-green' : 'text-red';
@@ -600,9 +679,8 @@ function renderClosedPositions(positions, symbol) {
           <td>₹${totalChargesINR.toFixed(2)}</td>
           <td class="${netClass}" style="font-weight:700;">₹${netProfitINR >= 0 ? '+' : ''}${netProfitINR.toFixed(2)}</td>
           <td><span class="badge-reason">${pos.exitReason || 'TARGET HIT'}</span></td>
-          <td class="${netClass}" style="font-size: 1.05rem; font-weight: 800; font-family: monospace; white-space: nowrap; background: rgba(15, 23, 42, 0.6); border-left: 2px solid ${netProfitINR >= 0 ? '#10b981' : '#ef4444'};">
+          <td class="${netClass}" style="font-size: 1.1rem; font-weight: 800; font-family: monospace; white-space: nowrap; background: rgba(15, 23, 42, 0.6); border-left: 2px solid ${netProfitINR >= 0 ? '#10b981' : '#ef4444'}; text-align: center;">
             <span>₹${netProfitINR >= 0 ? '+' : ''}${netProfitINR.toFixed(2)}</span>
-            <span style="font-size: 0.76rem; opacity: 0.85; display: block;">($${netProfitUSD >= 0 ? '+' : ''}${netProfitUSD.toFixed(4)} USD)</span>
           </td>
         </tr>
       `;

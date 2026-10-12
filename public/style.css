@@ -837,3 +837,34 @@ table.data-table tr:hover {
   }
 }
 
+/* Active Positions Dual Side-by-Side Tables */
+.active-tables-container {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  margin-top: 14px;
+}
+
+@media (max-width: 1024px) {
+  .active-tables-container {
+    grid-template-columns: 1fr;
+  }
+}
+
+.active-table-card {
+  border-radius: 8px;
+  padding: 12px;
+  overflow-x: auto;
+}
+
+.active-table-card.buy-card {
+  background: rgba(16, 185, 129, 0.04);
+  border: 1px solid rgba(16, 185, 129, 0.25);
+}
+
+.active-table-card.sell-card {
+  background: rgba(239, 68, 68, 0.04);
+  border: 1px solid rgba(239, 68, 68, 0.25);
+}
+
+
