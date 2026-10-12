@@ -528,33 +528,41 @@ class MudrexLiveAdapter {
     for (const url of endpoints) {
       try {
         const res = await this.request('GET', url);
-        if (res.success && res.data) {
-          let list = Array.isArray(res.data) ? res.data : (Array.isArray(res.data.data) ? res.data.data : (res.data.positions || [res.data]));
-          if (Array.isArray(list) && list.length > 0) {
-            const parsedPositions = list.map((item, idx) => {
-              const direction = (item.side || item.direction || item.order_type || 'BUY').toUpperCase().includes('SHORT') || (item.side === 'SELL') ? 'SELL' : 'BUY';
-              const entryPrice = Number(item.entry_price || item.price || item.entryPrice || 91.15);
-              const qty = Number(item.quantity || item.qty || 1.0);
-              const posId = item.position_id || item.id || item.order_id || `P-REAL-${idx + 1}`;
-              const pairId = item.pair_id || `PAIR-${(idx + 1).toString().padStart(4, '0')}`;
-              const targetExit = item.takeprofit_price ? Number(item.takeprofit_price) : (direction === 'BUY' ? Number((entryPrice + 0.20).toFixed(2)) : Number((entryPrice - 0.20).toFixed(2)));
-
-              return {
-                pairId,
-                positionId: posId,
-                direction,
-                symbol: item.symbol || symbol,
-                entryTime: item.created_at || item.created_time || new Date().toISOString(),
-                entryPrice,
-                currentPrice: entryPrice,
-                targetExitPrice: targetExit,
-                quantity: qty,
-                status: 'OPEN',
-                apiStatus: 'REAL_MUDREX_POSITION'
-              };
-            });
-            return { success: true, data: parsedPositions };
+        if (res.success && res.data !== undefined && res.data !== null) {
+          let list = [];
+          if (Array.isArray(res.data)) {
+            list = res.data;
+          } else if (Array.isArray(res.data.data)) {
+            list = res.data.data;
+          } else if (Array.isArray(res.data.positions)) {
+            list = res.data.positions;
+          } else if (typeof res.data === 'object' && (res.data.position_id || res.data.id || res.data.order_id)) {
+            list = [res.data];
           }
+
+          const parsedPositions = list.map((item, idx) => {
+            const direction = (item.side || item.direction || item.order_type || 'BUY').toUpperCase().includes('SHORT') || (item.side === 'SELL') ? 'SELL' : 'BUY';
+            const entryPrice = Number(item.entry_price || item.price || item.entryPrice || 91.15);
+            const qty = Number(item.quantity || item.qty || 1.0);
+            const posId = item.position_id || item.id || item.order_id || `P-REAL-${idx + 1}`;
+            const pairId = item.pair_id || `PAIR-${(idx + 1).toString().padStart(4, '0')}`;
+            const targetExit = item.takeprofit_price ? Number(item.takeprofit_price) : (direction === 'BUY' ? Number((entryPrice + 0.20).toFixed(2)) : Number((entryPrice - 0.20).toFixed(2)));
+
+            return {
+              pairId,
+              positionId: posId,
+              direction,
+              symbol: item.symbol || symbol,
+              entryTime: item.created_at || item.created_time || new Date().toISOString(),
+              entryPrice,
+              currentPrice: entryPrice,
+              targetExitPrice: targetExit,
+              quantity: qty,
+              status: 'OPEN',
+              apiStatus: 'REAL_MUDREX_POSITION'
+            };
+          });
+          return { success: true, data: parsedPositions };
         }
       } catch (e) {
         console.warn(`[Mudrex Live Adapter] Error querying ${url}:`, e.message);
@@ -606,8 +614,24 @@ class MudrexLiveAdapter {
 
     try {
       const realPosRes = await this.fetchPositions();
-      if (realPosRes.success && Array.isArray(realPosRes.data) && realPosRes.data.length > 0) {
-        liveOpenPositions = [...realPosRes.data];
+      if (realPosRes.success && Array.isArray(realPosRes.data)) {
+        const freshRealIds = new Set(realPosRes.data.map(p => p.positionId));
+        // Remove stale REAL_MUDREX_POSITION entries from memory if they are no longer open on Mudrex Exchange
+        this.liveOpenPositions = (this.liveOpenPositions || []).filter(p => {
+          if (p.apiStatus === 'REAL_MUDREX_POSITION') {
+            return freshRealIds.has(p.positionId);
+          }
+          return true;
+        });
+
+        // Add fresh real open positions
+        for (const rPos of realPosRes.data) {
+          if (!this.liveOpenPositions.some(p => p.positionId === rPos.positionId)) {
+            this.liveOpenPositions.push(rPos);
+          }
+        }
+        liveOpenPositions = [...this.liveOpenPositions];
+        this.saveState();
       }
     } catch (e) {}
 
