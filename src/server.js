@@ -37,7 +37,7 @@ app.get('/health', (req, res) => {
       service: 'Mudrex LIVE Rate Engine',
       timestamp: new Date().toISOString(),
       uptimeSeconds: Math.floor(process.uptime()),
-      paperTradingOnly: true,
+      paperTradingOnly: !require('./engine/mudrexLiveAdapter').isRealExecutionEnabled(),
       realOrdersDisabled: false,
       engineStatus: paperEngine.engineStatus,
       isEngineRunning: paperEngine.isEngineRunning,

@@ -23,8 +23,8 @@
   "closedPositions": [],
   "auditLogs": [
     {
-      "id": "LOG-1791831890390-313",
-      "timestamp": "2026-10-12T19:04:50.390Z",
+      "id": "LOG-1791831934120-824",
+      "timestamp": "2026-10-12T19:05:34.120Z",
       "event": "ENGINE_RESET",
       "details": "All engine paper positions, processed rates, and history reset to ₹1,00,000 capital."
     }
