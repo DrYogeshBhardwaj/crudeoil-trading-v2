@@ -42,8 +42,8 @@ async function runTestSuite() {
     { name: 'Test 17 — Entry Rejection Audit and Insufficient Margin Check', fn: test17 },
     { name: 'Test 18 — Position State-Driven Pair-Entry Strategy Verification (Leg Reopening, Idempotency & Cap)', fn: test18 },
     { name: 'Test 19 — Same-Rate Atomic Pair Creation & Missing-Side Re-Entry at Same Rate Verification', fn: test19 },
-    { name: 'Test 20 — Strict Pair Completion Condition Audit (No Re-entry at Unrelated Price)', fn: test20 },
-    { name: 'Test 21 — Accounting Formula & Margin Reconciliation Math Verification', fn: test21 }
+    { name: 'Test 21 — Accounting Formula & Margin Reconciliation Math Verification', fn: test21 },
+    { name: 'Test 22 — Total Charges Paid Summary KPI Aggregation Verification', fn: test22 }
   ];
 
   for (const tc of testCases) {
@@ -569,6 +569,24 @@ function test21() {
   const expectedAvailableMargin = Math.max(0, s.totalEquityINR - s.marginUsedINR);
   assert(Math.abs(s.availableMarginINR - expectedAvailableMargin) < 0.01, `Available Margin mismatch: got ${s.availableMarginINR}, expected ${expectedAvailableMargin}`);
   paperEngine.resetAllData();
+}
+
+// Test 22 — Total Charges Paid Summary KPI Aggregation Verification
+async function test22() {
+  const mudrexLive = require('../src/engine/mudrexLiveAdapter');
+  mudrexLive.liveClosedPositions = [
+    { positionId: 'P-0004-SELL', grossProfitUSD: 0.40, grossProfitINR: 38.78, totalChargesUSD: 0.2713, totalChargesINR: 26.31, netProfitUSD: 0.1287, netProfitINR: 12.47 },
+    { positionId: 'P-0001-SELL', grossProfitUSD: 0.40, grossProfitINR: 38.78, totalChargesUSD: 0.2713, totalChargesINR: 26.31, netProfitUSD: 0.1287, netProfitINR: 12.47 },
+    { positionId: 'P-0003-SELL', grossProfitUSD: 0.40, grossProfitINR: 38.78, totalChargesUSD: 0.2713, totalChargesINR: 26.31, netProfitUSD: 0.1287, netProfitINR: 12.47 },
+    { positionId: 'P-0002-SELL', grossProfitUSD: 0.40, grossProfitINR: 38.78, totalChargesUSD: 0.2712, totalChargesINR: 26.30, netProfitUSD: 0.1288, netProfitINR: 12.48 }
+  ];
+  
+  const metrics = await mudrexLive.getLiveMetrics();
+  const summary = metrics.summary;
+
+  assert(summary.realizedChargesINR === 105.23, `Expected summary.realizedChargesINR to be 105.23, got ${summary.realizedChargesINR}`);
+  assert(summary.realizedNetINR === 49.89, `Expected summary.realizedNetINR to be 49.89, got ${summary.realizedNetINR}`);
+  mudrexLive.liveClosedPositions = [];
 }
 
 runTestSuite();

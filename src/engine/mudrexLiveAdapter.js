@@ -647,9 +647,17 @@ class MudrexLiveAdapter {
     }
 
     let liveClosedPositions = [];
+    const seenIds = new Set();
     if (Array.isArray(paperEngine.closedPositions)) {
-      const seenIds = new Set();
       for (const cp of paperEngine.closedPositions) {
+        if (!seenIds.has(cp.positionId)) {
+          liveClosedPositions.push(cp);
+          seenIds.add(cp.positionId);
+        }
+      }
+    }
+    if (Array.isArray(this.liveClosedPositions)) {
+      for (const cp of this.liveClosedPositions) {
         if (!seenIds.has(cp.positionId)) {
           liveClosedPositions.push(cp);
           seenIds.add(cp.positionId);
@@ -698,11 +706,13 @@ class MudrexLiveAdapter {
     this.liveOpenPositions = liveOpenPositions;
     this.liveClosedPositions = liveClosedPositions;
 
-    let realizedGrossUSD = 0, realizedNetINR = 0;
+    let realizedGrossUSD = 0, realizedNetINR = 0, realizedChargesINR = 0, realizedChargesUSD = 0;
     let winCount = 0, lossCount = 0;
     for (const cp of liveClosedPositions) {
       realizedGrossUSD += cp.grossProfitUSD || 0;
       realizedNetINR += cp.netProfitINR || 0;
+      realizedChargesINR += cp.totalChargesINR || 0;
+      realizedChargesUSD += cp.totalChargesUSD || 0;
       if ((cp.netProfitUSD || cp.netProfitINR || 0) >= 0) winCount++;
       else lossCount++;
     }
@@ -783,8 +793,8 @@ class MudrexLiveAdapter {
         realizedBalanceINR,
         realizedGrossUSD,
         realizedGrossINR: realizedGrossUSD * (rateInfo.usdInrRate || 86.5),
-        realizedChargesUSD: 0,
-        realizedChargesINR: 0,
+        realizedChargesUSD: Number(realizedChargesUSD.toFixed(4)),
+        realizedChargesINR: Number(realizedChargesINR.toFixed(2)),
         realizedNetUSD: realizedNetINR / (rateInfo.usdInrRate || 86.5),
         realizedNetINR,
         floatingGrossUSD,
