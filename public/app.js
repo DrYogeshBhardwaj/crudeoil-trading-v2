@@ -854,13 +854,13 @@ function renderActivePositions(positions, symbol) {
             ${pos.apiStatus && !pos.apiStatus.includes('REAL_ORDERS_DISABLED') ? `<span style="display:block; font-size:0.62rem; color:${pos.apiStatus.includes('TRANSMITTED') ? '#a7f3d0' : (pos.apiStatus.includes('SENDING') ? '#38bdf8' : '#f87171')}; font-weight:700;">📡 ${pos.apiStatus}</span>` : ''}
           </td>
           <td>
-            <div style="font-size:0.78rem; color:var(--text-muted);">$${entryPrice.toFixed(priceDecimals)}</div>
-            <div style="font-size:0.88rem; font-weight:700; color:#fff;">➔ $${currentPrice.toFixed(priceDecimals)}</div>
+            <div style="font-size:0.78rem; color:var(--text-muted);">₹${entryPrice.toFixed(priceDecimals)}</div>
+            <div style="font-size:0.88rem; font-weight:700; color:#fff;">➔ ₹${currentPrice.toFixed(priceDecimals)}</div>
           </td>
           <td>
             ${targetPrice !== null ? `
-              <div style="font-size:1.05rem; font-weight:800; color:#f59e0b; font-family:monospace;">$${targetPrice.toFixed(priceDecimals)}</div>
-              <div style="font-size:0.7rem; color:var(--text-muted);">$${dist.toFixed(priceDecimals)} to exit</div>
+              <div style="font-size:1.05rem; font-weight:800; color:#f59e0b; font-family:monospace;">₹${targetPrice.toFixed(priceDecimals)}</div>
+              <div style="font-size:0.7rem; color:var(--text-muted);">₹${dist.toFixed(priceDecimals)} to exit</div>
             ` : '<span style="color:var(--text-dim)">DISABLED</span>'}
           </td>
           <td style="text-align: right;">
@@ -905,10 +905,11 @@ function renderClosedPositions(positions, symbol) {
       const exitPrice = typeof pos.exitPrice === 'number' ? pos.exitPrice : entryPrice;
       const targetPrice = typeof pos.targetExitPrice === 'number' ? pos.targetExitPrice : null;
       const grossProfitUSD = typeof pos.grossProfitUSD === 'number' ? pos.grossProfitUSD : 0;
+      const grossProfitINR = typeof pos.grossProfitINR === 'number' ? pos.grossProfitINR : (grossProfitUSD * (pos.usdInrRate || 86.5));
       const totalChargesINR = typeof pos.totalChargesINR === 'number' ? pos.totalChargesINR : 0;
       const netProfitINR = typeof pos.netProfitINR === 'number' ? pos.netProfitINR : 0;
 
-      const grossClass = grossProfitUSD >= 0 ? 'text-green' : 'text-red';
+      const grossClass = grossProfitINR >= 0 ? 'text-green' : 'text-red';
       const netClass = netProfitINR >= 0 ? 'text-green' : 'text-red';
 
       html += `
@@ -918,10 +919,10 @@ function renderClosedPositions(positions, symbol) {
           <td><span class="badge-direction ${isBuy ? 'buy' : 'sell'}">${pos.direction || 'BUY'}</span></td>
           <td>${pos.entryTime ? new Date(pos.entryTime).toLocaleTimeString() : 'N/A'}</td>
           <td>${pos.exitTime ? new Date(pos.exitTime).toLocaleTimeString() : 'N/A'}</td>
-          <td>$${entryPrice.toFixed(priceDecimals)}</td>
-          <td>$${exitPrice.toFixed(priceDecimals)}</td>
-          <td>${targetPrice !== null ? `<span class="target-price-badge">$${targetPrice.toFixed(priceDecimals)}</span>` : 'N/A'}</td>
-          <td class="${grossClass}">$${grossProfitUSD >= 0 ? '+' : ''}${grossProfitUSD.toFixed(4)}</td>
+          <td>₹${entryPrice.toFixed(priceDecimals)}</td>
+          <td>₹${exitPrice.toFixed(priceDecimals)}</td>
+          <td>${targetPrice !== null ? `<span class="target-price-badge">₹${targetPrice.toFixed(priceDecimals)}</span>` : 'N/A'}</td>
+          <td class="${grossClass}">₹${grossProfitINR >= 0 ? '+' : ''}${grossProfitINR.toFixed(2)}</td>
           <td>₹${totalChargesINR.toFixed(2)}</td>
           <td class="${netClass}" style="font-weight:700;">₹${netProfitINR >= 0 ? '+' : ''}${netProfitINR.toFixed(2)}</td>
           <td><span class="badge-reason">${pos.exitReason || 'TARGET HIT'}</span></td>
@@ -939,16 +940,36 @@ function renderClosedPositions(positions, symbol) {
 }
 
 function switchTab(tabId) {
-  const tabs = document.querySelectorAll('.tab-content');
-  const btns = document.querySelectorAll('.tab-btn');
+  let targetId = tabId;
+  if (!document.getElementById(targetId)) {
+    if (tabId === 'activePositions') targetId = 'tabContentActivePositions';
+    else if (tabId === 'closedHistory') targetId = 'tabContentClosedHistory';
+    else if (tabId === 'historicalBacktest') targetId = 'tabContentHistoricalBacktest';
+    else if (tabId === 'testRunner') targetId = 'tabContentTestRunner';
+    else if (tabId === 'auditLogs') targetId = 'tabContentAuditLogs';
+  }
 
-  tabs.forEach(t => t.classList.remove('active'));
-  btns.forEach(b => b.classList.remove('active'));
+  const targetEl = document.getElementById(targetId);
+  if (!targetEl) return;
 
-  document.getElementById(tabId).classList.add('active');
-  event.target.classList.add('active');
+  const parent = targetEl.parentElement;
+  if (parent) {
+    const tabs = parent.querySelectorAll('.tab-content');
+    tabs.forEach(t => t.classList.remove('active'));
+  }
 
-  if (tabId === 'tabLogs' && currentMetrics) {
+  targetEl.classList.add('active');
+
+  if (window.event && window.event.currentTarget) {
+    const btnContainer = window.event.currentTarget.parentElement;
+    if (btnContainer) {
+      const btns = btnContainer.querySelectorAll('.tab-btn');
+      btns.forEach(b => b.classList.remove('active'));
+    }
+    window.event.currentTarget.classList.add('active');
+  }
+
+  if ((targetId.includes('Audit') || targetId === 'tabLogs') && currentMetrics) {
     renderAuditLogs(currentMetrics.auditLogs);
   }
 }

@@ -270,24 +270,26 @@
         </div>
         <div class="card-body padding-none">
           <div class="table-responsive">
-            <table class="data-table">
+            <table class="data-table" id="closedPositionsTable">
               <thead>
                 <tr>
-                  <th>POSITION ID</th>
-                  <th>PAIR ID</th>
-                  <th>TYPE</th>
-                  <th>ENTRY TIME</th>
-                  <th>EXIT TIME</th>
-                  <th>ENTRY PRICE</th>
-                  <th>EXIT PRICE</th>
-                  <th>GROSS (₹)</th>
-                  <th>CHARGES (₹)</th>
-                  <th>NET P/L (₹)</th>
-                  <th>EXIT REASON</th>
+                  <th class="sortable" data-key="pairId" onclick="sortTable('closed', 'pairId')">PAIR ID</th>
+                  <th class="sortable" data-key="positionId" onclick="sortTable('closed', 'positionId')">POSITION ID</th>
+                  <th class="sortable" data-key="direction" onclick="sortTable('closed', 'direction')">TYPE</th>
+                  <th class="sortable" data-key="entryTime" onclick="sortTable('closed', 'entryTime')">ENTRY TIME</th>
+                  <th class="sortable" data-key="exitTime" onclick="sortTable('closed', 'exitTime')">EXIT TIME</th>
+                  <th class="sortable" data-key="entryPrice" onclick="sortTable('closed', 'entryPrice')">ENTRY PRICE</th>
+                  <th class="sortable" data-key="exitPrice" onclick="sortTable('closed', 'exitPrice')">EXIT PRICE</th>
+                  <th class="sortable" data-key="targetExitPrice" onclick="sortTable('closed', 'targetExitPrice')">TARGET 🎯</th>
+                  <th class="sortable" data-key="grossProfitUSD" onclick="sortTable('closed', 'grossProfitUSD')">GROSS (₹)</th>
+                  <th class="sortable" data-key="totalChargesINR" onclick="sortTable('closed', 'totalChargesINR')">CHARGES (₹)</th>
+                  <th class="sortable" data-key="netProfitINR" onclick="sortTable('closed', 'netProfitINR')">NET P/L (₹)</th>
+                  <th class="sortable" data-key="exitReason" onclick="sortTable('closed', 'exitReason')">EXIT REASON</th>
+                  <th class="sortable" data-key="netProfitINR" onclick="sortTable('closed', 'netProfitINR')" style="background: rgba(16, 185, 129, 0.15); color: #a7f3d0; font-weight: 800; text-align: center;">💎 NET PURE PROFIT (₹)</th>
                 </tr>
               </thead>
               <tbody id="closedPositionsTbody">
-                <tr><td colspan="11" style="text-align: center; color: var(--text-muted); padding: 30px;">No Closed Positions Logged Yet</td></tr>
+                <tr><td colspan="13" style="text-align: center; color: var(--text-muted); padding: 30px;">No Closed Positions Logged Yet</td></tr>
               </tbody>
             </table>
           </div>
