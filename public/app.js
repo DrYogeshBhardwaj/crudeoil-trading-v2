@@ -597,58 +597,6 @@ function renderActivePositions(positions, symbol) {
     const sellHtml = renderSideRows(sellPositions, false);
     if (sellTbody.innerHTML !== sellHtml) sellTbody.innerHTML = sellHtml;
   }
-
-  // Fallback if old single table body is present
-  if (singleTbody) {
-    updateTableHeaderClasses('activePositionsTable', activeSortKey, activeSortDir);
-    let html = '';
-    if (!positions || positions.length === 0) {
-      html = `<tr><td colspan="12" style="text-align: center; color: var(--text-dim); padding: 24px;">No active open positions. Engine will open 1 pair per unique market rate.</td></tr>`;
-    } else {
-      const sortedPositions = sortDataArray(positions, activeSortKey, activeSortDir);
-      for (const pos of sortedPositions) {
-        const posSym = pos.symbol || symbol || 'CLUSDT';
-        const priceDecimals = posSym === 'BTCUSDT' ? 2 : (posSym === 'XAGUSDT' ? 4 : 2);
-        const isBuy = pos.direction === 'BUY';
-        const entryPrice = typeof pos.entryPrice === 'number' ? pos.entryPrice : 0;
-        const currentPrice = typeof pos.currentPrice === 'number' ? pos.currentPrice : entryPrice;
-        const targetPrice = typeof pos.targetExitPrice === 'number' ? pos.targetExitPrice : null;
-        const floatingGrossUSD = typeof pos.floatingGrossUSD === 'number' ? pos.floatingGrossUSD : 0;
-        const floatingChargesINR = typeof pos.floatingChargesINR === 'number' ? pos.floatingChargesINR : 0;
-        const floatingNetINR = typeof pos.floatingNetINR === 'number' ? pos.floatingNetINR : 0;
-
-        const grossClass = floatingGrossUSD >= 0 ? 'text-green' : 'text-red';
-        const netClass = floatingNetINR >= 0 ? 'text-green' : 'text-red';
-
-        html += `
-          <tr>
-            <td><strong>${pos.pairId || 'N/A'}</strong></td>
-            <td>
-              <code style="color:var(--accent-cyan);">${pos.positionId || 'N/A'}</code> 
-              <span style="font-size:0.65rem; color:var(--text-dim);">(${posSym})</span>
-              ${pos.apiStatus ? `<span style="display:block; font-size:0.62rem; color:${pos.apiStatus.includes('TRANSMITTED') ? '#a7f3d0' : (pos.apiStatus.includes('SENDING') ? '#38bdf8' : '#f87171')}; font-weight:700;">📡 ${pos.apiStatus}</span>` : ''}
-            </td>
-            <td><span class="badge-direction ${isBuy ? 'buy' : 'sell'}">${pos.direction || 'BUY'}</span></td>
-            <td>${pos.entryTime ? new Date(pos.entryTime).toLocaleTimeString() : 'N/A'}</td>
-            <td>$${entryPrice.toFixed(priceDecimals)}</td>
-            <td>$${currentPrice.toFixed(priceDecimals)}</td>
-            <td>${targetPrice !== null ? `<span class="target-price-badge">$${targetPrice.toFixed(priceDecimals)}</span>` : '<span style="color:var(--text-dim)">DISABLED</span>'}</td>
-            <td class="${grossClass}">$${floatingGrossUSD >= 0 ? '+' : ''}${floatingGrossUSD.toFixed(4)}</td>
-            <td>₹${floatingChargesINR.toFixed(2)}</td>
-            <td class="${netClass}" style="font-weight:700;">₹${floatingNetINR >= 0 ? '+' : ''}${floatingNetINR.toFixed(2)}</td>
-            <td><span class="status-badge live" style="padding:2px 6px; font-size:0.7rem;">OPEN</span></td>
-            <td>
-              <button class="btn btn-danger" style="padding: 2px 8px; font-size: 0.72rem;" onclick="manualClose('${pos.positionId}')">Close</button>
-            </td>
-          </tr>
-        `;
-      }
-    }
-
-    if (singleTbody.innerHTML !== html) {
-      singleTbody.innerHTML = html;
-    }
-  }
 }
 
 function renderClosedPositions(positions, symbol) {
