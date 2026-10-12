@@ -568,6 +568,7 @@ function test21() {
   // 3. Available Margin = Total Equity - Margin Used
   const expectedAvailableMargin = Math.max(0, s.totalEquityINR - s.marginUsedINR);
   assert(Math.abs(s.availableMarginINR - expectedAvailableMargin) < 0.01, `Available Margin mismatch: got ${s.availableMarginINR}, expected ${expectedAvailableMargin}`);
+  paperEngine.resetAllData();
 }
 
 runTestSuite();
