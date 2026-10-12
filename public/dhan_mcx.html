@@ -201,59 +201,57 @@
         </div>
       </div>
 
-      <!-- Two Column Active Positions Grid -->
-      <div class="positions-grid">
+      <!-- 2 Side-by-Side Tables Container for BUY & SELL Positions -->
+      <div class="active-tables-container">
         
         <!-- Left: BUY Positions (Long) -->
-        <div class="card card-buy">
-          <div class="card-header header-buy" style="display: flex; justify-content: space-between; align-items: center;">
-            <h2>📈 BUY Positions P/L (Long) <span class="count-badge" id="buyCountBadge">0 ACTIVE</span></h2>
-            <div style="font-size: 0.85rem; font-weight: 700;">NET P/L: <span id="buyNetPlTotal" style="color: #10b981;">₹0.00</span></div>
+        <div class="active-table-card buy-card">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; padding-bottom: 6px; border-bottom: 1px solid rgba(16, 185, 129, 0.25);">
+            <h4 style="margin: 0; color: #10b981; font-size: 0.95rem; font-weight: 800; display: flex; align-items: center; gap: 8px;">
+              <span>🟢 BUY Positions P/L (Long)</span>
+              <span id="buyPositionsBadge" class="badge-direction buy" style="font-size: 0.7rem;">0 Active</span>
+            </h4>
+            <span id="buyPositionsNetPL" style="font-size: 0.85rem; font-weight: 800; color: #10b981;">NET P/L: ₹0.00</span>
           </div>
-          <div class="card-body padding-none">
-            <div class="table-responsive">
-              <table class="data-table">
-                <thead>
-                  <tr>
-                    <th>PAIR / POSITION ID</th>
-                    <th>ENTRY ➔ CURRENT</th>
-                    <th>TARGET EXIT 🎯</th>
-                    <th>NET FLOATING P/L (INR)</th>
-                    <th>ACTION</th>
-                  </tr>
-                </thead>
-                <tbody id="buyPositionsTbody">
-                  <tr><td colspan="5" style="text-align: center; color: var(--text-muted); padding: 30px;">No Active BUY Positions</td></tr>
-                </tbody>
-              </table>
-            </div>
-          </div>
+          <table class="data-table" id="buyPositionsTable">
+            <thead>
+              <tr>
+                <th>Pair / Position ID</th>
+                <th>Entry ➔ Current</th>
+                <th>Target Exit 🎯</th>
+                <th style="text-align: right;">Net Floating P/L (INR)</th>
+                <th style="text-align: center;">Action</th>
+              </tr>
+            </thead>
+            <tbody id="buyPositionsTbody">
+              <tr><td colspan="5" style="text-align: center; color: var(--text-dim); padding: 18px;">No active BUY positions.</td></tr>
+            </tbody>
+          </table>
         </div>
 
         <!-- Right: SELL Positions (Short) -->
-        <div class="card card-sell">
-          <div class="card-header header-sell" style="display: flex; justify-content: space-between; align-items: center;">
-            <h2>📉 SELL Positions P/L (Short) <span class="count-badge" id="sellCountBadge">0 ACTIVE</span></h2>
-            <div style="font-size: 0.85rem; font-weight: 700;">NET P/L: <span id="sellNetPlTotal" style="color: #ef4444;">₹0.00</span></div>
+        <div class="active-table-card sell-card">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; padding-bottom: 6px; border-bottom: 1px solid rgba(239, 68, 68, 0.25);">
+            <h4 style="margin: 0; color: #ef4444; font-size: 0.95rem; font-weight: 800; display: flex; align-items: center; gap: 8px;">
+              <span>🔴 SELL Positions P/L (Short)</span>
+              <span id="sellPositionsBadge" class="badge-direction sell" style="font-size: 0.7rem;">0 Active</span>
+            </h4>
+            <span id="sellPositionsNetPL" style="font-size: 0.85rem; font-weight: 800; color: #ef4444;">NET P/L: ₹0.00</span>
           </div>
-          <div class="card-body padding-none">
-            <div class="table-responsive">
-              <table class="data-table">
-                <thead>
-                  <tr>
-                    <th>PAIR / POSITION ID</th>
-                    <th>ENTRY ➔ CURRENT</th>
-                    <th>TARGET EXIT 🎯</th>
-                    <th>NET FLOATING P/L (INR)</th>
-                    <th>ACTION</th>
-                  </tr>
-                </thead>
-                <tbody id="sellPositionsTbody">
-                  <tr><td colspan="5" style="text-align: center; color: var(--text-muted); padding: 30px;">No Active SELL Positions</td></tr>
-                </tbody>
-              </table>
-            </div>
-          </div>
+          <table class="data-table" id="sellPositionsTable">
+            <thead>
+              <tr>
+                <th>Pair / Position ID</th>
+                <th>Entry ➔ Current</th>
+                <th>Target Exit 🎯</th>
+                <th style="text-align: right;">Net Floating P/L (INR)</th>
+                <th style="text-align: center;">Action</th>
+              </tr>
+            </thead>
+            <tbody id="sellPositionsTbody">
+              <tr><td colspan="5" style="text-align: center; color: var(--text-dim); padding: 18px;">No active SELL positions.</td></tr>
+            </tbody>
+          </table>
         </div>
 
       </div>
