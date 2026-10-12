@@ -413,6 +413,25 @@ function drawLiveCanvasChart(canvasId, livePrice, nearestBuyTarget, nearestSellT
 function renderDashboard(data) {
   const { rateFeedInfo, summary, settings, engineStatus, pauseReason, isEngineRunning, lastProcessedRate, processedRatesCount, openPositions, closedPositions, auditLogs } = data;
 
+  const isDhanPage = window.location.pathname.includes('dhan');
+  const isMudrexPage = window.location.pathname.includes('mudrex');
+
+  if (isDhanPage && settings && settings.instrument !== 'XAGUSDT' && !window._autoSwitchedInstrument) {
+    window._autoSwitchedInstrument = true;
+    fetch('/api/settings', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ instrument: 'XAGUSDT', profitTargetMove: 1000, maxActivePairs: 100, startingCapitalINR: 350000 })
+    });
+  } else if (isMudrexPage && settings && settings.instrument !== 'CLUSDT' && !window._autoSwitchedInstrument) {
+    window._autoSwitchedInstrument = true;
+    fetch('/api/settings', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ instrument: 'CLUSDT', profitTargetMove: 0.2, maxActivePairs: 100, startingCapitalINR: 350000 })
+    });
+  }
+
   const currentSymbol = settings.instrument;
   const symbolLabels = {
     CLUSDT: 'CLUSDT — Crude Oil',

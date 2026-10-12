@@ -6,11 +6,11 @@ class PaperEngine {
   constructor() {
     this.settings = {
       startingCapitalINR: 350000,
-      contractQuantity: 1.0, // 1 kg / 1 Lot default for XAGUSDT Silver
+      contractQuantity: 1.0,
       leverage: 5,
-      instrument: 'XAGUSDT',
+      instrument: 'CLUSDT',
       profitTargetMode: 'PRICE_MOVE',
-      profitTargetMove: 1000, // ₹1,000 default target move for MCX Silver
+      profitTargetMove: 0.2,
       targetDisabled: false,
       maxActivePairs: 100,
       dailyLossCircuitBreakerINR: 2000,
@@ -73,11 +73,8 @@ class PaperEngine {
     const saved = storage.loadState();
     if (saved) {
       if (saved.settings) this.settings = { ...this.settings, ...saved.settings };
-      this.settings.instrument = 'XAGUSDT'; // MCX Silver default
       this.settings.startingCapitalINR = 350000; // ₹3.5 Lakh virtual capital
       this.settings.maxActivePairs = 100; // 100 Active Pairs Cap
-      this.settings.profitTargetMove = 1000; // ₹1,000 target move for Silver
-      this.settings.contractQuantity = 1.0; // 1 Lot Silver
       if (saved.pairs) this.pairs = saved.pairs;
       if (saved.closedPositions) this.closedPositions = saved.closedPositions;
       if (saved.auditLogs) this.auditLogs = saved.auditLogs.slice(-500);
