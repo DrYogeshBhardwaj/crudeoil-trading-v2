@@ -253,9 +253,10 @@ class MudrexLiveAdapter {
         for (const pair of paperEngine.pairs) {
           if (pair.status === 'CLOSED') continue;
           for (const pos of [pair.buyPosition, pair.sellPosition]) {
-            if (pos && pos.status === 'OPEN' && !pos.mudrexOrderId && !pos.apiStatus) {
+            const canTransmit = !pos.apiStatus || (String(pos.apiStatus).includes('RATE_LIMIT') && Date.now() > this.rateLimitUntil);
+            if (pos && pos.status === 'OPEN' && !pos.mudrexOrderId && canTransmit) {
               pos.apiStatus = 'TRANSMITTING_TO_MUDREX';
-              const qty = this.settings.contractQuantity || pos.quantity || 1.0;
+              const qty = this.settings.contractQuantity || pos.quantity || 5.0;
               const lev = this.settings.leverage || 5;
 
               this.createRealOrder({ symbol, side: pos.direction, quantity: qty, leverage: lev })
@@ -500,54 +501,7 @@ class MudrexLiveAdapter {
     return { success: false, error: auth.error || 'Failed to fetch Mudrex wallet balance' };
   }
 
-  isRealExecutionEnabled() {
-    if (process.env.DISABLE_REAL_MUDREX_ORDERS === 'true') return false;
-    const key = process.env.MUDREX_API_KEY || this.mudrexApiKey;
-    const secret = process.env.MUDREX_API_SECRET || this.mudrexApiSecret;
-    if (!key || !secret) return false;
-    return true;
-  }
 
-  async createRealOrder({ symbol, side, quantity, leverage, targetPrice }) {
-    if (!this.isRealExecutionEnabled()) {
-      console.log('[Mudrex Live Adapter] Real order execution disabled. Pure paper mode active.');
-      return { success: false, error: 'REAL_ORDERS_DISABLED_PURE_PAPER_MODE' };
-    }
-
-    const symb = (symbol || 'CLUSDT').toUpperCase();
-    const sideUpper = (side || 'BUY').toUpperCase();
-    const orderType = (sideUpper === 'BUY' || sideUpper === 'LONG') ? 'LONG' : 'SHORT';
-    const qty = String(quantity || 0.01);
-    const lev = String(leverage || 5);
-
-    const body = {
-      trade_currency: 'INR',
-      symbol: symb,
-      side: sideUpper === 'BUY' ? 'BUY' : 'SELL',
-      order_type: orderType,
-      trigger_type: 'MARKET',
-      type: 'MARKET',
-      quantity: qty,
-      leverage: lev,
-      reduce_only: false
-    };
-
-    if (targetPrice) {
-      body.takeprofit_price = String(targetPrice);
-      body.is_takeprofit = true;
-    }
-
-    const url = `${this.baseUrl}/futures/${symb}/order?is_symbol=true&trade_currency=INR`;
-    console.log(`[Mudrex Live Adapter] Sending Real Order POST to ${url}:`, body);
-    let res = await this.request('POST', url, body);
-    if (!res.success) {
-      const altUrl = `${this.baseUrl}/futures/${symb}/order?is_symbol=true`;
-      console.log(`[Mudrex Live Adapter] Retrying via ${altUrl}...`);
-      res = await this.request('POST', altUrl, body);
-    }
-    console.log(`[Mudrex Live Adapter] Real Order Result:`, res);
-    return res;
-  }
 
   async closeRealPosition(positionId, symbol = 'CLUSDT') {
     if (!this.isRealExecutionEnabled()) {
