@@ -241,7 +241,7 @@ class HistoricalBacktester {
 
             if (buyOpen && !sellOpen) {
               if (Math.abs(priceStep - pair.buyPosition.entryPrice) <= tolerance) {
-                this.reopenBacktestLeg(pair, 'SELL', priceStep, timestamp, targetMove, symbol, contractQuantity, multiplier);
+                this.reopenBacktestLeg(pair, 'SELL', priceStep, timestamp, targetMove, symbol, contractQuantity, multiplier, config.buyTargetMove, config.sellTargetMove);
                 legReopened = true;
                 break;
               }
@@ -249,7 +249,7 @@ class HistoricalBacktester {
 
             if (sellOpen && !buyOpen) {
               if (Math.abs(priceStep - pair.sellPosition.entryPrice) <= tolerance) {
-                this.reopenBacktestLeg(pair, 'BUY', priceStep, timestamp, targetMove, symbol, contractQuantity, multiplier);
+                this.reopenBacktestLeg(pair, 'BUY', priceStep, timestamp, targetMove, symbol, contractQuantity, multiplier, config.buyTargetMove, config.sellTargetMove);
                 legReopened = true;
                 break;
               }
@@ -282,8 +282,11 @@ class HistoricalBacktester {
           // Create New Pair instantly on NEW RATE!
           const pairSeq = (pairs.length + 1).toString().padStart(4, '0');
           const pairId = `BT-PAIR-${pairSeq}`;
-          const buyTarget = targetMove ? this.normalizePrice(priceStep + targetMove, symbol) : null;
-          const sellTarget = targetMove ? this.normalizePrice(priceStep - targetMove, symbol) : null;
+          const bTargetMove = config.buyTargetMove !== undefined && config.buyTargetMove !== null ? Number(config.buyTargetMove) : (config.targetMove || 0.20);
+          const sTargetMove = config.sellTargetMove !== undefined && config.sellTargetMove !== null ? Number(config.sellTargetMove) : (config.targetMove || 0.20);
+
+          const buyTarget = bTargetMove ? this.normalizePrice(priceStep + bTargetMove, symbol) : null;
+          const sellTarget = sTargetMove ? this.normalizePrice(priceStep - sTargetMove, symbol) : null;
 
           const buyPosition = {
             positionId: `BT-${pairSeq}-BUY`,
@@ -364,12 +367,15 @@ class HistoricalBacktester {
     };
   }
 
-  reopenBacktestLeg(pair, direction, entryPrice, timestamp, targetMove, symbol, qty, mult) {
+  reopenBacktestLeg(pair, direction, entryPrice, timestamp, targetMove, symbol, qty, mult, buyTargetMove, sellTargetMove) {
     const seq = pair.pairId.replace('BT-PAIR-', '');
     const legSeq = `${seq}-${direction}-${Date.now().toString().slice(-4)}`;
 
+    const bMove = buyTargetMove !== undefined && buyTargetMove !== null ? Number(buyTargetMove) : (targetMove || 0.20);
+    const sMove = sellTargetMove !== undefined && sellTargetMove !== null ? Number(sellTargetMove) : (targetMove || 0.20);
+
     if (direction === 'BUY') {
-      const buyTarget = targetMove ? this.normalizePrice(entryPrice + targetMove, symbol) : null;
+      const buyTarget = bMove ? this.normalizePrice(entryPrice + bMove, symbol) : null;
       pair.buyPosition = {
         positionId: `BT-${legSeq}`,
         pairId: pair.pairId,
@@ -384,7 +390,7 @@ class HistoricalBacktester {
         status: 'OPEN'
       };
     } else {
-      const sellTarget = targetMove ? this.normalizePrice(entryPrice - targetMove, symbol) : null;
+      const sellTarget = sMove ? this.normalizePrice(entryPrice - sMove, symbol) : null;
       pair.sellPosition = {
         positionId: `BT-${legSeq}`,
         pairId: pair.pairId,

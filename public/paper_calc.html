@@ -159,43 +159,29 @@
           <input type="number" id="pcQuantity" class="form-control" value="2.0" step="0.5">
         </div>
 
-        <div class="form-group" style="grid-column: span 2;">
-          <label style="color: var(--accent-cyan); font-weight: 700;">Profit Target Move ($) — Manual / Select</label>
-          <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
-            <input type="number" id="pcTargetMove" class="form-control" value="0.20" step="0.01" min="0.01" placeholder="Type target move (e.g. 1.50, 2.50, 5.00)" style="font-weight: 800; color: #38bdf8; font-size: 1.05rem; flex: 1; min-width: 180px;">
-            <select id="pcTargetMoveSelect" class="form-control" onchange="onPcTargetSelectChange()" style="width: auto; min-width: 200px;">
-              <option value="">-- Quick Presets --</option>
-              <option value="0.05">$0.05 Move</option>
-              <option value="0.10">$0.10 Move</option>
-              <option value="0.15">$0.15 Move</option>
-              <option value="0.20" selected>$0.20 Move (Crude Standard)</option>
-              <option value="0.25">$0.25 Move</option>
-              <option value="0.50">$0.50 Move</option>
-              <option value="1.00">$1.00 Move</option>
-              <option value="1.25">$1.25 Move</option>
-              <option value="1.50">$1.50 Move</option>
-              <option value="1.75">$1.75 Move</option>
-              <option value="2.00">$2.00 Move</option>
-              <option value="2.50">$2.50 Move</option>
-              <option value="3.00">$3.00 Move</option>
-              <option value="5.00">$5.00 Move</option>
-              <option value="10.00">$10.00 Move</option>
-              <option value="25.00">$25.00 Move</option>
-              <option value="50.00">$50.00 Move</option>
-              <option value="100.00">$100.00 Move</option>
-            </select>
+        <div class="form-group" style="grid-column: span 2; background: rgba(15, 23, 42, 0.6); padding: 16px; border-radius: 12px; border: 1px solid rgba(56, 189, 248, 0.2);">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+            <label style="color: var(--accent-cyan); font-weight: 800; font-size: 1rem;">🎯 Profit Target Move Settings ($) — Independent BUY & SELL</label>
+            <span style="font-size: 0.72rem; color: #a7f3d0; background: rgba(16, 185, 129, 0.2); padding: 3px 8px; border-radius: 6px; font-weight: 700;">LIVE BACKTEST SIMULATOR</span>
           </div>
-          <div style="display: flex; gap: 6px; flex-wrap: wrap; margin-top: 8px;">
-            <span style="font-size: 0.72rem; color: var(--text-muted); align-self: center; font-weight: 700;">Quick Pills:</span>
-            <button type="button" class="pill-btn" onclick="setPcTargetVal('0.10')">$0.10</button>
-            <button type="button" class="pill-btn" onclick="setPcTargetVal('0.20')">$0.20</button>
-            <button type="button" class="pill-btn" onclick="setPcTargetVal('0.50')">$0.50</button>
-            <button type="button" class="pill-btn" onclick="setPcTargetVal('1.00')">$1.00</button>
-            <button type="button" class="pill-btn" onclick="setPcTargetVal('1.50')">$1.50</button>
-            <button type="button" class="pill-btn" onclick="setPcTargetVal('2.00')">$2.00</button>
-            <button type="button" class="pill-btn" onclick="setPcTargetVal('3.00')">$3.00</button>
-            <button type="button" class="pill-btn" onclick="setPcTargetVal('5.00')">$5.00</button>
-            <button type="button" class="pill-btn" onclick="setPcTargetVal('10.00')">$10.00</button>
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+            <div>
+              <label style="color: #34d399; font-weight: 700; font-size: 0.85rem;">🟢 BUY Target Move ($)</label>
+              <input type="number" id="pcBuyTargetMove" class="form-control" value="0.20" step="0.01" min="0.01" placeholder="e.g. 0.20" style="font-weight: 800; color: #34d399; font-size: 1.05rem; margin-top: 4px;">
+            </div>
+            <div>
+              <label style="color: #f87171; font-weight: 700; font-size: 0.85rem;">🔴 SELL Target Move ($)</label>
+              <input type="number" id="pcSellTargetMove" class="form-control" value="0.20" step="0.01" min="0.01" placeholder="e.g. 0.30" style="font-weight: 800; color: #f87171; font-size: 1.05rem; margin-top: 4px;">
+            </div>
+          </div>
+          <div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-top: 12px;">
+            <span style="font-size: 0.72rem; color: var(--text-muted); font-weight: 700;">Quick Target Presets:</span>
+            <button type="button" class="pill-btn" onclick="setPcCustomTargets('0.10', '0.10')">$0.10 Both</button>
+            <button type="button" class="pill-btn" onclick="setPcCustomTargets('0.20', '0.20')">$0.20 Both (Default)</button>
+            <button type="button" class="pill-btn" onclick="setPcCustomTargets('0.20', '0.30')">BUY $0.20 / SELL $0.30</button>
+            <button type="button" class="pill-btn" onclick="setPcCustomTargets('0.30', '0.20')">BUY $0.30 / SELL $0.20</button>
+            <button type="button" class="pill-btn" onclick="setPcCustomTargets('0.50', '0.50')">$0.50 Both</button>
+            <button type="button" class="pill-btn" onclick="setPcCustomTargets('1.00', '1.00')">$1.00 Both</button>
           </div>
         </div>
 
@@ -263,27 +249,32 @@
       }
     }
 
+    function setPcCustomTargets(buyVal, sellVal) {
+      const bEl = document.getElementById('pcBuyTargetMove');
+      const sEl = document.getElementById('pcSellTargetMove');
+      if (bEl) bEl.value = buyVal;
+      if (sEl) sEl.value = sellVal;
+    }
+
     function setPcTargetVal(val) {
-      document.getElementById('pcTargetMove').value = val;
-      const sel = document.getElementById('pcTargetMoveSelect');
-      if (sel) sel.value = val;
+      setPcCustomTargets(val, val);
     }
 
     function onPcTargetSelectChange() {
       const selVal = document.getElementById('pcTargetMoveSelect').value;
       if (selVal) {
-        document.getElementById('pcTargetMove').value = selVal;
+        setPcCustomTargets(selVal, selVal);
       }
     }
 
     function onPcSymbolChange() {
       const sym = document.getElementById('pcSymbol').value;
       if (sym === 'XAGUSDT') {
-        setPcTargetVal('0.50');
+        setPcCustomTargets('0.50', '0.50');
       } else if (sym === 'BTCUSDT') {
-        setPcTargetVal('50.00');
+        setPcCustomTargets('50.00', '50.00');
       } else {
-        setPcTargetVal('0.20');
+        setPcCustomTargets('0.20', '0.20');
       }
     }
 
@@ -293,7 +284,7 @@
       document.getElementById('pcSymbol').value = 'CLUSDT';
       document.getElementById('pcCapital').value = '100000';
       document.getElementById('pcQuantity').value = '2.0';
-      setPcTargetVal('0.20');
+      setPcCustomTargets('0.20', '0.20');
       document.getElementById('pcMaxPairs').value = '25';
       document.getElementById('pcUsdInr').value = '86.50';
     }
@@ -307,7 +298,9 @@
       const symbol = document.getElementById('pcSymbol').value;
       const startingCapitalINR = parseFloat(document.getElementById('pcCapital').value) || 100000;
       const contractQuantity = parseFloat(document.getElementById('pcQuantity').value) || 2.0;
-      const targetMove = parseFloat(document.getElementById('pcTargetMove').value) || 0.20;
+      const buyTargetMove = parseFloat(document.getElementById('pcBuyTargetMove').value) || 0.20;
+      const sellTargetMove = parseFloat(document.getElementById('pcSellTargetMove').value) || 0.20;
+      const targetMove = buyTargetMove;
       const maxActivePairs = parseInt(document.getElementById('pcMaxPairs').value) || 25;
       const usdInrRate = parseFloat(document.getElementById('pcUsdInr').value) || 86.50;
 
@@ -320,6 +313,8 @@
         startingCapitalINR,
         contractQuantity,
         targetMove,
+        buyTargetMove,
+        sellTargetMove,
         maxActivePairs,
         usdInrRate,
         takerFeeRate: 0.00059, // Mudrex fee rate
