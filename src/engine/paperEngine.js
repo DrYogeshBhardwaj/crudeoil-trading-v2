@@ -111,10 +111,18 @@ class PaperEngine {
     let removedCount = 0;
 
     for (const pair of this.pairs) {
-      if (pair.status === 'CLOSED') continue;
+      const bOpen = pair.buyPosition && pair.buyPosition.status === 'OPEN';
+      const sOpen = pair.sellPosition && pair.sellPosition.status === 'OPEN';
+
+      if (!bOpen && !sOpen) {
+        pair.status = 'CLOSED';
+        continue;
+      }
       
-      const bPrice = pair.buyPosition && pair.buyPosition.status === 'OPEN' ? pair.buyPosition.entryPrice : null;
-      const sPrice = pair.sellPosition && pair.sellPosition.status === 'OPEN' ? pair.sellPosition.entryPrice : null;
+      if (pair.status === 'CLOSED') continue;
+
+      const bPrice = bOpen ? pair.buyPosition.entryPrice : null;
+      const sPrice = sOpen ? pair.sellPosition.entryPrice : null;
       const sym = pair.symbol || this.settings.instrument;
 
       const rateLevel = bPrice !== null ? bPrice : sPrice;

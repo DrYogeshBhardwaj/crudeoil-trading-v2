@@ -133,6 +133,22 @@ app.post('/api/toggle-engine', (req, res) => {
   }
 });
 
+// 4b. Reset All Engine Data & History
+app.post('/api/reset-data', (req, res) => {
+  try {
+    paperEngine.resetAllData();
+    const mudrexLive = require('./engine/mudrexLiveAdapter');
+    mudrexLive.liveOpenPositions = [];
+    mudrexLive.liveClosedPositions = [];
+    mudrexLive.processedRates.clear();
+    mudrexLive.pairCounter = 1;
+    mudrexLive.saveState();
+    res.json({ success: true, message: 'All engine positions and trading history reset successfully!' });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
 // 5. Manual Close Position
 app.post('/api/manual-close', (req, res) => {
   try {
