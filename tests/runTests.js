@@ -440,15 +440,19 @@ function test18() {
   assert(pairsWith90.length >= 1, 'Historical rate 90.00 was allowed again');
 
   // Rule 7: Pair cap 25 enforced
+  paperEngine.resetData();
   paperEngine.settings.startingCapitalINR = 500000;
+  paperEngine.settings.maxActivePairs = 25;
   for (let i = 1; i <= 30; i++) {
     sendTestTick('CLUSDT', Number((91.00 + i * 0.10).toFixed(2)), t0 + 40000 + i * 1000);
   }
   assert(paperEngine.getActivePairsCount() <= 25, `Active pairs cap 25 enforced, got ${paperEngine.getActivePairsCount()}`);
+  paperEngine.settings.maxActivePairs = 50;
 }
 
 // Test 19 — Same-Rate Atomic Pair Creation & Missing-Side Re-Entry at Same Rate Verification
 function test19() {
+  paperEngine.resetData();
   paperEngine.settings.instrument = 'CLUSDT';
   paperEngine.settings.profitTargetMove = 0.20;
   paperEngine.settings.startingCapitalINR = 200000;

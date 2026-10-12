@@ -1,0 +1,705 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Mudrex LIVE Terminal v2 — Ultra Real-Time Trading Engine</title>
+  
+  <!-- Google Fonts: Inter & Outfit -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Outfit:wght@500;600;700;800;900&display=swap" rel="stylesheet">
+  
+  <style>
+    :root {
+      --bg-dark: #090d16;
+      --card-bg: rgba(15, 23, 42, 0.85);
+      --card-border: rgba(56, 189, 248, 0.2);
+      --accent-cyan: #38bdf8;
+      --accent-green: #10b981;
+      --accent-red: #ef4444;
+      --accent-gold: #f59e0b;
+      --text-main: #f8fafc;
+      --text-muted: #94a3b8;
+      --text-dim: #64748b;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      background-color: var(--bg-dark);
+      background-image: 
+        radial-gradient(at 15% 15%, rgba(56, 189, 248, 0.08) 0px, transparent 50%),
+        radial-gradient(at 85% 85%, rgba(16, 185, 129, 0.08) 0px, transparent 50%);
+      color: var(--text-main);
+      font-family: 'Inter', system-ui, -apple-system, sans-serif;
+      min-height: 100vh;
+      padding: 20px;
+    }
+
+    .container {
+      max-width: 1400px;
+      margin: 0 auto;
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+
+    /* Top Navbar */
+    .navbar {
+      background: var(--card-bg);
+      backdrop-filter: blur(12px);
+      border: 1px solid var(--card-border);
+      border-radius: 16px;
+      padding: 16px 24px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 16px;
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .brand-icon {
+      font-size: 1.8rem;
+      background: linear-gradient(135deg, #38bdf8, #818cf8);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .brand-title {
+      font-family: 'Outfit', sans-serif;
+      font-size: 1.4rem;
+      font-weight: 800;
+      letter-spacing: -0.5px;
+      color: #fff;
+    }
+
+    .status-pill {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      background: rgba(16, 185, 129, 0.15);
+      border: 1px solid rgba(16, 185, 129, 0.4);
+      color: #34d399;
+      padding: 6px 14px;
+      border-radius: 20px;
+      font-size: 0.8rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .status-dot {
+      width: 8px;
+      height: 8px;
+      background-color: var(--accent-green);
+      border-radius: 50%;
+      box-shadow: 0 0 10px var(--accent-green);
+      animation: pulse 1.5s infinite;
+    }
+
+    @keyframes pulse {
+      0% { opacity: 0.4; }
+      50% { opacity: 1; }
+      100% { opacity: 0.4; }
+    }
+
+    .nav-actions {
+      display: flex;
+      gap: 10px;
+    }
+
+    .btn {
+      font-family: inherit;
+      font-weight: 700;
+      font-size: 0.85rem;
+      padding: 10px 18px;
+      border-radius: 10px;
+      border: none;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .btn-primary {
+      background: linear-gradient(135deg, #10b981, #059669);
+      color: #fff;
+      box-shadow: 0 4px 14px rgba(16, 185, 129, 0.4);
+    }
+    .btn-primary:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 20px rgba(16, 185, 129, 0.6);
+    }
+
+    .btn-danger {
+      background: linear-gradient(135deg, #ef4444, #dc2626);
+      color: #fff;
+      box-shadow: 0 4px 14px rgba(239, 68, 68, 0.4);
+    }
+    .btn-danger:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 20px rgba(239, 68, 68, 0.6);
+    }
+
+    .btn-secondary {
+      background: rgba(255, 255, 255, 0.08);
+      color: var(--text-main);
+      border: 1px solid rgba(255, 255, 255, 0.15);
+    }
+    .btn-secondary:hover {
+      background: rgba(255, 255, 255, 0.15);
+    }
+
+    /* KPI Summary Row */
+    .kpi-row {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+      gap: 16px;
+    }
+
+    .kpi-card {
+      background: var(--card-bg);
+      backdrop-filter: blur(12px);
+      border: 1px solid var(--card-border);
+      border-radius: 14px;
+      padding: 18px 22px;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+    }
+
+    .kpi-label {
+      font-size: 0.75rem;
+      font-weight: 700;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 6px;
+    }
+
+    .kpi-val {
+      font-family: 'Outfit', sans-serif;
+      font-size: 1.8rem;
+      font-weight: 800;
+      color: #fff;
+      line-height: 1.2;
+    }
+
+    .kpi-val.cyan { color: var(--accent-cyan); text-shadow: 0 0 15px rgba(56, 189, 248, 0.4); }
+    .kpi-val.green { color: var(--accent-green); text-shadow: 0 0 15px rgba(16, 185, 129, 0.4); }
+    .kpi-val.red { color: var(--accent-red); text-shadow: 0 0 15px rgba(239, 68, 68, 0.4); }
+    .kpi-val.gold { color: var(--accent-gold); text-shadow: 0 0 15px rgba(245, 158, 11, 0.4); }
+
+    .kpi-sub {
+      font-size: 0.72rem;
+      color: var(--text-dim);
+      margin-top: 4px;
+      font-weight: 600;
+    }
+
+    /* Live Rate Banner Hero */
+    .hero-banner {
+      background: linear-gradient(135deg, rgba(13, 17, 23, 0.95), rgba(15, 23, 42, 0.95));
+      border: 1px solid rgba(56, 189, 248, 0.35);
+      border-radius: 16px;
+      padding: 24px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 20px;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+    }
+
+    .hero-callout {
+      display: flex;
+      flex-direction: column;
+    }
+
+    .hero-title {
+      font-size: 0.78rem;
+      font-weight: 800;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.6px;
+      margin-bottom: 4px;
+    }
+
+    .hero-rate {
+      font-family: 'Outfit', monospace;
+      font-size: 2.8rem;
+      font-weight: 900;
+      line-height: 1;
+    }
+
+    /* Tables Grid */
+    .tables-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+    }
+
+    @media (max-width: 1024px) {
+      .tables-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .table-card {
+      background: var(--card-bg);
+      backdrop-filter: blur(12px);
+      border-radius: 16px;
+      padding: 20px;
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+    }
+
+    .table-card.buy-card {
+      border: 1px solid rgba(16, 185, 129, 0.3);
+    }
+
+    .table-card.sell-card {
+      border: 1px solid rgba(239, 68, 68, 0.3);
+    }
+
+    .table-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 14px;
+      padding-bottom: 10px;
+    }
+
+    .buy-card .table-header { border-bottom: 1px solid rgba(16, 185, 129, 0.25); }
+    .sell-card .table-header { border-bottom: 1px solid rgba(239, 68, 68, 0.25); }
+
+    .table-title {
+      font-family: 'Outfit', sans-serif;
+      font-size: 1.1rem;
+      font-weight: 800;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .data-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.85rem;
+    }
+
+    .data-table th {
+      text-align: left;
+      padding: 10px 12px;
+      color: var(--text-muted);
+      font-size: 0.72rem;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    }
+
+    .data-table td {
+      padding: 12px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+      vertical-align: middle;
+    }
+
+    .badge {
+      padding: 3px 8px;
+      border-radius: 6px;
+      font-size: 0.7rem;
+      font-weight: 800;
+      text-transform: uppercase;
+    }
+
+    .badge-buy { background: rgba(16, 185, 129, 0.2); color: #34d399; }
+    .badge-sell { background: rgba(239, 68, 68, 0.2); color: #f87171; }
+
+    .empty-state {
+      text-align: center;
+      color: var(--text-dim);
+      padding: 30px 15px;
+      font-weight: 500;
+    }
+
+    .action-btn {
+      padding: 4px 10px;
+      border-radius: 6px;
+      font-size: 0.75rem;
+      font-weight: 700;
+      background: rgba(239, 68, 68, 0.2);
+      color: #f87171;
+      border: 1px solid rgba(239, 68, 68, 0.4);
+      cursor: pointer;
+    }
+    .action-btn:hover { background: rgba(239, 68, 68, 0.4); }
+  </style>
+</head>
+<body>
+
+  <div class="container">
+    
+    <!-- Navbar Header -->
+    <header class="navbar">
+      <div class="brand">
+        <span class="brand-icon">⚡</span>
+        <div>
+          <h1 class="brand-title">Mudrex LIVE Terminal v2</h1>
+          <div style="font-size: 0.72rem; color: var(--text-muted);">Real-Time Pair Trading & Exchange Synchronization</div>
+        </div>
+      </div>
+
+      <div class="status-pill" id="feedStatusPill">
+        <span class="status-dot"></span>
+        <span id="feedStatusText">LIVE FEED</span>
+      </div>
+
+      <div class="nav-actions">
+        <button class="btn btn-primary" id="toggleEngineBtn" onclick="toggleEngine()">
+          <span>⏸ PAUSE ENGINE</span>
+        </button>
+        <button class="btn btn-danger" onclick="resetEngineData()">
+          <span>🔄 RESET DATA</span>
+        </button>
+      </div>
+    </header>
+
+    <!-- Hero Live Callouts -->
+    <section class="hero-banner">
+      <div class="hero-callout">
+        <span class="hero-title">🛢️ CLUSDT CRUDE OIL RATE</span>
+        <span class="hero-rate cyan" id="heroLiveRate">$0.00</span>
+        <span style="font-size: 0.72rem; color: var(--text-dim);" id="heroLastTickTime">Tick Age: --</span>
+      </div>
+
+      <div class="hero-callout">
+        <span class="hero-title">🎯 BUY TARGET EXIT (UP)</span>
+        <span class="hero-rate green" id="heroBuyTarget">$0.00</span>
+        <span style="font-size: 0.72rem; color: #34d399;" id="heroBuyDist">--</span>
+      </div>
+
+      <div class="hero-callout">
+        <span class="hero-title">🎯 SELL TARGET EXIT (DOWN)</span>
+        <span class="hero-rate red" id="heroSellTarget">$0.00</span>
+        <span style="font-size: 0.72rem; color: #f87171;" id="heroSellDist">--</span>
+      </div>
+
+      <div class="hero-callout">
+        <span class="hero-title">📌 LAST PROCESSED RATE</span>
+        <span class="hero-rate gold" id="heroLastProcessed">$0.00</span>
+        <span style="font-size: 0.72rem; color: var(--text-muted);" id="heroProcessedCount">Processed Ticks: 0</span>
+      </div>
+    </section>
+
+    <!-- KPI Summary Row -->
+    <section class="kpi-row">
+      <div class="kpi-card">
+        <div class="kpi-label">Available Free Margin</div>
+        <div class="kpi-val green" id="kpiAvailableMargin">₹3,50,000.00</div>
+        <div class="kpi-sub" id="kpiMarginUsed">Locked Margin: ₹0.00 (5x Leverage)</div>
+      </div>
+
+      <div class="kpi-card">
+        <div class="kpi-label">Total Floating Net P/L</div>
+        <div class="kpi-val cyan" id="kpiFloatingNet">₹0.00</div>
+        <div class="kpi-sub" id="kpiFloatingGross">USD Gross P/L: $0.00</div>
+      </div>
+
+      <div class="kpi-card">
+        <div class="kpi-label">Active Pairs / Max Cap</div>
+        <div class="kpi-val gold" id="kpiActivePairs">0 / 50</div>
+        <div class="kpi-sub" id="kpiPairsBreakdown">1 Barrel: 0 | 2 Barrels: 0</div>
+      </div>
+
+      <div class="kpi-card">
+        <div class="kpi-label">Realized Closed P/L</div>
+        <div class="kpi-val green" id="kpiRealizedNet">₹0.00</div>
+        <div class="kpi-sub" id="kpiClosedTradesCount">Closed Trades: 0 (Win Rate 0%)</div>
+      </div>
+    </section>
+
+    <!-- Tables Grid: BUY & SELL Positions -->
+    <section class="tables-grid">
+      
+      <!-- BUY Positions Table -->
+      <div class="table-card buy-card">
+        <div class="table-header">
+          <h3 class="table-title" style="color: #10b981;">
+            <span>🟢 Active BUY Positions (Long)</span>
+            <span class="badge badge-buy" id="buyBadge">0 Active</span>
+          </h3>
+          <div style="font-weight: 800; color: #10b981;" id="buyNetPl">NET P/L: ₹0.00</div>
+        </div>
+
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Pair ID</th>
+              <th>Entry ➔ Current</th>
+              <th>Target Exit 🎯</th>
+              <th style="text-align: right;">Net P/L (INR)</th>
+              <th style="text-align: center;">Action</th>
+            </tr>
+          </thead>
+          <tbody id="buyTbody">
+            <tr>
+              <td colspan="5" class="empty-state">No active BUY positions. Waiting for new price ticks...</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- SELL Positions Table -->
+      <div class="table-card sell-card">
+        <div class="table-header">
+          <h3 class="table-title" style="color: #ef4444;">
+            <span>🔴 Active SELL Positions (Short)</span>
+            <span class="badge badge-sell" id="sellBadge">0 Active</span>
+          </h3>
+          <div style="font-weight: 800; color: #ef4444;" id="sellNetPl">NET P/L: ₹0.00</div>
+        </div>
+
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Pair ID</th>
+              <th>Entry ➔ Current</th>
+              <th>Target Exit 🎯</th>
+              <th style="text-align: right;">Net P/L (INR)</th>
+              <th style="text-align: center;">Action</th>
+            </tr>
+          </thead>
+          <tbody id="sellTbody">
+            <tr>
+              <td colspan="5" class="empty-state">No active SELL positions. Waiting for new price ticks...</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+    </section>
+
+  </div>
+
+  <script>
+    let isRunning = true;
+
+    async function fetchMetrics() {
+      try {
+        const res = await fetch('/api/mudrex/metrics');
+        const json = await res.json();
+        if (json.success && json.data) {
+          renderDashboard(json.data);
+        }
+      } catch (err) {
+        console.error('Failed to fetch metrics:', err);
+      }
+    }
+
+    function renderDashboard(data) {
+      const { rateFeedInfo, summary, engineStatus, isEngineRunning, lastProcessedRate, processedRatesCount, openPositions } = data;
+
+      isRunning = isEngineRunning;
+      
+      // Control button
+      const toggleBtn = document.getElementById('toggleEngineBtn');
+      if (toggleBtn) {
+        toggleBtn.innerHTML = isEngineRunning ? '<span>⏸ PAUSE ENGINE</span>' : '<span>🚀 START ENGINE</span>';
+        toggleBtn.className = isEngineRunning ? 'btn btn-danger' : 'btn btn-primary';
+      }
+
+      // Live Feed Status
+      const feedText = document.getElementById('feedStatusText');
+      if (feedText && rateFeedInfo) {
+        feedText.innerText = rateFeedInfo.status === 'LIVE' ? 'LIVE FEED' : rateFeedInfo.status;
+      }
+
+      // Hero Prices
+      const livePrice = rateFeedInfo ? rateFeedInfo.price : 0;
+      if (document.getElementById('heroLiveRate')) document.getElementById('heroLiveRate').innerText = `$${livePrice.toFixed(2)}`;
+      
+      const buyTarget = livePrice > 0 ? (livePrice + 0.20).toFixed(2) : '0.00';
+      const sellTarget = livePrice > 0 ? (livePrice - 0.20).toFixed(2) : '0.00';
+      if (document.getElementById('heroBuyTarget')) document.getElementById('heroBuyTarget').innerText = `$${buyTarget}`;
+      if (document.getElementById('heroSellTarget')) document.getElementById('heroSellTarget').innerText = `$${sellTarget}`;
+      if (document.getElementById('heroBuyDist')) document.getElementById('heroBuyDist').innerText = `+$0.20 to exit`;
+      if (document.getElementById('heroSellDist')) document.getElementById('heroSellDist').innerText = `-$0.20 to exit`;
+
+      if (document.getElementById('heroLastProcessed')) {
+        document.getElementById('heroLastProcessed').innerText = lastProcessedRate ? `$${lastProcessedRate.toFixed(2)}` : '$0.00';
+      }
+      if (document.getElementById('heroProcessedCount')) {
+        document.getElementById('heroProcessedCount').innerText = `Processed Ticks: ${processedRatesCount || 0}`;
+      }
+      if (document.getElementById('heroLastTickTime')) {
+        const age = rateFeedInfo && rateFeedInfo.tickAgeMs ? (rateFeedInfo.tickAgeMs / 1000).toFixed(1) : 0;
+        document.getElementById('heroLastTickTime').innerText = `Tick Age: ${age}s`;
+      }
+
+      // KPIs
+      if (summary) {
+        const availMargin = summary.availableMarginINR || 350000;
+        if (document.getElementById('kpiAvailableMargin')) document.getElementById('kpiAvailableMargin').innerText = `₹${availMargin.toLocaleString('en-IN', { minimumFractionDigits: 2 })}`;
+        if (document.getElementById('kpiMarginUsed')) document.getElementById('kpiMarginUsed').innerText = `Locked Margin: ₹${(summary.marginUsedINR || 0).toFixed(2)} (5x Leverage)`;
+        
+        const floatNet = summary.floatingNetINR || 0;
+        const floatEl = document.getElementById('kpiFloatingNet');
+        if (floatEl) {
+          floatEl.innerText = `₹${floatNet >= 0 ? '+' : ''}${floatNet.toFixed(2)}`;
+          floatEl.className = `kpi-val ${floatNet >= 0 ? 'green' : 'red'}`;
+        }
+        if (document.getElementById('kpiFloatingGross')) document.getElementById('kpiFloatingGross').innerText = `USD Gross P/L: $${(summary.floatingGrossUSD || 0).toFixed(2)}`;
+
+        if (document.getElementById('kpiActivePairs')) document.getElementById('kpiActivePairs').innerText = `${summary.activePairsCount || 0} / ${summary.maxActivePairs || 50}`;
+        if (document.getElementById('kpiPairsBreakdown')) document.getElementById('kpiPairsBreakdown').innerText = `1 Barrel: ${summary.pairs1B || 0} | 2 Barrels: ${summary.pairs2B || 0}`;
+
+        const realNet = summary.realizedNetINR || 0;
+        const realEl = document.getElementById('kpiRealizedNet');
+        if (realEl) {
+          realEl.innerText = `₹${realNet >= 0 ? '+' : ''}${realNet.toFixed(2)}`;
+          realEl.className = `kpi-val ${realNet >= 0 ? 'green' : 'red'}`;
+        }
+        if (document.getElementById('kpiClosedTradesCount')) document.getElementById('kpiClosedTradesCount').innerText = `Closed Trades: ${summary.closedPositionsCount || 0} (Win Rate ${summary.winRate || 0}%)`;
+      }
+
+      // Tables
+      renderTables(openPositions || [], livePrice);
+    }
+
+    function renderTables(positions, currentPrice) {
+      const buyTbody = document.getElementById('buyTbody');
+      const sellTbody = document.getElementById('sellTbody');
+      const buyBadge = document.getElementById('buyBadge');
+      const sellBadge = document.getElementById('sellBadge');
+      const buyNetPl = document.getElementById('buyNetPl');
+      const sellNetPl = document.getElementById('sellNetPl');
+
+      const buyPositions = positions.filter(p => p.direction === 'BUY');
+      const sellPositions = positions.filter(p => p.direction === 'SELL');
+
+      const buyNet = buyPositions.reduce((s, p) => s + (p.floatingNetINR || 0), 0);
+      const sellNet = sellPositions.reduce((s, p) => s + (p.floatingNetINR || 0), 0);
+
+      if (buyBadge) buyBadge.innerText = `${buyPositions.length} Active`;
+      if (sellBadge) sellBadge.innerText = `${sellPositions.length} Active`;
+
+      if (buyNetPl) buyNetPl.innerHTML = `NET P/L: <span style="color:${buyNet >= 0 ? '#10b981' : '#ef4444'}">₹${buyNet >= 0 ? '+' : ''}${buyNet.toFixed(2)}</span>`;
+      if (sellNetPl) sellNetPl.innerHTML = `NET P/L: <span style="color:${sellNet >= 0 ? '#10b981' : '#ef4444'}">₹${sellNet >= 0 ? '+' : ''}${sellNet.toFixed(2)}</span>`;
+
+      // Render BUY rows
+      if (buyPositions.length === 0) {
+        buyTbody.innerHTML = '<tr><td colspan="5" class="empty-state">No active BUY positions. Waiting for new price ticks...</td></tr>';
+      } else {
+        let html = '';
+        for (const pos of buyPositions) {
+          const entry = pos.entryPrice ? pos.entryPrice.toFixed(2) : '0.00';
+          const curr = currentPrice ? currentPrice.toFixed(2) : entry;
+          const target = pos.targetExitPrice ? pos.targetExitPrice.toFixed(2) : '--';
+          const netINR = pos.floatingNetINR !== undefined ? pos.floatingNetINR : 0;
+          const netColor = netINR >= 0 ? '#10b981' : '#ef4444';
+
+          html += `
+            <tr>
+              <td>
+                <strong style="color:#fff;">${pos.pairId || 'N/A'}</strong><br>
+                <code style="font-size:0.7rem; color:var(--accent-cyan);">${pos.positionId || ''}</code>
+              </td>
+              <td>
+                <div style="color:var(--text-muted); font-size:0.75rem;">$${entry}</div>
+                <div style="font-weight:700; color:#fff;">➔ $${curr}</div>
+              </td>
+              <td style="color:#10b981; font-weight:700;">$${target}</td>
+              <td style="text-align:right; font-weight:800; color:${netColor};">₹${netINR >= 0 ? '+' : ''}${netINR.toFixed(2)}</td>
+              <td style="text-align:center;">
+                <button class="action-btn" onclick="closePosition('${pos.positionId}')">Close</button>
+              </td>
+            </tr>
+          `;
+        }
+        buyTbody.innerHTML = html;
+      }
+
+      // Render SELL rows
+      if (sellPositions.length === 0) {
+        sellTbody.innerHTML = '<tr><td colspan="5" class="empty-state">No active SELL positions. Waiting for new price ticks...</td></tr>';
+      } else {
+        let html = '';
+        for (const pos of sellPositions) {
+          const entry = pos.entryPrice ? pos.entryPrice.toFixed(2) : '0.00';
+          const curr = currentPrice ? currentPrice.toFixed(2) : entry;
+          const target = pos.targetExitPrice ? pos.targetExitPrice.toFixed(2) : '--';
+          const netINR = pos.floatingNetINR !== undefined ? pos.floatingNetINR : 0;
+          const netColor = netINR >= 0 ? '#10b981' : '#ef4444';
+
+          html += `
+            <tr>
+              <td>
+                <strong style="color:#fff;">${pos.pairId || 'N/A'}</strong><br>
+                <code style="font-size:0.7rem; color:var(--accent-cyan);">${pos.positionId || ''}</code>
+              </td>
+              <td>
+                <div style="color:var(--text-muted); font-size:0.75rem;">$${entry}</div>
+                <div style="font-weight:700; color:#fff;">➔ $${curr}</div>
+              </td>
+              <td style="color:#ef4444; font-weight:700;">$${target}</td>
+              <td style="text-align:right; font-weight:800; color:${netColor};">₹${netINR >= 0 ? '+' : ''}${netINR.toFixed(2)}</td>
+              <td style="text-align:center;">
+                <button class="action-btn" onclick="closePosition('${pos.positionId}')">Close</button>
+              </td>
+            </tr>
+          `;
+        }
+        sellTbody.innerHTML = html;
+      }
+    }
+
+    async function toggleEngine() {
+      try {
+        await fetch('/api/toggle-engine', { method: 'POST' });
+        fetchMetrics();
+      } catch (err) {
+        console.error(err);
+      }
+    }
+
+    async function resetEngineData() {
+      if (!confirm('Are you sure you want to reset all engine trading data & pairs?')) return;
+      try {
+        await fetch('/api/reset-data', { method: 'POST' });
+        fetchMetrics();
+      } catch (err) {
+        console.error(err);
+      }
+    }
+
+    async function closePosition(posId) {
+      if (!confirm(`Close position ${posId}?`)) return;
+      try {
+        await fetch('/api/manual-close', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ positionId: posId })
+        });
+        fetchMetrics();
+      } catch (err) {
+        console.error(err);
+      }
+    }
+
+    // Auto poll metrics every 1 second
+    setInterval(fetchMetrics, 1000);
+    fetchMetrics();
+  </script>
+</body>
+</html>

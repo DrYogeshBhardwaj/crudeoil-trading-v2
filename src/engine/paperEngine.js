@@ -355,7 +355,9 @@ class PaperEngine {
     const reqMarginPairINR = ((normalizedPrice * qty * mult * usdInrRate) / leverage) * 2;
 
     const paperMarginUsedINR = activePairs.length * reqMarginPairINR;
-    const paperAvailableMarginINR = Math.max(0, (this.settings.startingCapitalINR || 350000) - paperMarginUsedINR);
+    const startingCap = this.settings.startingCapitalINR || 350000;
+    this.settings.startingCapitalINR = startingCap;
+    const paperAvailableMarginINR = Math.max(0, startingCap - paperMarginUsedINR);
 
     if (paperAvailableMarginINR < reqMarginPairINR) {
       this.engineStatus = 'PAUSED';
@@ -914,6 +916,10 @@ class PaperEngine {
     this.logAudit('ENGINE_STATE_TOGGLED', { isEngineRunning: this.isEngineRunning });
     this.saveState();
     return this.isEngineRunning;
+  }
+
+  resetData() {
+    this.resetAllData();
   }
 
   resetAllData() {
