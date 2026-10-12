@@ -145,11 +145,7 @@ app.post('/api/reset-data', (req, res) => {
   try {
     paperEngine.resetAllData();
     const mudrexLive = require('./engine/mudrexLiveAdapter');
-    mudrexLive.liveOpenPositions = [];
-    mudrexLive.liveClosedPositions = [];
-    mudrexLive.processedRates.clear();
-    mudrexLive.pairCounter = 1;
-    mudrexLive.saveState();
+    mudrexLive.resetLiveEngine();
     res.json({ success: true, message: 'All engine positions and trading history reset successfully!' });
   } catch (err) {
     res.status(500).json({ success: false, error: err.message });
@@ -179,18 +175,6 @@ app.post('/api/manual-close', (req, res) => {
     }
   } catch (err) {
     res.status(400).json({ success: false, error: err.message });
-  }
-});
-
-// 6. Reset All Engine Data
-app.post('/api/reset-data', (req, res) => {
-  try {
-    paperEngine.resetAllData();
-    const mudrexLive = require('./engine/mudrexLiveAdapter');
-    mudrexLive.resetLiveEngine();
-    res.json({ success: true, message: 'All trading positions and history have been reset.' });
-  } catch (err) {
-    res.status(500).json({ success: false, error: err.message });
   }
 });
 

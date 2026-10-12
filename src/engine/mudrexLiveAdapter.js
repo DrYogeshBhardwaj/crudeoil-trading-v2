@@ -916,6 +916,15 @@ class MudrexLiveAdapter {
       auditLogs: []
     };
   }
+
+  resetLiveEngine() {
+    this.liveOpenPositions = [];
+    this.liveClosedPositions = [];
+    this.processedRates.clear();
+    this.pairCounter = 1;
+    this.userClosedRealPositionIds.clear();
+    this.saveState();
+  }
 }
 
 module.exports = new MudrexLiveAdapter();

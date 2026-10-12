@@ -250,6 +250,37 @@ class DatabaseManager {
     if (fs.existsSync(TMP_BACKUP_FILE)) {
       try { fs.unlinkSync(TMP_BACKUP_FILE); } catch (e) {}
     }
+    const cleanSeed = {
+      settings: {
+        startingCapitalINR: 350000,
+        contractQuantity: 2,
+        leverage: 5,
+        profitTargetMove: 0.20,
+        profitTargetMode: "PRICE_MOVE",
+        strategyMode: "SINGLE",
+        priceMatchingTolerance: 0.0001,
+        maxActivePairs: 50,
+        realOrdersDisabled: false,
+        instrument: "CLUSDT",
+        takerFeeRate: 0.0005,
+        gstRate: 0.18,
+        dailyLossCircuitBreakerINR: 2000
+      },
+      pairs: [],
+      closedPositions: [],
+      auditLogs: [],
+      processedRates: { CLUSDT: [] },
+      lastProcessedRate: null,
+      dailyTracker: {
+        dateKey: new Date().toISOString().split('T')[0],
+        realizedNetLossINR: 0,
+        realizedNetProfitINR: 0
+      },
+      isEngineRunning: true
+    };
+    try {
+      fs.writeFileSync(STATE_SEED_FILE, JSON.stringify(cleanSeed, null, 2), 'utf8');
+    } catch (e) {}
   }
 }
 
