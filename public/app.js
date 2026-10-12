@@ -585,10 +585,7 @@ function renderDashboard(data) {
   const mWinRate = document.getElementById('modalWinRate');
   if (mWinRate) mWinRate.innerText = `${summary.winRate}%`;
   
-  const mTradesCount = document.getElementById('modalTradesCount');
-  if (mTradesCount) mTradesCount.innerText = `Total: ${summary.closedPositionsCount} | Wins: ${summary.winCount} | Losses: ${summary.lossCount}`;
-
-  const usdInrRate = (rateFeedInfo && rateFeedInfo.usdInrRate) || 96.96;
+  // Use existing usdInrRate declared at top of updateDashboardUI
   const realizedNetINR = summary.realizedNetINR || 0;
   const realizedNetUSD = summary.realizedNetUSD !== undefined ? summary.realizedNetUSD : (realizedNetINR / usdInrRate);
   const realizedGrossUSD = summary.realizedGrossUSD || 0;
