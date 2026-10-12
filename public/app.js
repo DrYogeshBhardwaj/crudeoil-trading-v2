@@ -2,21 +2,38 @@ let currentMetrics = null;
 let eventSource = null;
 let backtestRunsHistory = []; // In-memory store for multi-run comparison
 
-const INSTRUMENT_TARGET_OPTIONS = {
+const INSTRUMENT_TARGET_OPTIONS_MUDREX = {
   CLUSDT: [
-    { value: '10', label: '₹10 Target Move' },
-    { value: '20', label: '₹20 Target Move (Crude Standard)' },
-    { value: '50', label: '₹50 Target Move' },
-    { value: '100', label: '₹100 Target Move' },
-    { value: '200', label: '₹200 Target Move' },
-    { value: '500', label: '₹500 Target Move' },
-    { value: '1000', label: '₹1,000 Target Move' },
-    { value: '0.20', label: '₹20 / $0.20 Target Move' },
-    { value: '1.00', label: '₹100 / $1.00 Target Move' },
+    { value: '0.20', label: '$0.20 Target Move' },
+    { value: '0.50', label: '$0.50 Target Move' },
+    { value: '1.00', label: '$1.00 Target Move (Crude Standard)' },
+    { value: '2.00', label: '$2.00 Target Move' },
+    { value: '5.00', label: '$5.00 Target Move' },
     { value: 'DISABLED', label: 'Disabled (No Auto Target)' }
   ],
   XAGUSDT: [
+    { value: '0.50', label: '$0.50 Target Move' },
+    { value: '1.00', label: '$1.00 Target Move' },
+    { value: '2.00', label: '$2.00 Target Move' },
+    { value: 'DISABLED', label: 'Disabled (No Auto Target)' }
+  ],
+  BTCUSDT: [
+    { value: '100', label: '$100 Target Move' },
+    { value: '200', label: '$200 Target Move' },
+    { value: '500', label: '$500 Target Move' },
+    { value: 'DISABLED', label: 'Disabled (No Auto Target)' }
+  ]
+};
+
+const INSTRUMENT_TARGET_OPTIONS_DHAN = {
+  CLUSDT: [
     { value: '200', label: '₹200 Target Move' },
+    { value: '500', label: '₹500 Target Move' },
+    { value: '1000', label: '₹1,000 Target Move (Crude Standard)' },
+    { value: '2000', label: '₹2,000 Target Move' },
+    { value: 'DISABLED', label: 'Disabled (No Auto Target)' }
+  ],
+  XAGUSDT: [
     { value: '500', label: '₹500 Target Move' },
     { value: '1000', label: '₹1,000 Target Move (Silver Standard)' },
     { value: '1500', label: '₹1,500 Target Move' },
@@ -25,8 +42,6 @@ const INSTRUMENT_TARGET_OPTIONS = {
     { value: 'DISABLED', label: 'Disabled (No Auto Target)' }
   ],
   BTCUSDT: [
-    { value: '100', label: '₹100 Target Move' },
-    { value: '200', label: '₹200 Target Move (Gold Standard)' },
     { value: '500', label: '₹500 Target Move' },
     { value: '1000', label: '₹1,000 Target Move' },
     { value: '2000', label: '₹2,000 Target Move' },
@@ -38,7 +53,9 @@ function updateTargetDropdownOptions(symbol, currentTargetValStr) {
   const select = document.getElementById('settingTargetMove');
   if (!select) return;
 
-  const options = INSTRUMENT_TARGET_OPTIONS[symbol] || INSTRUMENT_TARGET_OPTIONS.CLUSDT;
+  const isDhanPage = window.location.pathname.includes('dhan');
+  const targetMap = isDhanPage ? INSTRUMENT_TARGET_OPTIONS_DHAN : INSTRUMENT_TARGET_OPTIONS_MUDREX;
+  const options = targetMap[symbol] || targetMap.CLUSDT;
   let html = '';
   let matchFound = false;
 
@@ -56,7 +73,7 @@ function updateTargetDropdownOptions(symbol, currentTargetValStr) {
   });
 
   if (!matchFound && options.length > 0) {
-    const defaultVal = symbol === 'XAGUSDT' ? '1000' : (symbol === 'CLUSDT' ? '20' : '200');
+    const defaultVal = isDhanPage ? (symbol === 'XAGUSDT' ? '1000' : '1000') : (symbol === 'XAGUSDT' ? '1.00' : '1.00');
     html = '';
     options.forEach(opt => {
       const isSelected = (opt.value === defaultVal);
@@ -418,29 +435,63 @@ function renderDashboard(data) {
   const { rateFeedInfo, summary, settings, engineStatus, pauseReason, isEngineRunning, lastProcessedRate, processedRatesCount, openPositions, closedPositions, auditLogs } = data;
 
   const isDhanPage = window.location.pathname.includes('dhan');
-  const isMudrexPage = window.location.pathname.includes('mudrex');
+  const isMudrexPage = window.location.pathname.includes('mudrex') || !isDhanPage;
 
   const currentSymbol = settings ? (settings.instrument || 'CLUSDT') : 'CLUSDT';
-  const symbolLabels = {
+  const usdInrRate = (rateFeedInfo && rateFeedInfo.usdInrRate) || (settings && settings.usdInrRate) || 86.50;
+
+  let pricePrefix = '$';
+  let priceMultiplier = 1;
+  let priceDecimals = currentSymbol === 'BTCUSDT' ? 2 : (currentSymbol === 'XAGUSDT' ? 4 : 2);
+
+  const symbolLabelsMudrex = {
     CLUSDT: 'CLUSDT — Crude Oil',
     XAGUSDT: 'XAGUSDT — Silver',
     BTCUSDT: 'BTCUSDT — Bitcoin'
   };
+
+  const symbolLabelsDhan = {
+    CLUSDT: 'MCX CRUDE OIL (CRUDEOIL 1 BBL)',
+    XAGUSDT: 'MCX SILVER (SILVERM 1kg)',
+    BTCUSDT: 'MCX GOLD (GOLD 10g)'
+  };
+
+  const symbolLabels = isDhanPage ? symbolLabelsDhan : symbolLabelsMudrex;
+
+  if (isDhanPage) {
+    pricePrefix = '₹';
+    if (currentSymbol === 'CLUSDT') {
+      priceMultiplier = usdInrRate; // Crude Oil in INR per barrel (e.g. $90.86 * 86.50 = ₹7,859.39)
+      priceDecimals = 2;
+    } else if (currentSymbol === 'XAGUSDT') {
+      priceMultiplier = usdInrRate * 32.1507; // Silver in INR per kg
+      priceDecimals = 0;
+    } else if (currentSymbol === 'BTCUSDT') {
+      priceMultiplier = usdInrRate / 3.11035; // Gold in INR per 10g
+      priceDecimals = 0;
+    } else {
+      priceMultiplier = usdInrRate;
+      priceDecimals = 2;
+    }
+  } else {
+    pricePrefix = '$';
+    priceMultiplier = 1;
+    priceDecimals = currentSymbol === 'BTCUSDT' ? 2 : (currentSymbol === 'XAGUSDT' ? 4 : 2);
+  }
+
   const symbolLblEl = document.getElementById('currentSymbolLabel');
   if (symbolLblEl) symbolLblEl.innerText = symbolLabels[currentSymbol] || currentSymbol;
 
-  const priceDecimals = currentSymbol === 'BTCUSDT' ? 2 : (currentSymbol === 'XAGUSDT' ? 4 : 2);
   const tickerPriceEl = document.getElementById('liveTickerPrice');
   if (tickerPriceEl) {
-    const oldPrice = parseFloat(tickerPriceEl.innerText.replace(/[$₹,]/g, '')) || 0;
-    const newPrice = rateFeedInfo.price;
-
-    if (newPrice) {
-      const prefix = '₹';
-      tickerPriceEl.innerText = prefix + newPrice.toFixed(priceDecimals);
-      if (newPrice > oldPrice) {
+    const rawPrice = rateFeedInfo.price;
+    if (rawPrice) {
+      const displayPrice = rawPrice * priceMultiplier;
+      const oldPrice = parseFloat(tickerPriceEl.innerText.replace(/[$₹,]/g, '')) || 0;
+      tickerPriceEl.innerText = pricePrefix + (priceDecimals === 0 ? Math.round(displayPrice).toLocaleString('en-IN') : displayPrice.toFixed(priceDecimals));
+      if (displayPrice > oldPrice) {
         tickerPriceEl.className = 'ticker-value up';
-      } else if (newPrice < oldPrice) {
+      } else if (displayPrice < oldPrice) {
         tickerPriceEl.className = 'ticker-value down';
       }
     } else {
@@ -457,12 +508,17 @@ function renderDashboard(data) {
 
   const lastProcEl = document.getElementById('lastProcessedRateDisplay');
   if (lastProcEl) {
-    const prefix = '₹';
-    lastProcEl.innerText = lastProcessedRate ? `${prefix}${lastProcessedRate.toFixed(priceDecimals)}` : 'NONE';
+    const rawProc = lastProcessedRate;
+    if (rawProc) {
+      const dispProc = rawProc * priceMultiplier;
+      lastProcEl.innerText = `${pricePrefix}${priceDecimals === 0 ? Math.round(dispProc).toLocaleString('en-IN') : dispProc.toFixed(priceDecimals)}`;
+    } else {
+      lastProcEl.innerText = 'NONE';
+    }
   }
 
   const usdInrEl = document.getElementById('usdInrDisplay');
-  if (usdInrEl) usdInrEl.innerText = `₹${rateFeedInfo.usdInrRate.toFixed(2)}`;
+  if (usdInrEl) usdInrEl.innerText = `₹${usdInrRate.toFixed(2)}`;
 
   // Feed Status Badge
   const feedBadge = document.getElementById('feedStatusBadge');
@@ -572,7 +628,7 @@ function renderDashboard(data) {
   const maxP = document.getElementById('settingMaxPairs');
   if (maxP) maxP.value = settings.maxActivePairs;
   const usdInrInput = document.getElementById('settingUsdInr');
-  if (usdInrInput) usdInrInput.value = settings.usdInrRate || rateFeedInfo.usdInrRate;
+  if (usdInrInput) usdInrInput.value = settings.usdInrRate || usdInrRate;
 
   // Tabs count badges
   const actTab = document.getElementById('tabActiveCount');
@@ -580,26 +636,26 @@ function renderDashboard(data) {
   const clsTab = document.getElementById('tabClosedCount');
   if (clsTab) clsTab.innerText = closedPositions.length;
 
-  // Calculate Next Exit Targets (Nearest BUY exit above market, Nearest SELL exit below market)
-  const livePrice = rateFeedInfo.price;
-  const priceDec = currentSymbol === 'BTCUSDT' ? 2 : (currentSymbol === 'XAGUSDT' ? 4 : 2);
+  // Calculate Next Exit Targets
+  const rawLivePrice = rateFeedInfo.price;
+  const livePrice = rawLivePrice ? rawLivePrice * priceMultiplier : null;
   
   let nearestBuyTarget = null;
   let nearestSellTarget = null;
   let distBuy = null;
   let distSell = null;
 
-  if (livePrice && openPositions && openPositions.length > 0) {
+  if (rawLivePrice && openPositions && openPositions.length > 0) {
     openPositions.forEach(pos => {
       if (!pos.targetExitPrice) return;
       if (pos.direction === 'BUY') {
-        if (pos.targetExitPrice > livePrice) {
+        if (pos.targetExitPrice > rawLivePrice) {
           if (nearestBuyTarget === null || pos.targetExitPrice < nearestBuyTarget) {
             nearestBuyTarget = pos.targetExitPrice;
           }
         }
       } else if (pos.direction === 'SELL') {
-        if (pos.targetExitPrice < livePrice) {
+        if (pos.targetExitPrice < rawLivePrice) {
           if (nearestSellTarget === null || pos.targetExitPrice > nearestSellTarget) {
             nearestSellTarget = pos.targetExitPrice;
           }
@@ -607,21 +663,20 @@ function renderDashboard(data) {
       }
     });
 
-    if (nearestBuyTarget !== null) distBuy = nearestBuyTarget - livePrice;
-    if (nearestSellTarget !== null) distSell = livePrice - nearestSellTarget;
+    if (nearestBuyTarget !== null) distBuy = (nearestBuyTarget - rawLivePrice) * priceMultiplier;
+    if (nearestSellTarget !== null) distSell = (rawLivePrice - nearestSellTarget) * priceMultiplier;
   }
 
   if (livePrice) {
     recordPriceTick(livePrice);
   }
 
-  const currSym = '₹';
+  const dispBuyTarget = nearestBuyTarget !== null ? nearestBuyTarget * priceMultiplier : null;
+  const dispSellTarget = nearestSellTarget !== null ? nearestSellTarget * priceMultiplier : null;
 
-  const liveRateStr = livePrice ? `${currSym}${livePrice.toFixed(priceDec)}` : 'FETCHING...';
-  const buyTargetStr = nearestBuyTarget !== null ? `${currSym}${nearestBuyTarget.toFixed(priceDec)}` : 'No Target';
-  const buyDistStr = distBuy !== null ? `(+${currSym}${distBuy.toFixed(priceDec)})` : '';
-  const sellTargetStr = nearestSellTarget !== null ? `${currSym}${nearestSellTarget.toFixed(priceDec)}` : 'No Target';
-  const sellDistStr = distSell !== null ? `(-${currSym}${distSell.toFixed(priceDec)})` : '';
+  const liveRateStr = livePrice ? `${pricePrefix}${priceDecimals === 0 ? Math.round(livePrice).toLocaleString('en-IN') : livePrice.toFixed(priceDecimals)}` : 'FETCHING...';
+  const buyTargetStr = dispBuyTarget !== null ? `${pricePrefix}${priceDecimals === 0 ? Math.round(dispBuyTarget).toLocaleString('en-IN') : dispBuyTarget.toFixed(priceDecimals)}` : 'No Target';
+  const sellTargetStr = dispSellTarget !== null ? `${pricePrefix}${priceDecimals === 0 ? Math.round(dispSellTarget).toLocaleString('en-IN') : dispSellTarget.toFixed(priceDecimals)}` : 'No Target';
   const floatNetStr = `₹${summary.floatingNetINR.toFixed(2)}`;
   const floatNetClass = summary.floatingNetINR >= 0 ? 'text-green' : 'text-red';
 
@@ -642,7 +697,7 @@ function renderDashboard(data) {
   const chartSellEl = document.getElementById('chartSellTargetDisplay');
   if (chartSellEl) chartSellEl.innerText = sellTargetStr;
 
-  // Update 3 Large 2.4rem Callouts (Live Rate, Green BUY Target Exit, Red SELL Target Exit)
+  // Update 3 Large 2.4rem Callouts
   const mainCrudeRateEl = document.getElementById('mainCrudeLiveRate');
   if (mainCrudeRateEl) mainCrudeRateEl.innerText = liveRateStr;
   const mainCrudeRateIndexEl = document.getElementById('mainCrudeLiveRateIndex');
@@ -655,14 +710,14 @@ function renderDashboard(data) {
   // Green BUY Target Exit Callout
   if (document.getElementById('mainBuyTargetRate')) document.getElementById('mainBuyTargetRate').innerText = buyTargetStr;
   if (document.getElementById('mainBuyTargetRateIndex')) document.getElementById('mainBuyTargetRateIndex').innerText = buyTargetStr;
-  const buyDistText = distBuy !== null ? `+${currSym}${distBuy.toFixed(priceDec)} to exit` : '--';
+  const buyDistText = distBuy !== null ? `+${pricePrefix}${priceDecimals === 0 ? Math.round(distBuy).toLocaleString('en-IN') : distBuy.toFixed(priceDecimals)} to exit` : '--';
   if (document.getElementById('mainBuyTargetDist')) document.getElementById('mainBuyTargetDist').innerText = buyDistText;
   if (document.getElementById('mainBuyTargetDistIndex')) document.getElementById('mainBuyTargetDistIndex').innerText = buyDistText;
 
   // Red SELL Target Exit Callout
   if (document.getElementById('mainSellTargetRate')) document.getElementById('mainSellTargetRate').innerText = sellTargetStr;
   if (document.getElementById('mainSellTargetRateIndex')) document.getElementById('mainSellTargetRateIndex').innerText = sellTargetStr;
-  const sellDistText = distSell !== null ? `-${currSym}${distSell.toFixed(priceDec)} to exit` : '--';
+  const sellDistText = distSell !== null ? `-${pricePrefix}${priceDecimals === 0 ? Math.round(distSell).toLocaleString('en-IN') : distSell.toFixed(priceDecimals)} to exit` : '--';
   if (document.getElementById('mainSellTargetDist')) document.getElementById('mainSellTargetDist').innerText = sellDistText;
   if (document.getElementById('mainSellTargetDistIndex')) document.getElementById('mainSellTargetDistIndex').innerText = sellDistText;
 
@@ -683,9 +738,9 @@ function renderDashboard(data) {
   if (document.getElementById('unifiedActivePairsIndex')) document.getElementById('unifiedActivePairsIndex').innerText = actPairsText;
 
   // Render Canvas Charts
-  drawLiveCanvasChart('livePriceCanvas', livePrice, nearestBuyTarget, nearestSellTarget);
-  drawLiveCanvasChart('livePriceCanvasIndex', livePrice, nearestBuyTarget, nearestSellTarget);
-  drawLiveCanvasChart('liveChartCanvas', livePrice, nearestBuyTarget, nearestSellTarget);
+  drawLiveCanvasChart('livePriceCanvas', livePrice, dispBuyTarget, dispSellTarget);
+  drawLiveCanvasChart('livePriceCanvasIndex', livePrice, dispBuyTarget, dispSellTarget);
+  drawLiveCanvasChart('liveChartCanvas', livePrice, dispBuyTarget, dispSellTarget);
 
   // Closed Positions History Top Summary Bar
   if (document.getElementById('closedSummaryCount')) document.getElementById('closedSummaryCount').innerText = `${summary.closedPositionsCount}`;
@@ -703,8 +758,8 @@ function renderDashboard(data) {
   if (document.getElementById('closedSummaryNetUSD')) document.getElementById('closedSummaryNetUSD').innerText = `$${summary.realizedNetUSD.toFixed(4)} Net`;
 
   // Render Tables
-  renderActivePositions(openPositions, settings.instrument);
-  renderClosedPositions(closedPositions, settings.instrument);
+  renderActivePositions(openPositions, settings.instrument, isDhanPage, pricePrefix, priceMultiplier, priceDecimals);
+  renderClosedPositions(closedPositions, settings.instrument, isDhanPage, pricePrefix, priceMultiplier, priceDecimals);
   
   const logsTab = document.getElementById('tabLogs') || document.getElementById('tabContentAuditLogs');
   if (logsTab && logsTab.classList.contains('active')) {
@@ -785,14 +840,13 @@ function getDistToExit(pos) {
   return Math.abs(pos.targetExitPrice - curr);
 }
 
-function renderActivePositions(positions, symbol) {
+function renderActivePositions(positions, symbol, isDhanPage = false, pricePrefix = '₹', priceMultiplier = 1, priceDecimals = 2) {
   const buyTbody = document.getElementById('buyPositionsTbody');
   const sellTbody = document.getElementById('sellPositionsTbody');
   const buyBadge = document.getElementById('buyPositionsBadge');
   const sellBadge = document.getElementById('sellPositionsBadge');
   const buyNetPlEl = document.getElementById('buyPositionsNetPL');
   const sellNetPlEl = document.getElementById('sellPositionsNetPL');
-  const singleTbody = document.getElementById('activePositionsTbody');
 
   const buyPositions = (positions || []).filter(p => p.direction === 'BUY');
   const sellPositions = (positions || []).filter(p => p.direction === 'SELL');
@@ -823,17 +877,19 @@ function renderActivePositions(positions, symbol) {
   buyPositions.sort((a, b) => getDistToExit(a) - getDistToExit(b));
   sellPositions.sort((a, b) => getDistToExit(a) - getDistToExit(b));
 
-  const priceDecimals = symbol === 'BTCUSDT' ? 2 : (symbol === 'XAGUSDT' ? 4 : 2);
-
   const renderSideRows = (posList, isBuyTable) => {
     if (posList.length === 0) {
       return `<tr><td colspan="5" style="text-align: center; color: var(--text-dim); padding: 18px;">No active ${isBuyTable ? 'BUY' : 'SELL'} positions.</td></tr>`;
     }
     let rowsHtml = '';
     for (const pos of posList) {
-      const entryPrice = typeof pos.entryPrice === 'number' ? pos.entryPrice : 0;
-      const currentPrice = typeof pos.currentPrice === 'number' ? pos.currentPrice : entryPrice;
-      const targetPrice = typeof pos.targetExitPrice === 'number' ? pos.targetExitPrice : null;
+      const rawEntry = typeof pos.entryPrice === 'number' ? pos.entryPrice : 0;
+      const rawCurrent = typeof pos.currentPrice === 'number' ? pos.currentPrice : rawEntry;
+      const rawTarget = typeof pos.targetExitPrice === 'number' ? pos.targetExitPrice : null;
+
+      const entryPrice = rawEntry * priceMultiplier;
+      const currentPrice = rawCurrent * priceMultiplier;
+      const targetPrice = rawTarget !== null ? rawTarget * priceMultiplier : null;
       const floatingNetINR = typeof pos.floatingNetINR === 'number' ? pos.floatingNetINR : 0;
 
       const qtyVal = typeof pos.quantity === 'number' ? pos.quantity : 1.0;
@@ -843,6 +899,8 @@ function renderActivePositions(positions, symbol) {
 
       const dist = targetPrice !== null ? Math.abs(targetPrice - currentPrice) : null;
       const netClass = floatingNetINR >= 0 ? 'text-green' : 'text-red';
+
+      const fmtP = (v) => priceDecimals === 0 ? Math.round(v).toLocaleString('en-IN') : v.toFixed(priceDecimals);
 
       rowsHtml += `
         <tr>
@@ -855,13 +913,13 @@ function renderActivePositions(positions, symbol) {
             ${pos.apiStatus && !pos.apiStatus.includes('REAL_ORDERS_DISABLED') ? `<span style="display:block; font-size:0.62rem; color:${pos.apiStatus.includes('TRANSMITTED') ? '#a7f3d0' : (pos.apiStatus.includes('SENDING') ? '#38bdf8' : '#f87171')}; font-weight:700;">📡 ${pos.apiStatus}</span>` : ''}
           </td>
           <td>
-            <div style="font-size:0.78rem; color:var(--text-muted);">₹${entryPrice.toFixed(priceDecimals)}</div>
-            <div style="font-size:0.88rem; font-weight:700; color:#fff;">➔ ₹${currentPrice.toFixed(priceDecimals)}</div>
+            <div style="font-size:0.78rem; color:var(--text-muted);">${pricePrefix}${fmtP(entryPrice)}</div>
+            <div style="font-size:0.88rem; font-weight:700; color:#fff;">➔ ${pricePrefix}${fmtP(currentPrice)}</div>
           </td>
           <td>
             ${targetPrice !== null ? `
-              <div style="font-size:1.05rem; font-weight:800; color:#f59e0b; font-family:monospace;">₹${targetPrice.toFixed(priceDecimals)}</div>
-              <div style="font-size:0.7rem; color:var(--text-muted);">₹${dist.toFixed(priceDecimals)} to exit</div>
+              <div style="font-size:1.05rem; font-weight:800; color:#f59e0b; font-family:monospace;">${pricePrefix}${fmtP(targetPrice)}</div>
+              <div style="font-size:0.7rem; color:var(--text-muted);">${pricePrefix}${fmtP(dist)} to exit</div>
             ` : '<span style="color:var(--text-dim)">DISABLED</span>'}
           </td>
           <td style="text-align: right;">
@@ -888,7 +946,7 @@ function renderActivePositions(positions, symbol) {
   }
 }
 
-function renderClosedPositions(positions, symbol) {
+function renderClosedPositions(positions, symbol, isDhanPage = false, pricePrefix = '₹', priceMultiplier = 1, priceDecimals = 2) {
   updateTableHeaderClasses('closedPositionsTable', closedSortKey, closedSortDir);
   const tbody = document.getElementById('closedPositionsTbody');
   if (!tbody) return;
@@ -898,13 +956,19 @@ function renderClosedPositions(positions, symbol) {
     html = `<tr><td colspan="13" style="text-align: center; color: var(--text-dim); padding: 24px;">No closed positions recorded yet.</td></tr>`;
   } else {
     const sortedPositions = sortDataArray(positions, closedSortKey, closedSortDir);
-    const priceDecimals = symbol === 'BTCUSDT' ? 2 : (symbol === 'XAGUSDT' ? 4 : 2);
+
+    const fmtP = (v) => priceDecimals === 0 ? Math.round(v).toLocaleString('en-IN') : v.toFixed(priceDecimals);
 
     for (const pos of sortedPositions) {
       const isBuy = pos.direction === 'BUY';
-      const entryPrice = typeof pos.entryPrice === 'number' ? pos.entryPrice : 0;
-      const exitPrice = typeof pos.exitPrice === 'number' ? pos.exitPrice : entryPrice;
-      const targetPrice = typeof pos.targetExitPrice === 'number' ? pos.targetExitPrice : null;
+      const rawEntry = typeof pos.entryPrice === 'number' ? pos.entryPrice : 0;
+      const rawExit = typeof pos.exitPrice === 'number' ? pos.exitPrice : rawEntry;
+      const rawTarget = typeof pos.targetExitPrice === 'number' ? pos.targetExitPrice : null;
+
+      const entryPrice = rawEntry * priceMultiplier;
+      const exitPrice = rawExit * priceMultiplier;
+      const targetPrice = rawTarget !== null ? rawTarget * priceMultiplier : null;
+
       const grossProfitUSD = typeof pos.grossProfitUSD === 'number' ? pos.grossProfitUSD : 0;
       const grossProfitINR = typeof pos.grossProfitINR === 'number' ? pos.grossProfitINR : (grossProfitUSD * (pos.usdInrRate || 86.5));
       const totalChargesINR = typeof pos.totalChargesINR === 'number' ? pos.totalChargesINR : 0;
@@ -920,9 +984,9 @@ function renderClosedPositions(positions, symbol) {
           <td><span class="badge-direction ${isBuy ? 'buy' : 'sell'}">${pos.direction || 'BUY'}</span></td>
           <td>${pos.entryTime ? new Date(pos.entryTime).toLocaleTimeString() : 'N/A'}</td>
           <td>${pos.exitTime ? new Date(pos.exitTime).toLocaleTimeString() : 'N/A'}</td>
-          <td>₹${entryPrice.toFixed(priceDecimals)}</td>
-          <td>₹${exitPrice.toFixed(priceDecimals)}</td>
-          <td>${targetPrice !== null ? `<span class="target-price-badge">₹${targetPrice.toFixed(priceDecimals)}</span>` : 'N/A'}</td>
+          <td>${pricePrefix}${fmtP(entryPrice)}</td>
+          <td>${pricePrefix}${fmtP(exitPrice)}</td>
+          <td>${targetPrice !== null ? `<span class="target-price-badge">${pricePrefix}${fmtP(targetPrice)}</span>` : 'N/A'}</td>
           <td class="${grossClass}">₹${grossProfitINR >= 0 ? '+' : ''}${grossProfitINR.toFixed(2)}</td>
           <td>₹${totalChargesINR.toFixed(2)}</td>
           <td class="${netClass}" style="font-weight:700;">₹${netProfitINR >= 0 ? '+' : ''}${netProfitINR.toFixed(2)}</td>
