@@ -420,10 +420,6 @@ class MudrexLiveAdapter {
 
   isRealExecutionEnabled() {
     if (process.env.DISABLE_REAL_MUDREX_ORDERS === 'true') return false;
-    const paperEngine = require('./paperEngine');
-    if (paperEngine && paperEngine.settings && paperEngine.settings.realOrdersDisabled === true) {
-      return false;
-    }
     return true;
   }
 
