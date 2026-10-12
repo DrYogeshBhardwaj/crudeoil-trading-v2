@@ -1,0 +1,577 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Mudrex Crude Oil Calculator & Backtester (Updated Charges Formula)</title>
+  <link rel="stylesheet" href="style.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+  <style>
+    .calc-hero {
+      background: linear-gradient(135deg, rgba(15, 23, 42, 0.95), rgba(13, 17, 23, 0.98));
+      border: 1px solid rgba(56, 189, 248, 0.35);
+      border-radius: 16px;
+      padding: 24px;
+      margin-bottom: 24px;
+      box-shadow: 0 12px 36px rgba(0, 0, 0, 0.5);
+    }
+    .trigger-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: rgba(16, 185, 129, 0.15);
+      border: 1px solid rgba(16, 185, 129, 0.4);
+      color: #34d399;
+      font-size: 0.85rem;
+      font-weight: 700;
+      padding: 8px 16px;
+      border-radius: 20px;
+      margin-top: 12px;
+    }
+    .form-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 16px;
+      margin-top: 20px;
+    }
+    .btn-calc {
+      background: linear-gradient(135deg, #0284c7, #2563eb);
+      color: #fff;
+      font-weight: 800;
+      font-size: 1rem;
+      padding: 12px 24px;
+      border-radius: 10px;
+      border: none;
+      cursor: pointer;
+      transition: transform 0.2s, box-shadow 0.2s;
+    }
+    .btn-calc:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 20px rgba(37, 99, 235, 0.4);
+    }
+    .pill-btn {
+      background: #0d1117;
+      border: 1px solid rgba(56, 189, 248, 0.4);
+      color: #38bdf8;
+      font-size: 0.75rem;
+      font-weight: 700;
+      padding: 4px 10px;
+      border-radius: 12px;
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+    .pill-btn:hover {
+      background: #38bdf8;
+      color: #0d1117;
+      border-color: #38bdf8;
+    }
+    .fee-formula-box {
+      background: rgba(245, 158, 11, 0.08);
+      border: 1px solid rgba(245, 158, 11, 0.3);
+      border-radius: 12px;
+      padding: 14px 18px;
+      margin-top: 16px;
+      font-size: 0.85rem;
+      color: #fde047;
+      line-height: 1.5;
+    }
+    .reconcile-badge {
+      display: inline-block;
+      background: rgba(16, 185, 129, 0.15);
+      border: 1px solid rgba(16, 185, 129, 0.4);
+      color: #34d399;
+      padding: 6px 14px;
+      border-radius: 8px;
+      font-weight: 700;
+      font-size: 0.85rem;
+      margin-top: 10px;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Safety Banner -->
+  <div class="safety-banner" style="background: linear-gradient(90deg, #0284c7, #0f172a, #0284c7);">
+    <span class="shield-icon">🛡️</span>
+    <span>MUDREX CRUDE OIL (CLUSDT) HISTORICAL CALCULATOR — UPDATED CHARGES AUDIT FORMULA</span>
+    <span class="shield-icon">🛡️</span>
+  </div>
+
+  <!-- Header Bar -->
+  <header class="app-header">
+    <div class="brand-section">
+      <div class="brand-logo" style="background: linear-gradient(135deg, #0284c7, #38bdf8);">⚡</div>
+      <div class="brand-title">
+        <h1>Mudrex Crude Oil Calculator (1 Day / Date Range)</h1>
+        <p>UPDATED MUDREX CHARGES FORMULA BACKTESTER (0.075% TAKER + 18% GST + SAFETY BUFFER)</p>
+      </div>
+    </div>
+
+    <!-- Navigation Header Actions -->
+    <div class="header-actions">
+      <a href="/" class="btn btn-secondary" style="text-decoration: none;">🏠 Paper Live</a>
+      <a href="/mudrex_crude_live" class="btn btn-secondary" style="border: 1px solid #10b981; color: #34d399; font-weight: 700; text-decoration: none;">🚀 Mudrex Crude Live</a>
+      <a href="/mudrex_crude_calc" class="btn btn-secondary" style="border: 1px solid #38bdf8; color: #38bdf8; font-weight: 700; text-decoration: none; background: rgba(56,189,248,0.15);">⚡ Mudrex Crude Calc</a>
+      <a href="/paper-calc" class="btn btn-secondary" style="text-decoration: none;">🧮 Paper Calc</a>
+      <a href="/mcx-calc" class="btn btn-secondary" style="border: 1px solid #f59e0b; color: #fbbf24; font-weight: 700; text-decoration: none;">🏆 MCX Calc</a>
+      <button class="btn btn-primary" style="background: linear-gradient(135deg, #0284c7, #2563eb); border: none;" onclick="runMudrexCrudeCalc()">▶ Run Mudrex Crude Calculator</button>
+    </div>
+  </header>
+
+  <!-- Main Container -->
+  <main class="dashboard-container">
+
+    <!-- Calculator Configuration Card -->
+    <div class="calc-hero">
+      <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 16px;">
+        <div>
+          <h2 style="color: #fff; margin-bottom: 6px; font-size: 1.4rem;">⚡ Mudrex Crude Oil Strategy & Charges Backtester</h2>
+          <p style="color: var(--text-muted); font-size: 0.88rem; max-width: 850px;">
+            Test Mudrex Crude Oil (CLUSDT) trading performance for <strong>1 Single Day</strong> or a <strong>From–To Date Range</strong> with updated real Mudrex charges calculation (0.075% entry taker fee + 0.075% exit taker fee + 18% GST + ₹5.00 safety buffer).
+          </p>
+          <div class="trigger-badge">
+            <span>⚡ CHARGES FORMULA:</span>
+            <strong style="color: #fff;">0.075% Taker Fee + 18% GST + ₹5 Safety Buffer per Trade</strong>
+          </div>
+        </div>
+      </div>
+
+      <!-- Quick Date Selector Pills -->
+      <div style="display: flex; gap: 8px; margin-top: 16px; align-items: center; flex-wrap: wrap;">
+        <span style="font-size: 0.8rem; color: var(--text-muted); font-weight: 600;">Quick Date Select:</span>
+        <button class="pill-btn" onclick="setQuickDate('TODAY')">Today</button>
+        <button class="pill-btn" onclick="setQuickDate('YESTERDAY')">Yesterday</button>
+        <button class="pill-btn" onclick="setQuickDate('LAST_7')">Last 7 Days</button>
+        <button class="pill-btn" onclick="setQuickDate('LAST_30')">Last 30 Days</button>
+      </div>
+
+      <!-- Input Form Fields -->
+      <div class="form-grid">
+        <div class="form-group">
+          <label style="color: var(--accent-cyan); font-weight: 700;">Date Range Mode</label>
+          <select id="mccMode" class="form-control" onchange="toggleMccModeDisplay(); runMudrexCrudeCalc();">
+            <option value="SINGLE">Single Date (1 Day)</option>
+            <option value="RANGE">Date Range (From – To)</option>
+          </select>
+        </div>
+
+        <div class="form-group" id="mccSingleDateGroup">
+          <label style="color: var(--text-muted); font-weight: 600;">Select Date</label>
+          <input type="date" id="mccDate" class="form-control" onchange="runMudrexCrudeCalc()">
+        </div>
+
+        <div class="form-group" id="mccFromDateGroup" style="display: none;">
+          <label style="color: var(--text-muted); font-weight: 600;">From Date</label>
+          <input type="date" id="mccFromDate" class="form-control" onchange="runMudrexCrudeCalc()">
+        </div>
+
+        <div class="form-group" id="mccToDateGroup" style="display: none;">
+          <label style="color: var(--text-muted); font-weight: 600;">To Date</label>
+          <input type="date" id="mccToDate" class="form-control" onchange="runMudrexCrudeCalc()">
+        </div>
+
+        <div class="form-group">
+          <label style="color: var(--accent-cyan); font-weight: 700;">Barrels per Pair (Qty)</label>
+          <select id="mccBarrels" class="form-control" onchange="runMudrexCrudeCalc()">
+            <option value="2.0">2 Barrels (Default Mudrex Pair)</option>
+            <option value="1.0">1 Barrel</option>
+            <option value="4.0">4 Barrels</option>
+            <option value="5.0">5 Barrels</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label style="color: var(--accent-cyan); font-weight: 700;">Target Exit Move ($)</label>
+          <input type="number" step="0.05" id="mccTargetMove" class="form-control" value="0.20" onchange="runMudrexCrudeCalc()">
+        </div>
+
+        <div class="form-group">
+          <label style="color: var(--text-muted); font-weight: 600;">Starting Capital (INR ₹)</label>
+          <input type="number" step="10000" id="mccCapital" class="form-control" value="100000" onchange="runMudrexCrudeCalc()">
+        </div>
+
+        <div class="form-group">
+          <label style="color: var(--text-muted); font-weight: 600;">Max Active Pairs Limit</label>
+          <input type="number" id="mccMaxPairs" class="form-control" value="50" onchange="runMudrexCrudeCalc()">
+        </div>
+
+        <div class="form-group">
+          <label style="color: var(--text-muted); font-weight: 600;">Taker Fee Rate (%)</label>
+          <input type="number" step="0.001" id="mccFeeRate" class="form-control" value="0.075" onchange="runMudrexCrudeCalc()">
+        </div>
+
+        <div class="form-group">
+          <label style="color: var(--text-muted); font-weight: 600;">GST Rate (%)</label>
+          <input type="number" step="1" id="mccGstRate" class="form-control" value="18" onchange="runMudrexCrudeCalc()">
+        </div>
+
+        <div class="form-group">
+          <label style="color: var(--text-muted); font-weight: 600;">Slippage Buffer (INR ₹)</label>
+          <input type="number" step="1" id="mccSlippageBuffer" class="form-control" value="5" onchange="runMudrexCrudeCalc()">
+        </div>
+
+        <div class="form-group">
+          <label style="color: var(--text-muted); font-weight: 600;">USD/INR Exchange Rate</label>
+          <input type="number" step="0.01" id="mccUsdInrRate" class="form-control" value="96.96" onchange="runMudrexCrudeCalc()">
+        </div>
+      </div>
+
+      <!-- Charges Audit Formula Note -->
+      <div class="fee-formula-box">
+        <strong>📋 Mudrex Charges Calculation Rules:</strong><br>
+        • Entry Taker Fee = Entry Price × Quantity × Taker Fee Rate (0.075%)<br>
+        • Exit Taker Fee = Exit Price × Quantity × Taker Fee Rate (0.075%)<br>
+        • GST = (Entry Fee + Exit Fee) × 18%<br>
+        • Safety / Slippage Buffer = ₹5.00 per trade leg<br>
+        • Total Charges Paid (INR) = (Entry Fee + Exit Fee + GST + Safety Buffer) × USD/INR Rate<br>
+        • <strong>Accounting Identity:</strong> Realized Gross P/L (₹) − Total Charges Paid (₹) = Realized Net P/L (₹)
+      </div>
+
+      <div style="margin-top: 20px; display: flex; justify-content: flex-end;">
+        <button class="btn-calc" onclick="runMudrexCrudeCalc()">⚡ Calculate Mudrex Backtest Results</button>
+      </div>
+    </div>
+
+    <!-- Status / Loading Bar -->
+    <div id="mccStatusBox" style="display: none; padding: 16px; border-radius: 12px; margin-bottom: 24px; font-weight: 700;"></div>
+
+    <!-- Summary KPI Cards -->
+    <section class="kpi-grid" id="mccKpiSection" style="display: none;">
+      <div class="kpi-card">
+        <div class="kpi-title">Starting Capital (INR)</div>
+        <div class="kpi-value neutral" id="mccKpiCap">₹1,00,000</div>
+        <div class="kpi-subtext">Initial virtual account balance</div>
+      </div>
+
+      <div class="kpi-card">
+        <div class="kpi-title">Realized Gross P/L</div>
+        <div class="kpi-value positive" id="mccKpiGross">₹0.00</div>
+        <div class="kpi-subtext">Sum of unadjusted trade profits</div>
+      </div>
+
+      <div class="kpi-card" style="border: 1px solid rgba(245, 158, 11, 0.4); background: rgba(245, 158, 11, 0.05);">
+        <div class="kpi-title" style="color: #fbbf24;">Total Charges Paid (INR)</div>
+        <div class="kpi-value negative" id="mccKpiCharges" style="color: #f87171;">₹0.00</div>
+        <div class="kpi-subtext">Taker fees + GST + ₹5 buffer</div>
+      </div>
+
+      <div class="kpi-card">
+        <div class="kpi-title">Realized Net P/L (INR)</div>
+        <div class="kpi-value positive" id="mccKpiNet">₹0.00</div>
+        <div class="kpi-subtext">Gross P/L minus Total Charges</div>
+      </div>
+
+      <div class="kpi-card">
+        <div class="kpi-title">Final Realized Balance</div>
+        <div class="kpi-value positive" id="mccKpiBalance">₹1,00,000</div>
+        <div class="kpi-subtext" id="mccKpiTradesCount">0 Trades Closed</div>
+      </div>
+
+      <div class="kpi-card">
+        <div class="kpi-title">Win Rate & Closed Trades</div>
+        <div class="kpi-value neutral" id="mccKpiWinRate">0%</div>
+        <div class="kpi-subtext" id="mccKpiWinLoss">0 Wins / 0 Losses</div>
+      </div>
+    </section>
+
+    <!-- Accounting Reconciliation Identity Banner -->
+    <div id="mccReconcileBanner" style="display: none; margin-bottom: 24px;">
+      <div class="reconcile-badge" id="mccReconcileText">
+        ✅ Accounting Identity Verified: Gross P/L (₹0.00) − Charges (₹0.00) = Net P/L (₹0.00)
+      </div>
+    </div>
+
+    <!-- Day-by-Day Reports Table (Range Mode) -->
+    <section class="card" id="mccDailySection" style="display: none; margin-bottom: 24px;">
+      <div class="card-header">
+        <h2>📅 Day-by-Day Backtest Summary</h2>
+      </div>
+      <div class="table-wrapper">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Date</th>
+              <th>Status</th>
+              <th>New Pairs Opened</th>
+              <th>Closed Trades</th>
+              <th>Daily Gross (₹)</th>
+              <th>Daily Charges (₹)</th>
+              <th>Daily Net P/L (₹)</th>
+              <th>End of Day Equity (₹)</th>
+            </tr>
+          </thead>
+          <tbody id="mccDailyTbody"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- Full Trades Ledger Table -->
+    <section class="card" id="mccTradesSection" style="display: none;">
+      <div class="card-header">
+        <h2>📜 Closed Trades Audit Ledger</h2>
+        <span class="badge badge-info" id="mccTradesCountBadge">0 Closed Positions</span>
+      </div>
+      <div class="table-wrapper">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Position ID</th>
+              <th>Pair ID</th>
+              <th>Direction</th>
+              <th>Entry Time</th>
+              <th>Exit Time</th>
+              <th>Entry ($)</th>
+              <th>Exit ($)</th>
+              <th>Qty (Barrels)</th>
+              <th>Rate (₹/$)</th>
+              <th>Gross P/L (₹)</th>
+              <th>Charges Paid (₹)</th>
+              <th>Net P/L (₹)</th>
+              <th>Exit Reason</th>
+            </tr>
+          </thead>
+          <tbody id="mccTradesTbody"></tbody>
+        </table>
+      </div>
+    </section>
+
+  </main>
+
+  <script>
+    // Initialize date inputs on load
+    document.addEventListener('DOMContentLoaded', () => {
+      const today = new Date().toISOString().split('T')[0];
+      document.getElementById('mccDate').value = today;
+      document.getElementById('mccFromDate').value = today;
+      document.getElementById('mccToDate').value = today;
+      runMudrexCrudeCalc();
+    });
+
+    function setQuickDate(type) {
+      const now = new Date();
+      const todayStr = now.toISOString().split('T')[0];
+
+      if (type === 'TODAY') {
+        document.getElementById('mccMode').value = 'SINGLE';
+        document.getElementById('mccDate').value = todayStr;
+      } else if (type === 'YESTERDAY') {
+        const yest = new Date(now.getTime() - 86400000);
+        document.getElementById('mccMode').value = 'SINGLE';
+        document.getElementById('mccDate').value = yest.toISOString().split('T')[0];
+      } else if (type === 'LAST_7') {
+        const d7 = new Date(now.getTime() - 7 * 86400000);
+        document.getElementById('mccMode').value = 'RANGE';
+        document.getElementById('mccFromDate').value = d7.toISOString().split('T')[0];
+        document.getElementById('mccToDate').value = todayStr;
+      } else if (type === 'LAST_30') {
+        const d30 = new Date(now.getTime() - 30 * 86400000);
+        document.getElementById('mccMode').value = 'RANGE';
+        document.getElementById('mccFromDate').value = d30.toISOString().split('T')[0];
+        document.getElementById('mccToDate').value = todayStr;
+      }
+
+      toggleMccModeDisplay();
+      runMudrexCrudeCalc();
+    }
+
+    function toggleMccModeDisplay() {
+      const mode = document.getElementById('mccMode').value;
+      if (mode === 'SINGLE') {
+        document.getElementById('mccSingleDateGroup').style.display = 'block';
+        document.getElementById('mccFromDateGroup').style.display = 'none';
+        document.getElementById('mccToDateGroup').style.display = 'none';
+      } else {
+        document.getElementById('mccSingleDateGroup').style.display = 'none';
+        document.getElementById('mccFromDateGroup').style.display = 'block';
+        document.getElementById('mccToDateGroup').style.display = 'block';
+      }
+    }
+
+    async function runMudrexCrudeCalc() {
+      const statusBox = document.getElementById('mccStatusBox');
+      statusBox.style.display = 'block';
+      statusBox.style.background = 'rgba(56, 189, 248, 0.15)';
+      statusBox.style.color = '#38bdf8';
+      statusBox.style.border = '1px solid rgba(56, 189, 248, 0.4)';
+      statusBox.innerText = '⏳ Fetching historical klines & running Mudrex Crude Oil backtest simulation...';
+
+      const mode = document.getElementById('mccMode').value;
+      const dateStr = document.getElementById('mccDate').value;
+      const fromDateStr = document.getElementById('mccFromDate').value;
+      const toDateStr = document.getElementById('mccToDate').value;
+
+      const contractQuantity = parseFloat(document.getElementById('mccBarrels').value) || 2.0;
+      const targetMove = parseFloat(document.getElementById('mccTargetMove').value) || 0.20;
+      const startingCapitalINR = parseFloat(document.getElementById('mccCapital').value) || 100000;
+      const maxActivePairs = parseInt(document.getElementById('mccMaxPairs').value) || 50;
+      const feeRatePercent = parseFloat(document.getElementById('mccFeeRate').value) || 0.075;
+      const takerFeeRate = feeRatePercent / 100;
+      const gstPercent = parseFloat(document.getElementById('mccGstRate').value) || 18;
+      const gstRate = gstPercent / 100;
+      const slippageBufferINR = parseFloat(document.getElementById('mccSlippageBuffer').value) || 5.0;
+      const usdInrRate = parseFloat(document.getElementById('mccUsdInrRate').value) || 96.96;
+
+      const payload = {
+        mode,
+        symbol: 'CLUSDT',
+        dateStr,
+        fromDateStr,
+        toDateStr,
+        startingCapitalINR,
+        contractQuantity,
+        targetMove,
+        buyTargetMove: targetMove,
+        sellTargetMove: targetMove,
+        maxActivePairs,
+        takerFeeRate,
+        gstRate,
+        slippageBufferINR,
+        usdInrRate,
+        leverage: 5
+      };
+
+      try {
+        const res = await fetch('/api/backtest', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+
+        const data = await res.json();
+
+        if (!data.success) {
+          statusBox.style.background = 'rgba(239, 68, 68, 0.15)';
+          statusBox.style.color = '#f87171';
+          statusBox.style.border = '1px solid rgba(239, 68, 68, 0.4)';
+          statusBox.innerText = `⚠️ Backtest Warning: ${data.message || 'Error running calculator'}`;
+          document.getElementById('mccKpiSection').style.display = 'none';
+          document.getElementById('mccDailySection').style.display = 'none';
+          document.getElementById('mccTradesSection').style.display = 'none';
+          document.getElementById('mccReconcileBanner').style.display = 'none';
+          return;
+        }
+
+        statusBox.style.display = 'none';
+        renderMccResults(data);
+      } catch (err) {
+        statusBox.style.background = 'rgba(239, 68, 68, 0.15)';
+        statusBox.style.color = '#f87171';
+        statusBox.style.border = '1px solid rgba(239, 68, 68, 0.4)';
+        statusBox.innerText = `❌ Request Failure: ${err.message}`;
+      }
+    }
+
+    function renderMccResults(data) {
+      const summary = data.summary || {};
+      const trades = data.trades || [];
+      const dailyReports = data.dailyReports || [];
+
+      document.getElementById('mccKpiSection').style.display = 'grid';
+      document.getElementById('mccReconcileBanner').style.display = 'block';
+
+      const grossINR = summary.totalRealizedGrossINR || 0;
+      const chargesINR = summary.totalChargesINR || 0;
+      const netINR = summary.totalRealizedNetINR || 0;
+      const capINR = summary.startingCapitalINR || 100000;
+      const balINR = summary.realizedBalanceINR || capINR;
+
+      document.getElementById('mccKpiCap').innerText = `₹${capINR.toLocaleString('en-IN')}`;
+      document.getElementById('mccKpiGross').innerText = `₹${grossINR.toLocaleString('en-IN', { minimumFractionDigits: 2 })}`;
+      document.getElementById('mccKpiCharges').innerText = `₹${chargesINR.toLocaleString('en-IN', { minimumFractionDigits: 2 })}`;
+      
+      const netEl = document.getElementById('mccKpiNet');
+      netEl.innerText = `₹${netINR.toLocaleString('en-IN', { minimumFractionDigits: 2 })}`;
+      netEl.className = netINR >= 0 ? 'kpi-value positive' : 'kpi-value negative';
+
+      const balEl = document.getElementById('mccKpiBalance');
+      balEl.innerText = `₹${balINR.toLocaleString('en-IN', { minimumFractionDigits: 2 })}`;
+      document.getElementById('mccKpiTradesCount').innerText = `${summary.closedPositionsCount || 0} Trades Settled`;
+
+      document.getElementById('mccKpiWinRate').innerText = `${summary.winRate || 0}%`;
+      document.getElementById('mccKpiWinLoss').innerText = `${summary.wins || 0} Wins / ${summary.losses || 0} Losses`;
+
+      // Reconciliation Identity Verification
+      const calcNet = Number((grossINR - chargesINR).toFixed(2));
+      const isReconciled = Math.abs(calcNet - netINR) < 0.05;
+      const reconcileText = isReconciled
+        ? `✅ Accounting Identity Verified: Gross (₹${grossINR.toFixed(2)}) − Charges (₹${chargesINR.toFixed(2)}) = Net P/L (₹${netINR.toFixed(2)})`
+        : `⚠️ Accounting Alert: Gross (₹${grossINR.toFixed(2)}) − Charges (₹${chargesINR.toFixed(2)}) = ₹${calcNet.toFixed(2)} (Reported: ₹${netINR.toFixed(2)})`;
+      
+      document.getElementById('mccReconcileText').innerText = reconcileText;
+
+      // Render Day-by-Day Table
+      const dailySection = document.getElementById('mccDailySection');
+      const dailyTbody = document.getElementById('mccDailyTbody');
+      dailyTbody.innerHTML = '';
+
+      if (dailyReports.length > 0) {
+        dailySection.style.display = 'block';
+        dailyReports.forEach(dr => {
+          const tr = document.createElement('tr');
+          const isClosed = dr.isMarketClosed;
+          const statusBadge = isClosed 
+            ? `<span class="badge badge-warning">Closed (${dr.marketClosedReason || 'Holiday'})</span>`
+            : `<span class="badge badge-success">Trading Day</span>`;
+
+          const dGross = dr.dailyRealizedGrossINR || 0;
+          const dCharges = dr.dailyRealizedChargesINR || 0;
+          const dNet = dr.dailyRealizedNetINR || 0;
+          const eodEq = dr.endOfDayEquityINR || 0;
+
+          tr.innerHTML = `
+            <td><strong>${dr.dateStr}</strong></td>
+            <td>${statusBadge}</td>
+            <td>${dr.dailyNewPairsOpened || 0}</td>
+            <td>${dr.dailyClosedPositionsCount || 0}</td>
+            <td>₹${dGross.toFixed(2)}</td>
+            <td style="color: #f87171;">₹${dCharges.toFixed(2)}</td>
+            <td style="color: ${dNet >= 0 ? '#34d399' : '#f87171'}; font-weight: 700;">₹${dNet.toFixed(2)}</td>
+            <td style="font-weight: 700;">₹${eodEq.toFixed(2)}</td>
+          `;
+          dailyTbody.appendChild(tr);
+        });
+      } else {
+        dailySection.style.display = 'none';
+      }
+
+      // Render Full Closed Trades Table
+      const tradesSection = document.getElementById('mccTradesSection');
+      const tradesTbody = document.getElementById('mccTradesTbody');
+      tradesTbody.innerHTML = '';
+      document.getElementById('mccTradesCountBadge').innerText = `${trades.length} Closed Positions`;
+
+      if (trades.length > 0) {
+        tradesSection.style.display = 'block';
+        trades.slice().reverse().forEach(t => {
+          const tr = document.createElement('tr');
+          const tGross = t.grossProfitINR || 0;
+          const tCharges = t.totalChargesINR || 0;
+          const tNet = t.netProfitINR || 0;
+          const dirClass = t.direction === 'BUY' ? 'badge-success' : 'badge-danger';
+
+          tr.innerHTML = `
+            <td><code>${t.positionId}</code></td>
+            <td><code>${t.pairId}</code></td>
+            <td><span class="badge ${dirClass}">${t.direction}</span></td>
+            <td>${t.entryTime ? t.entryTime.replace('T', ' ').slice(0, 19) : '-'}</td>
+            <td>${t.exitTime ? t.exitTime.replace('T', ' ').slice(0, 19) : '-'}</td>
+            <td>$${(t.entryPrice || 0).toFixed(2)}</td>
+            <td>$${(t.exitPrice || 0).toFixed(2)}</td>
+            <td>${t.quantity || 2} bbl</td>
+            <td>${t.usdInrRate || 96.96}</td>
+            <td>₹${tGross.toFixed(2)}</td>
+            <td style="color: #f87171;">₹${tCharges.toFixed(2)}</td>
+            <td style="color: ${tNet >= 0 ? '#34d399' : '#f87171'}; font-weight: 700;">₹${tNet.toFixed(2)}</td>
+            <td style="font-size: 0.8rem;">${t.exitReason || 'TARGET HIT'}</td>
+          `;
+          tradesTbody.appendChild(tr);
+        });
+      } else {
+        tradesSection.style.display = 'none';
+      }
+    }
+  </script>
+</body>
+</html>

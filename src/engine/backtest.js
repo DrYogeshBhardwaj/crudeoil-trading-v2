@@ -168,8 +168,9 @@ class HistoricalBacktester {
       sellTargetMove,
       autoAiTargetMode = false,
       maxActivePairs = 25,
-      takerFeeRate = 0.00059, // Mudrex exact 0.059%
+      takerFeeRate = 0.00075, // Mudrex exact 0.075%
       gstRate = 0.18,
+      slippageBufferINR = 5.0, // Fixed fee / slippage buffer INR per trade
       usdInrRate = 86.50,
       leverage = 5
     } = config;
@@ -293,14 +294,14 @@ class HistoricalBacktester {
             const buy = pair.buyPosition;
             if (buy && buy.status === 'OPEN' && buy.targetExitPrice !== null) {
               if (priceStep >= buy.targetExitPrice) {
-                this.executeBacktestClose(pair, buy, buy.targetExitPrice, timestamp, takerFeeRate, gstRate, usdInrRate, multiplier, contractQuantity, closedPositions);
+                this.executeBacktestClose(pair, buy, buy.targetExitPrice, timestamp, takerFeeRate, gstRate, usdInrRate, multiplier, contractQuantity, closedPositions, slippageBufferINR);
               }
             }
 
             const sell = pair.sellPosition;
             if (sell && sell.status === 'OPEN' && sell.targetExitPrice !== null) {
               if (priceStep <= sell.targetExitPrice) {
-                this.executeBacktestClose(pair, sell, sell.targetExitPrice, timestamp, takerFeeRate, gstRate, usdInrRate, multiplier, contractQuantity, closedPositions);
+                this.executeBacktestClose(pair, sell, sell.targetExitPrice, timestamp, takerFeeRate, gstRate, usdInrRate, multiplier, contractQuantity, closedPositions, slippageBufferINR);
               }
             }
 
@@ -492,7 +493,7 @@ class HistoricalBacktester {
     }
   }
 
-  executeBacktestClose(pair, position, exitPrice, exitTimestamp, takerFeeRate, gstRate, usdInrRate, mult, qty, closedPositions) {
+  executeBacktestClose(pair, position, exitPrice, exitTimestamp, takerFeeRate, gstRate, usdInrRate, mult, qty, closedPositions, slippageBufferINR = 5.0) {
     position.status = 'CLOSED';
     position.exitPrice = exitPrice;
     position.exitTime = new Date(exitTimestamp).toISOString();
@@ -509,12 +510,13 @@ class HistoricalBacktester {
     const entryFeeUSD = entryValUSD * takerFeeRate;
     const exitFeeUSD = exitValUSD * takerFeeRate;
     const gstUSD = (entryFeeUSD + exitFeeUSD) * gstRate;
-    const chargesUSD = entryFeeUSD + exitFeeUSD + gstUSD;
-    const netUSD = grossUSD - chargesUSD;
+    const slippageUSD = (slippageBufferINR || 0) / usdInrRate;
+    const chargesUSD = entryFeeUSD + exitFeeUSD + gstUSD + slippageUSD;
 
-    const grossINR = grossUSD * usdInrRate;
-    const chargesINR = chargesUSD * usdInrRate;
-    const netINR = grossINR - chargesINR;
+    const grossINR = Number((grossUSD * usdInrRate).toFixed(2));
+    const chargesINR = Number((chargesUSD * usdInrRate).toFixed(2));
+    const netINR = Number((grossINR - chargesINR).toFixed(2));
+    const netUSD = netINR / usdInrRate;
 
     const exitReason = netUSD >= 0 ? 'TARGET PROFIT HIT' : 'TARGET PRICE HIT (NET LOSS DUE TO FEES)';
 
@@ -528,12 +530,18 @@ class HistoricalBacktester {
       entryPrice: position.entryPrice,
       exitPrice,
       targetExitPrice: position.targetExitPrice,
+      quantity: qty,
+      contractMultiplier: mult,
       grossProfitUSD: Number(grossUSD.toFixed(4)),
-      grossProfitINR: Number(grossINR.toFixed(2)),
+      grossProfitINR: grossINR,
+      entryFeeUSD: Number(entryFeeUSD.toFixed(4)),
+      exitFeeUSD: Number(exitFeeUSD.toFixed(4)),
+      gstUSD: Number(gstUSD.toFixed(4)),
       totalChargesUSD: Number(chargesUSD.toFixed(4)),
-      totalChargesINR: Number(chargesINR.toFixed(2)),
+      totalChargesINR: chargesINR,
       netProfitUSD: Number(netUSD.toFixed(4)),
-      netProfitINR: Number(netINR.toFixed(2)),
+      netProfitINR: netINR,
+      usdInrRate,
       exitReason
     });
   }
