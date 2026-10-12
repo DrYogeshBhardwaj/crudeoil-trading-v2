@@ -1428,7 +1428,10 @@ function applySettingChange() {
   const maxActivePairs = maxPairsInput ? parseInt(maxPairsInput.value) || 100 : 100;
   const usdInrRate = usdInrInput ? parseFloat(usdInrInput.value) || 86.5 : 86.5;
 
-  fetch('/api/settings', {
+  const isMudrexPage = window.location.pathname.includes('mudrex') || !!document.getElementById('mudrexLiveStartBtn');
+  const endpoint = isMudrexPage ? '/api/mudrex/settings' : '/api/settings';
+
+  fetch(endpoint, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
@@ -1467,7 +1470,10 @@ function saveModalSettings() {
   const maxActivePairs = maxPairsInput ? parseInt(maxPairsInput.value) || 100 : 100;
   const usdInrRate = usdInrInput ? parseFloat(usdInrInput.value) || 86.5 : 86.5;
 
-  fetch('/api/settings', {
+  const isMudrexPage = window.location.pathname.includes('mudrex') || !!document.getElementById('mudrexLiveStartBtn');
+  const endpoint = isMudrexPage ? '/api/mudrex/settings' : '/api/settings';
+
+  fetch(endpoint, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({

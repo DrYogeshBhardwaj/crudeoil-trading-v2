@@ -14,6 +14,16 @@ class MudrexLiveAdapter {
     this.lastFetchPositionsTime = 0;
     this.lastFetchPositionsRes = null;
 
+    this.settings = {
+      instrument: 'CLUSDT',
+      profitTargetMove: 1.00,
+      targetDisabled: false,
+      maxActivePairs: 25,
+      contractQuantity: 1.0,
+      leverage: 5,
+      usdInrRate: 86.5
+    };
+
     this.initFromStorage();
 
     try {
@@ -26,11 +36,19 @@ class MudrexLiveAdapter {
     } catch (e) {}
   }
 
+  updateSettings(newSettings) {
+    this.settings = { ...this.settings, ...newSettings };
+    this.saveState();
+  }
+
   initFromStorage() {
     try {
       const storage = require('./storage');
       const saved = storage.loadState();
       if (saved) {
+        if (saved.mudrexSettings) {
+          this.settings = { ...this.settings, ...saved.mudrexSettings };
+        }
         if (saved.mudrexApiKey && !saved.mudrexApiKey.includes('*') && !process.env.MUDREX_API_KEY) {
           process.env.MUDREX_API_KEY = saved.mudrexApiKey;
         }
@@ -82,6 +100,7 @@ class MudrexLiveAdapter {
         ...currentState,
         mudrexApiKey: process.env.MUDREX_API_KEY || currentState.mudrexApiKey || '',
         mudrexApiSecret: process.env.MUDREX_API_SECRET || currentState.mudrexApiSecret || '',
+        mudrexSettings: this.settings,
         settings: paperEngine.settings,
         pairs: paperEngine.pairs,
         closedPositions: paperEngine.closedPositions,
@@ -108,9 +127,9 @@ class MudrexLiveAdapter {
       const decimals = symbol === 'BTCUSDT' ? 2 : (symbol === 'XAGUSDT' ? 4 : 2);
       const normPrice = Number(price.toFixed(decimals));
 
-      const targetMove = paperEngine.settings.targetDisabled ? null : (paperEngine.settings.profitTargetMove || 1.00);
+      const targetMove = this.settings.targetDisabled ? null : (this.settings.profitTargetMove || 1.00);
       const time = tick.time || Date.now();
-      const usdInrRate = tick.usdInrRate || 86.5;
+      const usdInrRate = tick.usdInrRate || this.settings.usdInrRate || 86.5;
 
       // 1. Evaluate target exits and update floating P/L for active open positions
       for (let i = this.liveOpenPositions.length - 1; i >= 0; i--) {
@@ -160,7 +179,7 @@ class MudrexLiveAdapter {
       }
 
       // 2. Open new BUY + SELL pair if rate not processed yet
-      const maxPairs = paperEngine.settings.maxActivePairs || 25;
+      const maxPairs = this.settings.maxActivePairs || 25;
       if (this.liveOpenPositions.length >= maxPairs * 2) {
         // Prune oldest 2 positions to make room for fresh new rate pair
         this.liveOpenPositions.splice(0, 2);
@@ -187,7 +206,7 @@ class MudrexLiveAdapter {
           entryPrice: normPrice,
           currentPrice: normPrice,
           targetExitPrice: buyTarget,
-          quantity: paperEngine.settings.contractQuantity || 1.0,
+          quantity: this.settings.contractQuantity || 1.0,
           floatingGrossUSD: 0,
           floatingGrossINR: 0,
           floatingChargesINR: 0,
@@ -206,7 +225,7 @@ class MudrexLiveAdapter {
           entryPrice: normPrice,
           currentPrice: normPrice,
           targetExitPrice: sellTarget,
-          quantity: paperEngine.settings.contractQuantity || 1.0,
+          quantity: this.settings.contractQuantity || 1.0,
           floatingGrossUSD: 0,
           floatingGrossINR: 0,
           floatingChargesINR: 0,
@@ -221,8 +240,8 @@ class MudrexLiveAdapter {
         this.saveState();
 
         // Transmit Real BUY & SELL Orders to Mudrex Futures API (/fapi/v2/futures/order)
-        const qty = paperEngine.settings.contractQuantity || 1.0;
-        const lev = paperEngine.settings.leverage || 5;
+        const qty = this.settings.contractQuantity || 1.0;
+        const lev = this.settings.leverage || 5;
 
         this.createRealOrder({ symbol, side: 'BUY', quantity: qty, leverage: lev })
           .then(res => {

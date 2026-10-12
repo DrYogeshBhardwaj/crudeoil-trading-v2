@@ -100,12 +100,24 @@ app.get('/api/stream', async (req, res) => {
   });
 });
 
-// 3. Update Settings
+// 3. Update Settings (Dhan MCX Engine)
 app.post('/api/settings', (req, res) => {
   try {
     const newSettings = req.body;
     paperEngine.updateSettings(newSettings);
     res.json({ success: true, settings: paperEngine.settings });
+  } catch (err) {
+    res.status(400).json({ success: false, error: err.message });
+  }
+});
+
+// 3b. Update Settings (Mudrex Live Engine)
+app.post('/api/mudrex/settings', (req, res) => {
+  try {
+    const mudrexLive = require('./engine/mudrexLiveAdapter');
+    const newSettings = req.body;
+    mudrexLive.updateSettings(newSettings);
+    res.json({ success: true, settings: mudrexLive.settings });
   } catch (err) {
     res.status(400).json({ success: false, error: err.message });
   }
