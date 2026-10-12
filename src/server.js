@@ -57,6 +57,7 @@ app.get(['/dhan-mcx', '/dhan_mcx', '/dhan_mcx.html', '/dhan-mcx.html'], (req, re
 app.get(['/mcx-calc', '/mcx_calc', '/mcx_calc.html', '/mcx-calc.html'], (req, res) => res.sendFile(path.join(__dirname, '../public/mcx_calc.html')));
 app.get(['/paper-calc', '/paper_calc', '/paper_calc.html', '/paper-calc.html'], (req, res) => res.sendFile(path.join(__dirname, '../public/paper_calc.html')));
 app.get(['/mudrex-live', '/mudrex_live', '/mudrex_live.html', '/mudrex-live.html'], (req, res) => res.sendFile(path.join(__dirname, '../public/mudrex_live.html')));
+app.get(['/mudrex-crude-live', '/mudrex_crude_live', '/mudrex_crude_live.html', '/mudrex-crude-live.html'], (req, res) => res.sendFile(path.join(__dirname, '../public/mudrex_crude_live.html')));
 
 // 1. Dashboard Metrics (Supporting Mudrex Live Mode)
 app.get(['/api/metrics', '/api/mudrex/metrics', '/api/mudrex-metrics'], async (req, res) => {
@@ -181,6 +182,11 @@ app.post('/api/manual-close', (req, res) => {
 // Standalone Mudrex Live Terminal Page Route
 app.get('/mudrex-live', (req, res) => {
   res.sendFile(path.join(__dirname, '../public/mudrex_live.html'));
+});
+
+// Standalone Mudrex Crude Live Page Route
+app.get('/mudrex_crude_live', (req, res) => {
+  res.sendFile(path.join(__dirname, '../public/mudrex_crude_live.html'));
 });
 
 // Standalone Paper Trading Calculator Page Route
