@@ -28,6 +28,12 @@ class MudrexLiveAdapter {
       const storage = require('./storage');
       const saved = storage.loadState();
       if (saved) {
+        if (saved.mudrexApiKey && !process.env.MUDREX_API_KEY) {
+          process.env.MUDREX_API_KEY = saved.mudrexApiKey;
+        }
+        if (saved.mudrexApiSecret && !process.env.MUDREX_API_SECRET) {
+          process.env.MUDREX_API_SECRET = saved.mudrexApiSecret;
+        }
         if (Array.isArray(saved.userClosedRealPositionIds)) {
           this.userClosedRealPositionIds = new Set(saved.userClosedRealPositionIds);
         }
@@ -71,6 +77,8 @@ class MudrexLiveAdapter {
 
       storage.saveState({
         ...currentState,
+        mudrexApiKey: process.env.MUDREX_API_KEY || currentState.mudrexApiKey || '',
+        mudrexApiSecret: process.env.MUDREX_API_SECRET || currentState.mudrexApiSecret || '',
         settings: paperEngine.settings,
         pairs: paperEngine.pairs,
         closedPositions: paperEngine.closedPositions,
@@ -426,7 +434,7 @@ class MudrexLiveAdapter {
     const symb = (symbol || 'CLUSDT').toUpperCase();
     const sideUpper = (side || 'BUY').toUpperCase();
     const orderType = (sideUpper === 'BUY' || sideUpper === 'LONG') ? 'LONG' : 'SHORT';
-    const qty = String(quantity || 1.0);
+    const qty = String(quantity || 0.01);
     const lev = String(leverage || 5);
 
     const body = {
