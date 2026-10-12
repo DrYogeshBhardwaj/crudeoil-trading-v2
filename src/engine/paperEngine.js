@@ -1,6 +1,5 @@
 const rateFeed = require('./rateFeed');
 const storage = require('./storage');
-const mudrexLive = require('./mudrexLiveAdapter');
 
 class PaperEngine {
   constructor() {
