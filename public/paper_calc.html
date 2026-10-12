@@ -416,6 +416,26 @@
             </div>
           </div>
 
+          ${res.marketBounds && res.marketBounds.max48h ? `
+            <div style="background: rgba(15, 23, 42, 0.9); border: 1px solid rgba(56, 189, 248, 0.4); border-radius: 10px; padding: 12px 18px; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;">
+              <div style="display: flex; align-items: center; gap: 10px;">
+                <span style="font-size: 1.1rem;">📊</span>
+                <div>
+                  <div style="font-size: 0.88rem; font-weight: 800; color: #38bdf8;">24H & 48H MARKET MAX / MIN BOUNDS ANALYZED</div>
+                  <div style="font-size: 0.75rem; color: var(--text-muted);">Engine analyzes 24-48h High (MAX) & Low (MIN) prices before taking pairs & assigning dynamic BUY/SELL profit targets</div>
+                </div>
+              </div>
+              <div style="display: flex; gap: 12px; flex-wrap: wrap; font-size: 0.82rem; font-weight: 800;">
+                <div style="color: #34d399; background: rgba(16, 185, 129, 0.15); border: 1px solid rgba(16, 185, 129, 0.3); padding: 5px 12px; border-radius: 6px;">
+                  🔼 48H MAX: $${res.marketBounds.max48h.toFixed(priceDecimals)} | 🔽 48H MIN: $${res.marketBounds.min48h.toFixed(priceDecimals)}
+                </div>
+                <div style="color: #38bdf8; background: rgba(56, 189, 248, 0.15); border: 1px solid rgba(56, 189, 248, 0.3); padding: 5px 12px; border-radius: 6px;">
+                  🔼 24H MAX: $${res.marketBounds.max24h ? res.marketBounds.max24h.toFixed(priceDecimals) : 'N/A'} | 🔽 24H MIN: $${res.marketBounds.min24h ? res.marketBounds.min24h.toFixed(priceDecimals) : 'N/A'}
+                </div>
+              </div>
+            </div>
+          ` : ''}
+
           <!-- Top Metric Cards Grid -->
           <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 14px; margin-bottom: 24px;">
             <div style="background: #0d1117; border: 1px solid var(--border-color); border-radius: 10px; padding: 14px;">

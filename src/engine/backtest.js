@@ -127,25 +127,30 @@ class HistoricalBacktester {
     return { isClosed: false, reason: '' };
   }
 
-  calculateAiTargetsFromHistory(recentPrices) {
+  calculateAiTargetsFromHistory(recentPrices, max48h, min48h) {
     if (!recentPrices || recentPrices.length < 3) {
-      return { buyTargetMove: 0.20, sellTargetMove: 0.20 };
+      return { buyTargetMove: 0.20, sellTargetMove: 0.20, channelPos48h: 50 };
     }
     const len = recentPrices.length;
     const oldest = recentPrices[0];
     const newest = recentPrices[len - 1];
     const diff = newest - oldest;
 
-    if (diff >= 0.08) {
-      return { buyTargetMove: 0.35, sellTargetMove: 0.15 };
-    } else if (diff >= 0.02) {
-      return { buyTargetMove: 0.30, sellTargetMove: 0.20 };
-    } else if (diff <= -0.08) {
-      return { buyTargetMove: 0.15, sellTargetMove: 0.35 };
-    } else if (diff <= -0.02) {
-      return { buyTargetMove: 0.20, sellTargetMove: 0.30 };
+    let channelPos48h = 50;
+    if (max48h && min48h && max48h > min48h && isFinite(max48h) && isFinite(min48h)) {
+      channelPos48h = Math.round(((newest - min48h) / (max48h - min48h)) * 100);
+    }
+
+    if (diff >= 0.08 || channelPos48h >= 80) {
+      return { buyTargetMove: 0.35, sellTargetMove: 0.15, channelPos48h };
+    } else if (diff >= 0.02 || channelPos48h >= 60) {
+      return { buyTargetMove: 0.30, sellTargetMove: 0.20, channelPos48h };
+    } else if (diff <= -0.08 || channelPos48h <= 20) {
+      return { buyTargetMove: 0.15, sellTargetMove: 0.35, channelPos48h };
+    } else if (diff <= -0.02 || channelPos48h <= 40) {
+      return { buyTargetMove: 0.20, sellTargetMove: 0.30, channelPos48h };
     } else {
-      return { buyTargetMove: 0.20, sellTargetMove: 0.20 };
+      return { buyTargetMove: 0.20, sellTargetMove: 0.20, channelPos48h };
     }
   }
 
@@ -187,9 +192,15 @@ class HistoricalBacktester {
     const dailyReports = [];
     const missingDates = [];
     const recentSubTicks = [];
+    const rolling48hSubTicks = []; // Stores { price, timestamp } for 48h MAX/MIN tracking
 
     let currentPrice = null;
     let lastProcessedRate = null;
+    let overallMax48h = -Infinity;
+    let overallMin48h = Infinity;
+    let overallMax24h = -Infinity;
+    let overallMin24h = Infinity;
+
     const runId = `RUN-${Date.now()}-${Math.floor(Math.random()*1000)}`;
 
     for (const dStr of targetDates) {
@@ -234,11 +245,37 @@ class HistoricalBacktester {
           recentSubTicks.push(priceStep);
           if (recentSubTicks.length > 20) recentSubTicks.shift();
 
+          // Maintain rolling 48-hour sub-ticks buffer (48 * 3600 * 1000 = 172,800,000 ms)
+          rolling48hSubTicks.push({ price: priceStep, timestamp });
+          const cutoff48h = timestamp - 172800000;
+          const cutoff24h = timestamp - 86400000;
+          while (rolling48hSubTicks.length > 0 && rolling48hSubTicks[0].timestamp < cutoff48h) {
+            rolling48hSubTicks.shift();
+          }
+
+          let curMax48h = -Infinity, curMin48h = Infinity;
+          let curMax24h = -Infinity, curMin24h = Infinity;
+          for (let j = 0; j < rolling48hSubTicks.length; j++) {
+            const p = rolling48hSubTicks[j].price;
+            const ts = rolling48hSubTicks[j].timestamp;
+            if (p > curMax48h) curMax48h = p;
+            if (p < curMin48h) curMin48h = p;
+            if (ts >= cutoff24h) {
+              if (p > curMax24h) curMax24h = p;
+              if (p < curMin24h) curMin24h = p;
+            }
+          }
+
+          if (curMax48h > overallMax48h) overallMax48h = curMax48h;
+          if (curMin48h < overallMin48h) overallMin48h = curMin48h;
+          if (curMax24h > overallMax24h) overallMax24h = curMax24h;
+          if (curMin24h < overallMin24h) overallMin24h = curMin24h;
+
           let bTargetMove = buyTargetMove !== undefined && buyTargetMove !== null ? Number(buyTargetMove) : (targetMove || 0.20);
           let sTargetMove = sellTargetMove !== undefined && sellTargetMove !== null ? Number(sellTargetMove) : (targetMove || 0.20);
 
           if (autoAiTargetMode) {
-            const aiTargets = this.calculateAiTargetsFromHistory(recentSubTicks);
+            const aiTargets = this.calculateAiTargetsFromHistory(recentSubTicks, curMax48h, curMin48h);
             bTargetMove = aiTargets.buyTargetMove;
             sTargetMove = aiTargets.sellTargetMove;
           }
@@ -396,6 +433,12 @@ class HistoricalBacktester {
       targetDates,
       missingDates,
       config,
+      marketBounds: {
+        max48h: isFinite(overallMax48h) ? overallMax48h : null,
+        min48h: isFinite(overallMin48h) ? overallMin48h : null,
+        max24h: isFinite(overallMax24h) ? overallMax24h : null,
+        min24h: isFinite(overallMin24h) ? overallMin24h : null
+      },
       summary: finalSummary,
       dailyReports,
       trades: closedPositions, // full trade ledger
