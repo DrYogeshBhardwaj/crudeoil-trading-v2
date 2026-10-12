@@ -349,7 +349,8 @@ function test16() {
 // Test 17 — Entry Rejection Audit and Insufficient Margin Check
 function test17() {
   paperEngine.settings.instrument = 'CLUSDT';
-  paperEngine.settings.startingCapitalINR = 4500; // Small capital ₹4500
+  paperEngine.settings.contractQuantity = 1.0;
+  paperEngine.settings.startingCapitalINR = 4500; // Small capital ₹4500 (enough for 1 pair of 1 Barrel @ ₹3114)
   paperEngine.settings.profitTargetMove = 0.20;
 
   // Send ticks to consume margin (5x leverage at $90 = ~₹1,557 per position, ~₹3,114 per pair)

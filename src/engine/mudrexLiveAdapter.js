@@ -749,6 +749,23 @@ class MudrexLiveAdapter {
     const totalTrades = winCount + lossCount;
     const winRate = totalTrades > 0 ? Math.round((winCount / totalTrades) * 100) : 0;
 
+    let pairs1B = 0;
+    let pairs2B = 0;
+    const activePairMap = new Map();
+    for (const pos of liveOpenPositions) {
+      if (pos.status === 'OPEN' && pos.pairId) {
+        const q = pos.quantity || 1.0;
+        if (!activePairMap.has(pos.pairId) || q > activePairMap.get(pos.pairId)) {
+          activePairMap.set(pos.pairId, q);
+        }
+      }
+    }
+    for (const [pid, q] of activePairMap.entries()) {
+      if (q >= 2.0) pairs2B++;
+      else pairs1B++;
+    }
+    const realActivePairsCount = activePairMap.size > 0 ? activePairMap.size : Math.max(activeBuyCount, activeSellCount);
+
     return {
       rateFeedInfo: rateInfo,
       settings: paperEngine.settings,
@@ -775,8 +792,10 @@ class MudrexLiveAdapter {
         totalEquityINR,
         marginUsedINR,
         availableMarginINR: Math.max(0, totalEquityINR - marginUsedINR),
-        activePairsCount: Math.max(activeBuyCount, activeSellCount),
+        activePairsCount: realActivePairsCount,
         maxActivePairs: paperEngine.settings.maxActivePairs || 25,
+        pairs1B,
+        pairs2B,
         activeBuyCount,
         activeSellCount,
         closedPositionsCount: closedCount,

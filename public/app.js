@@ -524,7 +524,11 @@ function renderDashboard(data) {
   if (document.getElementById('kpiFloatingSubtext')) document.getElementById('kpiFloatingSubtext').innerText = `Gross: $${summary.floatingGrossUSD.toFixed(2)} | Charges: ₹${summary.floatingChargesINR.toFixed(2)}`;
 
   if (document.getElementById('kpiActivePairs')) document.getElementById('kpiActivePairs').innerText = `${summary.activePairsCount} / ${summary.maxActivePairs}`;
-  if (document.getElementById('kpiUniqueRatesCount')) document.getElementById('kpiUniqueRatesCount').innerText = `Processed Rates: ${processedRatesCount} unique`;
+  if (document.getElementById('kpiUniqueRatesCount')) {
+    const p1B = summary.pairs1B !== undefined ? summary.pairs1B : 0;
+    const p2B = summary.pairs2B !== undefined ? summary.pairs2B : 0;
+    document.getElementById('kpiUniqueRatesCount').innerText = `📦 1 Barrel: ${p1B} Pairs | 📦 2 Barrels: ${p2B} Pairs`;
+  }
 
   if (document.getElementById('kpiAvailableMargin')) document.getElementById('kpiAvailableMargin').innerText = `₹${summary.availableMarginINR.toLocaleString('en-IN', { minimumFractionDigits: 2 })}`;
   if (document.getElementById('kpiMarginUsed')) document.getElementById('kpiMarginUsed').innerText = `Locked Margin: ₹${summary.marginUsedINR.toFixed(2)} (${settings.leverage}x)`;
@@ -744,8 +748,17 @@ function renderActivePositions(positions, symbol) {
   const totalBuyNetINR = buyPositions.reduce((sum, p) => sum + (typeof p.floatingNetINR === 'number' ? p.floatingNetINR : 0), 0);
   const totalSellNetINR = sellPositions.reduce((sum, p) => sum + (typeof p.floatingNetINR === 'number' ? p.floatingNetINR : 0), 0);
 
-  if (buyBadge) buyBadge.innerText = `${buyPositions.length} Active`;
-  if (sellBadge) sellBadge.innerText = `${sellPositions.length} Active`;
+  const buy1B = buyPositions.filter(p => (p.quantity || 1.0) < 2).length;
+  const buy2B = buyPositions.filter(p => (p.quantity || 1.0) >= 2).length;
+  const sell1B = sellPositions.filter(p => (p.quantity || 1.0) < 2).length;
+  const sell2B = sellPositions.filter(p => (p.quantity || 1.0) >= 2).length;
+
+  if (buyBadge) {
+    buyBadge.innerText = buy2B > 0 ? `${buyPositions.length} Active (${buy1B} 1-B, ${buy2B} 2-B)` : `${buyPositions.length} Active`;
+  }
+  if (sellBadge) {
+    sellBadge.innerText = sell2B > 0 ? `${sellPositions.length} Active (${sell1B} 1-B, ${sell2B} 2-B)` : `${sellPositions.length} Active`;
+  }
 
   if (buyNetPlEl) {
     buyNetPlEl.innerHTML = `NET P/L: <strong class="${totalBuyNetINR >= 0 ? 'text-green' : 'text-red'}">₹${totalBuyNetINR >= 0 ? '+' : ''}${totalBuyNetINR.toFixed(2)}</strong>`;
@@ -771,14 +784,22 @@ function renderActivePositions(positions, symbol) {
       const targetPrice = typeof pos.targetExitPrice === 'number' ? pos.targetExitPrice : null;
       const floatingNetINR = typeof pos.floatingNetINR === 'number' ? pos.floatingNetINR : 0;
 
+      const qtyVal = typeof pos.quantity === 'number' ? pos.quantity : 1.0;
+      const qtyLabel = qtyVal >= 2 ? '2 Barrels' : '1 Barrel';
+      const qtyBg = qtyVal >= 2 ? 'rgba(245, 158, 11, 0.25)' : 'rgba(56, 189, 248, 0.25)';
+      const qtyColor = qtyVal >= 2 ? '#f59e0b' : '#38bdf8';
+
       const dist = targetPrice !== null ? Math.abs(targetPrice - currentPrice) : null;
       const netClass = floatingNetINR >= 0 ? 'text-green' : 'text-red';
 
       rowsHtml += `
         <tr>
           <td>
-            <strong style="font-size:0.85rem;">${pos.pairId || 'N/A'}</strong>
-            <span style="display:block;"><code style="color:var(--accent-cyan); font-size:0.75rem;">${pos.positionId || 'N/A'}</code></span>
+            <div style="display: flex; align-items: center; gap: 6px;">
+              <strong style="font-size:0.85rem;">${pos.pairId || 'N/A'}</strong>
+              <span style="font-size:0.65rem; padding: 2px 6px; border-radius: 4px; background: ${qtyBg}; color: ${qtyColor}; font-weight: 800;">${qtyLabel}</span>
+            </div>
+            <span style="display:block; margin-top: 2px;"><code style="color:var(--accent-cyan); font-size:0.75rem;">${pos.positionId || 'N/A'}</code></span>
             ${pos.apiStatus && !pos.apiStatus.includes('REAL_ORDERS_DISABLED') ? `<span style="display:block; font-size:0.62rem; color:${pos.apiStatus.includes('TRANSMITTED') ? '#a7f3d0' : (pos.apiStatus.includes('SENDING') ? '#38bdf8' : '#f87171')}; font-weight:700;">📡 ${pos.apiStatus}</span>` : ''}
           </td>
           <td>

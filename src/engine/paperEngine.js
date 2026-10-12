@@ -6,7 +6,7 @@ class PaperEngine {
   constructor() {
     this.settings = {
       startingCapitalINR: 100000,
-      contractQuantity: 0.01,
+      contractQuantity: 2.0, // 2 Barrels default for CLUSDT
       leverage: 5,
       instrument: 'CLUSDT',
       profitTargetMode: 'PRICE_MOVE',
@@ -73,6 +73,7 @@ class PaperEngine {
     const saved = storage.loadState();
     if (saved) {
       if (saved.settings) this.settings = { ...this.settings, ...saved.settings };
+      this.settings.contractQuantity = 2.0; // 2 Barrels for new pairs per user instruction
       if (!saved.settings?.startingCapitalINR || saved.settings?.startingCapitalINR === 200000) {
         this.settings.startingCapitalINR = 100000;
       }
@@ -340,9 +341,9 @@ class PaperEngine {
       return;
     }
 
-    // 6. Check Available Margin for NEW Pair (1 BUY + 1 SELL)
+    // 6. Check Available Margin for NEW Pair (1 BUY + 1 SELL of 2 Barrels)
     const metrics = this.getDashboardMetrics();
-    const qty = this.settings.contractQuantity;
+    const qty = this.settings.contractQuantity || 2.0;
     const mult = this.contractMultipliers[symbol] || 1.0;
     const leverage = this.settings.leverage;
     const reqMarginPairINR = ((normalizedPrice * qty * mult * usdInrRate) / leverage) * 2;
@@ -351,7 +352,7 @@ class PaperEngine {
       this.engineStatus = 'PAUSED';
       this.pauseReason = `PAUSED — INSUFFICIENT MARGIN (Required: ₹${reqMarginPairINR.toFixed(2)}, Available: ₹${metrics.summary.availableMarginINR.toFixed(2)})`;
       if (this.lastSkippedRate !== `MARGIN-${normalizedPrice}`) {
-        this.logAudit('ENTRY_REJECTED', `ENTRY REJECTED — INSUFFICIENT MARGIN (Required: ₹${reqMarginPairINR.toFixed(2)}, Available: ₹${metrics.summary.availableMarginINR.toFixed(2)})`);
+        this.logAudit('ENTRY_REJECTED', `ENTRY REJECTED — INSUFFICIENT MARGIN (Required ₹${reqMarginPairINR.toFixed(2)} for 2 Barrels Pair, Available: ₹${metrics.summary.availableMarginINR.toFixed(2)})`);
         this.lastSkippedRate = `MARGIN-${normalizedPrice}`;
       }
       return;
@@ -728,17 +729,18 @@ class PaperEngine {
         const posRateInfo = rateFeed.getCurrentRate(posSymbol);
         const posCurrentPrice = (posRateInfo && posRateInfo.price) ? posRateInfo.price : pos.entryPrice;
         const posMult = this.contractMultipliers[posSymbol] || 1.0;
+        const posQty = pos.quantity || this.settings.contractQuantity || 1.0;
 
         if (posCurrentPrice) {
           if (pos.direction === 'BUY') {
-            posGrossUSD = (posCurrentPrice - pos.entryPrice) * qty * posMult;
+            posGrossUSD = (posCurrentPrice - pos.entryPrice) * posQty * posMult;
           } else {
-            posGrossUSD = (pos.entryPrice - posCurrentPrice) * qty * posMult;
+            posGrossUSD = (pos.entryPrice - posCurrentPrice) * posQty * posMult;
           }
           posGrossINR = posGrossUSD * usdInrRate;
 
-          const entryValueUSD = pos.entryPrice * qty * posMult;
-          const estExitValueUSD = posCurrentPrice * qty * posMult;
+          const entryValueUSD = pos.entryPrice * posQty * posMult;
+          const estExitValueUSD = posCurrentPrice * posQty * posMult;
           const entryFeeUSD = entryValueUSD * feeRate;
           const estExitFeeUSD = estExitValueUSD * feeRate;
           const estGstUSD = (entryFeeUSD + estExitFeeUSD) * gstRate;
@@ -757,7 +759,7 @@ class PaperEngine {
           floatingNetINR += posNetINR;
 
           // Margin calculation
-          const posNotionalUSD = posCurrentPrice * qty * posMult;
+          const posNotionalUSD = posCurrentPrice * posQty * posMult;
           const posMarginUSD = posNotionalUSD / leverage;
           marginUsedINR += (posMarginUSD * usdInrRate);
         }
@@ -772,6 +774,7 @@ class PaperEngine {
           currentPrice: posCurrentPrice || pos.entryPrice,
           targetExitPrice: pos.targetExitPrice,
           targetMove: pos.targetMove,
+          quantity: posQty,
           floatingGrossUSD: Number(posGrossUSD.toFixed(4)),
           floatingGrossINR: Number(posGrossINR.toFixed(2)),
           floatingChargesUSD: Number(posChargesUSD.toFixed(4)),
@@ -787,6 +790,17 @@ class PaperEngine {
     const totalEquityINR = realizedBalanceINR + floatingNetINR;
     const availableMarginINR = Math.max(0, totalEquityINR - marginUsedINR);
     const activePairsCount = this.getActivePairsCount();
+
+    let pairs1B = 0;
+    let pairs2B = 0;
+    for (const pair of this.pairs) {
+      if (pair.status === 'ACTIVE') {
+        const q = (pair.buyPosition && pair.buyPosition.quantity) || (pair.sellPosition && pair.sellPosition.quantity) || 1.0;
+        if (q >= 2.0) pairs2B++;
+        else pairs1B++;
+      }
+    }
+
     const processedRatesCount = this.processedRates[this.settings.instrument] ? this.processedRates[this.settings.instrument].size : 0;
 
     let effectiveEngineStatus = this.engineStatus;
@@ -829,6 +843,8 @@ class PaperEngine {
         
         activePairsCount,
         maxActivePairs: this.settings.maxActivePairs,
+        pairs1B,
+        pairs2B,
         activeBuyCount,
         activeSellCount,
         closedPositionsCount: this.closedPositions.length,
