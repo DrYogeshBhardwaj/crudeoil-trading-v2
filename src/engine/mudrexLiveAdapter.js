@@ -106,7 +106,7 @@ class MudrexLiveAdapter {
       const decimals = symbol === 'BTCUSDT' ? 2 : (symbol === 'XAGUSDT' ? 4 : 2);
       const normPrice = Number(price.toFixed(decimals));
 
-      const targetMove = paperEngine.settings.targetDisabled ? null : (paperEngine.settings.profitTargetMove || 0.20);
+      const targetMove = paperEngine.settings.targetDisabled ? null : (paperEngine.settings.profitTargetMove || 1.00);
       const time = tick.time || Date.now();
       const usdInrRate = tick.usdInrRate || 86.5;
 
@@ -593,7 +593,7 @@ class MudrexLiveAdapter {
               return null;
             }
 
-            const targetExit = item.takeprofit_price ? Number(item.takeprofit_price) : (direction === 'BUY' ? Number((entryPrice + 0.20).toFixed(2)) : Number((entryPrice - 0.20).toFixed(2)));
+            const targetExit = item.takeprofit_price ? Number(item.takeprofit_price) : (direction === 'BUY' ? Number((entryPrice + 1.00).toFixed(2)) : Number((entryPrice - 1.00).toFixed(2)));
 
             return {
               pairId,

@@ -4,6 +4,7 @@ const path = require('path');
 const rateFeed = require('./engine/rateFeed');
 const paperEngine = require('./engine/paperEngine');
 const backtest = require('./engine/backtest');
+const mcxBacktest = require('./engine/mcxBacktest');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -155,6 +156,16 @@ app.get('/mudrex-live', (req, res) => {
   res.sendFile(path.join(__dirname, '../public/mudrex_live.html'));
 });
 
+// Standalone Paper Trading Calculator Page Route
+app.get('/paper-calc', (req, res) => {
+  res.sendFile(path.join(__dirname, '../public/paper_calc.html'));
+});
+
+// Standalone MCX Commodity Trading Calculator Page Route
+app.get('/mcx-calc', (req, res) => {
+  res.sendFile(path.join(__dirname, '../public/mcx_calc.html'));
+});
+
 // Mudrex Live API Authentication Check Endpoint
 app.get('/api/mudrex/auth-check', async (req, res) => {
   try {
@@ -198,6 +209,17 @@ app.post('/api/backtest', async (req, res) => {
   try {
     const config = req.body;
     const result = await backtest.runBacktest(config);
+    res.json(result);
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// 7b. MCX Commodity Historical Backtest Simulation (INR ₹)
+app.post('/api/mcx/backtest', async (req, res) => {
+  try {
+    const config = req.body;
+    const result = await mcxBacktest.runMcxBacktest(config);
     res.json(result);
   } catch (err) {
     res.status(500).json({ success: false, error: err.message });

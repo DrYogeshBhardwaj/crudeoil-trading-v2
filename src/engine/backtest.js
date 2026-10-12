@@ -63,6 +63,70 @@ class HistoricalBacktester {
     return dates;
   }
 
+  checkMarketClosedStatus(dateStr) {
+    const d = new Date(`${dateStr}T00:00:00Z`);
+    const dayOfWeek = d.getUTCDay();
+
+    if (dayOfWeek === 0) {
+      return { isClosed: true, reason: 'Sunday (Weekend Market Closed)' };
+    }
+    if (dayOfWeek === 6) {
+      return { isClosed: true, reason: 'Saturday (Weekend Market Closed)' };
+    }
+
+    const holidays = {
+      '2026-01-26': 'Republic Day',
+      '2026-03-08': 'Mahashivratri',
+      '2026-03-25': 'Holi',
+      '2026-04-03': 'Good Friday',
+      '2026-04-14': 'Dr. Ambedkar Jayanti',
+      '2026-05-01': 'Maharashtra Day',
+      '2026-08-15': 'Independence Day',
+      '2026-10-02': 'Mahatma Gandhi Jayanti',
+      '2026-11-08': 'Diwali Laxmi Pujan',
+      '2026-11-24': 'Guru Nanak Jayanti',
+      '2026-12-25': 'Christmas',
+
+      '2025-01-26': 'Republic Day',
+      '2025-02-26': 'Mahashivratri',
+      '2025-03-14': 'Holi',
+      '2025-03-31': 'Id-Ul-Fitr',
+      '2025-04-10': 'Mahavir Jayanti',
+      '2025-04-18': 'Good Friday',
+      '2025-04-14': 'Dr. Ambedkar Jayanti',
+      '2025-05-01': 'Maharashtra Day',
+      '2025-06-07': 'Bakri Id',
+      '2025-07-06': 'Moharram',
+      '2025-08-15': 'Independence Day',
+      '2025-10-02': 'Mahatma Gandhi Jayanti',
+      '2025-10-21': 'Diwali Laxmi Pujan',
+      '2025-10-22': 'Diwali Balipratipada',
+      '2025-11-05': 'Guru Nanak Jayanti',
+      '2025-12-25': 'Christmas',
+
+      '2024-01-26': 'Republic Day',
+      '2024-03-08': 'Mahashivratri',
+      '2024-03-25': 'Holi',
+      '2024-03-29': 'Good Friday',
+      '2024-04-11': 'Id-Ul-Fitr',
+      '2024-04-17': 'Ram Navami',
+      '2024-05-01': 'Maharashtra Day',
+      '2024-06-17': 'Bakri Id',
+      '2024-07-17': 'Moharram',
+      '2024-08-15': 'Independence Day',
+      '2024-10-02': 'Mahatma Gandhi Jayanti',
+      '2024-11-01': 'Diwali Laxmi Pujan',
+      '2024-11-15': 'Guru Nanak Jayanti',
+      '2024-12-25': 'Christmas'
+    };
+
+    if (holidays[dateStr]) {
+      return { isClosed: true, reason: `Market Holiday — ${holidays[dateStr]}` };
+    }
+
+    return { isClosed: false, reason: '' };
+  }
+
   async runBacktest(config) {
     const {
       mode = 'SINGLE', // 'SINGLE' or 'RANGE'
@@ -70,11 +134,11 @@ class HistoricalBacktester {
       dateStr,
       fromDateStr,
       toDateStr,
-      startingCapitalINR = 50000,
-      contractQuantity = 1.0,
-      targetMove = 0.05,
+      startingCapitalINR = 100000,
+      contractQuantity = 2.0,
+      targetMove = 0.20,
       maxActivePairs = 25,
-      takerFeeRate = 0.0005,
+      takerFeeRate = 0.00059, // Mudrex exact 0.059%
       gstRate = 0.18,
       usdInrRate = 86.50,
       leverage = 5
@@ -99,55 +163,127 @@ class HistoricalBacktester {
     const missingDates = [];
 
     let currentPrice = null;
+    let lastProcessedRate = null;
     const runId = `RUN-${Date.now()}-${Math.floor(Math.random()*1000)}`;
 
     for (const dStr of targetDates) {
+      const closedInfo = this.checkMarketClosedStatus(dStr);
       const klines = await this.fetchKlinesForDate(symbol, dStr);
       if (!klines || klines.length === 0) {
         missingDates.push(dStr);
+        if (closedInfo.isClosed) {
+          const dayEndData = this.calculateDayEndSnapshot(dStr, startingCapitalINR, pairs, closedPositions, currentPrice, multiplier, contractQuantity, takerFeeRate, gstRate, usdInrRate, leverage);
+          dayEndData.isMarketClosed = true;
+          dayEndData.marketClosedReason = closedInfo.reason;
+          dailyReports.push(dayEndData);
+        }
+        if (mode === 'SINGLE' && closedInfo.isClosed) {
+          return {
+            success: false,
+            isMarketClosed: true,
+            marketClosedReason: closedInfo.reason,
+            message: `Selected Date (${dStr}) is ${closedInfo.reason}. Market was closed on this day! Please pick a trading weekday or Date Range.`,
+            runId,
+            config
+          };
+        }
         continue;
       }
 
       for (let i = 0; i < klines.length; i++) {
         const k = klines[i];
         currentPrice = this.normalizePrice(k.close, symbol);
-        const klineHigh = k.high;
-        const klineLow = k.low;
         const timestamp = k.openTime;
 
-        // 1. Evaluate open target hits intrabar (against high & low)
-        for (const pair of pairs) {
-          if (pair.status === 'CLOSED') continue;
+        // Sub-tick price sequence for candle (Green: Open->Low->High->Close, Red: Open->High->Low->Close)
+        const isBullish = k.close >= k.open;
+        const priceSubTicks = isBullish 
+          ? [k.open, k.low, k.high, k.close]
+          : [k.open, k.high, k.low, k.close];
 
-          // BUY Position
-          const buy = pair.buyPosition;
-          if (buy.status === 'OPEN' && buy.targetExitPrice !== null) {
-            if (klineHigh >= buy.targetExitPrice) {
-              this.executeBacktestClose(pair, buy, buy.targetExitPrice, timestamp, takerFeeRate, gstRate, usdInrRate, multiplier, contractQuantity, closedPositions);
+        for (const rawPrice of priceSubTicks) {
+          const priceStep = this.normalizePrice(rawPrice, symbol);
+          if (priceStep === null) continue;
+
+          // 1. Evaluate Target Exits for ALL Open Positions on THIS sub-tick rate
+          for (const pair of pairs) {
+            if (pair.status === 'CLOSED') continue;
+
+            const buy = pair.buyPosition;
+            if (buy && buy.status === 'OPEN' && buy.targetExitPrice !== null) {
+              if (priceStep >= buy.targetExitPrice) {
+                this.executeBacktestClose(pair, buy, buy.targetExitPrice, timestamp, takerFeeRate, gstRate, usdInrRate, multiplier, contractQuantity, closedPositions);
+              }
+            }
+
+            const sell = pair.sellPosition;
+            if (sell && sell.status === 'OPEN' && sell.targetExitPrice !== null) {
+              if (priceStep <= sell.targetExitPrice) {
+                this.executeBacktestClose(pair, sell, sell.targetExitPrice, timestamp, takerFeeRate, gstRate, usdInrRate, multiplier, contractQuantity, closedPositions);
+              }
+            }
+
+            if (pair.buyPosition.status === 'CLOSED' && pair.sellPosition.status === 'CLOSED') {
+              pair.status = 'CLOSED';
             }
           }
 
-          // SELL Position
-          const sell = pair.sellPosition;
-          if (sell.status === 'OPEN' && sell.targetExitPrice !== null) {
-            if (klineLow <= sell.targetExitPrice) {
-              this.executeBacktestClose(pair, sell, sell.targetExitPrice, timestamp, takerFeeRate, gstRate, usdInrRate, multiplier, contractQuantity, closedPositions);
+          // 2. Evaluate Missing Legs Re-opening on THIS sub-tick rate
+          const activePairs = pairs.filter(p => p.status === 'ACTIVE');
+          const tolerance = 0.0001;
+          let legReopened = false;
+
+          for (const pair of activePairs) {
+            const buyOpen = pair.buyPosition && pair.buyPosition.status === 'OPEN';
+            const sellOpen = pair.sellPosition && pair.sellPosition.status === 'OPEN';
+
+            if (buyOpen && sellOpen) continue;
+
+            if (buyOpen && !sellOpen) {
+              if (Math.abs(priceStep - pair.buyPosition.entryPrice) <= tolerance) {
+                this.reopenBacktestLeg(pair, 'SELL', priceStep, timestamp, targetMove, symbol, contractQuantity, multiplier);
+                legReopened = true;
+                break;
+              }
+            }
+
+            if (sellOpen && !buyOpen) {
+              if (Math.abs(priceStep - pair.sellPosition.entryPrice) <= tolerance) {
+                this.reopenBacktestLeg(pair, 'BUY', priceStep, timestamp, targetMove, symbol, contractQuantity, multiplier);
+                legReopened = true;
+                break;
+              }
             }
           }
 
-          // Check if pair fully closed
-          if (pair.buyPosition.status === 'CLOSED' && pair.sellPosition.status === 'CLOSED') {
-            pair.status = 'CLOSED';
+          if (legReopened) {
+            lastProcessedRate = priceStep;
+            continue;
           }
-        }
 
-        // 2. Unique Rate Entry Check
-        const activePairsCount = pairs.filter(p => p.status === 'ACTIVE').length;
-        if (activePairsCount < maxActivePairs && !processedRates.has(currentPrice)) {
+          // 3. NEW PAIR CREATION ON NEW RATE UPDATE (No 1-min timer)
+          // Skip if a full active pair (both legs open) already exists at this exact rate
+          const existingPairAtRate = activePairs.find(p => {
+            const bOpen = p.buyPosition && p.buyPosition.status === 'OPEN';
+            const sOpen = p.sellPosition && p.sellPosition.status === 'OPEN';
+            return bOpen && sOpen && (p.buyPosition.entryPrice === priceStep || p.sellPosition.entryPrice === priceStep);
+          });
+          if (existingPairAtRate) continue;
+
+          // Skip if price rate hasn't changed (idempotent rate guard)
+          if (lastProcessedRate === priceStep && activePairs.length > 0) continue;
+
+          // Skip if this rate was already processed
+          if (processedRates.has(priceStep)) continue;
+
+          // Skip if max active pairs cap reached
+          if (activePairs.length >= maxActivePairs) continue;
+
+          // Create New Pair instantly on NEW RATE!
           const pairSeq = (pairs.length + 1).toString().padStart(4, '0');
           const pairId = `BT-PAIR-${pairSeq}`;
-          const buyTarget = targetMove ? this.normalizePrice(currentPrice + targetMove, symbol) : null;
-          const sellTarget = targetMove ? this.normalizePrice(currentPrice - targetMove, symbol) : null;
+          const buyTarget = targetMove ? this.normalizePrice(priceStep + targetMove, symbol) : null;
+          const sellTarget = targetMove ? this.normalizePrice(priceStep - targetMove, symbol) : null;
 
           const buyPosition = {
             positionId: `BT-${pairSeq}-BUY`,
@@ -156,7 +292,7 @@ class HistoricalBacktester {
             symbol,
             entryTime: new Date(timestamp).toISOString(),
             entryTimestamp: timestamp,
-            entryPrice: currentPrice,
+            entryPrice: priceStep,
             quantity: contractQuantity,
             contractMultiplier: multiplier,
             targetExitPrice: buyTarget,
@@ -170,7 +306,7 @@ class HistoricalBacktester {
             symbol,
             entryTime: new Date(timestamp).toISOString(),
             entryTimestamp: timestamp,
-            entryPrice: currentPrice,
+            entryPrice: priceStep,
             quantity: contractQuantity,
             contractMultiplier: multiplier,
             targetExitPrice: sellTarget,
@@ -181,13 +317,14 @@ class HistoricalBacktester {
             pairId,
             symbol,
             createdTime: new Date(timestamp).toISOString(),
-            entryRate: currentPrice,
+            entryRate: priceStep,
             status: 'ACTIVE',
             buyPosition,
             sellPosition
           });
 
-          processedRates.add(currentPrice);
+          processedRates.add(priceStep);
+          lastProcessedRate = priceStep;
         }
       }
 
@@ -225,6 +362,43 @@ class HistoricalBacktester {
       trades: closedPositions, // full trade ledger
       remainingOpenPositions
     };
+  }
+
+  reopenBacktestLeg(pair, direction, entryPrice, timestamp, targetMove, symbol, qty, mult) {
+    const seq = pair.pairId.replace('BT-PAIR-', '');
+    const legSeq = `${seq}-${direction}-${Date.now().toString().slice(-4)}`;
+
+    if (direction === 'BUY') {
+      const buyTarget = targetMove ? this.normalizePrice(entryPrice + targetMove, symbol) : null;
+      pair.buyPosition = {
+        positionId: `BT-${legSeq}`,
+        pairId: pair.pairId,
+        direction: 'BUY',
+        symbol,
+        entryTime: new Date(timestamp).toISOString(),
+        entryTimestamp: timestamp,
+        entryPrice,
+        quantity: qty,
+        contractMultiplier: mult,
+        targetExitPrice: buyTarget,
+        status: 'OPEN'
+      };
+    } else {
+      const sellTarget = targetMove ? this.normalizePrice(entryPrice - targetMove, symbol) : null;
+      pair.sellPosition = {
+        positionId: `BT-${legSeq}`,
+        pairId: pair.pairId,
+        direction: 'SELL',
+        symbol,
+        entryTime: new Date(timestamp).toISOString(),
+        entryTimestamp: timestamp,
+        entryPrice,
+        quantity: qty,
+        contractMultiplier: mult,
+        targetExitPrice: sellTarget,
+        status: 'OPEN'
+      };
+    }
   }
 
   executeBacktestClose(pair, position, exitPrice, exitTimestamp, takerFeeRate, gstRate, usdInrRate, mult, qty, closedPositions) {

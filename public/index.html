@@ -57,6 +57,8 @@
 
     <!-- Header Actions -->
     <div class="header-actions">
+      <a href="/paper-calc" class="btn btn-secondary" style="border: 1px solid #a855f7; color: #c084fc; font-weight: 700; text-decoration: none;">🧮 Paper Calc</a>
+      <a href="/mcx-calc" class="btn btn-secondary" style="border: 1px solid #f59e0b; color: #fbbf24; font-weight: 700; text-decoration: none;">🏆 MCX Calc</a>
       <button class="btn btn-primary" style="background: linear-gradient(135deg, #10b981, #059669); border: none;" onclick="openMudrexLiveModal()">🚀 Mudrex Live API</button>
       <button id="toggleEngineBtn" class="btn btn-primary" onclick="toggleEngineState()">
         <span>▶</span> <span id="toggleEngineBtnText">PAUSE ENGINE</span>
@@ -460,10 +462,10 @@
             <option value="0.05">$0.05 Target Move</option>
             <option value="0.10">$0.10 Target Move</option>
             <option value="0.15">$0.15 Target Move</option>
-            <option value="0.20">$0.20 Target Move (Crude Standard)</option>
+            <option value="0.20">$0.20 Target Move</option>
             <option value="0.25">$0.25 Target Move</option>
             <option value="0.50">$0.50 Target Move</option>
-            <option value="1.00">$1.00 Target Move</option>
+            <option value="1.00" selected>$1.00 Target Move (Crude Standard)</option>
             <option value="1.15">$1.15 Target Move (Silver Standard)</option>
             <option value="DISABLED">Disabled (No Auto Target)</option>
           </select>

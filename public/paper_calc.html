@@ -1,0 +1,542 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Mudrex Pair Trading — Historical Paper Calculator</title>
+  <link rel="stylesheet" href="style.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+  <style>
+    .calc-hero {
+      background: linear-gradient(135deg, rgba(15, 23, 42, 0.95), rgba(13, 17, 23, 0.98));
+      border: 1px solid rgba(56, 189, 248, 0.35);
+      border-radius: 16px;
+      padding: 24px;
+      margin-bottom: 24px;
+      box-shadow: 0 12px 36px rgba(0, 0, 0, 0.5);
+    }
+    .trigger-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: rgba(16, 185, 129, 0.15);
+      border: 1px solid rgba(16, 185, 129, 0.4);
+      color: #34d399;
+      font-size: 0.85rem;
+      font-weight: 700;
+      padding: 8px 16px;
+      border-radius: 20px;
+      margin-top: 12px;
+    }
+    .form-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 16px;
+      margin-top: 20px;
+    }
+    .btn-calc {
+      background: linear-gradient(135deg, #0284c7, #2563eb);
+      color: #fff;
+      font-weight: 800;
+      font-size: 1rem;
+      padding: 12px 24px;
+      border-radius: 10px;
+      border: none;
+      cursor: pointer;
+      transition: transform 0.2s, box-shadow 0.2s;
+    }
+    .btn-calc:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 20px rgba(37, 99, 235, 0.4);
+    }
+    .pill-btn {
+      background: #0d1117;
+      border: 1px solid rgba(56, 189, 248, 0.4);
+      color: #38bdf8;
+      font-size: 0.75rem;
+      font-weight: 700;
+      padding: 4px 10px;
+      border-radius: 12px;
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+    .pill-btn:hover {
+      background: #38bdf8;
+      color: #0d1117;
+      border-color: #38bdf8;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Safety Banner -->
+  <div class="safety-banner">
+    <span class="shield-icon">🛡️</span>
+    <span>HISTORICAL PAPER TRADING CALCULATOR — NEW RATE PAIR ENGINE</span>
+    <span class="shield-icon">🛡️</span>
+  </div>
+
+  <!-- Header Bar -->
+  <header class="app-header">
+    <div class="brand-section">
+      <div class="brand-logo" style="background: linear-gradient(135deg, #0284c7, #38bdf8);">🧮</div>
+      <div class="brand-title">
+        <h1>Historical Paper Trading Calculator</h1>
+        <p>PAIR TRADING STRATEGY BACKTESTER (INSTANT NEW RATE ENTRY)</p>
+      </div>
+    </div>
+
+    <!-- Navigation Header Actions -->
+    <div class="header-actions">
+      <a href="/" class="btn btn-secondary" style="text-decoration: none;">🏠 Live Dashboard</a>
+      <a href="/mudrex-live" class="btn btn-secondary" style="text-decoration: none;">🚀 Mudrex Live API</a>
+      <a href="/mcx-calc" class="btn btn-secondary" style="border: 1px solid #f59e0b; color: #fbbf24; font-weight: 700; text-decoration: none;">🏆 MCX Calc</a>
+      <button class="btn btn-primary" style="background: linear-gradient(135deg, #10b981, #059669); border: none;" onclick="runPaperCalculator()">▶ Run Calculator</button>
+    </div>
+  </header>
+
+  <!-- Main Container -->
+  <main class="dashboard-container">
+
+    <!-- Calculator Configuration Card -->
+    <div class="calc-hero">
+      <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 16px;">
+        <div>
+          <h2 style="color: #fff; margin-bottom: 6px; font-size: 1.4rem;">🧮 Backtest Strategy Settings</h2>
+          <p style="color: var(--text-muted); font-size: 0.88rem; max-width: 750px;">
+            Simulate pair trading performance on past market data. Entries trigger <strong>immediately when a NEW PRICE RATE arrives</strong> (sub-tick rate level updates), eliminating artificial 1-minute candle delays.
+          </p>
+          <div class="trigger-badge">
+            <span>⚡ TRIGGER MODE:</span>
+            <strong style="color: #fff;">Instant Entry on NEW RATE (No 1-min timer)</strong>
+          </div>
+        </div>
+      </div>
+
+      <!-- Input Form Fields -->
+      <div class="form-grid">
+        <div class="form-group">
+          <label style="color: var(--accent-cyan); font-weight: 700;">Date Range Mode</label>
+          <select id="pcMode" class="form-control" onchange="togglePcModeDisplay()">
+            <option value="SINGLE">Single Date</option>
+            <option value="RANGE">Date Range (From – To)</option>
+          </select>
+        </div>
+
+        <div class="form-group" id="pcSingleDateGroup">
+          <label style="color: var(--text-muted); font-weight: 600;">Select Date</label>
+          <input type="date" id="pcDate" class="form-control">
+        </div>
+
+        <div class="form-group" id="pcFromDateGroup" style="display: none;">
+          <label style="color: var(--text-muted); font-weight: 600;">From Date</label>
+          <input type="date" id="pcFromDate" class="form-control">
+        </div>
+
+        <div class="form-group" id="pcToDateGroup" style="display: none;">
+          <label style="color: var(--text-muted); font-weight: 600;">To Date</label>
+          <input type="date" id="pcToDate" class="form-control">
+        </div>
+
+        <div class="form-group">
+          <label style="color: var(--accent-cyan); font-weight: 700;">Trading Instrument</label>
+          <select id="pcSymbol" class="form-control" onchange="onPcSymbolChange()">
+            <option value="CLUSDT">CLUSDT — Crude Oil (Default)</option>
+            <option value="XAGUSDT">XAGUSDT — Silver</option>
+            <option value="BTCUSDT">BTCUSDT — Bitcoin</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label style="color: var(--text-muted); font-weight: 600;">Starting Capital (INR ₹)</label>
+          <input type="number" id="pcCapital" class="form-control" value="100000" step="10000">
+        </div>
+
+        <div class="form-group">
+          <label style="color: var(--text-muted); font-weight: 600;">Contract Qty (Barrels/Units)</label>
+          <input type="number" id="pcQuantity" class="form-control" value="2.0" step="0.5">
+        </div>
+
+        <div class="form-group" style="grid-column: span 2;">
+          <label style="color: var(--accent-cyan); font-weight: 700;">Profit Target Move ($) — Manual / Select</label>
+          <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
+            <input type="number" id="pcTargetMove" class="form-control" value="0.20" step="0.01" min="0.01" placeholder="Type target move (e.g. 1.50, 2.50, 5.00)" style="font-weight: 800; color: #38bdf8; font-size: 1.05rem; flex: 1; min-width: 180px;">
+            <select id="pcTargetMoveSelect" class="form-control" onchange="onPcTargetSelectChange()" style="width: auto; min-width: 200px;">
+              <option value="">-- Quick Presets --</option>
+              <option value="0.05">$0.05 Move</option>
+              <option value="0.10">$0.10 Move</option>
+              <option value="0.15">$0.15 Move</option>
+              <option value="0.20" selected>$0.20 Move (Crude Standard)</option>
+              <option value="0.25">$0.25 Move</option>
+              <option value="0.50">$0.50 Move</option>
+              <option value="1.00">$1.00 Move</option>
+              <option value="1.25">$1.25 Move</option>
+              <option value="1.50">$1.50 Move</option>
+              <option value="1.75">$1.75 Move</option>
+              <option value="2.00">$2.00 Move</option>
+              <option value="2.50">$2.50 Move</option>
+              <option value="3.00">$3.00 Move</option>
+              <option value="5.00">$5.00 Move</option>
+              <option value="10.00">$10.00 Move</option>
+              <option value="25.00">$25.00 Move</option>
+              <option value="50.00">$50.00 Move</option>
+              <option value="100.00">$100.00 Move</option>
+            </select>
+          </div>
+          <div style="display: flex; gap: 6px; flex-wrap: wrap; margin-top: 8px;">
+            <span style="font-size: 0.72rem; color: var(--text-muted); align-self: center; font-weight: 700;">Quick Pills:</span>
+            <button type="button" class="pill-btn" onclick="setPcTargetVal('0.10')">$0.10</button>
+            <button type="button" class="pill-btn" onclick="setPcTargetVal('0.20')">$0.20</button>
+            <button type="button" class="pill-btn" onclick="setPcTargetVal('0.50')">$0.50</button>
+            <button type="button" class="pill-btn" onclick="setPcTargetVal('1.00')">$1.00</button>
+            <button type="button" class="pill-btn" onclick="setPcTargetVal('1.50')">$1.50</button>
+            <button type="button" class="pill-btn" onclick="setPcTargetVal('2.00')">$2.00</button>
+            <button type="button" class="pill-btn" onclick="setPcTargetVal('3.00')">$3.00</button>
+            <button type="button" class="pill-btn" onclick="setPcTargetVal('5.00')">$5.00</button>
+            <button type="button" class="pill-btn" onclick="setPcTargetVal('10.00')">$10.00</button>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label style="color: var(--text-muted); font-weight: 600;">Max Active Pairs Cap</label>
+          <input type="number" id="pcMaxPairs" class="form-control" value="25" min="1" max="100">
+        </div>
+
+        <div class="form-group">
+          <label style="color: var(--text-muted); font-weight: 600;">Leverage (x)</label>
+          <input type="number" id="pcLeverage" class="form-control" value="5" min="1" max="20" disabled readonly>
+        </div>
+
+        <div class="form-group">
+          <label style="color: var(--text-muted); font-weight: 600;">USD / INR Exchange Rate</label>
+          <input type="number" id="pcUsdInr" class="form-control" value="86.50" step="0.1">
+        </div>
+      </div>
+
+      <div style="margin-top: 20px; display: flex; gap: 12px; align-items: center; flex-wrap: wrap;">
+        <button class="btn-calc" onclick="runPaperCalculator()">🚀 Run Paper Calculation</button>
+        <button class="btn btn-secondary" onclick="resetCalculatorDefaults()">🔄 Reset Inputs</button>
+        <span id="calcStatusText" style="font-size: 0.85rem; color: var(--accent-cyan); font-weight: 600;"></span>
+      </div>
+    </div>
+
+    <!-- Simulation Results Area -->
+    <div id="pcResultsContainer" style="display: none;"></div>
+
+    <!-- Multi-Run Comparison Table -->
+    <div id="pcComparisonContainer" style="display: none; margin-top: 24px; background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 12px; padding: 20px;">
+      <h3 style="color: var(--accent-cyan); margin-bottom: 14px;">📊 Side-by-Side Run Comparison Matrix</h3>
+      <table class="data-table">
+        <thead>
+          <tr id="pcCompHeaderTr">
+            <th>Strategy Metric</th>
+          </tr>
+        </thead>
+        <tbody id="pcCompTbody"></tbody>
+      </table>
+    </div>
+
+  </main>
+
+  <script>
+    let calcHistory = [];
+
+    document.addEventListener('DOMContentLoaded', () => {
+      const today = new Date().toISOString().split('T')[0];
+      document.getElementById('pcDate').value = today;
+      document.getElementById('pcFromDate').value = today;
+      document.getElementById('pcToDate').value = today;
+    });
+
+    function togglePcModeDisplay() {
+      const mode = document.getElementById('pcMode').value;
+      if (mode === 'SINGLE') {
+        document.getElementById('pcSingleDateGroup').style.display = 'block';
+        document.getElementById('pcFromDateGroup').style.display = 'none';
+        document.getElementById('pcToDateGroup').style.display = 'none';
+      } else {
+        document.getElementById('pcSingleDateGroup').style.display = 'none';
+        document.getElementById('pcFromDateGroup').style.display = 'block';
+        document.getElementById('pcToDateGroup').style.display = 'block';
+      }
+    }
+
+    function setPcTargetVal(val) {
+      document.getElementById('pcTargetMove').value = val;
+      const sel = document.getElementById('pcTargetMoveSelect');
+      if (sel) sel.value = val;
+    }
+
+    function onPcTargetSelectChange() {
+      const selVal = document.getElementById('pcTargetMoveSelect').value;
+      if (selVal) {
+        document.getElementById('pcTargetMove').value = selVal;
+      }
+    }
+
+    function onPcSymbolChange() {
+      const sym = document.getElementById('pcSymbol').value;
+      if (sym === 'XAGUSDT') {
+        setPcTargetVal('0.50');
+      } else if (sym === 'BTCUSDT') {
+        setPcTargetVal('50.00');
+      } else {
+        setPcTargetVal('0.20');
+      }
+    }
+
+    function resetCalculatorDefaults() {
+      document.getElementById('pcMode').value = 'SINGLE';
+      togglePcModeDisplay();
+      document.getElementById('pcSymbol').value = 'CLUSDT';
+      document.getElementById('pcCapital').value = '100000';
+      document.getElementById('pcQuantity').value = '2.0';
+      setPcTargetVal('0.20');
+      document.getElementById('pcMaxPairs').value = '25';
+      document.getElementById('pcUsdInr').value = '86.50';
+    }
+
+    function runPaperCalculator() {
+      const mode = document.getElementById('pcMode').value;
+      const dateStr = document.getElementById('pcDate').value;
+      const fromDateStr = document.getElementById('pcFromDate').value;
+      const toDateStr = document.getElementById('pcToDate').value;
+
+      const symbol = document.getElementById('pcSymbol').value;
+      const startingCapitalINR = parseFloat(document.getElementById('pcCapital').value) || 100000;
+      const contractQuantity = parseFloat(document.getElementById('pcQuantity').value) || 2.0;
+      const targetMove = parseFloat(document.getElementById('pcTargetMove').value) || 0.20;
+      const maxActivePairs = parseInt(document.getElementById('pcMaxPairs').value) || 25;
+      const usdInrRate = parseFloat(document.getElementById('pcUsdInr').value) || 86.50;
+
+      const body = {
+        mode,
+        symbol,
+        dateStr,
+        fromDateStr,
+        toDateStr,
+        startingCapitalINR,
+        contractQuantity,
+        targetMove,
+        maxActivePairs,
+        usdInrRate,
+        takerFeeRate: 0.00059, // Mudrex fee rate
+        gstRate: 0.18
+      };
+
+      const container = document.getElementById('pcResultsContainer');
+      const statusText = document.getElementById('calcStatusText');
+      
+      container.style.display = 'block';
+      container.innerHTML = '<div style="padding: 24px; text-align: center; color: var(--accent-cyan); font-weight: 700; font-size: 1.1rem;">⏳ Fetching historical data & running instant NEW RATE paper calculation...</div>';
+      statusText.innerText = 'Processing...';
+
+      fetch('/api/backtest', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body)
+      })
+      .then(r => r.json())
+      .then(res => {
+        statusText.innerText = '';
+        if (!res.success) {
+          const isClosedMsg = res.isMarketClosed 
+            ? `🔒 <strong>MARKET CLOSED:</strong> ${res.message}` 
+            : `⚠️ ${res.message || res.error}`;
+          container.innerHTML = `<div style="background: rgba(245, 158, 11, 0.15); border: 1px solid rgba(245, 158, 11, 0.4); color: #fef08a; padding: 18px; border-radius: 12px; font-weight: 700; font-size: 0.95rem;">${isClosedMsg}</div>`;
+          return;
+        }
+
+        calcHistory.push(res);
+        renderCalculatorResults(res, container);
+        renderComparisonTable();
+      })
+      .catch(err => {
+        statusText.innerText = '';
+        container.innerHTML = `<div style="background: rgba(239, 68, 68, 0.15); color: #fca5a5; padding: 18px; border-radius: 12px;">⚠️ Server error: ${err.message}</div>`;
+      });
+    }
+
+    function renderCalculatorResults(res, container) {
+      const s = res.summary;
+      const priceDecimals = res.symbol === 'BTCUSDT' ? 2 : (res.symbol === 'XAGUSDT' ? 4 : 2);
+
+      let html = `
+        <div style="background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 14px; padding: 24px; margin-bottom: 24px;">
+          
+          <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; margin-bottom: 16px; border-bottom: 1px solid var(--border-color); padding-bottom: 12px;">
+            <div>
+              <h3 style="color: var(--accent-cyan); font-size: 1.3rem; margin-bottom: 4px;">📈 Simulation Results — ${res.symbol} (${res.dateStr})</h3>
+              <p style="color: var(--text-muted); font-size: 0.82rem;">Run ID: <code>${res.runId}</code> | Trigger: <strong>New Rate Update (Instant)</strong></p>
+            </div>
+            <div style="font-size: 0.85rem; color: #a7f3d0; background: rgba(16, 185, 129, 0.15); border: 1px solid rgba(16, 185, 129, 0.3); padding: 6px 14px; border-radius: 8px; font-weight: 700;">
+              Total Pairs Created: ${s.totalPairsCreated}
+            </div>
+          </div>
+
+          <!-- Top Metric Cards Grid -->
+          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 14px; margin-bottom: 24px;">
+            <div style="background: #0d1117; border: 1px solid var(--border-color); border-radius: 10px; padding: 14px;">
+              <div style="font-size: 0.72rem; color: var(--text-muted); font-weight: 700; text-transform: uppercase;">Starting Capital</div>
+              <div style="font-size: 1.4rem; font-weight: 800; font-family: monospace; color: #38bdf8;">₹${s.startingCapitalINR.toLocaleString()}</div>
+            </div>
+
+            <div style="background: #0d1117; border: 1px solid var(--border-color); border-radius: 10px; padding: 14px;">
+              <div style="font-size: 0.72rem; color: var(--text-muted); font-weight: 700; text-transform: uppercase;">End-of-Day Equity</div>
+              <div style="font-size: 1.4rem; font-weight: 800; font-family: monospace; color: ${s.finalEquityINR >= s.startingCapitalINR ? '#10b981' : '#ef4444'};">₹${s.finalEquityINR.toLocaleString()}</div>
+              <div style="font-size: 0.7rem; color: var(--text-dim);">Peak: ₹${s.peakEquityINR.toLocaleString()} | Low: ₹${s.lowestEquityINR.toLocaleString()}</div>
+            </div>
+
+            <div style="background: #0d1117; border: 1px solid var(--border-color); border-radius: 10px; padding: 14px;">
+              <div style="font-size: 0.72rem; color: var(--text-muted); font-weight: 700; text-transform: uppercase;">Closed Net Profit (INR)</div>
+              <div style="font-size: 1.4rem; font-weight: 800; font-family: monospace; color: ${s.totalRealizedNetINR >= 0 ? '#10b981' : '#ef4444'};">₹${s.totalRealizedNetINR.toFixed(2)}</div>
+              <div style="font-size: 0.7rem; color: var(--text-dim);">Trades: ${s.closedPositionsCount} (${s.winRate}% Win Rate)</div>
+            </div>
+
+            <div style="background: #0d1117; border: 1px solid var(--border-color); border-radius: 10px; padding: 14px;">
+              <div style="font-size: 0.72rem; color: var(--text-muted); font-weight: 700; text-transform: uppercase;">Total Charges Paid</div>
+              <div style="font-size: 1.4rem; font-weight: 800; font-family: monospace; color: #f59e0b;">₹${s.totalChargesINR.toFixed(2)}</div>
+              <div style="font-size: 0.7rem; color: var(--text-dim);">$${s.totalChargesUSD.toFixed(4)} USD (0.059% + 18% GST)</div>
+            </div>
+
+            <div style="background: #0d1117; border: 1px solid var(--border-color); border-radius: 10px; padding: 14px;">
+              <div style="font-size: 0.72rem; color: var(--text-muted); font-weight: 700; text-transform: uppercase;">Remaining Open Floating P/L</div>
+              <div style="font-size: 1.4rem; font-weight: 800; font-family: monospace; color: ${s.remainingFloatingNetINR >= 0 ? '#10b981' : '#ef4444'};">₹${s.remainingFloatingNetINR.toFixed(2)}</div>
+              <div style="font-size: 0.7rem; color: var(--text-dim);">${s.remainingOpenPositionsCount} positions open (${s.remainingActivePairsCount} active pairs)</div>
+            </div>
+          </div>
+      `;
+
+      // Day-by-Day Breakdown Table (if multiple days)
+      if (res.dailyReports && res.dailyReports.length > 1) {
+        html += `
+          <h4 style="color: var(--accent-cyan); margin-bottom: 10px;">📅 Day-by-Day Performance Ledger</h4>
+          <table class="data-table" style="margin-bottom: 24px;">
+            <thead>
+              <tr>
+                <th>Date</th>
+                <th>Day-End Price</th>
+                <th>New Pairs Opened</th>
+                <th>Closed Trades</th>
+                <th>Realized Net P/L (INR)</th>
+                <th>Floating Net (INR)</th>
+                <th>End-of-Day Equity (INR)</th>
+              </tr>
+            </thead>
+            <tbody>
+        `;
+        for (const dr of res.dailyReports) {
+          if (dr.isMarketClosed) {
+            html += `
+              <tr style="background: rgba(245, 158, 11, 0.08);">
+                <td><strong>${dr.dateStr}</strong></td>
+                <td colspan="6"><span style="color: #fef08a; font-weight: 700; background: rgba(245, 158, 11, 0.2); padding: 4px 10px; border-radius: 6px;">🔒 MARKET CLOSED (${dr.marketClosedReason || 'Weekend / Holiday'})</span></td>
+              </tr>
+            `;
+          } else {
+            html += `
+              <tr>
+                <td><strong>${dr.dateStr}</strong></td>
+                <td>$${dr.dayEndPrice ? dr.dayEndPrice.toFixed(priceDecimals) : 'N/A'}</td>
+                <td>${dr.dailyNewPairsOpened}</td>
+                <td>${dr.dailyClosedPositionsCount}</td>
+                <td style="font-weight: 700; color: ${dr.dailyRealizedNetINR >= 0 ? '#10b981' : '#ef4444'};">₹${dr.dailyRealizedNetINR.toFixed(2)}</td>
+                <td style="color: ${dr.floatingNetINR >= 0 ? '#10b981' : '#ef4444'};">₹${dr.floatingNetINR.toFixed(2)}</td>
+                <td style="font-weight: 800; color: #38bdf8;">₹${dr.endOfDayEquityINR.toLocaleString()}</td>
+              </tr>
+            `;
+          }
+        }
+        html += `</tbody></table>`;
+      }
+
+      // Closed Trades History
+      if (res.trades && res.trades.length > 0) {
+        html += `
+          <h4 style="color: #fff; margin-bottom: 10px;">📜 Closed Trade Log (${res.trades.length} Closed Legs)</h4>
+          <div style="max-height: 380px; overflow-y: auto; margin-bottom: 24px;">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>Pair ID</th>
+                  <th>Position ID</th>
+                  <th>Type</th>
+                  <th>Entry Time</th>
+                  <th>Exit Time</th>
+                  <th>Entry Price</th>
+                  <th>Exit Price</th>
+                  <th>Gross USD</th>
+                  <th>Charges INR</th>
+                  <th>Net P/L INR</th>
+                  <th>Exit Reason</th>
+                </tr>
+              </thead>
+              <tbody>
+        `;
+        for (const t of res.trades) {
+          html += `
+            <tr>
+              <td><code>${t.pairId}</code></td>
+              <td><code>${t.positionId}</code></td>
+              <td><span class="badge-direction ${t.direction.toLowerCase()}">${t.direction}</span></td>
+              <td style="font-size: 0.75rem;">${t.entryTime.replace('T', ' ').slice(0, 19)}</td>
+              <td style="font-size: 0.75rem;">${t.exitTime.replace('T', ' ').slice(0, 19)}</td>
+              <td>$${t.entryPrice.toFixed(priceDecimals)}</td>
+              <td>$${t.exitPrice.toFixed(priceDecimals)}</td>
+              <td>$${t.grossProfitUSD.toFixed(4)}</td>
+              <td style="color: #f59e0b;">₹${t.totalChargesINR.toFixed(2)}</td>
+              <td style="font-weight: 800; color: ${t.netProfitINR >= 0 ? '#10b981' : '#ef4444'};">₹${t.netProfitINR.toFixed(2)}</td>
+              <td style="font-size: 0.75rem; color: var(--text-muted);">${t.exitReason}</td>
+            </tr>
+          `;
+        }
+        html += `</tbody></table></div>`;
+      }
+
+      html += `</div>`;
+      container.innerHTML = html;
+    }
+
+    function renderComparisonTable() {
+      if (calcHistory.length < 2) return;
+      const compDiv = document.getElementById('pcComparisonContainer');
+      const headerTr = document.getElementById('pcCompHeaderTr');
+      const tbody = document.getElementById('pcCompTbody');
+
+      compDiv.style.display = 'block';
+
+      let headerHtml = '<th>Strategy Metric</th>';
+      calcHistory.forEach((run, idx) => {
+        headerHtml += `<th>Run #${idx+1} (${run.symbol} | $${run.config.targetMove})</th>`;
+      });
+      headerTr.innerHTML = headerHtml;
+
+      const metrics = [
+        { label: 'Date Range', fn: r => r.dateStr },
+        { label: 'Target Move ($)', fn: r => `$${r.config.targetMove}` },
+        { label: 'Contract Quantity', fn: r => `${r.config.contractQuantity}` },
+        { label: 'Total Pairs Created', fn: r => r.summary.totalPairsCreated },
+        { label: 'Closed Trades', fn: r => r.summary.closedPositionsCount },
+        { label: 'Win Rate (%)', fn: r => `${r.summary.winRate}%` },
+        { label: 'Total Realized Net P/L (INR)', fn: r => `₹${r.summary.totalRealizedNetINR.toFixed(2)}` },
+        { label: 'Total Charges Paid (INR)', fn: r => `₹${r.summary.totalChargesINR.toFixed(2)}` },
+        { label: 'End-of-Day Equity (INR)', fn: r => `₹${r.summary.finalEquityINR.toLocaleString()}` },
+        { label: 'Peak Equity (INR)', fn: r => `₹${r.summary.peakEquityINR.toLocaleString()}` }
+      ];
+
+      let tbodyHtml = '';
+      metrics.forEach(m => {
+        tbodyHtml += `<tr><td><strong>${m.label}</strong></td>`;
+        calcHistory.forEach(run => {
+          tbodyHtml += `<td>${m.fn(run)}</td>`;
+        });
+        tbodyHtml += `</tr>`;
+      });
+      tbody.innerHTML = tbodyHtml;
+    }
+  </script>
+
+</body>
+</html>
