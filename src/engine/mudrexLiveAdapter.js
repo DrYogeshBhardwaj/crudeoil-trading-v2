@@ -634,28 +634,32 @@ class MudrexLiveAdapter {
       }
     }
 
-    try {
-      const realPosRes = await this.fetchPositions();
-      if (realPosRes.success && Array.isArray(realPosRes.data)) {
-        const freshRealIds = new Set(realPosRes.data.map(p => p.positionId));
-        // Remove stale REAL_MUDREX_POSITION entries from memory if they are no longer open on Mudrex Exchange
-        this.liveOpenPositions = (this.liveOpenPositions || []).filter(p => {
-          if (p.apiStatus === 'REAL_MUDREX_POSITION') {
-            return freshRealIds.has(p.positionId);
-          }
-          return true;
-        });
+    // Pure Paper Mode: Purge any external REAL_MUDREX_POSITION records so only 100% Paper Simulation Pairs are displayed
+    this.liveOpenPositions = (this.liveOpenPositions || []).filter(p => p.apiStatus !== 'REAL_MUDREX_POSITION' && !p.positionId?.includes('P-REAL'));
+    liveOpenPositions = [...this.liveOpenPositions];
 
-        // Add fresh real open positions
-        for (const rPos of realPosRes.data) {
-          if (!this.liveOpenPositions.some(p => p.positionId === rPos.positionId)) {
-            this.liveOpenPositions.push(rPos);
+    if (process.env.ENABLE_REAL_MUDREX_POSITIONS_SYNC === 'true') {
+      try {
+        const realPosRes = await this.fetchPositions();
+        if (realPosRes.success && Array.isArray(realPosRes.data)) {
+          const freshRealIds = new Set(realPosRes.data.map(p => p.positionId));
+          this.liveOpenPositions = (this.liveOpenPositions || []).filter(p => {
+            if (p.apiStatus === 'REAL_MUDREX_POSITION') {
+              return freshRealIds.has(p.positionId);
+            }
+            return true;
+          });
+
+          for (const rPos of realPosRes.data) {
+            if (!this.liveOpenPositions.some(p => p.positionId === rPos.positionId)) {
+              this.liveOpenPositions.push(rPos);
+            }
           }
+          liveOpenPositions = [...this.liveOpenPositions];
+          this.saveState();
         }
-        liveOpenPositions = [...this.liveOpenPositions];
-        this.saveState();
-      }
-    } catch (e) {}
+      } catch (e) {}
+    }
 
     // Merge paperEngine active and closed positions into live terminal metrics
     const paperMetrics = paperEngine.getDashboardMetrics();
