@@ -1348,6 +1348,7 @@ window.addEventListener('keydown', (e) => {
 
 function checkMudrexAuthStatus() {
   const container = document.getElementById('mudrexAuthStatusContainer');
+  if (!container) return;
   container.innerHTML = '<span style="color:var(--accent-cyan)">Connecting to Mudrex Live API...</span>';
 
   fetch('/api/mudrex/auth-check')
