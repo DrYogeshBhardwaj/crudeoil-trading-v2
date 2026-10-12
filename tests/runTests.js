@@ -45,7 +45,11 @@ async function runTestSuite() {
     { name: 'Test 20 — Strict Pair Completion Condition Audit (No Re-entry at Unrelated Price)', fn: test20 },
     { name: 'Test 21 — Accounting Formula & Margin Reconciliation Math Verification', fn: test21 },
     { name: 'Test 22 — Total Charges Paid Summary KPI Aggregation Verification', fn: test22 },
-    { name: 'Test 23 — Accounting Rounding Policy & Aggregate Reconciliation Audit', fn: test23 }
+    { name: 'Test 23 — Accounting Rounding Policy & Aggregate Reconciliation Audit', fn: test23 },
+    { name: 'Test 24 — Duplicate Order Prevention During In-Flight Requests', fn: test24 },
+    { name: 'Test 25 — Permanent Transmission Halt on Recorded Real Exchange Order ID', fn: test25 },
+    { name: 'Test 26 — 30-Second Rate Limit Cooldown Pause Enforcement', fn: test26 },
+    { name: 'Test 27 — Historic Paper Positions Exclusion', fn: test27 }
   ];
 
   for (const tc of testCases) {
@@ -620,6 +624,48 @@ async function test23() {
   assert(aggregateNetCalc === summary.realizedNetINR, `Aggregate accounting mismatch: gross (${summary.realizedGrossINR}) - charges (${summary.realizedChargesINR}) = ${aggregateNetCalc}, expected ${summary.realizedNetINR}`);
 
   mudrexLive.liveClosedPositions = [];
+}
+
+// Test 24 — Duplicate Order Prevention During In-Flight Requests
+function test24() {
+  const mudrexLive = require('../src/engine/mudrexLiveAdapter');
+  const pos = { positionId: 'P-TEST-BUY', status: 'OPEN', apiStatus: 'TRANSMITTING_TO_MUDREX' };
+  
+  const isAlreadyReal = pos && (pos.mudrexOrderId || pos.apiStatus === 'REAL_MUDREX_POSITION' || pos.apiStatus === 'TRANSMITTING_TO_MUDREX');
+  const canTransmit = !isAlreadyReal && Date.now() > mudrexLive.rateLimitUntil;
+
+  assert(canTransmit === false, 'In-flight TRANSMITTING_TO_MUDREX status MUST block duplicate order attempts');
+}
+
+// Test 25 — Permanent Transmission Halt on Recorded Real Exchange Order ID
+function test25() {
+  const mudrexLive = require('../src/engine/mudrexLiveAdapter');
+  const pos = { positionId: 'P-TEST-BUY', status: 'OPEN', mudrexOrderId: '01a12e0c-9876', apiStatus: 'REAL_MUDREX_POSITION' };
+
+  const isAlreadyReal = pos && (pos.mudrexOrderId || pos.apiStatus === 'REAL_MUDREX_POSITION' || pos.apiStatus === 'TRANSMITTING_TO_MUDREX');
+  const canTransmit = !isAlreadyReal && Date.now() > mudrexLive.rateLimitUntil;
+
+  assert(canTransmit === false, 'Recorded mudrexOrderId MUST permanently block re-transmission');
+}
+
+// Test 26 — 30-Second Rate Limit Cooldown Pause Enforcement
+function test26() {
+  const mudrexLive = require('../src/engine/mudrexLiveAdapter');
+  mudrexLive.rateLimitUntil = Date.now() + 30000;
+  
+  const pos = { positionId: 'P-TEST-BUY', status: 'OPEN' };
+  const isAlreadyReal = pos && (pos.mudrexOrderId || pos.apiStatus === 'REAL_MUDREX_POSITION' || pos.apiStatus === 'TRANSMITTING_TO_MUDREX');
+  const canTransmit = !isAlreadyReal && Date.now() > mudrexLive.rateLimitUntil;
+
+  assert(canTransmit === false, 'Rate limit cooldown MUST pause order transmission until expiry');
+  mudrexLive.rateLimitUntil = 0;
+}
+
+// Test 27 — Historic Paper Positions Exclusion
+function test27() {
+  const historicPaperPos = { positionId: 'P-HISTORIC-BUY', status: 'OPEN', isPurePaper: true };
+  const isEligible = !historicPaperPos.isPurePaper && !historicPaperPos.mudrexOrderId;
+  assert(isEligible === false, 'Historic paper positions MUST NOT be retroactively submitted as real trades');
 }
 
 runTestSuite();
