@@ -1643,3 +1643,25 @@ function saveAndConnectMudrexKeys() {
     }
   });
 }
+
+window.manualClose = async function(positionId) {
+  if (!positionId) return;
+  if (!confirm(`Are you sure you want to close position ${positionId}?`)) return;
+
+  try {
+    const res = await fetch('/api/manual-close', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ positionId })
+    });
+    const data = await res.json();
+    if (data.success) {
+      if (typeof fetchMetricsFallback === 'function') fetchMetricsFallback();
+      if (typeof fetchDashboardMetrics === 'function') fetchDashboardMetrics();
+    } else {
+      alert('Failed to close position: ' + (data.error || 'Unknown error'));
+    }
+  } catch (err) {
+    alert('Error closing position: ' + err.message);
+  }
+};

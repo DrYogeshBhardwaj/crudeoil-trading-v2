@@ -79,7 +79,6 @@
 
     <!-- Header Actions -->
     <div class="header-actions">
-      <a href="/mudrex-live" class="btn btn-secondary" style="border: 1px solid #10b981; color: #10b981; font-weight: 700; text-decoration: none;">⚡ Mudrex Live</a>
       <a href="/dhan-mcx" class="btn btn-secondary" style="border: 1px solid #00d09c; color: #00d09c; font-weight: 700; text-decoration: none;">🇮🇳 Dhan MCX</a>
       <a href="/mcx-calc" class="btn btn-secondary" style="border: 1px solid #f59e0b; color: #fbbf24; font-weight: 700; text-decoration: none;">🧮 MCX Calc</a>
       <a href="/paper-calc" class="btn btn-secondary" style="border: 1px solid #a855f7; color: #c084fc; font-weight: 700; text-decoration: none;">🧮 Paper Calc</a>
@@ -131,14 +130,14 @@
         <!-- 4. Active Pairs / Cap -->
         <div style="background: #0d1117; border: 1px solid var(--border-color); border-radius: 10px; padding: 14px 18px;">
           <div style="font-size: 0.72rem; color: var(--text-muted); font-weight: 700; text-transform: uppercase;">Active Pairs / Cap 📊</div>
-          <div style="font-size: 1.5rem; font-weight: 800; font-family: monospace; color: #f59e0b;" id="kpiActivePairs">0 / 50</div>
+          <div style="font-size: 1.5rem; font-weight: 800; font-family: monospace; color: #f59e0b;" id="kpiActivePairs">0 / 25</div>
           <div style="font-size: 0.72rem; color: var(--text-dim);" id="kpiUniqueRatesCount">Processed Rates: 0 unique</div>
         </div>
 
       </div>
     </section>
 
-    <!-- Mobile Bottom Secondary Controls & Technical Info Panel -->
+    <!-- Mobile Bottom Secondary Controls & Technical Info Panel (Moved down below chart/tables on mobile) -->
     <div class="mobile-bottom-panel" style="display: none;">
       <div style="font-size: 0.72rem; color: var(--text-muted); font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px;">⚙️ Secondary Controls & System Info</div>
       <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px;">
@@ -154,102 +153,150 @@
       </div>
     </div>
 
-    <!-- Main Navigation Tabs -->
-    <nav class="dashboard-tabs">
-      <button class="tab-btn active" onclick="switchTab('active')">⚡ Active Positions (<span id="tabActiveCount">0</span>)</button>
-      <button class="tab-btn" onclick="switchTab('closed')">📜 Closed Positions History (<span id="tabClosedCount">0</span>)</button>
-      <button class="tab-btn" onclick="switchTab('backtest')">📊 Historical Day Backtester</button>
-      <button class="tab-btn" onclick="switchTab('testRunner')">🧪 Test Suite Runner</button>
-      <button class="tab-btn" onclick="switchTab('logs')">📋 System Audit Logs</button>
-    </nav>
+    <!-- Main Content Area: Tabs -->
+    <section class="main-content-card">
+      <div class="tabs-header">
+        <button class="tab-btn active" onclick="switchTab('tabActive')">⚡ Active Positions (<span id="tabActiveCount">0</span>)</button>
+        <button class="tab-btn" onclick="switchTab('tabClosed')">📜 Closed Positions History (<span id="tabClosedCount">0</span>)</button>
+        <button class="tab-btn" onclick="switchTab('tabBacktest')">📊 Historical Day Backtester</button>
+        <button class="tab-btn" onclick="switchTab('tabTestRunner')">🧪 Test Suite Runner</button>
+        <button class="tab-btn" onclick="switchTab('tabLogs')">📋 System Audit Logs</button>
+      </div>
 
-    <!-- Dynamic Main Content Views -->
-    <section class="tab-content-container">
-
-      <!-- Tab 1: Active Positions & Live Chart -->
+      <!-- Tab 1: Active Positions -->
       <div id="tabActive" class="tab-content active">
-        
-        <!-- Interactive Canvas Price Chart (Crude Oil) -->
-        <div class="chart-container" style="position: relative;">
-          <div class="chart-header">
-            <h3>🛢️ Crude Oil (CLUSDT) Real-Time Rate Stream & Target Exits</h3>
-            <div class="chart-legend">
-              <span class="legend-item"><span class="legend-color" style="background:#10b981;"></span> Live Market Rate</span>
-              <span class="legend-item"><span class="legend-color" style="background:#06b6d4;"></span> BUY Target Exits</span>
-              <span class="legend-item"><span class="legend-color" style="background:#ef4444;"></span> SELL Target Exits</span>
+        <!-- Live Price Tick Chart & Unified Info Bar -->
+        <div class="live-chart-hero-card" style="background: linear-gradient(135deg, rgba(13, 17, 23, 0.95), rgba(15, 23, 42, 0.95)); border: 1px solid rgba(56, 189, 248, 0.35); border-radius: 14px; padding: 18px; margin-bottom: 20px; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);">
+          
+          <!-- Unified 3-Callout Banner (Live Rate, Green BUY Target, Red SELL Target in equal 2.4rem size) -->
+          <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 20px; background: rgba(15, 23, 42, 0.85); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 12px; padding: 16px 24px; margin-bottom: 16px;">
+            
+            <!-- 1. Main CLUSDT Live Rate Callout (Cyan #38bdf8) -->
+            <div style="display: flex; flex-direction: column;">
+              <span style="font-size: 0.75rem; font-weight: 800; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.5px;" id="unifiedSymbolLabel">🛢️ CLUSDT LIVE RATE</span>
+              <span id="mainCrudeLiveRate" style="font-size: 2.4rem; font-weight: 900; color: #38bdf8; font-family: monospace; line-height: 1.1; text-shadow: 0 0 20px rgba(56, 189, 248, 0.6);">$0.00</span>
             </div>
+
+            <!-- 2. Next BUY Target Exit (Green #10b981) - SAME SIZE 2.4rem -->
+            <div style="display: flex; flex-direction: column;">
+              <span style="font-size: 0.75rem; font-weight: 800; color: #34d399; text-transform: uppercase; letter-spacing: 0.5px;">🎯 BUY TARGET EXIT (UP)</span>
+              <span id="mainBuyTargetRate" style="font-size: 2.4rem; font-weight: 900; color: #10b981; font-family: monospace; line-height: 1.1; text-shadow: 0 0 20px rgba(16, 185, 129, 0.6);">$0.00</span>
+              <span id="mainBuyTargetDist" style="font-size: 0.72rem; color: #34d399; font-weight: 700;">--</span>
+            </div>
+
+            <!-- 3. Next SELL Target Exit (Red #ef4444) - SAME SIZE 2.4rem -->
+            <div style="display: flex; flex-direction: column;">
+              <span style="font-size: 0.75rem; font-weight: 800; color: #f87171; text-transform: uppercase; letter-spacing: 0.5px;">🎯 SELL TARGET EXIT (DOWN)</span>
+              <span id="mainSellTargetRate" style="font-size: 2.4rem; font-weight: 900; color: #ef4444; font-family: monospace; line-height: 1.1; text-shadow: 0 0 20px rgba(239, 68, 68, 0.6);">$0.00</span>
+              <span id="mainSellTargetDist" style="font-size: 0.72rem; color: #f87171; font-weight: 700;">--</span>
+            </div>
+
+            <!-- Key Summary Badges (Floating P/L & Active Pairs) -->
+            <div style="display: flex; align-items: center; gap: 20px; border-left: 1px solid rgba(255,255,255,0.1); padding-left: 20px;">
+              <div style="display: flex; flex-direction: column;">
+                <span style="font-size: 0.7rem; color: #94a3b8; font-weight: 700; text-transform: uppercase;">Floating Net P/L</span>
+                <span id="unifiedFloatingNet" style="font-size: 1.25rem; font-weight: 800; font-family: monospace;">₹0.00</span>
+              </div>
+
+              <div style="display: flex; flex-direction: column;">
+                <span style="font-size: 0.7rem; color: #94a3b8; font-weight: 700; text-transform: uppercase;">Active Pairs / Cap</span>
+                <span id="unifiedActivePairs" style="font-size: 1.2rem; font-weight: 800; color: #f59e0b; font-family: monospace;">0 / 25</span>
+              </div>
+            </div>
+
           </div>
-          <canvas id="livePriceChart" height="200"></canvas>
-          <div id="chartHoverTooltip" class="chart-hover-tooltip"></div>
+
+          <!-- Interactive Live Price Canvas Chart -->
+          <div style="position: relative; width: 100%; height: 210px; background: #080c14; border-radius: 10px; border: 1px solid rgba(255, 255, 255, 0.06); overflow: hidden;">
+            <canvas id="livePriceCanvas" style="width: 100%; height: 100%; display: block;"></canvas>
+          </div>
         </div>
 
-        <!-- Two Columns: Active BUY Positions & Active SELL Positions -->
-        <div class="positions-grid">
-          
-          <!-- Column 1: BUY Positions P/L -->
-          <div class="position-card buy-card">
-            <div class="card-header">
-              <span class="card-title">🟩 BUY Positions P/L (Long) <span class="badge badge-buy" id="buyPositionsBadge">0 ACTIVE</span></span>
-              <span id="buyColumnNetPl" style="font-weight: 800; font-family: monospace; font-size: 0.88rem; color: #10b981;">NET P/L: ₹+0.00</span>
+        <!-- 2 Side-by-Side Tables Container for BUY & SELL Positions -->
+        <div class="active-tables-container">
+          <!-- BUY Positions Table -->
+          <div class="active-table-card buy-card">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; padding-bottom: 6px; border-bottom: 1px solid rgba(16, 185, 129, 0.25);">
+              <h4 style="margin: 0; color: #10b981; font-size: 0.95rem; font-weight: 800; display: flex; align-items: center; gap: 8px;">
+                <span>🟢 BUY Positions P/L (Long)</span>
+                <span id="buyPositionsBadge" class="badge-direction buy" style="font-size: 0.7rem;">0 Active</span>
+              </h4>
+              <span id="buyPositionsNetPL" style="font-size: 0.85rem; font-weight: 800; color: #10b981;">NET P/L: ₹0.00</span>
             </div>
-            <div class="table-responsive">
-              <table class="data-table">
-                <thead>
-                  <tr>
-                    <th>Pair / Position ID</th>
-                    <th>Entry ➔ Current</th>
-                    <th>Target Exit 🎯</th>
-                    <th>Net Floating P/L (INR)</th>
-                    <th>Action</th>
-                  </tr>
-                </thead>
-                <tbody id="buyPositionsTbody">
-                  <tr>
-                    <td colspan="5" style="text-align: center; color: var(--text-dim); padding: 24px;">No active BUY positions.</td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
+            <table class="data-table" id="buyPositionsTable">
+              <thead>
+                <tr>
+                  <th>Pair / Position ID</th>
+                  <th>Entry ➔ Current</th>
+                  <th>Target Exit 🎯</th>
+                  <th style="text-align: right;">Net Floating P/L (INR)</th>
+                  <th style="text-align: center;">Action</th>
+                </tr>
+              </thead>
+              <tbody id="buyPositionsTbody">
+                <tr>
+                  <td colspan="5" style="text-align: center; color: var(--text-dim); padding: 18px;">No active BUY positions.</td>
+                </tr>
+              </tbody>
+            </table>
           </div>
 
-          <!-- Column 2: SELL Positions P/L -->
-          <div class="position-card sell-card">
-            <div class="card-header">
-              <span class="card-title">🟥 SELL Positions P/L (Short) <span class="badge badge-sell" id="sellPositionsBadge">0 ACTIVE</span></span>
-              <span id="sellColumnNetPl" style="font-weight: 800; font-family: monospace; font-size: 0.88rem; color: #ef4444;">NET P/L: ₹+0.00</span>
+          <!-- SELL Positions Table -->
+          <div class="active-table-card sell-card">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; padding-bottom: 6px; border-bottom: 1px solid rgba(239, 68, 68, 0.25);">
+              <h4 style="margin: 0; color: #ef4444; font-size: 0.95rem; font-weight: 800; display: flex; align-items: center; gap: 8px;">
+                <span>🔴 SELL Positions P/L (Short)</span>
+                <span id="sellPositionsBadge" class="badge-direction sell" style="font-size: 0.7rem;">0 Active</span>
+              </h4>
+              <span id="sellPositionsNetPL" style="font-size: 0.85rem; font-weight: 800; color: #ef4444;">NET P/L: ₹0.00</span>
             </div>
-            <div class="table-responsive">
-              <table class="data-table">
-                <thead>
-                  <tr>
-                    <th>Pair / Position ID</th>
-                    <th>Entry ➔ Current</th>
-                    <th>Target Exit 🎯</th>
-                    <th>Net Floating P/L (INR)</th>
-                    <th>Action</th>
-                  </tr>
-                </thead>
-                <tbody id="sellPositionsTbody">
-                  <tr>
-                    <td colspan="5" style="text-align: center; color: var(--text-dim); padding: 24px;">No active SELL positions.</td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
+            <table class="data-table" id="sellPositionsTable">
+              <thead>
+                <tr>
+                  <th>Pair / Position ID</th>
+                  <th>Entry ➔ Current</th>
+                  <th>Target Exit 🎯</th>
+                  <th style="text-align: right;">Net Floating P/L (INR)</th>
+                  <th style="text-align: center;">Action</th>
+                </tr>
+              </thead>
+              <tbody id="sellPositionsTbody">
+                <tr>
+                  <td colspan="5" style="text-align: center; color: var(--text-dim); padding: 18px;">No active SELL positions.</td>
+                </tr>
+              </tbody>
+            </table>
           </div>
-
         </div>
       </div>
 
       <!-- Tab 2: Closed Positions History -->
       <div id="tabClosed" class="tab-content">
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px;">
-          <h3 style="color: #fff;">Closed Positions History & Realized P/L Audit</h3>
-          <div style="font-size: 0.85rem; color: var(--text-muted);">
-            Sorted by Exit Time (Latest First)
+        <!-- Top Closed Positions History Performance Summary -->
+        <div class="closed-history-summary" id="closedTabSummaryBar">
+          <div class="summary-box">
+            <div class="summary-label">Closed Trades / Win Rate</div>
+            <div class="summary-value" id="closedSummaryCount">0</div>
+            <div class="summary-subtext" id="closedSummaryWinLoss">Wins: 0 | Losses: 0 | Win Rate: 0%</div>
+          </div>
+          <div class="summary-box">
+            <div class="summary-label">Total Realized Gross P/L</div>
+            <div class="summary-value" id="closedSummaryGrossINR">₹0.00</div>
+            <div class="summary-subtext" id="closedSummaryGrossUSD">$0.0000 Gross</div>
+          </div>
+          <div class="summary-box">
+            <div class="summary-label">Total Charges Paid (Fees+GST)</div>
+            <div class="summary-value text-amber" id="closedSummaryChargesINR">₹0.00</div>
+            <div class="summary-subtext" id="closedSummaryChargesUSD">$0.0000 Charges</div>
+          </div>
+          <div class="summary-box">
+            <div class="summary-label">Total Realized Net P/L</div>
+            <div class="summary-value" id="closedSummaryNetINR">₹0.00</div>
+            <div class="summary-subtext" id="closedSummaryNetUSD">$0.0000 Net</div>
           </div>
         </div>
-        <table class="data-table">
+
+        <table class="data-table" id="closedPositionsTable">
           <thead>
             <tr>
               <th class="sortable" data-key="pairId" onclick="sortTable('closed', 'pairId')">Pair ID</th>
@@ -328,6 +375,14 @@
 
         <div id="mudrexAuthStatusContainer" style="background: #0d1117; border: 1px solid var(--border-color); padding: 12px; border-radius: 8px; font-size: 0.8rem; color: #f3f4f6;">
           <span style="color: var(--text-muted);">Click "Check Mudrex Live API Status" to test API Key & Secret connection.</span>
+        </div>
+
+        <div style="border-top: 1px solid var(--border-color); padding-top: 12px; margin-top: 4px;">
+          <h4 style="color: #fff; margin-bottom: 6px; font-size: 0.9rem;">Alternative: Railway Cloud Environment Variables</h4>
+          <code style="display: block; background: #0b0e14; padding: 10px; border-radius: 6px; font-size: 0.78rem; color: #38bdf8; margin-bottom: 8px; font-family: monospace;">
+            MUDREX_API_KEY="your_mudrex_api_key"<br>
+            MUDREX_API_SECRET="your_mudrex_api_secret"
+          </code>
         </div>
 
         <button class="btn btn-secondary" style="width: 100%; margin-top: 6px; background: #374151; color: #fff; font-weight: 700; border: none; padding: 10px; cursor: pointer;" onclick="closeMudrexLiveModal()">✖ Close Modal & Return to Live Dashboard</button>
@@ -437,6 +492,6 @@
     </div>
   </div>
 
-  <script src="app.js?v=20261012_v9"></script>
+  <script src="app.js?v=20261012_v10"></script>
 </body>
 </html>
