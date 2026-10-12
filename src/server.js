@@ -43,7 +43,9 @@ app.get('/health', (req, res) => {
       isEngineRunning: paperEngine.isEngineRunning,
       activeInstrument: paperEngine.settings.instrument,
       feedStatus: rateInfo.status,
-      feedPrice: rateInfo.price
+      feedPrice: rateInfo.price,
+      dhanSilverTokenConfigured: !!(process.env.DHAN_ACCESS_TOKEN_SILVER || process.env.DHAN_ACCESS_TOKEN),
+      mudrexApiConfigured: !!(process.env.MUDREX_API_KEY && process.env.MUDREX_API_SECRET)
     });
   } catch (err) {
     res.status(500).json({ status: 'ERROR', error: err.message });

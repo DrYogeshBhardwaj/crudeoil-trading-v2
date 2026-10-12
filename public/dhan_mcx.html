@@ -440,6 +440,22 @@
       alert('✅ Dhan API Credentials Saved Successfully!');
       closeDhanModal();
     }
+
+    document.addEventListener('DOMContentLoaded', () => {
+      fetch('/health')
+        .then(r => r.json())
+        .then(data => {
+          if (data && data.dhanSilverTokenConfigured) {
+            const btn = document.querySelector("button[onclick='openDhanModal()']");
+            if (btn) {
+              btn.innerHTML = '✅ Dhan API Connected (ENV)';
+              btn.style.background = 'rgba(0, 208, 156, 0.2)';
+              btn.style.borderColor = '#00d09c';
+            }
+          }
+        })
+        .catch(() => {});
+    });
   </script>
 </body>
 </html>
