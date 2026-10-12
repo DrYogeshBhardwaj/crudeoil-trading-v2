@@ -779,8 +779,25 @@ class MudrexLiveAdapter {
       }
     } catch (e) {}
 
-    let liveOpenPositions = this.liveOpenPositions || [];
-    let liveClosedPositions = this.liveClosedPositions || [];
+    let liveOpenPositions = [];
+
+    if (Array.isArray(paperEngine.pairs)) {
+      for (const pair of paperEngine.pairs) {
+        if (pair.status === 'CLOSED') continue;
+        if (pair.buyPosition && pair.buyPosition.status === 'OPEN') {
+          liveOpenPositions.push(pair.buyPosition);
+        }
+        if (pair.sellPosition && pair.sellPosition.status === 'OPEN') {
+          liveOpenPositions.push(pair.sellPosition);
+        }
+      }
+    }
+
+    for (const pos of (this.liveOpenPositions || [])) {
+      if (pos.status === 'OPEN' && !liveOpenPositions.some(p => p.positionId === pos.positionId)) {
+        liveOpenPositions.push(pos);
+      }
+    }
 
     // Clean up any stale flags
     for (const pos of liveOpenPositions) {
@@ -795,18 +812,18 @@ class MudrexLiveAdapter {
         if (realPosRes.success && Array.isArray(realPosRes.data)) {
           for (const rPos of realPosRes.data) {
             rPos.apiStatus = 'REAL_MUDREX_POSITION';
-            const existingIdx = this.liveOpenPositions.findIndex(p => p.positionId === rPos.positionId);
+            const existingIdx = liveOpenPositions.findIndex(p => p.positionId === rPos.positionId);
             if (existingIdx !== -1) {
-              this.liveOpenPositions[existingIdx] = { ...this.liveOpenPositions[existingIdx], ...rPos };
+              liveOpenPositions[existingIdx] = { ...liveOpenPositions[existingIdx], ...rPos };
             } else {
-              this.liveOpenPositions.push(rPos);
+              liveOpenPositions.push(rPos);
             }
           }
-          this.saveState();
         }
       } catch (e) {}
-      liveOpenPositions = [...this.liveOpenPositions];
     }
+
+    liveOpenPositions = liveOpenPositions.filter(p => !this.userClosedRealPositionIds.has(p.positionId) && !this.userClosedRealPositionIds.has(p.pairId));
 
     this.liveOpenPositions = liveOpenPositions;
     this.liveClosedPositions = liveClosedPositions;
