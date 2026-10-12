@@ -57,6 +57,7 @@ class MudrexLiveAdapter {
         if (saved.mudrexSettings) {
           this.settings = { ...this.settings, ...saved.mudrexSettings };
         }
+        this.settings.contractQuantity = 2.0;
         if (saved.mudrexApiKey && !saved.mudrexApiKey.includes('*') && !process.env.MUDREX_API_KEY) {
           process.env.MUDREX_API_KEY = saved.mudrexApiKey;
         }
