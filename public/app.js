@@ -821,14 +821,56 @@ function renderDashboard(data) {
   }
 }
 
+let buySortKey = 'distToExit';
+let buySortDir = 'asc';
+
+let sellSortKey = 'distToExit';
+let sellSortDir = 'asc';
+
 let activeSortKey = null;
 let activeSortDir = 'desc';
 
-let closedSortKey = null;
+let closedSortKey = 'exitTime';
 let closedSortDir = 'desc';
 
+function formatISTDate(isoStr) {
+  if (!isoStr) return '<span style="color:var(--text-dim);">N/A</span>';
+  const date = new Date(isoStr);
+  if (isNaN(date.getTime())) return '<span style="color:var(--text-dim);">N/A</span>';
+
+  const timeStr = date.toLocaleTimeString('en-IN', {
+    timeZone: 'Asia/Kolkata',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+    hour12: true
+  });
+
+  const dateStr = date.toLocaleDateString('en-IN', {
+    timeZone: 'Asia/Kolkata',
+    day: '2-digit',
+    month: 'short'
+  });
+
+  return `<div style="font-size:0.85rem; font-weight:800; color:#fff; font-family:monospace;">${timeStr}</div><div style="font-size:0.72rem; color:#94a3b8; font-weight:700;">${dateStr} IST</div>`;
+}
+
 function sortTable(tableType, key) {
-  if (tableType === 'active') {
+  if (tableType === 'buy') {
+    if (buySortKey === key) {
+      buySortDir = buySortDir === 'asc' ? 'desc' : 'asc';
+    } else {
+      buySortKey = key;
+      buySortDir = ['floatingNetINR', 'floatingGrossUSD', 'entryPrice', 'currentPrice', 'targetExitPrice'].includes(key) ? 'desc' : 'asc';
+    }
+  } else if (tableType === 'sell') {
+    if (sellSortKey === key) {
+      sellSortDir = sellSortDir === 'asc' ? 'desc' : 'asc';
+    } else {
+      sellSortKey = key;
+      sellSortDir = ['floatingNetINR', 'floatingGrossUSD', 'entryPrice', 'currentPrice', 'targetExitPrice'].includes(key) ? 'desc' : 'asc';
+    }
+  } else if (tableType === 'active') {
     if (activeSortKey === key) {
       activeSortDir = activeSortDir === 'asc' ? 'desc' : 'asc';
     } else {
@@ -840,10 +882,24 @@ function sortTable(tableType, key) {
       closedSortDir = closedSortDir === 'asc' ? 'desc' : 'asc';
     } else {
       closedSortKey = key;
-      closedSortDir = ['grossProfitUSD', 'netProfitINR', 'totalChargesINR', 'entryPrice', 'exitPrice', 'holdingDurationSec'].includes(key) ? 'desc' : 'asc';
+      closedSortDir = ['grossProfitUSD', 'netProfitINR', 'netProfitUSD', 'totalChargesINR', 'totalChargesUSD', 'entryPrice', 'exitPrice', 'holdingDurationSec'].includes(key) ? 'desc' : 'asc';
     }
   }
 
+  if (currentMetrics && currentMetrics.data) {
+    updateDashboardUI(currentMetrics.data);
+  }
+}
+
+function onActiveSortDropdownChanged(val) {
+  if (!val) return;
+  const parts = val.split('_');
+  const key = parts[0];
+  const dir = parts[1] || 'asc';
+  buySortKey = key;
+  buySortDir = dir;
+  sellSortKey = key;
+  sellSortDir = dir;
   if (currentMetrics && currentMetrics.data) {
     updateDashboardUI(currentMetrics.data);
   }
@@ -895,6 +951,9 @@ function getDistToExit(pos) {
 }
 
 function renderActivePositions(positions, symbol, isDhanPage = false, pricePrefix = '₹', priceMultiplier = 1, priceDecimals = 2) {
+  updateTableHeaderClasses('buyPositionsTable', buySortKey, buySortDir);
+  updateTableHeaderClasses('sellPositionsTable', sellSortKey, sellSortDir);
+
   const buyTbody = document.getElementById('buyPositionsTbody');
   const sellTbody = document.getElementById('sellPositionsTbody');
   const buyBadge = document.getElementById('buyPositionsBadge');
@@ -947,13 +1006,6 @@ function renderActivePositions(positions, symbol, isDhanPage = false, pricePrefi
   const totalBuyNetUSD = totalBuyNetINR / usdRate;
   const totalSellNetUSD = totalSellNetINR / usdRate;
 
-  if (buyBadge) {
-    buyBadge.innerText = buy2B > 0 ? `${buyPositions.length} Active (${buy1B} 1-B, ${buy2B} 2-B)` : `${buyPositions.length} Active`;
-  }
-  if (sellBadge) {
-    sellBadge.innerText = sell2B > 0 ? `${sellPositions.length} Active (${sell1B} 1-B, ${sell2B} 2-B)` : `${sellPositions.length} Active`;
-  }
-
   if (buyNetPlEl) {
     const bSign = totalBuyNetUSD >= 0 ? '+' : '-';
     const bLabel = totalBuyNetUSD >= 0 ? 'PROFIT' : 'LOSS';
@@ -967,13 +1019,27 @@ function renderActivePositions(positions, symbol, isDhanPage = false, pricePrefi
     sellNetPlEl.innerHTML = `SELL FLOATING P/L: <strong style="color:${sColor}; font-size: 1.35rem; font-family: monospace;">${sSign}$${Math.abs(totalSellNetUSD).toFixed(2)} ${sLabel}</strong>`;
   }
 
-  // Sort by Next Exit target distance ascending (closest target exit first)
-  buyPositions.sort((a, b) => getDistToExit(a) - getDistToExit(b));
-  sellPositions.sort((a, b) => getDistToExit(a) - getDistToExit(b));
+  // Apply sorting to buyPositions
+  if (buySortKey === 'distToExit') {
+    buyPositions.sort((a, b) => buySortDir === 'asc' ? getDistToExit(a) - getDistToExit(b) : getDistToExit(b) - getDistToExit(a));
+  } else {
+    const sortedBuy = sortDataArray(buyPositions, buySortKey, buySortDir);
+    buyPositions.length = 0;
+    buyPositions.push(...sortedBuy);
+  }
+
+  // Apply sorting to sellPositions
+  if (sellSortKey === 'distToExit') {
+    sellPositions.sort((a, b) => sellSortDir === 'asc' ? getDistToExit(a) - getDistToExit(b) : getDistToExit(b) - getDistToExit(a));
+  } else {
+    const sortedSell = sortDataArray(sellPositions, sellSortKey, sellSortDir);
+    sellPositions.length = 0;
+    sellPositions.push(...sortedSell);
+  }
 
   const renderSideRows = (posList, isBuyTable) => {
     if (posList.length === 0) {
-      return `<tr><td colspan="5" style="text-align: center; color: var(--text-dim); padding: 18px;">No active ${isBuyTable ? 'BUY' : 'SELL'} positions.</td></tr>`;
+      return `<tr><td colspan="6" style="text-align: center; color: var(--text-dim); padding: 18px;">No active ${isBuyTable ? 'BUY' : 'SELL'} positions.</td></tr>`;
     }
     let rowsHtml = '';
     for (const pos of posList) {
@@ -1015,6 +1081,9 @@ function renderActivePositions(positions, symbol, isDhanPage = false, pricePrefi
               const color = s.includes('REAL_MUDREX') ? '#a7f3d0' : (s.includes('TRANSMITTED') || s.includes('SENDING') ? '#38bdf8' : '#fbbf24');
               return `<span style="display:block; font-size:0.65rem; color:${color}; font-weight:700; margin-top:2px;">📡 ${s}</span>`;
             })()}
+          </td>
+          <td>
+            ${formatISTDate(pos.entryTime)}
           </td>
           <td>
             <div style="font-size:0.85rem; color:var(--text-muted);">$${fmtP(entryPrice)}</div>
@@ -1085,8 +1154,8 @@ function renderClosedPositions(positions, symbol, isDhanPage = false, pricePrefi
           <td><strong>${pos.pairId || 'N/A'}</strong></td>
           <td><code style="color:var(--accent-cyan); font-weight: 700;">${pos.positionId || 'N/A'}</code></td>
           <td><span class="badge-direction ${isBuy ? 'buy' : 'sell'}">${pos.direction || 'BUY'}</span></td>
-          <td>${pos.entryTime ? new Date(pos.entryTime).toLocaleTimeString() : 'N/A'}</td>
-          <td>${pos.exitTime ? new Date(pos.exitTime).toLocaleTimeString() : 'N/A'}</td>
+          <td>${formatISTDate(pos.entryTime)}</td>
+          <td>${formatISTDate(pos.exitTime)}</td>
           <td style="font-family: monospace;">$${fmtP(entryPrice)}</td>
           <td style="font-family: monospace;">$${fmtP(exitPrice)}</td>
           <td>${targetPrice !== null ? `<span class="target-price-badge" style="font-family: monospace;">$${fmtP(targetPrice)}</span>` : 'N/A'}</td>

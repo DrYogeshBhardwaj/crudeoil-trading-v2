@@ -238,7 +238,27 @@
           </div>
         </div>
 
-        <!-- 2 Side-by-Side Tables Container for BUY & SELL Positions -->
+        <!-- Sort Bar & 2 Side-by-Side Tables Container for BUY & SELL Positions -->
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; padding: 10px 16px; background: rgba(13, 17, 23, 0.85); border: 1px solid rgba(56, 189, 248, 0.25); border-radius: 10px; flex-wrap: wrap; gap: 12px;">
+          <div style="display: flex; align-items: center; gap: 8px;">
+            <span style="font-size: 0.95rem; font-weight: 800; color: #f8fafc;">⚡ Active Positions Monitor</span>
+            <span style="font-size: 0.75rem; color: #94a3b8; font-weight: 700;">(Indian Time IST & Sortable Columns)</span>
+          </div>
+          <div style="display: flex; align-items: center; gap: 8px;">
+            <label style="font-size: 0.8rem; font-weight: 800; color: #38bdf8;">🔄 Sort Active Positions:</label>
+            <select id="activeSortSelect" onchange="onActiveSortDropdownChanged(this.value)" style="background: #080c14; border: 1px solid rgba(56, 189, 248, 0.4); color: #38bdf8; padding: 6px 12px; border-radius: 6px; font-size: 0.82rem; font-weight: 800; cursor: pointer;">
+              <option value="distToExit_asc">🎯 Target Exit Distance (Closest First)</option>
+              <option value="entryTime_desc">⏰ Entry Time IST (Newest First)</option>
+              <option value="entryTime_asc">⏰ Entry Time IST (Oldest First)</option>
+              <option value="floatingNetINR_desc">💰 Net Floating P/L (Highest Profit First)</option>
+              <option value="floatingNetINR_asc">🔻 Net Floating P/L (Lowest / Drawdown First)</option>
+              <option value="entryPrice_asc">📈 Entry Price (Low to High)</option>
+              <option value="entryPrice_desc">📉 Entry Price (High to Low)</option>
+              <option value="positionId_asc">🆔 Position ID (Ascending)</option>
+            </select>
+          </div>
+        </div>
+
         <div class="active-tables-container">
           <!-- BUY Positions Table -->
           <div class="active-table-card buy-card">
@@ -252,16 +272,17 @@
             <table class="data-table" id="buyPositionsTable">
               <thead>
                 <tr>
-                  <th>Pair / Position ID</th>
-                  <th>Entry ➔ Current ($)</th>
-                  <th>Target Exit 🎯 ($)</th>
-                  <th style="text-align: right;">Net Floating P/L ($)</th>
+                  <th class="sortable" data-key="positionId" onclick="sortTable('buy', 'positionId')">Pair / Position ID</th>
+                  <th class="sortable" data-key="entryTime" onclick="sortTable('buy', 'entryTime')">Entry Time (IST) ⏰</th>
+                  <th class="sortable" data-key="entryPrice" onclick="sortTable('buy', 'entryPrice')">Entry ➔ Current ($)</th>
+                  <th class="sortable" data-key="targetExitPrice" onclick="sortTable('buy', 'targetExitPrice')">Target Exit 🎯 ($)</th>
+                  <th class="sortable" data-key="floatingNetINR" onclick="sortTable('buy', 'floatingNetINR')" style="text-align: right;">Net Floating P/L ($)</th>
                   <th style="text-align: center;">Action</th>
                 </tr>
               </thead>
               <tbody id="buyPositionsTbody">
                 <tr>
-                  <td colspan="5" style="text-align: center; color: var(--text-dim); padding: 18px;">No active BUY positions.</td>
+                  <td colspan="6" style="text-align: center; color: var(--text-dim); padding: 18px;">No active BUY positions.</td>
                 </tr>
               </tbody>
             </table>
@@ -279,16 +300,17 @@
             <table class="data-table" id="sellPositionsTable">
               <thead>
                 <tr>
-                  <th>Pair / Position ID</th>
-                  <th>Entry ➔ Current ($)</th>
-                  <th>Target Exit 🎯 ($)</th>
-                  <th style="text-align: right;">Net Floating P/L ($)</th>
+                  <th class="sortable" data-key="positionId" onclick="sortTable('sell', 'positionId')">Pair / Position ID</th>
+                  <th class="sortable" data-key="entryTime" onclick="sortTable('sell', 'entryTime')">Entry Time (IST) ⏰</th>
+                  <th class="sortable" data-key="entryPrice" onclick="sortTable('sell', 'entryPrice')">Entry ➔ Current ($)</th>
+                  <th class="sortable" data-key="targetExitPrice" onclick="sortTable('sell', 'targetExitPrice')">Target Exit 🎯 ($)</th>
+                  <th class="sortable" data-key="floatingNetINR" onclick="sortTable('sell', 'floatingNetINR')" style="text-align: right;">Net Floating P/L ($)</th>
                   <th style="text-align: center;">Action</th>
                 </tr>
               </thead>
               <tbody id="sellPositionsTbody">
                 <tr>
-                  <td colspan="5" style="text-align: center; color: var(--text-dim); padding: 18px;">No active SELL positions.</td>
+                  <td colspan="6" style="text-align: center; color: var(--text-dim); padding: 18px;">No active SELL positions.</td>
                 </tr>
               </tbody>
             </table>
@@ -328,8 +350,8 @@
               <th class="sortable" data-key="pairId" onclick="sortTable('closed', 'pairId')">Pair ID</th>
               <th class="sortable" data-key="positionId" onclick="sortTable('closed', 'positionId')">Position ID</th>
               <th class="sortable" data-key="direction" onclick="sortTable('closed', 'direction')">Type</th>
-              <th class="sortable" data-key="entryTime" onclick="sortTable('closed', 'entryTime')">Entry Time</th>
-              <th class="sortable" data-key="exitTime" onclick="sortTable('closed', 'exitTime')">Exit Time</th>
+              <th class="sortable" data-key="entryTime" onclick="sortTable('closed', 'entryTime')">Entry Time (IST) ⏰</th>
+              <th class="sortable" data-key="exitTime" onclick="sortTable('closed', 'exitTime')">Exit Time (IST) ⏰</th>
               <th class="sortable" data-key="entryPrice" onclick="sortTable('closed', 'entryPrice')">Entry Price ($)</th>
               <th class="sortable" data-key="exitPrice" onclick="sortTable('closed', 'exitPrice')">Exit Price ($)</th>
               <th class="sortable" data-key="targetExitPrice" onclick="sortTable('closed', 'targetExitPrice')">Target Exit ($) 🎯</th>
