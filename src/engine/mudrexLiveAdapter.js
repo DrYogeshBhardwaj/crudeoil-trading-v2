@@ -399,6 +399,10 @@ class MudrexLiveAdapter {
   }
 
   async testAuthentication(force = false) {
+    const now = Date.now();
+    if (!force && this.lastAuthCheckRes && (now - (this.lastAuthCheckTime || 0) < 15000)) {
+      return this.lastAuthCheckRes;
+    }
     if (force) {
       this.rateLimitUntil = 0;
     }
@@ -451,7 +455,7 @@ class MudrexLiveAdapter {
     const totalPortfolioBalance = Number((spotBal + futBal).toFixed(2));
 
     if (spotRes.success || futRes.success) {
-      return {
+      const authRes = {
         success: true,
         balance: totalPortfolioBalance > 0 ? totalPortfolioBalance : Math.max(spotBal, futBal),
         spotBalance: spotBal,
@@ -459,6 +463,9 @@ class MudrexLiveAdapter {
         totalPortfolioBalance,
         raw: { spot: spotRaw, futures: futRaw }
       };
+      this.lastAuthCheckRes = authRes;
+      this.lastAuthCheckTime = Date.now();
+      return authRes;
     }
 
     if (!spotRes.success && !futRes.success) {
@@ -467,7 +474,12 @@ class MudrexLiveAdapter {
       if (errStr.includes('3100') || errStr.includes('Invalid Authentication')) {
         errStr = 'Invalid Mudrex API Secret Key. Please verify your Secret Key.';
       }
-      return { success: false, error: errStr };
+      const failRes = { success: false, error: errStr };
+      if (!this.lastAuthCheckRes) {
+        this.lastAuthCheckRes = failRes;
+        this.lastAuthCheckTime = Date.now();
+      }
+      return failRes;
     }
   }
 
