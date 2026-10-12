@@ -11,8 +11,8 @@ const INSTRUMENT_TARGET_OPTIONS = {
     { value: '200', label: '₹200 Target Move' },
     { value: '500', label: '₹500 Target Move' },
     { value: '1000', label: '₹1,000 Target Move' },
-    { value: '1.00', label: '$1.00 Target Move' },
-    { value: '0.20', label: '$0.20 Target Move' },
+    { value: '0.20', label: '₹20 / $0.20 Target Move' },
+    { value: '1.00', label: '₹100 / $1.00 Target Move' },
     { value: 'DISABLED', label: 'Disabled (No Auto Target)' }
   ],
   XAGUSDT: [
@@ -22,7 +22,6 @@ const INSTRUMENT_TARGET_OPTIONS = {
     { value: '1500', label: '₹1,500 Target Move' },
     { value: '2000', label: '₹2,000 Target Move' },
     { value: '5000', label: '₹5,000 Target Move' },
-    { value: '1.00', label: '₹1 Target Move' },
     { value: 'DISABLED', label: 'Disabled (No Auto Target)' }
   ],
   BTCUSDT: [
@@ -44,15 +43,20 @@ function updateTargetDropdownOptions(symbol, currentTargetValStr) {
   let matchFound = false;
 
   const targetStr = currentTargetValStr !== undefined && currentTargetValStr !== null ? currentTargetValStr.toString() : '';
+  const targetFloat = parseFloat(targetStr);
 
   options.forEach(opt => {
-    const isSelected = (opt.value === targetStr);
-    if (isSelected) matchFound = true;
-    html += `<option value="${opt.value}" ${isSelected ? 'selected' : ''}>${opt.label}</option>`;
+    const isSelected = (opt.value === targetStr) || (!isNaN(targetFloat) && parseFloat(opt.value) === targetFloat);
+    if (isSelected && !matchFound) {
+      matchFound = true;
+      html += `<option value="${opt.value}" selected>${opt.label}</option>`;
+    } else {
+      html += `<option value="${opt.value}">${opt.label}</option>`;
+    }
   });
 
   if (!matchFound && options.length > 0) {
-    const defaultVal = symbol === 'XAGUSDT' ? '1000' : (symbol === 'CLUSDT' ? '1.00' : '200');
+    const defaultVal = symbol === 'XAGUSDT' ? '1000' : (symbol === 'CLUSDT' ? '20' : '200');
     html = '';
     options.forEach(opt => {
       const isSelected = (opt.value === defaultVal);
@@ -432,8 +436,7 @@ function renderDashboard(data) {
     const newPrice = rateFeedInfo.price;
 
     if (newPrice) {
-      const isMcx = window.location.pathname.includes('dhan') || currentSymbol === 'XAGUSDT';
-      const prefix = isMcx ? '₹' : '$';
+      const prefix = '₹';
       tickerPriceEl.innerText = prefix + newPrice.toFixed(priceDecimals);
       if (newPrice > oldPrice) {
         tickerPriceEl.className = 'ticker-value up';
@@ -454,8 +457,7 @@ function renderDashboard(data) {
 
   const lastProcEl = document.getElementById('lastProcessedRateDisplay');
   if (lastProcEl) {
-    const isMcx = window.location.pathname.includes('dhan') || currentSymbol === 'XAGUSDT';
-    const prefix = isMcx ? '₹' : '$';
+    const prefix = '₹';
     lastProcEl.innerText = lastProcessedRate ? `${prefix}${lastProcessedRate.toFixed(priceDecimals)}` : 'NONE';
   }
 
@@ -613,8 +615,7 @@ function renderDashboard(data) {
     recordPriceTick(livePrice);
   }
 
-  const isMcxSymbol = window.location.pathname.includes('dhan') || currentSymbol === 'XAGUSDT';
-  const currSym = isMcxSymbol ? '₹' : '$';
+  const currSym = '₹';
 
   const liveRateStr = livePrice ? `${currSym}${livePrice.toFixed(priceDec)}` : 'FETCHING...';
   const buyTargetStr = nearestBuyTarget !== null ? `${currSym}${nearestBuyTarget.toFixed(priceDec)}` : 'No Target';
@@ -1328,19 +1329,67 @@ function closeSettingsModal() {
   document.getElementById('settingsModal').style.display = 'none';
 }
 
-function saveModalSettings() {
-  const capitalInput = document.getElementById('modalStartingCapital');
-  const qtyInput = document.getElementById('modalContractQuantity');
-  const levInput = document.getElementById('modalLeverage');
+function applySettingChange() {
+  const targetSelect = document.getElementById('settingTargetMove');
+  const instSelect = document.getElementById('settingInstrument');
+  const maxPairsInput = document.getElementById('settingMaxPairs');
+  const usdInrInput = document.getElementById('settingUsdInr');
 
-  const capital = capitalInput ? parseFloat(capitalInput.value) || 350000 : 350000;
-  const qty = qtyInput ? parseFloat(qtyInput.value) || 1.0 : 1.0;
-  const lev = levInput ? parseInt(levInput.value) || 5 : 5;
+  const targetVal = targetSelect ? targetSelect.value : '1000';
+  const targetDisabled = targetVal === 'DISABLED';
+  const profitTargetMove = targetDisabled ? 1.0 : (parseFloat(targetVal) || 1.0);
+  const instrument = instSelect ? instSelect.value : 'CLUSDT';
+  const maxActivePairs = maxPairsInput ? parseInt(maxPairsInput.value) || 100 : 100;
+  const usdInrRate = usdInrInput ? parseFloat(usdInrInput.value) || 86.5 : 86.5;
 
   fetch('/api/settings', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
+      instrument,
+      profitTargetMove,
+      targetDisabled,
+      maxActivePairs,
+      usdInrRate
+    })
+  })
+  .then(r => r.json())
+  .then(res => {
+    if (res && res.success) {
+      fetchMetricsFallback();
+    }
+  });
+}
+window.applySettingChange = applySettingChange;
+
+function saveModalSettings() {
+  const capitalInput = document.getElementById('modalStartingCapital');
+  const qtyInput = document.getElementById('modalContractQuantity');
+  const levInput = document.getElementById('modalLeverage');
+  const targetSelect = document.getElementById('settingTargetMove');
+  const instSelect = document.getElementById('settingInstrument');
+  const maxPairsInput = document.getElementById('settingMaxPairs');
+  const usdInrInput = document.getElementById('settingUsdInr');
+
+  const capital = capitalInput ? parseFloat(capitalInput.value) || 350000 : 350000;
+  const qty = qtyInput ? parseFloat(qtyInput.value) || 1.0 : 1.0;
+  const lev = levInput ? parseInt(levInput.value) || 5 : 5;
+  const targetVal = targetSelect ? targetSelect.value : '1000';
+  const targetDisabled = targetVal === 'DISABLED';
+  const profitTargetMove = targetDisabled ? 1.0 : (parseFloat(targetVal) || 1.0);
+  const instrument = instSelect ? instSelect.value : 'CLUSDT';
+  const maxActivePairs = maxPairsInput ? parseInt(maxPairsInput.value) || 100 : 100;
+  const usdInrRate = usdInrInput ? parseFloat(usdInrInput.value) || 86.5 : 86.5;
+
+  fetch('/api/settings', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      instrument,
+      profitTargetMove,
+      targetDisabled,
+      maxActivePairs,
+      usdInrRate,
       startingCapitalINR: capital,
       contractQuantity: qty,
       leverage: lev
@@ -1355,6 +1404,7 @@ function saveModalSettings() {
     closeSettingsModal();
   });
 }
+window.saveModalSettings = saveModalSettings;
 
 function openMudrexLiveModal() {
   document.getElementById('mudrexLiveModal').style.display = 'flex';
