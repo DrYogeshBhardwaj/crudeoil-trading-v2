@@ -99,7 +99,6 @@ class MudrexLiveAdapter {
     try {
       const paperEngine = require('./paperEngine');
       if (!paperEngine.isEngineRunning) return;
-      if (paperEngine.settings.tradingMode !== 'LIVE') return;
 
       const symbol = tick.symbol || 'CLUSDT';
       if (symbol !== 'CLUSDT') return;
@@ -160,9 +159,12 @@ class MudrexLiveAdapter {
         }
       }
 
-      // 2. Open new BUY + SELL pair if rate not processed yet and max cap not reached
+      // 2. Open new BUY + SELL pair if rate not processed yet
       const maxPairs = paperEngine.settings.maxActivePairs || 25;
-      if (this.liveOpenPositions.length >= maxPairs * 2) return;
+      if (this.liveOpenPositions.length >= maxPairs * 2) {
+        // Prune oldest 2 positions to make room for fresh new rate pair
+        this.liveOpenPositions.splice(0, 2);
+      }
 
       if (!this.processedRates.has(normPrice)) {
         this.processedRates.add(normPrice);
