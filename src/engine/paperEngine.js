@@ -552,6 +552,55 @@ class PaperEngine {
     this.saveState();
   }
 
+  createSinglePosition(direction, symbol, entryPrice, quantity, targetMove, usdInrRate) {
+    const pairSeq = (this.pairs.length + 1).toString().padStart(4, '0');
+    const pairId = `PAIR-${pairSeq}`;
+    const qty = quantity || this.settings.contractQuantity || 1.0;
+    const tMove = targetMove || 0.20;
+    const mult = this.contractMultipliers[symbol] || 1.0;
+    const takerFee = this.settings.takerFeeRate || 0.0005;
+
+    const targetExit = direction === 'BUY'
+      ? this.normalizePrice(entryPrice + tMove, symbol)
+      : this.normalizePrice(entryPrice - tMove, symbol);
+
+    const entryValueUSD = entryPrice * qty * mult;
+    const estEntryFeeUSD = entryValueUSD * takerFee;
+
+    const pos = {
+      positionId: `P-${pairSeq}-${direction}`,
+      pairId,
+      direction,
+      symbol,
+      entryTime: new Date().toISOString(),
+      entryTimestamp: Date.now(),
+      entryPrice,
+      quantity: qty,
+      contractMultiplier: mult,
+      targetExitPrice: targetExit,
+      targetMove: tMove,
+      status: 'OPEN',
+      entryFeeUSD: estEntryFeeUSD,
+      usdInrRateAtEntry: usdInrRate
+    };
+
+    const newPair = {
+      pairId,
+      symbol,
+      createdTime: new Date().toISOString(),
+      createdTimestamp: Date.now(),
+      entryRate: entryPrice,
+      status: 'ACTIVE',
+      buyPosition: direction === 'BUY' ? pos : null,
+      sellPosition: direction === 'SELL' ? pos : null
+    };
+
+    this.pairs.push(newPair);
+    this.logAudit('MANUAL_POSITION_CREATED', { pairId, positionId: pos.positionId, direction, entryPrice });
+    this.saveState();
+    return pos;
+  }
+
   evaluateTargetExits(currentPrice, currentTimestamp, currentUsdInrRate, tickSymbol = this.settings.instrument) {
     let stateChanged = false;
 

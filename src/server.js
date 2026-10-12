@@ -179,6 +179,30 @@ app.post('/api/manual-close', (req, res) => {
   }
 });
 
+// 6. Manual Trade Placement (Instant Pair, Buy, or Sell)
+app.post('/api/manual-trade', (req, res) => {
+  try {
+    const { action, symbol = 'CLUSDT', quantity = 1.0, targetMove = 0.20 } = req.body;
+    const rateInfo = rateFeed.getCurrentRate(symbol);
+    const price = rateInfo.price || 93.15;
+    const usdInrRate = rateInfo.usdInrRate || 86.5;
+
+    if (action === 'BUY' || action === 'LONG') {
+      const pos = paperEngine.createSinglePosition('BUY', symbol, price, Number(quantity), Number(targetMove), usdInrRate);
+      return res.json({ success: true, message: `Placed manual BUY position at $${price}`, data: pos });
+    } else if (action === 'SELL' || action === 'SHORT') {
+      const pos = paperEngine.createSinglePosition('SELL', symbol, price, Number(quantity), Number(targetMove), usdInrRate);
+      return res.json({ success: true, message: `Placed manual SELL position at $${price}`, data: pos });
+    } else {
+      // Instant Pair (1 BUY + 1 SELL)
+      const pair = paperEngine.createNewPair(symbol, price, Date.now(), usdInrRate);
+      return res.json({ success: true, message: `Created instant BUY & SELL Pair at $${price}`, data: pair });
+    }
+  } catch (err) {
+    res.status(400).json({ success: false, error: err.message });
+  }
+});
+
 // Standalone Mudrex Live Terminal Page Route
 app.get('/mudrex-live', (req, res) => {
   res.sendFile(path.join(__dirname, '../public/mudrex_live.html'));

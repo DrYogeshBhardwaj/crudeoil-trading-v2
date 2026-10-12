@@ -1665,3 +1665,47 @@ window.manualClose = async function(positionId) {
     alert('Error closing position: ' + err.message);
   }
 };
+
+window.openTradeModal = function() {
+  const modal = document.getElementById('tradeModal');
+  if (modal) modal.style.display = 'flex';
+  const liveRateEl = document.getElementById('mainCrudeLiveRate') || document.getElementById('liveTickerPrice');
+  const modalRateEl = document.getElementById('modalTradeLiveRate');
+  if (liveRateEl && modalRateEl) {
+    modalRateEl.textContent = liveRateEl.textContent;
+  }
+};
+
+window.closeTradeModal = function() {
+  const modal = document.getElementById('tradeModal');
+  if (modal) modal.style.display = 'none';
+};
+
+window.executeManualTrade = async function() {
+  const typeSelect = document.getElementById('tradeTypeSelect');
+  const qtySelect = document.getElementById('tradeQtySelect');
+  const targetSelect = document.getElementById('tradeTargetSelect');
+
+  const action = typeSelect ? typeSelect.value : 'PAIR';
+  const quantity = qtySelect ? parseFloat(qtySelect.value) : 2.0;
+  const targetMove = targetSelect ? parseFloat(targetSelect.value) : 0.20;
+
+  try {
+    const res = await fetch('/api/manual-trade', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action, quantity, targetMove, symbol: 'CLUSDT' })
+    });
+    const data = await res.json();
+    if (data.success) {
+      alert(`✅ ${data.message}`);
+      closeTradeModal();
+      if (typeof fetchMetricsFallback === 'function') fetchMetricsFallback();
+      if (typeof fetchDashboardMetrics === 'function') fetchDashboardMetrics();
+    } else {
+      alert(`❌ Failed: ${data.error || 'Unknown error'}`);
+    }
+  } catch (err) {
+    alert(`❌ Error executing trade: ${err.message}`);
+  }
+};
