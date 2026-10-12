@@ -23,7 +23,7 @@ class MudrexLiveAdapter {
       autoAiTargetMode: true,
       targetDisabled: false,
       maxActivePairs: 25,
-      contractQuantity: 1.0,
+      contractQuantity: 2.0,
       leverage: 5,
       usdInrRate: 86.5
     };
@@ -712,13 +712,30 @@ class MudrexLiveAdapter {
       
       const posPrice = rateInfo.price || pos.currentPrice || pos.entryPrice;
       const qty = pos.quantity || 1.0;
-      let pGrossUSD = pos.floatingGrossUSD !== undefined ? pos.floatingGrossUSD : (pos.direction === 'BUY' ? (posPrice - pos.entryPrice) * qty : (pos.entryPrice - posPrice) * qty);
-      let pGrossINR = pos.floatingGrossINR !== undefined ? pos.floatingGrossINR : pGrossUSD * (rateInfo.usdInrRate || 86.5);
-      let pNetINR = pos.floatingNetINR !== undefined ? pos.floatingNetINR : pGrossINR;
+      const usdInrRate = rateInfo.usdInrRate || pos.usdInrRateAtEntry || 86.5;
+      const takerFeeRate = this.settings.takerFeeRate || 0.0005;
+      const gstRate = this.settings.gstRate || 0.18;
+
+      let pGrossUSD = pos.direction === 'BUY' ? (posPrice - pos.entryPrice) * qty : (pos.entryPrice - posPrice) * qty;
+      let pGrossINR = pGrossUSD * usdInrRate;
+
+      let entryFeeUSD = pos.entryFeeUSD || (pos.entryPrice * qty * takerFeeRate);
+      let exitFeeUSD = posPrice * qty * takerFeeRate;
+      let gstUSD = (entryFeeUSD + exitFeeUSD) * gstRate;
+      let totalChargesUSD = entryFeeUSD + exitFeeUSD + gstUSD;
+      let totalChargesINR = totalChargesUSD * usdInrRate;
+
+      let pNetINR = pGrossINR - totalChargesINR;
+
+      pos.currentPrice = posPrice;
+      pos.floatingGrossUSD = Number(pGrossUSD.toFixed(4));
+      pos.floatingGrossINR = Number(pGrossINR.toFixed(2));
+      pos.floatingNetUSD = Number((pNetINR / usdInrRate).toFixed(4));
+      pos.floatingNetINR = Number(pNetINR.toFixed(2));
 
       floatingGrossUSD += pGrossUSD;
       floatingNetINR += pNetINR;
-      marginUsedINR += (pos.entryPrice * qty * (rateInfo.usdInrRate || 86.5)) / (paperEngine.settings.leverage || 5);
+      marginUsedINR += (pos.entryPrice * qty * usdInrRate) / (paperEngine.settings.leverage || 5);
     }
 
     let displayStartingCap = startingCapital;

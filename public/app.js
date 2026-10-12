@@ -851,6 +851,30 @@ function renderActivePositions(positions, symbol, isDhanPage = false, pricePrefi
   const buyPositions = (positions || []).filter(p => p.direction === 'BUY');
   const sellPositions = (positions || []).filter(p => p.direction === 'SELL');
 
+  const usdRate = (window.lastMetricsData?.data?.rateFeedInfo?.usdInrRate) || 86.5;
+  buyPositions.forEach(p => {
+    if (typeof p.floatingNetINR !== 'number' || (p.floatingNetINR === 0 && p.entryPrice && p.currentPrice && p.entryPrice !== p.currentPrice)) {
+      const rawE = p.entryPrice || 0;
+      const rawC = p.currentPrice || rawE;
+      const q = p.quantity || 1.0;
+      const grossUSD = (rawC - rawE) * q;
+      const grossINR = grossUSD * usdRate;
+      const chargesUSD = (rawE * q * 0.0005 + rawC * q * 0.0005) * 1.18;
+      p.floatingNetINR = Number((grossINR - (chargesUSD * usdRate)).toFixed(2));
+    }
+  });
+  sellPositions.forEach(p => {
+    if (typeof p.floatingNetINR !== 'number' || (p.floatingNetINR === 0 && p.entryPrice && p.currentPrice && p.entryPrice !== p.currentPrice)) {
+      const rawE = p.entryPrice || 0;
+      const rawC = p.currentPrice || rawE;
+      const q = p.quantity || 1.0;
+      const grossUSD = (rawE - rawC) * q;
+      const grossINR = grossUSD * usdRate;
+      const chargesUSD = (rawE * q * 0.0005 + rawC * q * 0.0005) * 1.18;
+      p.floatingNetINR = Number((grossINR - (chargesUSD * usdRate)).toFixed(2));
+    }
+  });
+
   const totalBuyNetINR = buyPositions.reduce((sum, p) => sum + (typeof p.floatingNetINR === 'number' ? p.floatingNetINR : 0), 0);
   const totalSellNetINR = sellPositions.reduce((sum, p) => sum + (typeof p.floatingNetINR === 'number' ? p.floatingNetINR : 0), 0);
 
@@ -925,7 +949,7 @@ function renderActivePositions(positions, symbol, isDhanPage = false, pricePrefi
           <td>
             ${targetPrice !== null ? `
               <div style="font-size:1.05rem; font-weight:800; color:#f59e0b; font-family:monospace;">${pricePrefix}${fmtP(targetPrice)}</div>
-              <div style="font-size:0.7rem; color:var(--text-muted);">${pricePrefix}${fmtP(dist)} to exit</div>
+              <div style="font-size:0.68rem; color:${isBuyTable ? '#a7f3d0' : '#fca5a5'}; font-weight:700;">${isBuyTable ? '⬆️ UP' : '⬇️ DOWN'} (${pricePrefix}${fmtP(dist)} to exit)</div>
             ` : '<span style="color:var(--text-dim)">DISABLED</span>'}
           </td>
           <td style="text-align: right;">
