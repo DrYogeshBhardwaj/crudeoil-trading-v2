@@ -58,10 +58,17 @@ app.get(['/mcx-calc', '/mcx_calc', '/mcx_calc.html', '/mcx-calc.html'], (req, re
 app.get(['/paper-calc', '/paper_calc', '/paper_calc.html', '/paper-calc.html'], (req, res) => res.sendFile(path.join(__dirname, '../public/paper_calc.html')));
 app.get(['/mudrex-live', '/mudrex_live', '/mudrex_live.html', '/mudrex-live.html'], (req, res) => res.sendFile(path.join(__dirname, '../public/mudrex_live.html')));
 
-// 1. Dashboard Metrics
-app.get('/api/metrics', (req, res) => {
+// 1. Dashboard Metrics (Supporting Mudrex Live Mode)
+app.get(['/api/metrics', '/api/mudrex/metrics', '/api/mudrex-metrics'], async (req, res) => {
   try {
-    const metrics = paperEngine.getDashboardMetrics();
+    const isMudrexLive = req.path.includes('mudrex') || req.query.mode === 'mudrex_live' || (req.headers.referer && (req.headers.referer.includes('mudrex_live') || req.headers.referer.includes('mudrex-live')));
+    let metrics;
+    if (isMudrexLive) {
+      const mudrexLive = require('./engine/mudrexLiveAdapter');
+      metrics = await mudrexLive.getLiveMetrics();
+    } else {
+      metrics = paperEngine.getDashboardMetrics();
+    }
     res.json({ success: true, data: metrics });
   } catch (err) {
     res.status(500).json({ success: false, error: err.message });

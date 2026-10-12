@@ -20,8 +20,8 @@
     {
       "pairId": "PAIR-0001",
       "symbol": "CLUSDT",
-      "createdTime": "2026-10-12T12:25:46.707Z",
-      "createdTimestamp": 1791807946707,
+      "createdTime": "2026-10-12T12:28:14.636Z",
+      "createdTimestamp": 1791808094636,
       "entryRate": 100,
       "status": "ACTIVE",
       "buyPosition": {
@@ -29,8 +29,8 @@
         "pairId": "PAIR-0001",
         "direction": "BUY",
         "symbol": "CLUSDT",
-        "entryTime": "2026-10-12T12:25:46.707Z",
-        "entryTimestamp": 1791807946707,
+        "entryTime": "2026-10-12T12:28:14.636Z",
+        "entryTimestamp": 1791808094636,
         "entryPrice": 100,
         "quantity": 1,
         "contractMultiplier": 1,
@@ -40,8 +40,8 @@
         "entryFeeUSD": 0.05,
         "usdInrRateAtEntry": 86.5,
         "exitPrice": 100.2,
-        "exitTime": "2026-10-12T12:25:46.739Z",
-        "exitTimestamp": 1791807946739,
+        "exitTime": "2026-10-12T12:28:14.675Z",
+        "exitTimestamp": 1791808094675,
         "exitReason": "BUY TARGET PROFIT HIT"
       },
       "sellPosition": {
@@ -49,8 +49,8 @@
         "pairId": "PAIR-0001",
         "direction": "SELL",
         "symbol": "CLUSDT",
-        "entryTime": "2026-10-12T12:25:46.707Z",
-        "entryTimestamp": 1791807946707,
+        "entryTime": "2026-10-12T12:28:14.636Z",
+        "entryTimestamp": 1791808094636,
         "entryPrice": 100,
         "quantity": 1,
         "contractMultiplier": 1,
@@ -64,8 +64,8 @@
     {
       "pairId": "PAIR-0002",
       "symbol": "CLUSDT",
-      "createdTime": "2026-10-12T12:25:46.739Z",
-      "createdTimestamp": 1791807946739,
+      "createdTime": "2026-10-12T12:28:14.675Z",
+      "createdTimestamp": 1791808094675,
       "entryRate": 100.2,
       "status": "ACTIVE",
       "buyPosition": {
@@ -73,8 +73,8 @@
         "pairId": "PAIR-0002",
         "direction": "BUY",
         "symbol": "CLUSDT",
-        "entryTime": "2026-10-12T12:25:46.739Z",
-        "entryTimestamp": 1791807946739,
+        "entryTime": "2026-10-12T12:28:14.675Z",
+        "entryTimestamp": 1791808094675,
         "entryPrice": 100.2,
         "quantity": 1,
         "contractMultiplier": 1,
@@ -89,8 +89,8 @@
         "pairId": "PAIR-0002",
         "direction": "SELL",
         "symbol": "CLUSDT",
-        "entryTime": "2026-10-12T12:25:46.739Z",
-        "entryTimestamp": 1791807946739,
+        "entryTime": "2026-10-12T12:28:14.675Z",
+        "entryTimestamp": 1791808094675,
         "entryPrice": 100.2,
         "quantity": 1,
         "contractMultiplier": 1,
@@ -108,7 +108,7 @@
       "positionId": "P-0001-BUY",
       "direction": "BUY",
       "symbol": "CLUSDT",
-      "entryTime": "2026-10-12T12:25:46.707Z",
+      "entryTime": "2026-10-12T12:28:14.636Z",
       "entryPrice": 100,
       "currentPrice": 100.2,
       "targetExitPrice": 100.2,
@@ -121,7 +121,7 @@
       "status": "CLOSED",
       "apiStatus": "LIVE_ENGINE_PAIR (Mudrex API: REAL_ORDERS_DISABLED_PURE_PAPER_MODE)",
       "exitPrice": 100.2,
-      "exitTime": "2026-10-12T12:25:46.739Z",
+      "exitTime": "2026-10-12T12:28:14.675Z",
       "grossProfitUSD": 0.2,
       "netProfitINR": 17.3,
       "totalChargesINR": 0,
@@ -133,8 +133,8 @@
       "positionId": "P-0001-BUY",
       "direction": "BUY",
       "symbol": "CLUSDT",
-      "entryTime": "2026-10-12T12:25:46.707Z",
-      "exitTime": "2026-10-12T12:25:46.739Z",
+      "entryTime": "2026-10-12T12:28:14.636Z",
+      "exitTime": "2026-10-12T12:28:14.675Z",
       "entryPrice": 100,
       "exitPrice": 100.2,
       "targetExitPrice": 100.2,
@@ -160,7 +160,7 @@
       "positionId": "P-0001-SELL",
       "direction": "SELL",
       "symbol": "CLUSDT",
-      "entryTime": "2026-10-12T12:25:46.707Z",
+      "entryTime": "2026-10-12T12:28:14.636Z",
       "entryPrice": 100,
       "currentPrice": 100.2,
       "targetExitPrice": 99.8,
@@ -179,7 +179,7 @@
       "positionId": "P-0002-BUY",
       "direction": "BUY",
       "symbol": "CLUSDT",
-      "entryTime": "2026-10-12T12:25:46.739Z",
+      "entryTime": "2026-10-12T12:28:14.675Z",
       "entryPrice": 100.2,
       "currentPrice": 100.2,
       "targetExitPrice": 100.4,
@@ -198,7 +198,7 @@
       "positionId": "P-0002-SELL",
       "direction": "SELL",
       "symbol": "CLUSDT",
-      "entryTime": "2026-10-12T12:25:46.739Z",
+      "entryTime": "2026-10-12T12:28:14.675Z",
       "entryPrice": 100.2,
       "currentPrice": 100.2,
       "targetExitPrice": 99.9,
@@ -219,7 +219,7 @@
       "positionId": "P-0001-BUY",
       "direction": "BUY",
       "symbol": "CLUSDT",
-      "entryTime": "2026-10-12T12:25:46.707Z",
+      "entryTime": "2026-10-12T12:28:14.636Z",
       "entryPrice": 100,
       "currentPrice": 100.2,
       "targetExitPrice": 100.2,
@@ -232,7 +232,7 @@
       "status": "CLOSED",
       "apiStatus": "LIVE_ENGINE_PAIR (Mudrex API: REAL_ORDERS_DISABLED_PURE_PAPER_MODE)",
       "exitPrice": 100.2,
-      "exitTime": "2026-10-12T12:25:46.739Z",
+      "exitTime": "2026-10-12T12:28:14.675Z",
       "grossProfitUSD": 0.2,
       "netProfitINR": 17.3,
       "totalChargesINR": 0,
@@ -242,24 +242,24 @@
   ],
   "auditLogs": [
     {
-      "id": "LOG-1791807945870",
-      "timestamp": "2026-10-12T12:25:45.870Z",
+      "id": "LOG-1791808093794",
+      "timestamp": "2026-10-12T12:28:13.794Z",
       "event": "PAIR_FULLY_CLOSED",
       "details": {
         "pairId": "PAIR-0018"
       }
     },
     {
-      "id": "LOG-1791807945870",
-      "timestamp": "2026-10-12T12:25:45.870Z",
+      "id": "LOG-1791808093794",
+      "timestamp": "2026-10-12T12:28:13.794Z",
       "event": "POSITION_CLOSED",
       "details": {
         "pairId": "PAIR-0019",
         "positionId": "P-0019-SELL",
         "direction": "SELL",
         "symbol": "CLUSDT",
-        "entryTime": "2026-10-12T12:26:31.658Z",
-        "exitTime": "2026-10-12T12:25:45.860Z",
+        "entryTime": "2026-10-12T12:28:59.403Z",
+        "exitTime": "2026-10-12T12:28:13.785Z",
         "entryPrice": 91.9,
         "exitPrice": 91.51,
         "targetExitPrice": 91.7,
@@ -280,24 +280,24 @@
       }
     },
     {
-      "id": "LOG-1791807945870",
-      "timestamp": "2026-10-12T12:25:45.870Z",
+      "id": "LOG-1791808093794",
+      "timestamp": "2026-10-12T12:28:13.794Z",
       "event": "PAIR_FULLY_CLOSED",
       "details": {
         "pairId": "PAIR-0019"
       }
     },
     {
-      "id": "LOG-1791807945870",
-      "timestamp": "2026-10-12T12:25:45.870Z",
+      "id": "LOG-1791808093794",
+      "timestamp": "2026-10-12T12:28:13.794Z",
       "event": "POSITION_CLOSED",
       "details": {
         "pairId": "PAIR-0020",
         "positionId": "P-0020-SELL",
         "direction": "SELL",
         "symbol": "CLUSDT",
-        "entryTime": "2026-10-12T12:26:32.658Z",
-        "exitTime": "2026-10-12T12:25:45.860Z",
+        "entryTime": "2026-10-12T12:29:00.403Z",
+        "exitTime": "2026-10-12T12:28:13.785Z",
         "entryPrice": 92,
         "exitPrice": 91.51,
         "targetExitPrice": 91.8,
@@ -318,24 +318,24 @@
       }
     },
     {
-      "id": "LOG-1791807945870",
-      "timestamp": "2026-10-12T12:25:45.870Z",
+      "id": "LOG-1791808093794",
+      "timestamp": "2026-10-12T12:28:13.794Z",
       "event": "PAIR_FULLY_CLOSED",
       "details": {
         "pairId": "PAIR-0020"
       }
     },
     {
-      "id": "LOG-1791807945870",
-      "timestamp": "2026-10-12T12:25:45.870Z",
+      "id": "LOG-1791808093794",
+      "timestamp": "2026-10-12T12:28:13.794Z",
       "event": "POSITION_CLOSED",
       "details": {
         "pairId": "PAIR-0021",
         "positionId": "P-0021-SELL",
         "direction": "SELL",
         "symbol": "CLUSDT",
-        "entryTime": "2026-10-12T12:26:33.658Z",
-        "exitTime": "2026-10-12T12:25:45.860Z",
+        "entryTime": "2026-10-12T12:29:01.403Z",
+        "exitTime": "2026-10-12T12:28:13.785Z",
         "entryPrice": 92.1,
         "exitPrice": 91.51,
         "targetExitPrice": 91.9,
@@ -356,24 +356,24 @@
       }
     },
     {
-      "id": "LOG-1791807945870",
-      "timestamp": "2026-10-12T12:25:45.870Z",
+      "id": "LOG-1791808093794",
+      "timestamp": "2026-10-12T12:28:13.794Z",
       "event": "PAIR_FULLY_CLOSED",
       "details": {
         "pairId": "PAIR-0021"
       }
     },
     {
-      "id": "LOG-1791807945870",
-      "timestamp": "2026-10-12T12:25:45.870Z",
+      "id": "LOG-1791808093794",
+      "timestamp": "2026-10-12T12:28:13.794Z",
       "event": "POSITION_CLOSED",
       "details": {
         "pairId": "PAIR-0022",
         "positionId": "P-0022-SELL",
         "direction": "SELL",
         "symbol": "CLUSDT",
-        "entryTime": "2026-10-12T12:26:34.658Z",
-        "exitTime": "2026-10-12T12:25:45.860Z",
+        "entryTime": "2026-10-12T12:29:02.403Z",
+        "exitTime": "2026-10-12T12:28:13.785Z",
         "entryPrice": 92.2,
         "exitPrice": 91.51,
         "targetExitPrice": 92,
@@ -394,24 +394,24 @@
       }
     },
     {
-      "id": "LOG-1791807945870",
-      "timestamp": "2026-10-12T12:25:45.870Z",
+      "id": "LOG-1791808093794",
+      "timestamp": "2026-10-12T12:28:13.794Z",
       "event": "PAIR_FULLY_CLOSED",
       "details": {
         "pairId": "PAIR-0022"
       }
     },
     {
-      "id": "LOG-1791807945870",
-      "timestamp": "2026-10-12T12:25:45.870Z",
+      "id": "LOG-1791808093794",
+      "timestamp": "2026-10-12T12:28:13.794Z",
       "event": "POSITION_CLOSED",
       "details": {
         "pairId": "PAIR-0023",
         "positionId": "P-0023-SELL",
         "direction": "SELL",
         "symbol": "CLUSDT",
-        "entryTime": "2026-10-12T12:26:35.658Z",
-        "exitTime": "2026-10-12T12:25:45.860Z",
+        "entryTime": "2026-10-12T12:29:03.403Z",
+        "exitTime": "2026-10-12T12:28:13.785Z",
         "entryPrice": 92.3,
         "exitPrice": 91.51,
         "targetExitPrice": 92.1,
@@ -432,24 +432,24 @@
       }
     },
     {
-      "id": "LOG-1791807945870",
-      "timestamp": "2026-10-12T12:25:45.870Z",
+      "id": "LOG-1791808093794",
+      "timestamp": "2026-10-12T12:28:13.794Z",
       "event": "PAIR_FULLY_CLOSED",
       "details": {
         "pairId": "PAIR-0023"
       }
     },
     {
-      "id": "LOG-1791807945870",
-      "timestamp": "2026-10-12T12:25:45.870Z",
+      "id": "LOG-1791808093794",
+      "timestamp": "2026-10-12T12:28:13.794Z",
       "event": "POSITION_CLOSED",
       "details": {
         "pairId": "PAIR-0024",
         "positionId": "P-0024-SELL",
         "direction": "SELL",
         "symbol": "CLUSDT",
-        "entryTime": "2026-10-12T12:26:36.658Z",
-        "exitTime": "2026-10-12T12:25:45.860Z",
+        "entryTime": "2026-10-12T12:29:04.403Z",
+        "exitTime": "2026-10-12T12:28:13.785Z",
         "entryPrice": 92.4,
         "exitPrice": 91.51,
         "targetExitPrice": 92.2,
@@ -470,24 +470,24 @@
       }
     },
     {
-      "id": "LOG-1791807945870",
-      "timestamp": "2026-10-12T12:25:45.870Z",
+      "id": "LOG-1791808093794",
+      "timestamp": "2026-10-12T12:28:13.794Z",
       "event": "PAIR_FULLY_CLOSED",
       "details": {
         "pairId": "PAIR-0024"
       }
     },
     {
-      "id": "LOG-1791807945870",
-      "timestamp": "2026-10-12T12:25:45.870Z",
+      "id": "LOG-1791808093794",
+      "timestamp": "2026-10-12T12:28:13.794Z",
       "event": "POSITION_CLOSED",
       "details": {
         "pairId": "PAIR-0025",
         "positionId": "P-0025-SELL",
         "direction": "SELL",
         "symbol": "CLUSDT",
-        "entryTime": "2026-10-12T12:26:37.658Z",
-        "exitTime": "2026-10-12T12:25:45.860Z",
+        "entryTime": "2026-10-12T12:29:05.403Z",
+        "exitTime": "2026-10-12T12:28:13.785Z",
         "entryPrice": 92.5,
         "exitPrice": 91.51,
         "targetExitPrice": 92.3,
@@ -508,24 +508,24 @@
       }
     },
     {
-      "id": "LOG-1791807945870",
-      "timestamp": "2026-10-12T12:25:45.870Z",
+      "id": "LOG-1791808093794",
+      "timestamp": "2026-10-12T12:28:13.794Z",
       "event": "PAIR_FULLY_CLOSED",
       "details": {
         "pairId": "PAIR-0025"
       }
     },
     {
-      "id": "LOG-1791807945870",
-      "timestamp": "2026-10-12T12:25:45.870Z",
+      "id": "LOG-1791808093794",
+      "timestamp": "2026-10-12T12:28:13.794Z",
       "event": "POSITION_CLOSED",
       "details": {
         "pairId": "PAIR-0026",
         "positionId": "P-0026-SELL",
         "direction": "SELL",
         "symbol": "CLUSDT",
-        "entryTime": "2026-10-12T12:26:38.658Z",
-        "exitTime": "2026-10-12T12:25:45.860Z",
+        "entryTime": "2026-10-12T12:29:06.403Z",
+        "exitTime": "2026-10-12T12:28:13.785Z",
         "entryPrice": 92.6,
         "exitPrice": 91.51,
         "targetExitPrice": 92.4,
@@ -546,24 +546,24 @@
       }
     },
     {
-      "id": "LOG-1791807945870",
-      "timestamp": "2026-10-12T12:25:45.870Z",
+      "id": "LOG-1791808093794",
+      "timestamp": "2026-10-12T12:28:13.794Z",
       "event": "PAIR_FULLY_CLOSED",
       "details": {
         "pairId": "PAIR-0026"
       }
     },
     {
-      "id": "LOG-1791807945870",
-      "timestamp": "2026-10-12T12:25:45.870Z",
+      "id": "LOG-1791808093794",
+      "timestamp": "2026-10-12T12:28:13.794Z",
       "event": "POSITION_CLOSED",
       "details": {
         "pairId": "PAIR-0027",
         "positionId": "P-0027-SELL",
         "direction": "SELL",
         "symbol": "CLUSDT",
-        "entryTime": "2026-10-12T12:26:39.658Z",
-        "exitTime": "2026-10-12T12:25:45.860Z",
+        "entryTime": "2026-10-12T12:29:07.403Z",
+        "exitTime": "2026-10-12T12:28:13.785Z",
         "entryPrice": 92.7,
         "exitPrice": 91.51,
         "targetExitPrice": 92.5,
@@ -584,24 +584,24 @@
       }
     },
     {
-      "id": "LOG-1791807945870",
-      "timestamp": "2026-10-12T12:25:45.870Z",
+      "id": "LOG-1791808093794",
+      "timestamp": "2026-10-12T12:28:13.794Z",
       "event": "PAIR_FULLY_CLOSED",
       "details": {
         "pairId": "PAIR-0027"
       }
     },
     {
-      "id": "LOG-1791807945870",
-      "timestamp": "2026-10-12T12:25:45.870Z",
+      "id": "LOG-1791808093794",
+      "timestamp": "2026-10-12T12:28:13.794Z",
       "event": "POSITION_CLOSED",
       "details": {
         "pairId": "PAIR-0028",
         "positionId": "P-0028-SELL",
         "direction": "SELL",
         "symbol": "CLUSDT",
-        "entryTime": "2026-10-12T12:26:40.658Z",
-        "exitTime": "2026-10-12T12:25:45.860Z",
+        "entryTime": "2026-10-12T12:29:08.403Z",
+        "exitTime": "2026-10-12T12:28:13.785Z",
         "entryPrice": 92.8,
         "exitPrice": 91.51,
         "targetExitPrice": 92.6,
@@ -622,24 +622,32 @@
       }
     },
     {
-      "id": "LOG-1791807945870",
-      "timestamp": "2026-10-12T12:25:45.870Z",
+      "id": "LOG-1791808093794",
+      "timestamp": "2026-10-12T12:28:13.794Z",
+      "event": "PAIR_FULLY_CLOSED",
+      "details": {
+        "pairId": "PAIR-0020"
+      }
+    },
+    {
+      "id": "LOG-1791808093795",
+      "timestamp": "2026-10-12T12:28:13.795Z",
       "event": "PAIR_FULLY_CLOSED",
       "details": {
         "pairId": "PAIR-0028"
       }
     },
     {
-      "id": "LOG-1791807945870",
-      "timestamp": "2026-10-12T12:25:45.870Z",
+      "id": "LOG-1791808093795",
+      "timestamp": "2026-10-12T12:28:13.795Z",
       "event": "POSITION_CLOSED",
       "details": {
         "pairId": "PAIR-0029",
         "positionId": "P-0029-SELL",
         "direction": "SELL",
         "symbol": "CLUSDT",
-        "entryTime": "2026-10-12T12:26:41.658Z",
-        "exitTime": "2026-10-12T12:25:45.860Z",
+        "entryTime": "2026-10-12T12:29:09.403Z",
+        "exitTime": "2026-10-12T12:28:13.785Z",
         "entryPrice": 92.9,
         "exitPrice": 91.51,
         "targetExitPrice": 92.7,
@@ -660,24 +668,24 @@
       }
     },
     {
-      "id": "LOG-1791807945870",
-      "timestamp": "2026-10-12T12:25:45.870Z",
+      "id": "LOG-1791808093795",
+      "timestamp": "2026-10-12T12:28:13.795Z",
       "event": "PAIR_FULLY_CLOSED",
       "details": {
         "pairId": "PAIR-0029"
       }
     },
     {
-      "id": "LOG-1791807945870",
-      "timestamp": "2026-10-12T12:25:45.870Z",
+      "id": "LOG-1791808093795",
+      "timestamp": "2026-10-12T12:28:13.795Z",
       "event": "POSITION_CLOSED",
       "details": {
         "pairId": "PAIR-0030",
         "positionId": "P-0030-SELL",
         "direction": "SELL",
         "symbol": "CLUSDT",
-        "entryTime": "2026-10-12T12:26:42.658Z",
-        "exitTime": "2026-10-12T12:25:45.860Z",
+        "entryTime": "2026-10-12T12:29:10.403Z",
+        "exitTime": "2026-10-12T12:28:13.785Z",
         "entryPrice": 93,
         "exitPrice": 91.51,
         "targetExitPrice": 92.8,
@@ -698,24 +706,24 @@
       }
     },
     {
-      "id": "LOG-1791807945870",
-      "timestamp": "2026-10-12T12:25:45.870Z",
+      "id": "LOG-1791808093795",
+      "timestamp": "2026-10-12T12:28:13.795Z",
       "event": "PAIR_FULLY_CLOSED",
       "details": {
         "pairId": "PAIR-0030"
       }
     },
     {
-      "id": "LOG-1791807945870",
-      "timestamp": "2026-10-12T12:25:45.870Z",
+      "id": "LOG-1791808093795",
+      "timestamp": "2026-10-12T12:28:13.795Z",
       "event": "POSITION_CLOSED",
       "details": {
         "pairId": "PAIR-0031",
         "positionId": "P-0031-SELL",
         "direction": "SELL",
         "symbol": "CLUSDT",
-        "entryTime": "2026-10-12T12:26:43.658Z",
-        "exitTime": "2026-10-12T12:25:45.860Z",
+        "entryTime": "2026-10-12T12:29:11.403Z",
+        "exitTime": "2026-10-12T12:28:13.785Z",
         "entryPrice": 93.1,
         "exitPrice": 91.51,
         "targetExitPrice": 92.9,
@@ -736,24 +744,24 @@
       }
     },
     {
-      "id": "LOG-1791807945870",
-      "timestamp": "2026-10-12T12:25:45.870Z",
+      "id": "LOG-1791808093795",
+      "timestamp": "2026-10-12T12:28:13.795Z",
       "event": "PAIR_FULLY_CLOSED",
       "details": {
         "pairId": "PAIR-0031"
       }
     },
     {
-      "id": "LOG-1791807945870",
-      "timestamp": "2026-10-12T12:25:45.870Z",
+      "id": "LOG-1791808093795",
+      "timestamp": "2026-10-12T12:28:13.795Z",
       "event": "POSITION_CLOSED",
       "details": {
         "pairId": "PAIR-0032",
         "positionId": "P-0032-SELL",
         "direction": "SELL",
         "symbol": "CLUSDT",
-        "entryTime": "2026-10-12T12:26:44.658Z",
-        "exitTime": "2026-10-12T12:25:45.860Z",
+        "entryTime": "2026-10-12T12:29:12.403Z",
+        "exitTime": "2026-10-12T12:28:13.785Z",
         "entryPrice": 93.2,
         "exitPrice": 91.51,
         "targetExitPrice": 93,
@@ -774,24 +782,24 @@
       }
     },
     {
-      "id": "LOG-1791807945870",
-      "timestamp": "2026-10-12T12:25:45.870Z",
+      "id": "LOG-1791808093795",
+      "timestamp": "2026-10-12T12:28:13.795Z",
       "event": "PAIR_FULLY_CLOSED",
       "details": {
         "pairId": "PAIR-0032"
       }
     },
     {
-      "id": "LOG-1791807945870",
-      "timestamp": "2026-10-12T12:25:45.870Z",
+      "id": "LOG-1791808093795",
+      "timestamp": "2026-10-12T12:28:13.795Z",
       "event": "POSITION_CLOSED",
       "details": {
         "pairId": "PAIR-0033",
         "positionId": "P-0033-SELL",
         "direction": "SELL",
         "symbol": "CLUSDT",
-        "entryTime": "2026-10-12T12:26:45.658Z",
-        "exitTime": "2026-10-12T12:25:45.860Z",
+        "entryTime": "2026-10-12T12:29:13.403Z",
+        "exitTime": "2026-10-12T12:28:13.785Z",
         "entryPrice": 93.3,
         "exitPrice": 91.51,
         "targetExitPrice": 93.1,
@@ -812,24 +820,24 @@
       }
     },
     {
-      "id": "LOG-1791807945870",
-      "timestamp": "2026-10-12T12:25:45.870Z",
+      "id": "LOG-1791808093795",
+      "timestamp": "2026-10-12T12:28:13.795Z",
       "event": "PAIR_FULLY_CLOSED",
       "details": {
         "pairId": "PAIR-0033"
       }
     },
     {
-      "id": "LOG-1791807945870",
-      "timestamp": "2026-10-12T12:25:45.870Z",
+      "id": "LOG-1791808093795",
+      "timestamp": "2026-10-12T12:28:13.795Z",
       "event": "POSITION_CLOSED",
       "details": {
         "pairId": "PAIR-0034",
         "positionId": "P-0034-SELL",
         "direction": "SELL",
         "symbol": "CLUSDT",
-        "entryTime": "2026-10-12T12:26:46.658Z",
-        "exitTime": "2026-10-12T12:25:45.860Z",
+        "entryTime": "2026-10-12T12:29:14.403Z",
+        "exitTime": "2026-10-12T12:28:13.785Z",
         "entryPrice": 93.4,
         "exitPrice": 91.51,
         "targetExitPrice": 93.2,
@@ -850,24 +858,24 @@
       }
     },
     {
-      "id": "LOG-1791807945870",
-      "timestamp": "2026-10-12T12:25:45.870Z",
+      "id": "LOG-1791808093795",
+      "timestamp": "2026-10-12T12:28:13.795Z",
       "event": "PAIR_FULLY_CLOSED",
       "details": {
         "pairId": "PAIR-0034"
       }
     },
     {
-      "id": "LOG-1791807945870",
-      "timestamp": "2026-10-12T12:25:45.870Z",
+      "id": "LOG-1791808093795",
+      "timestamp": "2026-10-12T12:28:13.795Z",
       "event": "POSITION_CLOSED",
       "details": {
         "pairId": "PAIR-0035",
         "positionId": "P-0035-SELL",
         "direction": "SELL",
         "symbol": "CLUSDT",
-        "entryTime": "2026-10-12T12:26:47.658Z",
-        "exitTime": "2026-10-12T12:25:45.860Z",
+        "entryTime": "2026-10-12T12:29:15.403Z",
+        "exitTime": "2026-10-12T12:28:13.785Z",
         "entryPrice": 93.5,
         "exitPrice": 91.51,
         "targetExitPrice": 93.3,
@@ -888,24 +896,24 @@
       }
     },
     {
-      "id": "LOG-1791807945870",
-      "timestamp": "2026-10-12T12:25:45.870Z",
+      "id": "LOG-1791808093795",
+      "timestamp": "2026-10-12T12:28:13.795Z",
       "event": "PAIR_FULLY_CLOSED",
       "details": {
         "pairId": "PAIR-0035"
       }
     },
     {
-      "id": "LOG-1791807945870",
-      "timestamp": "2026-10-12T12:25:45.870Z",
+      "id": "LOG-1791808093795",
+      "timestamp": "2026-10-12T12:28:13.795Z",
       "event": "POSITION_CLOSED",
       "details": {
         "pairId": "PAIR-0036",
         "positionId": "P-0036-SELL",
         "direction": "SELL",
         "symbol": "CLUSDT",
-        "entryTime": "2026-10-12T12:26:48.658Z",
-        "exitTime": "2026-10-12T12:25:45.860Z",
+        "entryTime": "2026-10-12T12:29:16.403Z",
+        "exitTime": "2026-10-12T12:28:13.785Z",
         "entryPrice": 93.6,
         "exitPrice": 91.51,
         "targetExitPrice": 93.4,
@@ -926,24 +934,24 @@
       }
     },
     {
-      "id": "LOG-1791807945870",
-      "timestamp": "2026-10-12T12:25:45.870Z",
+      "id": "LOG-1791808093795",
+      "timestamp": "2026-10-12T12:28:13.795Z",
       "event": "PAIR_FULLY_CLOSED",
       "details": {
         "pairId": "PAIR-0036"
       }
     },
     {
-      "id": "LOG-1791807945870",
-      "timestamp": "2026-10-12T12:25:45.870Z",
+      "id": "LOG-1791808093795",
+      "timestamp": "2026-10-12T12:28:13.795Z",
       "event": "POSITION_CLOSED",
       "details": {
         "pairId": "PAIR-0037",
         "positionId": "P-0037-SELL",
         "direction": "SELL",
         "symbol": "CLUSDT",
-        "entryTime": "2026-10-12T12:26:49.658Z",
-        "exitTime": "2026-10-12T12:25:45.860Z",
+        "entryTime": "2026-10-12T12:29:17.403Z",
+        "exitTime": "2026-10-12T12:28:13.785Z",
         "entryPrice": 93.7,
         "exitPrice": 91.51,
         "targetExitPrice": 93.5,
@@ -964,24 +972,24 @@
       }
     },
     {
-      "id": "LOG-1791807945870",
-      "timestamp": "2026-10-12T12:25:45.870Z",
+      "id": "LOG-1791808093795",
+      "timestamp": "2026-10-12T12:28:13.795Z",
       "event": "PAIR_FULLY_CLOSED",
       "details": {
         "pairId": "PAIR-0037"
       }
     },
     {
-      "id": "LOG-1791807945870",
-      "timestamp": "2026-10-12T12:25:45.870Z",
+      "id": "LOG-1791808093795",
+      "timestamp": "2026-10-12T12:28:13.795Z",
       "event": "POSITION_CLOSED",
       "details": {
         "pairId": "PAIR-0038",
         "positionId": "P-0038-SELL",
         "direction": "SELL",
         "symbol": "CLUSDT",
-        "entryTime": "2026-10-12T12:26:50.658Z",
-        "exitTime": "2026-10-12T12:25:45.860Z",
+        "entryTime": "2026-10-12T12:29:18.403Z",
+        "exitTime": "2026-10-12T12:28:13.785Z",
         "entryPrice": 93.8,
         "exitPrice": 91.51,
         "targetExitPrice": 93.6,
@@ -1002,24 +1010,24 @@
       }
     },
     {
-      "id": "LOG-1791807945870",
-      "timestamp": "2026-10-12T12:25:45.870Z",
+      "id": "LOG-1791808093795",
+      "timestamp": "2026-10-12T12:28:13.795Z",
       "event": "PAIR_FULLY_CLOSED",
       "details": {
         "pairId": "PAIR-0038"
       }
     },
     {
-      "id": "LOG-1791807945870",
-      "timestamp": "2026-10-12T12:25:45.870Z",
+      "id": "LOG-1791808093795",
+      "timestamp": "2026-10-12T12:28:13.795Z",
       "event": "POSITION_CLOSED",
       "details": {
         "pairId": "PAIR-0039",
         "positionId": "P-0039-SELL",
         "direction": "SELL",
         "symbol": "CLUSDT",
-        "entryTime": "2026-10-12T12:26:51.658Z",
-        "exitTime": "2026-10-12T12:25:45.860Z",
+        "entryTime": "2026-10-12T12:29:19.403Z",
+        "exitTime": "2026-10-12T12:28:13.785Z",
         "entryPrice": 93.9,
         "exitPrice": 91.51,
         "targetExitPrice": 93.7,
@@ -1040,16 +1048,16 @@
       }
     },
     {
-      "id": "LOG-1791807945870",
-      "timestamp": "2026-10-12T12:25:45.870Z",
+      "id": "LOG-1791808093795",
+      "timestamp": "2026-10-12T12:28:13.795Z",
       "event": "POSITION_CLOSED",
       "details": {
         "pairId": "PAIR-0040",
         "positionId": "P-0040-SELL",
         "direction": "SELL",
         "symbol": "CLUSDT",
-        "entryTime": "2026-10-12T12:26:52.658Z",
-        "exitTime": "2026-10-12T12:25:45.860Z",
+        "entryTime": "2026-10-12T12:29:20.403Z",
+        "exitTime": "2026-10-12T12:28:13.785Z",
         "entryPrice": 94,
         "exitPrice": 91.51,
         "targetExitPrice": 93.8,
@@ -1070,16 +1078,16 @@
       }
     },
     {
-      "id": "LOG-1791807945870",
-      "timestamp": "2026-10-12T12:25:45.870Z",
+      "id": "LOG-1791808093795",
+      "timestamp": "2026-10-12T12:28:13.795Z",
       "event": "PAIR_FULLY_CLOSED",
       "details": {
-        "pairId": "PAIR-0020"
+        "pairId": "PAIR-0028"
       }
     },
     {
-      "id": "LOG-1791807945879",
-      "timestamp": "2026-10-12T12:25:45.879Z",
+      "id": "LOG-1791808093807",
+      "timestamp": "2026-10-12T12:28:13.807Z",
       "event": "PAIR_CREATED",
       "details": {
         "reason": "NEW_UNIQUE_RATE",
@@ -1092,8 +1100,8 @@
       }
     },
     {
-      "id": "LOG-1791807945879",
-      "timestamp": "2026-10-12T12:25:45.879Z",
+      "id": "LOG-1791808093807",
+      "timestamp": "2026-10-12T12:28:13.807Z",
       "event": "PAIR_CREATED",
       "details": {
         "reason": "NEW_UNIQUE_RATE",
@@ -1106,16 +1114,16 @@
       }
     },
     {
-      "id": "LOG-1791807945913",
-      "timestamp": "2026-10-12T12:25:45.913Z",
+      "id": "LOG-1791808093849",
+      "timestamp": "2026-10-12T12:28:13.849Z",
       "event": "POSITION_CLOSED",
       "details": {
         "pairId": "PAIR-0041",
         "positionId": "P-0041-BUY",
         "direction": "BUY",
         "symbol": "CLUSDT",
-        "entryTime": "2026-10-12T12:25:45.860Z",
-        "exitTime": "2026-10-12T12:25:45.889Z",
+        "entryTime": "2026-10-12T12:28:13.785Z",
+        "exitTime": "2026-10-12T12:28:13.818Z",
         "entryPrice": 91.51,
         "exitPrice": 91.71,
         "targetExitPrice": 91.71,
@@ -1136,16 +1144,16 @@
       }
     },
     {
-      "id": "LOG-1791807945913",
-      "timestamp": "2026-10-12T12:25:45.913Z",
+      "id": "LOG-1791808093849",
+      "timestamp": "2026-10-12T12:28:13.849Z",
       "event": "POSITION_CLOSED",
       "details": {
         "pairId": "PAIR-0041",
         "positionId": "P-0041-BUY",
         "direction": "BUY",
         "symbol": "CLUSDT",
-        "entryTime": "2026-10-12T12:25:45.860Z",
-        "exitTime": "2026-10-12T12:25:45.889Z",
+        "entryTime": "2026-10-12T12:28:13.785Z",
+        "exitTime": "2026-10-12T12:28:13.818Z",
         "entryPrice": 91.51,
         "exitPrice": 91.71,
         "targetExitPrice": 91.71,
@@ -1166,8 +1174,8 @@
       }
     },
     {
-      "id": "LOG-1791807945923",
-      "timestamp": "2026-10-12T12:25:45.923Z",
+      "id": "LOG-1791808093859",
+      "timestamp": "2026-10-12T12:28:13.859Z",
       "event": "PAIR_CREATED",
       "details": {
         "reason": "NEW_UNIQUE_RATE",
@@ -1180,8 +1188,8 @@
       }
     },
     {
-      "id": "LOG-1791807945923",
-      "timestamp": "2026-10-12T12:25:45.923Z",
+      "id": "LOG-1791808093859",
+      "timestamp": "2026-10-12T12:28:13.859Z",
       "event": "PAIR_CREATED",
       "details": {
         "reason": "NEW_UNIQUE_RATE",
@@ -1194,16 +1202,16 @@
       }
     },
     {
-      "id": "LOG-1791807945944",
-      "timestamp": "2026-10-12T12:25:45.944Z",
+      "id": "LOG-1791808093881",
+      "timestamp": "2026-10-12T12:28:13.881Z",
       "event": "POSITION_CLOSED",
       "details": {
         "pairId": "PAIR-0042",
         "positionId": "P-0042-SELL",
         "direction": "SELL",
         "symbol": "CLUSDT",
-        "entryTime": "2026-10-12T12:25:45.889Z",
-        "exitTime": "2026-10-12T12:25:45.935Z",
+        "entryTime": "2026-10-12T12:28:13.818Z",
+        "exitTime": "2026-10-12T12:28:13.872Z",
         "entryPrice": 91.71,
         "exitPrice": 91.51,
         "targetExitPrice": 91.51,
@@ -1224,16 +1232,16 @@
       }
     },
     {
-      "id": "LOG-1791807945944",
-      "timestamp": "2026-10-12T12:25:45.944Z",
+      "id": "LOG-1791808093881",
+      "timestamp": "2026-10-12T12:28:13.881Z",
       "event": "POSITION_CLOSED",
       "details": {
         "pairId": "PAIR-0042",
         "positionId": "P-0042-SELL",
         "direction": "SELL",
         "symbol": "CLUSDT",
-        "entryTime": "2026-10-12T12:25:45.889Z",
-        "exitTime": "2026-10-12T12:25:45.935Z",
+        "entryTime": "2026-10-12T12:28:13.818Z",
+        "exitTime": "2026-10-12T12:28:13.872Z",
         "entryPrice": 91.71,
         "exitPrice": 91.51,
         "targetExitPrice": 91.51,
@@ -1254,12 +1262,12 @@
       }
     },
     {
-      "id": "LOG-1791807945957",
-      "timestamp": "2026-10-12T12:25:45.957Z",
+      "id": "LOG-1791808093890",
+      "timestamp": "2026-10-12T12:28:13.890Z",
       "event": "LEG_REOPENED",
       "details": {
         "pairId": "PAIR-0041",
-        "positionId": "P-0041-BUY-5957",
+        "positionId": "P-0041-BUY-3890",
         "direction": "BUY",
         "symbol": "CLUSDT",
         "entryPrice": 91.51,
@@ -1267,12 +1275,12 @@
       }
     },
     {
-      "id": "LOG-1791807945957",
-      "timestamp": "2026-10-12T12:25:45.957Z",
+      "id": "LOG-1791808093890",
+      "timestamp": "2026-10-12T12:28:13.890Z",
       "event": "LEG_REOPENED",
       "details": {
         "pairId": "PAIR-0041",
-        "positionId": "P-0041-BUY-5957",
+        "positionId": "P-0041-BUY-3890",
         "direction": "BUY",
         "symbol": "CLUSDT",
         "entryPrice": 91.51,
@@ -1280,28 +1288,28 @@
       }
     },
     {
-      "id": "LOG-1791807945968",
-      "timestamp": "2026-10-12T12:25:45.968Z",
+      "id": "LOG-1791808093902",
+      "timestamp": "2026-10-12T12:28:13.902Z",
       "event": "ENTRY_SKIPPED",
       "details": "ENTRY SKIPPED — FULL ACTIVE PAIR ALREADY EXISTS AT RATE ($91.51)"
     },
     {
-      "id": "LOG-1791807945968",
-      "timestamp": "2026-10-12T12:25:45.968Z",
+      "id": "LOG-1791808093902",
+      "timestamp": "2026-10-12T12:28:13.902Z",
       "event": "ENTRY_SKIPPED",
       "details": "ENTRY SKIPPED — FULL ACTIVE PAIR ALREADY EXISTS AT RATE ($91.51)"
     },
     {
-      "id": "LOG-1791807946004",
-      "timestamp": "2026-10-12T12:25:46.004Z",
+      "id": "LOG-1791808093938",
+      "timestamp": "2026-10-12T12:28:13.938Z",
       "event": "POSITION_CLOSED",
       "details": {
         "pairId": "PAIR-0016",
         "positionId": "P-0016-SELL",
         "direction": "SELL",
         "symbol": "CLUSDT",
-        "entryTime": "2026-10-12T12:26:28.658Z",
-        "exitTime": "2026-10-12T12:25:45.968Z",
+        "entryTime": "2026-10-12T12:28:56.403Z",
+        "exitTime": "2026-10-12T12:28:13.902Z",
         "entryPrice": 91.6,
         "exitPrice": 91.31,
         "targetExitPrice": 91.4,
@@ -1322,24 +1330,24 @@
       }
     },
     {
-      "id": "LOG-1791807946004",
-      "timestamp": "2026-10-12T12:25:46.004Z",
+      "id": "LOG-1791808093938",
+      "timestamp": "2026-10-12T12:28:13.938Z",
       "event": "PAIR_FULLY_CLOSED",
       "details": {
         "pairId": "PAIR-0016"
       }
     },
     {
-      "id": "LOG-1791807946004",
-      "timestamp": "2026-10-12T12:25:46.004Z",
+      "id": "LOG-1791808093938",
+      "timestamp": "2026-10-12T12:28:13.938Z",
       "event": "POSITION_CLOSED",
       "details": {
         "pairId": "PAIR-0017",
         "positionId": "P-0017-SELL",
         "direction": "SELL",
         "symbol": "CLUSDT",
-        "entryTime": "2026-10-12T12:26:29.658Z",
-        "exitTime": "2026-10-12T12:25:45.968Z",
+        "entryTime": "2026-10-12T12:28:57.403Z",
+        "exitTime": "2026-10-12T12:28:13.902Z",
         "entryPrice": 91.7,
         "exitPrice": 91.31,
         "targetExitPrice": 91.5,
@@ -1360,24 +1368,24 @@
       }
     },
     {
-      "id": "LOG-1791807946004",
-      "timestamp": "2026-10-12T12:25:46.004Z",
+      "id": "LOG-1791808093938",
+      "timestamp": "2026-10-12T12:28:13.938Z",
       "event": "PAIR_FULLY_CLOSED",
       "details": {
         "pairId": "PAIR-0017"
       }
     },
     {
-      "id": "LOG-1791807946004",
-      "timestamp": "2026-10-12T12:25:46.004Z",
+      "id": "LOG-1791808093938",
+      "timestamp": "2026-10-12T12:28:13.938Z",
       "event": "POSITION_CLOSED",
       "details": {
         "pairId": "PAIR-0041",
         "positionId": "P-0041-SELL",
         "direction": "SELL",
         "symbol": "CLUSDT",
-        "entryTime": "2026-10-12T12:25:45.860Z",
-        "exitTime": "2026-10-12T12:25:45.968Z",
+        "entryTime": "2026-10-12T12:28:13.785Z",
+        "exitTime": "2026-10-12T12:28:13.902Z",
         "entryPrice": 91.51,
         "exitPrice": 91.31,
         "targetExitPrice": 91.31,
@@ -1398,16 +1406,16 @@
       }
     },
     {
-      "id": "LOG-1791807946004",
-      "timestamp": "2026-10-12T12:25:46.004Z",
+      "id": "LOG-1791808093938",
+      "timestamp": "2026-10-12T12:28:13.938Z",
       "event": "POSITION_CLOSED",
       "details": {
         "pairId": "PAIR-0016",
         "positionId": "P-0016-SELL",
         "direction": "SELL",
         "symbol": "CLUSDT",
-        "entryTime": "2026-10-12T12:26:28.658Z",
-        "exitTime": "2026-10-12T12:25:45.968Z",
+        "entryTime": "2026-10-12T12:28:56.403Z",
+        "exitTime": "2026-10-12T12:28:13.902Z",
         "entryPrice": 91.6,
         "exitPrice": 91.31,
         "targetExitPrice": 91.4,
@@ -1428,8 +1436,8 @@
       }
     },
     {
-      "id": "LOG-1791807946012",
-      "timestamp": "2026-10-12T12:25:46.012Z",
+      "id": "LOG-1791808093947",
+      "timestamp": "2026-10-12T12:28:13.947Z",
       "event": "PAIR_CREATED",
       "details": {
         "reason": "NEW_UNIQUE_RATE",
@@ -1442,8 +1450,8 @@
       }
     },
     {
-      "id": "LOG-1791807946012",
-      "timestamp": "2026-10-12T12:25:46.012Z",
+      "id": "LOG-1791808093947",
+      "timestamp": "2026-10-12T12:28:13.947Z",
       "event": "PAIR_CREATED",
       "details": {
         "reason": "NEW_UNIQUE_RATE",
@@ -1456,16 +1464,16 @@
       }
     },
     {
-      "id": "LOG-1791807946042",
-      "timestamp": "2026-10-12T12:25:46.042Z",
+      "id": "LOG-1791808093980",
+      "timestamp": "2026-10-12T12:28:13.980Z",
       "event": "POSITION_CLOSED",
       "details": {
         "pairId": "PAIR-0043",
         "positionId": "P-0043-BUY",
         "direction": "BUY",
         "symbol": "CLUSDT",
-        "entryTime": "2026-10-12T12:25:45.968Z",
-        "exitTime": "2026-10-12T12:25:46.023Z",
+        "entryTime": "2026-10-12T12:28:13.902Z",
+        "exitTime": "2026-10-12T12:28:13.960Z",
         "entryPrice": 91.31,
         "exitPrice": 91.51,
         "targetExitPrice": 91.51,
@@ -1486,16 +1494,16 @@
       }
     },
     {
-      "id": "LOG-1791807946042",
-      "timestamp": "2026-10-12T12:25:46.042Z",
+      "id": "LOG-1791808093980",
+      "timestamp": "2026-10-12T12:28:13.980Z",
       "event": "POSITION_CLOSED",
       "details": {
         "pairId": "PAIR-0043",
         "positionId": "P-0043-BUY",
         "direction": "BUY",
         "symbol": "CLUSDT",
-        "entryTime": "2026-10-12T12:25:45.968Z",
-        "exitTime": "2026-10-12T12:25:46.023Z",
+        "entryTime": "2026-10-12T12:28:13.902Z",
+        "exitTime": "2026-10-12T12:28:13.960Z",
         "entryPrice": 91.31,
         "exitPrice": 91.51,
         "targetExitPrice": 91.51,
@@ -1516,12 +1524,12 @@
       }
     },
     {
-      "id": "LOG-1791807946053",
-      "timestamp": "2026-10-12T12:25:46.053Z",
+      "id": "LOG-1791808093990",
+      "timestamp": "2026-10-12T12:28:13.990Z",
       "event": "LEG_REOPENED",
       "details": {
         "pairId": "PAIR-0041",
-        "positionId": "P-0041-SELL-6053",
+        "positionId": "P-0041-SELL-3990",
         "direction": "SELL",
         "symbol": "CLUSDT",
         "entryPrice": 91.51,
@@ -1529,12 +1537,12 @@
       }
     },
     {
-      "id": "LOG-1791807946053",
-      "timestamp": "2026-10-12T12:25:46.053Z",
+      "id": "LOG-1791808093990",
+      "timestamp": "2026-10-12T12:28:13.990Z",
       "event": "LEG_REOPENED",
       "details": {
         "pairId": "PAIR-0041",
-        "positionId": "P-0041-SELL-6053",
+        "positionId": "P-0041-SELL-3990",
         "direction": "SELL",
         "symbol": "CLUSDT",
         "entryPrice": 91.51,
@@ -1542,16 +1550,16 @@
       }
     },
     {
-      "id": "LOG-1791807946194",
-      "timestamp": "2026-10-12T12:25:46.194Z",
+      "id": "LOG-1791808094112",
+      "timestamp": "2026-10-12T12:28:14.112Z",
       "event": "POSITION_CLOSED",
       "details": {
         "pairId": "PAIR-0011",
         "positionId": "P-0011-SELL",
         "direction": "SELL",
         "symbol": "CLUSDT",
-        "entryTime": "2026-10-12T12:26:23.658Z",
-        "exitTime": "2026-10-12T12:25:46.178Z",
+        "entryTime": "2026-10-12T12:28:51.403Z",
+        "exitTime": "2026-10-12T12:28:14.102Z",
         "entryPrice": 91.1,
         "exitPrice": 90.88,
         "targetExitPrice": 90.9,
@@ -1572,24 +1580,24 @@
       }
     },
     {
-      "id": "LOG-1791807946194",
-      "timestamp": "2026-10-12T12:25:46.194Z",
+      "id": "LOG-1791808094112",
+      "timestamp": "2026-10-12T12:28:14.112Z",
       "event": "PAIR_FULLY_CLOSED",
       "details": {
         "pairId": "PAIR-0011"
       }
     },
     {
-      "id": "LOG-1791807946194",
-      "timestamp": "2026-10-12T12:25:46.194Z",
+      "id": "LOG-1791808094112",
+      "timestamp": "2026-10-12T12:28:14.112Z",
       "event": "POSITION_CLOSED",
       "details": {
         "pairId": "PAIR-0012",
         "positionId": "P-0012-SELL",
         "direction": "SELL",
         "symbol": "CLUSDT",
-        "entryTime": "2026-10-12T12:26:24.658Z",
-        "exitTime": "2026-10-12T12:25:46.178Z",
+        "entryTime": "2026-10-12T12:28:52.403Z",
+        "exitTime": "2026-10-12T12:28:14.102Z",
         "entryPrice": 91.2,
         "exitPrice": 90.88,
         "targetExitPrice": 91,
@@ -1610,24 +1618,24 @@
       }
     },
     {
-      "id": "LOG-1791807946194",
-      "timestamp": "2026-10-12T12:25:46.194Z",
+      "id": "LOG-1791808094112",
+      "timestamp": "2026-10-12T12:28:14.112Z",
       "event": "PAIR_FULLY_CLOSED",
       "details": {
         "pairId": "PAIR-0012"
       }
     },
     {
-      "id": "LOG-1791807946194",
-      "timestamp": "2026-10-12T12:25:46.194Z",
+      "id": "LOG-1791808094112",
+      "timestamp": "2026-10-12T12:28:14.112Z",
       "event": "POSITION_CLOSED",
       "details": {
         "pairId": "PAIR-0013",
         "positionId": "P-0013-SELL",
         "direction": "SELL",
         "symbol": "CLUSDT",
-        "entryTime": "2026-10-12T12:26:25.658Z",
-        "exitTime": "2026-10-12T12:25:46.178Z",
+        "entryTime": "2026-10-12T12:28:53.403Z",
+        "exitTime": "2026-10-12T12:28:14.102Z",
         "entryPrice": 91.3,
         "exitPrice": 90.88,
         "targetExitPrice": 91.1,
@@ -1648,24 +1656,24 @@
       }
     },
     {
-      "id": "LOG-1791807946194",
-      "timestamp": "2026-10-12T12:25:46.194Z",
+      "id": "LOG-1791808094112",
+      "timestamp": "2026-10-12T12:28:14.112Z",
       "event": "PAIR_FULLY_CLOSED",
       "details": {
         "pairId": "PAIR-0013"
       }
     },
     {
-      "id": "LOG-1791807946194",
-      "timestamp": "2026-10-12T12:25:46.194Z",
+      "id": "LOG-1791808094112",
+      "timestamp": "2026-10-12T12:28:14.112Z",
       "event": "POSITION_CLOSED",
       "details": {
         "pairId": "PAIR-0014",
         "positionId": "P-0014-SELL",
         "direction": "SELL",
         "symbol": "CLUSDT",
-        "entryTime": "2026-10-12T12:26:26.658Z",
-        "exitTime": "2026-10-12T12:25:46.178Z",
+        "entryTime": "2026-10-12T12:28:54.403Z",
+        "exitTime": "2026-10-12T12:28:14.102Z",
         "entryPrice": 91.4,
         "exitPrice": 90.88,
         "targetExitPrice": 91.2,
@@ -1686,24 +1694,24 @@
       }
     },
     {
-      "id": "LOG-1791807946194",
-      "timestamp": "2026-10-12T12:25:46.194Z",
+      "id": "LOG-1791808094112",
+      "timestamp": "2026-10-12T12:28:14.112Z",
       "event": "PAIR_FULLY_CLOSED",
       "details": {
         "pairId": "PAIR-0014"
       }
     },
     {
-      "id": "LOG-1791807946194",
-      "timestamp": "2026-10-12T12:25:46.194Z",
+      "id": "LOG-1791808094112",
+      "timestamp": "2026-10-12T12:28:14.112Z",
       "event": "POSITION_CLOSED",
       "details": {
         "pairId": "PAIR-0015",
         "positionId": "P-0015-SELL",
         "direction": "SELL",
         "symbol": "CLUSDT",
-        "entryTime": "2026-10-12T12:26:27.658Z",
-        "exitTime": "2026-10-12T12:25:46.178Z",
+        "entryTime": "2026-10-12T12:28:55.403Z",
+        "exitTime": "2026-10-12T12:28:14.102Z",
         "entryPrice": 91.5,
         "exitPrice": 90.88,
         "targetExitPrice": 91.3,
@@ -1724,24 +1732,24 @@
       }
     },
     {
-      "id": "LOG-1791807946194",
-      "timestamp": "2026-10-12T12:25:46.194Z",
+      "id": "LOG-1791808094112",
+      "timestamp": "2026-10-12T12:28:14.112Z",
       "event": "PAIR_FULLY_CLOSED",
       "details": {
         "pairId": "PAIR-0015"
       }
     },
     {
-      "id": "LOG-1791807946194",
-      "timestamp": "2026-10-12T12:25:46.194Z",
+      "id": "LOG-1791808094112",
+      "timestamp": "2026-10-12T12:28:14.112Z",
       "event": "POSITION_CLOSED",
       "details": {
         "pairId": "PAIR-0041",
-        "positionId": "P-0041-SELL-6053",
+        "positionId": "P-0041-SELL-3990",
         "direction": "SELL",
         "symbol": "CLUSDT",
-        "entryTime": "2026-10-12T12:25:46.023Z",
-        "exitTime": "2026-10-12T12:25:46.178Z",
+        "entryTime": "2026-10-12T12:28:13.960Z",
+        "exitTime": "2026-10-12T12:28:14.102Z",
         "entryPrice": 91.51,
         "exitPrice": 90.88,
         "targetExitPrice": 91.31,
@@ -1762,16 +1770,16 @@
       }
     },
     {
-      "id": "LOG-1791807946194",
-      "timestamp": "2026-10-12T12:25:46.194Z",
+      "id": "LOG-1791808094112",
+      "timestamp": "2026-10-12T12:28:14.112Z",
       "event": "POSITION_CLOSED",
       "details": {
         "pairId": "PAIR-0043",
         "positionId": "P-0043-SELL",
         "direction": "SELL",
         "symbol": "CLUSDT",
-        "entryTime": "2026-10-12T12:25:45.968Z",
-        "exitTime": "2026-10-12T12:25:46.178Z",
+        "entryTime": "2026-10-12T12:28:13.902Z",
+        "exitTime": "2026-10-12T12:28:14.102Z",
         "entryPrice": 91.31,
         "exitPrice": 90.88,
         "targetExitPrice": 91.11,
@@ -1792,24 +1800,24 @@
       }
     },
     {
-      "id": "LOG-1791807946194",
-      "timestamp": "2026-10-12T12:25:46.194Z",
+      "id": "LOG-1791808094112",
+      "timestamp": "2026-10-12T12:28:14.112Z",
       "event": "PAIR_FULLY_CLOSED",
       "details": {
         "pairId": "PAIR-0043"
       }
     },
     {
-      "id": "LOG-1791807946194",
-      "timestamp": "2026-10-12T12:25:46.194Z",
+      "id": "LOG-1791808094112",
+      "timestamp": "2026-10-12T12:28:14.112Z",
       "event": "POSITION_CLOSED",
       "details": {
         "pairId": "PAIR-0011",
         "positionId": "P-0011-SELL",
         "direction": "SELL",
         "symbol": "CLUSDT",
-        "entryTime": "2026-10-12T12:26:23.658Z",
-        "exitTime": "2026-10-12T12:25:46.178Z",
+        "entryTime": "2026-10-12T12:28:51.403Z",
+        "exitTime": "2026-10-12T12:28:14.102Z",
         "entryPrice": 91.1,
         "exitPrice": 90.88,
         "targetExitPrice": 90.9,
@@ -1830,8 +1838,8 @@
       }
     },
     {
-      "id": "LOG-1791807946208",
-      "timestamp": "2026-10-12T12:25:46.208Z",
+      "id": "LOG-1791808094125",
+      "timestamp": "2026-10-12T12:28:14.125Z",
       "event": "PAIR_CREATED",
       "details": {
         "reason": "NEW_UNIQUE_RATE",
@@ -1844,8 +1852,8 @@
       }
     },
     {
-      "id": "LOG-1791807946208",
-      "timestamp": "2026-10-12T12:25:46.208Z",
+      "id": "LOG-1791808094125",
+      "timestamp": "2026-10-12T12:28:14.125Z",
       "event": "PAIR_CREATED",
       "details": {
         "reason": "NEW_UNIQUE_RATE",
@@ -1858,16 +1866,16 @@
       }
     },
     {
-      "id": "LOG-1791807946259",
-      "timestamp": "2026-10-12T12:25:46.259Z",
+      "id": "LOG-1791808094173",
+      "timestamp": "2026-10-12T12:28:14.173Z",
       "event": "POSITION_CLOSED",
       "details": {
         "pairId": "PAIR-0044",
         "positionId": "P-0044-BUY",
         "direction": "BUY",
         "symbol": "CLUSDT",
-        "entryTime": "2026-10-12T12:25:46.178Z",
-        "exitTime": "2026-10-12T12:25:46.223Z",
+        "entryTime": "2026-10-12T12:28:14.102Z",
+        "exitTime": "2026-10-12T12:28:14.140Z",
         "entryPrice": 90.88,
         "exitPrice": 91.08,
         "targetExitPrice": 91.08,
@@ -1888,16 +1896,16 @@
       }
     },
     {
-      "id": "LOG-1791807946259",
-      "timestamp": "2026-10-12T12:25:46.259Z",
+      "id": "LOG-1791808094173",
+      "timestamp": "2026-10-12T12:28:14.173Z",
       "event": "POSITION_CLOSED",
       "details": {
         "pairId": "PAIR-0044",
         "positionId": "P-0044-BUY",
         "direction": "BUY",
         "symbol": "CLUSDT",
-        "entryTime": "2026-10-12T12:25:46.178Z",
-        "exitTime": "2026-10-12T12:25:46.223Z",
+        "entryTime": "2026-10-12T12:28:14.102Z",
+        "exitTime": "2026-10-12T12:28:14.140Z",
         "entryPrice": 90.88,
         "exitPrice": 91.08,
         "targetExitPrice": 91.08,
@@ -1918,8 +1926,8 @@
       }
     },
     {
-      "id": "LOG-1791807946275",
-      "timestamp": "2026-10-12T12:25:46.275Z",
+      "id": "LOG-1791808094182",
+      "timestamp": "2026-10-12T12:28:14.182Z",
       "event": "PAIR_CREATED",
       "details": {
         "reason": "NEW_UNIQUE_RATE",
@@ -1932,8 +1940,8 @@
       }
     },
     {
-      "id": "LOG-1791807946275",
-      "timestamp": "2026-10-12T12:25:46.275Z",
+      "id": "LOG-1791808094182",
+      "timestamp": "2026-10-12T12:28:14.182Z",
       "event": "PAIR_CREATED",
       "details": {
         "reason": "NEW_UNIQUE_RATE",
@@ -1946,8 +1954,8 @@
       }
     },
     {
-      "id": "LOG-1791807946304",
-      "timestamp": "2026-10-12T12:25:46.304Z",
+      "id": "LOG-1791808094208",
+      "timestamp": "2026-10-12T12:28:14.208Z",
       "event": "PAIR_CREATED",
       "details": {
         "reason": "NEW_UNIQUE_RATE",
@@ -1960,8 +1968,8 @@
       }
     },
     {
-      "id": "LOG-1791807946304",
-      "timestamp": "2026-10-12T12:25:46.304Z",
+      "id": "LOG-1791808094208",
+      "timestamp": "2026-10-12T12:28:14.208Z",
       "event": "PAIR_CREATED",
       "details": {
         "reason": "NEW_UNIQUE_RATE",
@@ -1974,16 +1982,16 @@
       }
     },
     {
-      "id": "LOG-1791807946332",
-      "timestamp": "2026-10-12T12:25:46.332Z",
+      "id": "LOG-1791808094239",
+      "timestamp": "2026-10-12T12:28:14.239Z",
       "event": "POSITION_CLOSED",
       "details": {
         "pairId": "PAIR-0046",
         "positionId": "P-0046-BUY",
         "direction": "BUY",
         "symbol": "CLUSDT",
-        "entryTime": "2026-10-12T12:25:46.289Z",
-        "exitTime": "2026-10-12T12:25:46.313Z",
+        "entryTime": "2026-10-12T12:28:14.194Z",
+        "exitTime": "2026-10-12T12:28:14.218Z",
         "entryPrice": 90.94,
         "exitPrice": 91.2,
         "targetExitPrice": 91.14,
@@ -2004,16 +2012,16 @@
       }
     },
     {
-      "id": "LOG-1791807946332",
-      "timestamp": "2026-10-12T12:25:46.332Z",
+      "id": "LOG-1791808094239",
+      "timestamp": "2026-10-12T12:28:14.239Z",
       "event": "POSITION_CLOSED",
       "details": {
         "pairId": "PAIR-0046",
         "positionId": "P-0046-BUY",
         "direction": "BUY",
         "symbol": "CLUSDT",
-        "entryTime": "2026-10-12T12:25:46.289Z",
-        "exitTime": "2026-10-12T12:25:46.313Z",
+        "entryTime": "2026-10-12T12:28:14.194Z",
+        "exitTime": "2026-10-12T12:28:14.218Z",
         "entryPrice": 90.94,
         "exitPrice": 91.2,
         "targetExitPrice": 91.14,
@@ -2034,8 +2042,8 @@
       }
     },
     {
-      "id": "LOG-1791807946341",
-      "timestamp": "2026-10-12T12:25:46.341Z",
+      "id": "LOG-1791808094251",
+      "timestamp": "2026-10-12T12:28:14.251Z",
       "event": "PAIR_CREATED",
       "details": {
         "reason": "NEW_UNIQUE_RATE",
@@ -2048,8 +2056,8 @@
       }
     },
     {
-      "id": "LOG-1791807946341",
-      "timestamp": "2026-10-12T12:25:46.341Z",
+      "id": "LOG-1791808094251",
+      "timestamp": "2026-10-12T12:28:14.251Z",
       "event": "PAIR_CREATED",
       "details": {
         "reason": "NEW_UNIQUE_RATE",
@@ -2062,16 +2070,16 @@
       }
     },
     {
-      "id": "LOG-1791807946373",
-      "timestamp": "2026-10-12T12:25:46.373Z",
+      "id": "LOG-1791808094285",
+      "timestamp": "2026-10-12T12:28:14.285Z",
       "event": "POSITION_CLOSED",
       "details": {
         "pairId": "PAIR-0045",
         "positionId": "P-0045-SELL",
         "direction": "SELL",
         "symbol": "CLUSDT",
-        "entryTime": "2026-10-12T12:25:46.223Z",
-        "exitTime": "2026-10-12T12:25:46.352Z",
+        "entryTime": "2026-10-12T12:28:14.140Z",
+        "exitTime": "2026-10-12T12:28:14.261Z",
         "entryPrice": 91.08,
         "exitPrice": 90.88,
         "targetExitPrice": 90.88,
@@ -2092,16 +2100,16 @@
       }
     },
     {
-      "id": "LOG-1791807946373",
-      "timestamp": "2026-10-12T12:25:46.373Z",
+      "id": "LOG-1791808094285",
+      "timestamp": "2026-10-12T12:28:14.285Z",
       "event": "POSITION_CLOSED",
       "details": {
         "pairId": "PAIR-0047",
         "positionId": "P-0047-SELL",
         "direction": "SELL",
         "symbol": "CLUSDT",
-        "entryTime": "2026-10-12T12:25:46.313Z",
-        "exitTime": "2026-10-12T12:25:46.352Z",
+        "entryTime": "2026-10-12T12:28:14.218Z",
+        "exitTime": "2026-10-12T12:28:14.261Z",
         "entryPrice": 91.2,
         "exitPrice": 90.88,
         "targetExitPrice": 91,
@@ -2122,16 +2130,16 @@
       }
     },
     {
-      "id": "LOG-1791807946373",
-      "timestamp": "2026-10-12T12:25:46.373Z",
+      "id": "LOG-1791808094285",
+      "timestamp": "2026-10-12T12:28:14.285Z",
       "event": "POSITION_CLOSED",
       "details": {
         "pairId": "PAIR-0045",
         "positionId": "P-0045-SELL",
         "direction": "SELL",
         "symbol": "CLUSDT",
-        "entryTime": "2026-10-12T12:25:46.223Z",
-        "exitTime": "2026-10-12T12:25:46.352Z",
+        "entryTime": "2026-10-12T12:28:14.140Z",
+        "exitTime": "2026-10-12T12:28:14.261Z",
         "entryPrice": 91.08,
         "exitPrice": 90.88,
         "targetExitPrice": 90.88,
@@ -2152,12 +2160,12 @@
       }
     },
     {
-      "id": "LOG-1791807946384",
-      "timestamp": "2026-10-12T12:25:46.384Z",
+      "id": "LOG-1791808094295",
+      "timestamp": "2026-10-12T12:28:14.295Z",
       "event": "LEG_REOPENED",
       "details": {
         "pairId": "PAIR-0044",
-        "positionId": "P-0044-BUY-6384",
+        "positionId": "P-0044-BUY-4295",
         "direction": "BUY",
         "symbol": "CLUSDT",
         "entryPrice": 90.88,
@@ -2165,12 +2173,12 @@
       }
     },
     {
-      "id": "LOG-1791807946384",
-      "timestamp": "2026-10-12T12:25:46.384Z",
+      "id": "LOG-1791808094295",
+      "timestamp": "2026-10-12T12:28:14.295Z",
       "event": "LEG_REOPENED",
       "details": {
         "pairId": "PAIR-0044",
-        "positionId": "P-0044-BUY-6384",
+        "positionId": "P-0044-BUY-4295",
         "direction": "BUY",
         "symbol": "CLUSDT",
         "entryPrice": 90.88,
@@ -2178,16 +2186,16 @@
       }
     },
     {
-      "id": "LOG-1791807946443",
-      "timestamp": "2026-10-12T12:25:46.443Z",
+      "id": "LOG-1791808094372",
+      "timestamp": "2026-10-12T12:28:14.372Z",
       "event": "POSITION_CLOSED",
       "details": {
         "pairId": "PAIR-0044",
         "positionId": "P-0044-SELL",
         "direction": "SELL",
         "symbol": "CLUSDT",
-        "entryTime": "2026-10-12T12:25:46.178Z",
-        "exitTime": "2026-10-12T12:25:46.393Z",
+        "entryTime": "2026-10-12T12:28:14.102Z",
+        "exitTime": "2026-10-12T12:28:14.311Z",
         "entryPrice": 90.88,
         "exitPrice": 90.68,
         "targetExitPrice": 90.68,
@@ -2208,16 +2216,16 @@
       }
     },
     {
-      "id": "LOG-1791807946443",
-      "timestamp": "2026-10-12T12:25:46.443Z",
+      "id": "LOG-1791808094372",
+      "timestamp": "2026-10-12T12:28:14.372Z",
       "event": "POSITION_CLOSED",
       "details": {
         "pairId": "PAIR-0046",
         "positionId": "P-0046-SELL",
         "direction": "SELL",
         "symbol": "CLUSDT",
-        "entryTime": "2026-10-12T12:25:46.289Z",
-        "exitTime": "2026-10-12T12:25:46.393Z",
+        "entryTime": "2026-10-12T12:28:14.194Z",
+        "exitTime": "2026-10-12T12:28:14.311Z",
         "entryPrice": 90.94,
         "exitPrice": 90.68,
         "targetExitPrice": 90.74,
@@ -2238,24 +2246,24 @@
       }
     },
     {
-      "id": "LOG-1791807946443",
-      "timestamp": "2026-10-12T12:25:46.443Z",
+      "id": "LOG-1791808094372",
+      "timestamp": "2026-10-12T12:28:14.372Z",
       "event": "PAIR_FULLY_CLOSED",
       "details": {
         "pairId": "PAIR-0046"
       }
     },
     {
-      "id": "LOG-1791807946443",
-      "timestamp": "2026-10-12T12:25:46.443Z",
+      "id": "LOG-1791808094372",
+      "timestamp": "2026-10-12T12:28:14.372Z",
       "event": "POSITION_CLOSED",
       "details": {
         "pairId": "PAIR-0044",
         "positionId": "P-0044-SELL",
         "direction": "SELL",
         "symbol": "CLUSDT",
-        "entryTime": "2026-10-12T12:25:46.178Z",
-        "exitTime": "2026-10-12T12:25:46.393Z",
+        "entryTime": "2026-10-12T12:28:14.102Z",
+        "exitTime": "2026-10-12T12:28:14.311Z",
         "entryPrice": 90.88,
         "exitPrice": 90.68,
         "targetExitPrice": 90.68,
@@ -2276,8 +2284,8 @@
       }
     },
     {
-      "id": "LOG-1791807946454",
-      "timestamp": "2026-10-12T12:25:46.454Z",
+      "id": "LOG-1791808094382",
+      "timestamp": "2026-10-12T12:28:14.382Z",
       "event": "PAIR_CREATED",
       "details": {
         "reason": "NEW_UNIQUE_RATE",
@@ -2290,8 +2298,8 @@
       }
     },
     {
-      "id": "LOG-1791807946454",
-      "timestamp": "2026-10-12T12:25:46.454Z",
+      "id": "LOG-1791808094382",
+      "timestamp": "2026-10-12T12:28:14.382Z",
       "event": "PAIR_CREATED",
       "details": {
         "reason": "NEW_UNIQUE_RATE",
@@ -2304,8 +2312,8 @@
       }
     },
     {
-      "id": "LOG-1791807946478",
-      "timestamp": "2026-10-12T12:25:46.478Z",
+      "id": "LOG-1791808094409",
+      "timestamp": "2026-10-12T12:28:14.409Z",
       "event": "PAIR_CREATED",
       "details": {
         "reason": "NEW_UNIQUE_RATE",
@@ -2318,8 +2326,8 @@
       }
     },
     {
-      "id": "LOG-1791807946478",
-      "timestamp": "2026-10-12T12:25:46.478Z",
+      "id": "LOG-1791808094409",
+      "timestamp": "2026-10-12T12:28:14.409Z",
       "event": "PAIR_CREATED",
       "details": {
         "reason": "NEW_UNIQUE_RATE",
@@ -2332,16 +2340,16 @@
       }
     },
     {
-      "id": "LOG-1791807946520",
-      "timestamp": "2026-10-12T12:25:46.520Z",
+      "id": "LOG-1791808094449",
+      "timestamp": "2026-10-12T12:28:14.449Z",
       "event": "POSITION_CLOSED",
       "details": {
         "pairId": "PAIR-0048",
         "positionId": "P-0048-BUY",
         "direction": "BUY",
         "symbol": "CLUSDT",
-        "entryTime": "2026-10-12T12:25:46.393Z",
-        "exitTime": "2026-10-12T12:25:46.489Z",
+        "entryTime": "2026-10-12T12:28:14.311Z",
+        "exitTime": "2026-10-12T12:28:14.419Z",
         "entryPrice": 90.68,
         "exitPrice": 90.88,
         "targetExitPrice": 90.88,
@@ -2362,16 +2370,16 @@
       }
     },
     {
-      "id": "LOG-1791807946520",
-      "timestamp": "2026-10-12T12:25:46.520Z",
+      "id": "LOG-1791808094449",
+      "timestamp": "2026-10-12T12:28:14.449Z",
       "event": "POSITION_CLOSED",
       "details": {
         "pairId": "PAIR-0048",
         "positionId": "P-0048-BUY",
         "direction": "BUY",
         "symbol": "CLUSDT",
-        "entryTime": "2026-10-12T12:25:46.393Z",
-        "exitTime": "2026-10-12T12:25:46.489Z",
+        "entryTime": "2026-10-12T12:28:14.311Z",
+        "exitTime": "2026-10-12T12:28:14.419Z",
         "entryPrice": 90.68,
         "exitPrice": 90.88,
         "targetExitPrice": 90.88,
@@ -2392,12 +2400,12 @@
       }
     },
     {
-      "id": "LOG-1791807946532",
-      "timestamp": "2026-10-12T12:25:46.532Z",
+      "id": "LOG-1791808094462",
+      "timestamp": "2026-10-12T12:28:14.462Z",
       "event": "LEG_REOPENED",
       "details": {
         "pairId": "PAIR-0044",
-        "positionId": "P-0044-SELL-6532",
+        "positionId": "P-0044-SELL-4462",
         "direction": "SELL",
         "symbol": "CLUSDT",
         "entryPrice": 90.88,
@@ -2405,12 +2413,12 @@
       }
     },
     {
-      "id": "LOG-1791807946532",
-      "timestamp": "2026-10-12T12:25:46.532Z",
+      "id": "LOG-1791808094462",
+      "timestamp": "2026-10-12T12:28:14.462Z",
       "event": "LEG_REOPENED",
       "details": {
         "pairId": "PAIR-0044",
-        "positionId": "P-0044-SELL-6532",
+        "positionId": "P-0044-SELL-4462",
         "direction": "SELL",
         "symbol": "CLUSDT",
         "entryPrice": 90.88,
@@ -2418,20 +2426,20 @@
       }
     },
     {
-      "id": "LOG-1791807946704",
-      "timestamp": "2026-10-12T12:25:46.704Z",
+      "id": "LOG-1791808094632",
+      "timestamp": "2026-10-12T12:28:14.632Z",
       "event": "ENGINE_RESET",
       "details": "All engine paper positions, processed rates, and history reset to ₹1,00,000 capital."
     },
     {
-      "id": "LOG-1791807946704",
-      "timestamp": "2026-10-12T12:25:46.704Z",
+      "id": "LOG-1791808094632",
+      "timestamp": "2026-10-12T12:28:14.632Z",
       "event": "ENGINE_RESET",
       "details": "All engine paper positions, processed rates, and history reset to ₹1,00,000 capital."
     },
     {
-      "id": "LOG-1791807946712",
-      "timestamp": "2026-10-12T12:25:46.712Z",
+      "id": "LOG-1791808094641",
+      "timestamp": "2026-10-12T12:28:14.641Z",
       "event": "PAIR_CREATED",
       "details": {
         "reason": "NEW_UNIQUE_RATE",
@@ -2444,8 +2452,8 @@
       }
     },
     {
-      "id": "LOG-1791807946712",
-      "timestamp": "2026-10-12T12:25:46.712Z",
+      "id": "LOG-1791808094641",
+      "timestamp": "2026-10-12T12:28:14.641Z",
       "event": "PAIR_CREATED",
       "details": {
         "reason": "NEW_UNIQUE_RATE",
@@ -2458,16 +2466,16 @@
       }
     },
     {
-      "id": "LOG-1791807946716",
-      "timestamp": "2026-10-12T12:25:46.716Z",
+      "id": "LOG-1791808094647",
+      "timestamp": "2026-10-12T12:28:14.647Z",
       "event": "POSITION_CLOSED",
       "details": {
         "pairId": "PAIR-0039",
         "positionId": "P-0039-BUY",
         "direction": "BUY",
         "symbol": "CLUSDT",
-        "entryTime": "2026-10-12T12:26:51.658Z",
-        "exitTime": "2026-10-12T12:25:46.707Z",
+        "entryTime": "2026-10-12T12:29:19.403Z",
+        "exitTime": "2026-10-12T12:28:14.636Z",
         "entryPrice": 93.9,
         "exitPrice": 100,
         "targetExitPrice": 94.1,
@@ -2488,24 +2496,24 @@
       }
     },
     {
-      "id": "LOG-1791807946716",
-      "timestamp": "2026-10-12T12:25:46.716Z",
+      "id": "LOG-1791808094647",
+      "timestamp": "2026-10-12T12:28:14.647Z",
       "event": "PAIR_FULLY_CLOSED",
       "details": {
         "pairId": "PAIR-0039"
       }
     },
     {
-      "id": "LOG-1791807946716",
-      "timestamp": "2026-10-12T12:25:46.716Z",
+      "id": "LOG-1791808094647",
+      "timestamp": "2026-10-12T12:28:14.647Z",
       "event": "POSITION_CLOSED",
       "details": {
         "pairId": "PAIR-0040",
         "positionId": "P-0040-BUY",
         "direction": "BUY",
         "symbol": "CLUSDT",
-        "entryTime": "2026-10-12T12:26:52.658Z",
-        "exitTime": "2026-10-12T12:25:46.707Z",
+        "entryTime": "2026-10-12T12:29:20.403Z",
+        "exitTime": "2026-10-12T12:28:14.636Z",
         "entryPrice": 94,
         "exitPrice": 100,
         "targetExitPrice": 94.2,
@@ -2526,24 +2534,24 @@
       }
     },
     {
-      "id": "LOG-1791807946716",
-      "timestamp": "2026-10-12T12:25:46.716Z",
+      "id": "LOG-1791808094647",
+      "timestamp": "2026-10-12T12:28:14.647Z",
       "event": "PAIR_FULLY_CLOSED",
       "details": {
         "pairId": "PAIR-0040"
       }
     },
     {
-      "id": "LOG-1791807946716",
-      "timestamp": "2026-10-12T12:25:46.716Z",
+      "id": "LOG-1791808094647",
+      "timestamp": "2026-10-12T12:28:14.647Z",
       "event": "POSITION_CLOSED",
       "details": {
         "pairId": "PAIR-0041",
-        "positionId": "P-0041-BUY-5957",
+        "positionId": "P-0041-BUY-3890",
         "direction": "BUY",
         "symbol": "CLUSDT",
-        "entryTime": "2026-10-12T12:25:45.935Z",
-        "exitTime": "2026-10-12T12:25:46.707Z",
+        "entryTime": "2026-10-12T12:28:13.872Z",
+        "exitTime": "2026-10-12T12:28:14.636Z",
         "entryPrice": 91.51,
         "exitPrice": 100,
         "targetExitPrice": 91.71,
@@ -2564,24 +2572,24 @@
       }
     },
     {
-      "id": "LOG-1791807946716",
-      "timestamp": "2026-10-12T12:25:46.716Z",
+      "id": "LOG-1791808094647",
+      "timestamp": "2026-10-12T12:28:14.647Z",
       "event": "PAIR_FULLY_CLOSED",
       "details": {
         "pairId": "PAIR-0041"
       }
     },
     {
-      "id": "LOG-1791807946716",
-      "timestamp": "2026-10-12T12:25:46.716Z",
+      "id": "LOG-1791808094647",
+      "timestamp": "2026-10-12T12:28:14.647Z",
       "event": "POSITION_CLOSED",
       "details": {
         "pairId": "PAIR-0042",
         "positionId": "P-0042-BUY",
         "direction": "BUY",
         "symbol": "CLUSDT",
-        "entryTime": "2026-10-12T12:25:45.889Z",
-        "exitTime": "2026-10-12T12:25:46.707Z",
+        "entryTime": "2026-10-12T12:28:13.818Z",
+        "exitTime": "2026-10-12T12:28:14.636Z",
         "entryPrice": 91.71,
         "exitPrice": 100,
         "targetExitPrice": 91.91,
@@ -2602,54 +2610,24 @@
       }
     },
     {
-      "id": "LOG-1791807946716",
-      "timestamp": "2026-10-12T12:25:46.716Z",
+      "id": "LOG-1791808094647",
+      "timestamp": "2026-10-12T12:28:14.647Z",
       "event": "PAIR_FULLY_CLOSED",
       "details": {
         "pairId": "PAIR-0042"
       }
     },
     {
-      "id": "LOG-1791807946716",
-      "timestamp": "2026-10-12T12:25:46.716Z",
-      "event": "POSITION_CLOSED",
-      "details": {
-        "pairId": "PAIR-0039",
-        "positionId": "P-0039-BUY",
-        "direction": "BUY",
-        "symbol": "CLUSDT",
-        "entryTime": "2026-10-12T12:26:51.658Z",
-        "exitTime": "2026-10-12T12:25:46.707Z",
-        "entryPrice": 93.9,
-        "exitPrice": 100,
-        "targetExitPrice": 94.1,
-        "quantity": 1,
-        "contractMultiplier": 1,
-        "grossProfitUSD": 6.1,
-        "grossProfitINR": 527.65,
-        "entryFeeUSD": 0.047,
-        "exitFeeUSD": 0.05,
-        "gstUSD": 0.0175,
-        "totalChargesUSD": 0.1144,
-        "totalChargesINR": 9.9,
-        "netProfitUSD": 5.9856,
-        "netProfitINR": 517.75,
-        "usdInrRate": 86.5,
-        "exitReason": "BUY TARGET PROFIT HIT",
-        "holdingDurationSec": 0
-      }
-    },
-    {
-      "id": "LOG-1791807946717",
-      "timestamp": "2026-10-12T12:25:46.717Z",
+      "id": "LOG-1791808094647",
+      "timestamp": "2026-10-12T12:28:14.647Z",
       "event": "POSITION_CLOSED",
       "details": {
         "pairId": "PAIR-0044",
-        "positionId": "P-0044-BUY-6384",
+        "positionId": "P-0044-BUY-4295",
         "direction": "BUY",
         "symbol": "CLUSDT",
-        "entryTime": "2026-10-12T12:25:46.352Z",
-        "exitTime": "2026-10-12T12:25:46.707Z",
+        "entryTime": "2026-10-12T12:28:14.261Z",
+        "exitTime": "2026-10-12T12:28:14.636Z",
         "entryPrice": 90.88,
         "exitPrice": 100,
         "targetExitPrice": 91.08,
@@ -2670,16 +2648,16 @@
       }
     },
     {
-      "id": "LOG-1791807946717",
-      "timestamp": "2026-10-12T12:25:46.717Z",
+      "id": "LOG-1791808094647",
+      "timestamp": "2026-10-12T12:28:14.647Z",
       "event": "POSITION_CLOSED",
       "details": {
         "pairId": "PAIR-0045",
         "positionId": "P-0045-BUY",
         "direction": "BUY",
         "symbol": "CLUSDT",
-        "entryTime": "2026-10-12T12:25:46.223Z",
-        "exitTime": "2026-10-12T12:25:46.707Z",
+        "entryTime": "2026-10-12T12:28:14.140Z",
+        "exitTime": "2026-10-12T12:28:14.636Z",
         "entryPrice": 91.08,
         "exitPrice": 100,
         "targetExitPrice": 91.28,
@@ -2700,24 +2678,24 @@
       }
     },
     {
-      "id": "LOG-1791807946717",
-      "timestamp": "2026-10-12T12:25:46.717Z",
+      "id": "LOG-1791808094647",
+      "timestamp": "2026-10-12T12:28:14.647Z",
       "event": "PAIR_FULLY_CLOSED",
       "details": {
         "pairId": "PAIR-0045"
       }
     },
     {
-      "id": "LOG-1791807946717",
-      "timestamp": "2026-10-12T12:25:46.717Z",
+      "id": "LOG-1791808094647",
+      "timestamp": "2026-10-12T12:28:14.647Z",
       "event": "POSITION_CLOSED",
       "details": {
         "pairId": "PAIR-0047",
         "positionId": "P-0047-BUY",
         "direction": "BUY",
         "symbol": "CLUSDT",
-        "entryTime": "2026-10-12T12:25:46.313Z",
-        "exitTime": "2026-10-12T12:25:46.707Z",
+        "entryTime": "2026-10-12T12:28:14.218Z",
+        "exitTime": "2026-10-12T12:28:14.636Z",
         "entryPrice": 91.2,
         "exitPrice": 100,
         "targetExitPrice": 91.4,
@@ -2738,24 +2716,24 @@
       }
     },
     {
-      "id": "LOG-1791807946717",
-      "timestamp": "2026-10-12T12:25:46.717Z",
+      "id": "LOG-1791808094647",
+      "timestamp": "2026-10-12T12:28:14.647Z",
       "event": "PAIR_FULLY_CLOSED",
       "details": {
         "pairId": "PAIR-0047"
       }
     },
     {
-      "id": "LOG-1791807946717",
-      "timestamp": "2026-10-12T12:25:46.717Z",
+      "id": "LOG-1791808094647",
+      "timestamp": "2026-10-12T12:28:14.647Z",
       "event": "POSITION_CLOSED",
       "details": {
         "pairId": "PAIR-0049",
         "positionId": "P-0049-BUY",
         "direction": "BUY",
         "symbol": "CLUSDT",
-        "entryTime": "2026-10-12T12:25:46.463Z",
-        "exitTime": "2026-10-12T12:25:46.707Z",
+        "entryTime": "2026-10-12T12:28:14.393Z",
+        "exitTime": "2026-10-12T12:28:14.636Z",
         "entryPrice": 90.75,
         "exitPrice": 100,
         "targetExitPrice": 90.95,
@@ -2776,38 +2754,38 @@
       }
     },
     {
-      "id": "LOG-1791807946717",
-      "timestamp": "2026-10-12T12:25:46.717Z",
+      "id": "LOG-1791808094647",
+      "timestamp": "2026-10-12T12:28:14.647Z",
       "event": "POSITION_CLOSED",
       "details": {
-        "pairId": "PAIR-0044",
-        "positionId": "P-0044-BUY-6384",
+        "pairId": "PAIR-0039",
+        "positionId": "P-0039-BUY",
         "direction": "BUY",
         "symbol": "CLUSDT",
-        "entryTime": "2026-10-12T12:25:46.352Z",
-        "exitTime": "2026-10-12T12:25:46.707Z",
-        "entryPrice": 90.88,
+        "entryTime": "2026-10-12T12:29:19.403Z",
+        "exitTime": "2026-10-12T12:28:14.636Z",
+        "entryPrice": 93.9,
         "exitPrice": 100,
-        "targetExitPrice": 91.08,
+        "targetExitPrice": 94.1,
         "quantity": 1,
         "contractMultiplier": 1,
-        "grossProfitUSD": 9.12,
-        "grossProfitINR": 788.88,
-        "entryFeeUSD": 0.0454,
+        "grossProfitUSD": 6.1,
+        "grossProfitINR": 527.65,
+        "entryFeeUSD": 0.047,
         "exitFeeUSD": 0.05,
-        "gstUSD": 0.0172,
-        "totalChargesUSD": 0.1126,
-        "totalChargesINR": 9.74,
-        "netProfitUSD": 9.0074,
-        "netProfitINR": 779.14,
+        "gstUSD": 0.0175,
+        "totalChargesUSD": 0.1144,
+        "totalChargesINR": 9.9,
+        "netProfitUSD": 5.9856,
+        "netProfitINR": 517.75,
         "usdInrRate": 86.5,
         "exitReason": "BUY TARGET PROFIT HIT",
         "holdingDurationSec": 0
       }
     },
     {
-      "id": "LOG-1791807946727",
-      "timestamp": "2026-10-12T12:25:46.727Z",
+      "id": "LOG-1791808094662",
+      "timestamp": "2026-10-12T12:28:14.662Z",
       "event": "PAIR_CREATED",
       "details": {
         "reason": "NEW_UNIQUE_RATE",
@@ -2820,8 +2798,8 @@
       }
     },
     {
-      "id": "LOG-1791807946727",
-      "timestamp": "2026-10-12T12:25:46.727Z",
+      "id": "LOG-1791808094662",
+      "timestamp": "2026-10-12T12:28:14.662Z",
       "event": "PAIR_CREATED",
       "details": {
         "reason": "NEW_UNIQUE_RATE",
@@ -2834,16 +2812,16 @@
       }
     },
     {
-      "id": "LOG-1791807946756",
-      "timestamp": "2026-10-12T12:25:46.756Z",
+      "id": "LOG-1791808094697",
+      "timestamp": "2026-10-12T12:28:14.697Z",
       "event": "POSITION_CLOSED",
       "details": {
         "pairId": "PAIR-0001",
         "positionId": "P-0001-BUY",
         "direction": "BUY",
         "symbol": "CLUSDT",
-        "entryTime": "2026-10-12T12:25:46.707Z",
-        "exitTime": "2026-10-12T12:25:46.739Z",
+        "entryTime": "2026-10-12T12:28:14.636Z",
+        "exitTime": "2026-10-12T12:28:14.675Z",
         "entryPrice": 100,
         "exitPrice": 100.2,
         "targetExitPrice": 100.2,
@@ -2864,16 +2842,16 @@
       }
     },
     {
-      "id": "LOG-1791807946756",
-      "timestamp": "2026-10-12T12:25:46.756Z",
+      "id": "LOG-1791808094697",
+      "timestamp": "2026-10-12T12:28:14.697Z",
       "event": "POSITION_CLOSED",
       "details": {
         "pairId": "PAIR-0001",
         "positionId": "P-0001-BUY",
         "direction": "BUY",
         "symbol": "CLUSDT",
-        "entryTime": "2026-10-12T12:25:46.707Z",
-        "exitTime": "2026-10-12T12:25:46.739Z",
+        "entryTime": "2026-10-12T12:28:14.636Z",
+        "exitTime": "2026-10-12T12:28:14.675Z",
         "entryPrice": 100,
         "exitPrice": 100.2,
         "targetExitPrice": 100.2,
@@ -2894,8 +2872,8 @@
       }
     },
     {
-      "id": "LOG-1791807946760",
-      "timestamp": "2026-10-12T12:25:46.760Z",
+      "id": "LOG-1791808094701",
+      "timestamp": "2026-10-12T12:28:14.701Z",
       "event": "PAIR_CREATED",
       "details": {
         "reason": "NEW_UNIQUE_RATE",
@@ -2908,8 +2886,8 @@
       }
     },
     {
-      "id": "LOG-1791807946760",
-      "timestamp": "2026-10-12T12:25:46.760Z",
+      "id": "LOG-1791808094701",
+      "timestamp": "2026-10-12T12:28:14.701Z",
       "event": "PAIR_CREATED",
       "details": {
         "reason": "NEW_UNIQUE_RATE",
@@ -2922,16 +2900,16 @@
       }
     },
     {
-      "id": "LOG-1791807946764",
-      "timestamp": "2026-10-12T12:25:46.764Z",
+      "id": "LOG-1791808094705",
+      "timestamp": "2026-10-12T12:28:14.705Z",
       "event": "POSITION_CLOSED",
       "details": {
         "pairId": "PAIR-0050",
         "positionId": "P-0050-BUY",
         "direction": "BUY",
         "symbol": "CLUSDT",
-        "entryTime": "2026-10-12T12:25:46.707Z",
-        "exitTime": "2026-10-12T12:25:46.739Z",
+        "entryTime": "2026-10-12T12:28:14.636Z",
+        "exitTime": "2026-10-12T12:28:14.675Z",
         "entryPrice": 100,
         "exitPrice": 100.2,
         "targetExitPrice": 100.2,
@@ -2952,16 +2930,16 @@
       }
     },
     {
-      "id": "LOG-1791807946764",
-      "timestamp": "2026-10-12T12:25:46.764Z",
+      "id": "LOG-1791808094705",
+      "timestamp": "2026-10-12T12:28:14.705Z",
       "event": "POSITION_CLOSED",
       "details": {
         "pairId": "PAIR-0050",
         "positionId": "P-0050-BUY",
         "direction": "BUY",
         "symbol": "CLUSDT",
-        "entryTime": "2026-10-12T12:25:46.707Z",
-        "exitTime": "2026-10-12T12:25:46.739Z",
+        "entryTime": "2026-10-12T12:28:14.636Z",
+        "exitTime": "2026-10-12T12:28:14.675Z",
         "entryPrice": 100,
         "exitPrice": 100.2,
         "targetExitPrice": 100.2,
@@ -2982,8 +2960,8 @@
       }
     },
     {
-      "id": "LOG-1791807946777",
-      "timestamp": "2026-10-12T12:25:46.777Z",
+      "id": "LOG-1791808094715",
+      "timestamp": "2026-10-12T12:28:14.715Z",
       "event": "PAIR_CREATED",
       "details": {
         "reason": "NEW_UNIQUE_RATE",
@@ -2996,8 +2974,8 @@
       }
     },
     {
-      "id": "LOG-1791807946777",
-      "timestamp": "2026-10-12T12:25:46.777Z",
+      "id": "LOG-1791808094715",
+      "timestamp": "2026-10-12T12:28:14.715Z",
       "event": "PAIR_CREATED",
       "details": {
         "reason": "NEW_UNIQUE_RATE",
