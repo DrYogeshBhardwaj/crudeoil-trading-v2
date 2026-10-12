@@ -1541,12 +1541,12 @@ function checkMudrexAuthStatus() {
           </div>
         `;
       } else {
-        let cleanErr = 'Mudrex API Secret Key missing or invalid.';
+        let cleanErr = 'Mudrex Real API not connected.';
         if (typeof res.error === 'string') {
           if (res.error.includes('3100') || res.error.includes('Invalid Authentication')) {
             cleanErr = 'Invalid Mudrex API Secret Key. Please verify your Secret Key.';
-          } else if (res.error.includes('MUDREX_API_SECRET missing')) {
-            cleanErr = 'Mudrex API Secret Key not configured.';
+          } else if (res.error.includes('MUDREX_API_SECRET missing') || res.error.includes('RATE_LIMIT_COOLDOWN') || res.error.includes('rate limit')) {
+            cleanErr = 'Mudrex Real API not connected.';
           } else {
             cleanErr = res.error;
           }
