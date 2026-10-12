@@ -813,6 +813,7 @@ class MudrexLiveAdapter {
 
 
   resetLiveEngine() {
+    this.settings.contractQuantity = 2.0;
     this.liveOpenPositions = [];
     this.liveClosedPositions = [];
     this.processedRates.clear();
