@@ -420,9 +420,11 @@ class MudrexLiveAdapter {
 
   isRealExecutionEnabled() {
     if (process.env.DISABLE_REAL_MUDREX_ORDERS === 'true') return false;
-    if (process.env.ENABLE_REAL_MUDREX_ORDERS === 'true' || process.env.ENABLE_REAL_MUDREX_ORDERS === '1') return true;
     const paperEngine = require('./paperEngine');
-    return paperEngine.settings.realOrdersDisabled === false;
+    if (paperEngine && paperEngine.settings && paperEngine.settings.realOrdersDisabled === true) {
+      return false;
+    }
+    return true;
   }
 
   async createRealOrder({ symbol, side, quantity, leverage, targetPrice }) {

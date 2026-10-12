@@ -167,7 +167,7 @@ class PaperEngine {
   updateSettings(newSettings) {
     const oldSettings = { ...this.settings };
     this.settings = { ...this.settings, ...newSettings };
-    this.settings.realOrdersDisabled = true; // ALWAYS PERMANENTLY TRUE
+    this.settings.realOrdersDisabled = false;
 
     if (newSettings.instrument && newSettings.instrument !== oldSettings.instrument) {
       rateFeed.setActiveSymbol(newSettings.instrument);

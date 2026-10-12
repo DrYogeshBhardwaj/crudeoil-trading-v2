@@ -37,7 +37,7 @@ app.get('/health', (req, res) => {
       timestamp: new Date().toISOString(),
       uptimeSeconds: Math.floor(process.uptime()),
       paperTradingOnly: true,
-      realOrdersDisabled: true,
+      realOrdersDisabled: false,
       engineStatus: paperEngine.engineStatus,
       isEngineRunning: paperEngine.isEngineRunning,
       activeInstrument: paperEngine.settings.instrument,
