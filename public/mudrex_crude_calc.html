@@ -93,30 +93,33 @@
 <body>
 
   <!-- Safety Banner -->
-  <div class="safety-banner" style="background: linear-gradient(90deg, #0284c7, #0f172a, #0284c7);">
-    <span class="shield-icon">🛡️</span>
-    <span>MUDREX CRUDE OIL (CLUSDT) HISTORICAL CALCULATOR — UPDATED CHARGES AUDIT FORMULA</span>
-    <span class="shield-icon">🛡️</span>
+  <div class="safety-banner" style="background: linear-gradient(90deg, #0284c7, #4f46e5, #0284c7); border-bottom: 1px solid #38bdf8; padding: 6px 12px; font-size: 0.82rem; font-weight: 800;">
+    <span class="shield-icon">🧮</span>
+    <span>MUDREX CRUDE OIL (CLUSDT) CALCULATOR & BACKTESTER — 1 DAY / DATE RANGE AUDIT PAGE</span>
+    <span class="shield-icon">🧮</span>
   </div>
 
   <!-- Header Bar -->
   <header class="app-header">
     <div class="brand-section">
-      <div class="brand-logo" style="background: linear-gradient(135deg, #0284c7, #38bdf8);">⚡</div>
+      <div class="brand-logo" style="background: linear-gradient(135deg, #0284c7, #6366f1); box-shadow: 0 0 16px rgba(99, 102, 241, 0.5); font-size: 1.5rem;">🧮</div>
       <div class="brand-title">
-        <h1>Mudrex Crude Oil Calculator (1 Day / Date Range)</h1>
-        <p>UPDATED MUDREX CHARGES FORMULA BACKTESTER (0.075% TAKER + 18% GST + SAFETY BUFFER)</p>
+        <h1 style="display: flex; align-items: center; gap: 8px;">
+          Mudrex Crude Calc
+          <span style="background: linear-gradient(135deg, #0284c7, #4f46e5); color: #fff; padding: 4px 10px; border-radius: 6px; font-size: 0.75rem; font-weight: 900; letter-spacing: 0.5px;">🧮 CALCULATOR PAGE</span>
+          <span class="crude-brand-badge" style="background: linear-gradient(135deg, #f59e0b, #d97706); color: #fff; padding: 4px 10px; border-radius: 6px; font-size: 0.75rem; font-weight: 900;">🛢️ CRUDE OIL</span>
+        </h1>
+        <p style="margin: 2px 0 0 0; color: #94a3b8; font-size: 0.8rem; font-weight: 700;">1 DAY & DATE RANGE BACKTESTER WITH EXACT MUDREX CHARGES FORMULA</p>
       </div>
     </div>
 
     <!-- Navigation Header Actions -->
     <div class="header-actions">
-      <a href="/" class="btn btn-secondary" style="text-decoration: none;">🏠 Paper Live</a>
-      <a href="/mudrex_crude_live" class="btn btn-secondary" style="border: 1px solid #10b981; color: #34d399; font-weight: 700; text-decoration: none;">🚀 Mudrex Crude Live</a>
-      <a href="/mudrex_crude_calc" class="btn btn-secondary" style="border: 1px solid #38bdf8; color: #38bdf8; font-weight: 700; text-decoration: none; background: rgba(56,189,248,0.15);">⚡ Mudrex Crude Calc</a>
-      <a href="/paper-calc" class="btn btn-secondary" style="text-decoration: none;">🧮 Paper Calc</a>
+      <a href="/mudrex_crude_live" class="btn" style="background: linear-gradient(135deg, #10b981, #059669); color: #fff; font-weight: 800; text-decoration: none; font-size: 0.9rem; padding: 8px 16px; border-radius: 8px; border: 1px solid #34d399; box-shadow: 0 0 14px rgba(16,185,129,0.4);">⚡ Open Live Terminal (/mudrex_crude_live)</a>
+      <a href="/mudrex_crude_calc" class="btn btn-secondary" style="border: 1px solid #38bdf8; color: #38bdf8; font-weight: 800; text-decoration: none; background: rgba(56,189,248,0.15);">🧮 Calculator Page</a>
+      <a href="/" class="btn btn-secondary" style="text-decoration: none;">🏠 Paper Engine</a>
       <a href="/mcx-calc" class="btn btn-secondary" style="border: 1px solid #f59e0b; color: #fbbf24; font-weight: 700; text-decoration: none;">🏆 MCX Calc</a>
-      <button class="btn btn-primary" style="background: linear-gradient(135deg, #0284c7, #2563eb); border: none;" onclick="runMudrexCrudeCalc()">▶ Run Mudrex Crude Calculator</button>
+      <button class="btn btn-primary" style="background: linear-gradient(135deg, #0284c7, #2563eb); border: none; font-weight: 800;" onclick="runMudrexCrudeCalc()">▶ Run Calculator</button>
     </div>
   </header>
 
