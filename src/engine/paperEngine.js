@@ -6,7 +6,7 @@ class PaperEngine {
   constructor() {
     this.settings = {
       startingCapitalINR: 100000,
-      contractQuantity: 1.0,
+      contractQuantity: 0.01,
       leverage: 5,
       instrument: 'CLUSDT',
       profitTargetMode: 'PRICE_MOVE',
