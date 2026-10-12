@@ -416,23 +416,7 @@ function renderDashboard(data) {
   const isDhanPage = window.location.pathname.includes('dhan');
   const isMudrexPage = window.location.pathname.includes('mudrex');
 
-  if (isDhanPage && settings && settings.instrument !== 'XAGUSDT' && !window._autoSwitchedInstrument) {
-    window._autoSwitchedInstrument = true;
-    fetch('/api/settings', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ instrument: 'XAGUSDT', profitTargetMove: 1000, maxActivePairs: 100, startingCapitalINR: 350000 })
-    });
-  } else if (isMudrexPage && settings && settings.instrument !== 'CLUSDT' && !window._autoSwitchedInstrument) {
-    window._autoSwitchedInstrument = true;
-    fetch('/api/settings', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ instrument: 'CLUSDT', profitTargetMove: 0.2, maxActivePairs: 100, startingCapitalINR: 350000 })
-    });
-  }
-
-  const currentSymbol = settings.instrument;
+  const currentSymbol = settings ? (settings.instrument || 'CLUSDT') : 'CLUSDT';
   const symbolLabels = {
     CLUSDT: 'CLUSDT — Crude Oil',
     XAGUSDT: 'XAGUSDT — Silver',
@@ -498,7 +482,6 @@ function renderDashboard(data) {
 
   // Main Engine Control Button
   const mainStartBtn = document.getElementById('mudrexStartEngineMainBtn') || document.getElementById('mudrexLiveStartBtn') || document.getElementById('toggleEngineBtn');
-  const isDhanPage = window.location.pathname.includes('dhan');
 
   if (isEngineRunning) {
     if (mainStartBtn) {

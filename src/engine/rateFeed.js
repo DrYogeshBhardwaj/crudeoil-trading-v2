@@ -199,17 +199,15 @@ class RateFeedManager {
       source
     };
 
-    if (symbol === this.activeSymbol) {
-      this.notifyListeners('tick', {
-        symbol,
-        price,
-        time,
-        receivedTime: now,
-        status: 'LIVE',
-        source,
-        usdInrRate: this.usdInrRate
-      });
-    }
+    this.notifyListeners('tick', {
+      symbol,
+      price,
+      time,
+      receivedTime: now,
+      status: 'LIVE',
+      source,
+      usdInrRate: this.usdInrRate
+    });
   }
 
   startStaleCheckTimer() {

@@ -783,7 +783,7 @@ class MudrexLiveAdapter {
 
     return {
       rateFeedInfo: rateInfo,
-      settings: paperEngine.settings,
+      settings: { ...paperEngine.settings, instrument: 'CLUSDT' },
       engineStatus: paperEngine.engineStatus,
       pauseReason: paperEngine.pauseReason,
       isEngineRunning: paperEngine.isEngineRunning,
