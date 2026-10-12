@@ -98,6 +98,19 @@ document.addEventListener('DOMContentLoaded', () => {
   if (toggleBtn) toggleBtn.addEventListener('click', toggleEngineState);
 });
 
+function openAccountDetailsModal() {
+  const modal = document.getElementById('accountDetailsModal');
+  if (modal) modal.style.display = 'flex';
+}
+
+function closeAccountDetailsModal() {
+  const modal = document.getElementById('accountDetailsModal');
+  if (modal) modal.style.display = 'none';
+}
+
+window.openAccountDetailsModal = openAccountDetailsModal;
+window.closeAccountDetailsModal = closeAccountDetailsModal;
+
 function makeDockDraggable() {
   const dock = document.getElementById('quickGlanceDock');
   if (!dock) return;
@@ -475,29 +488,49 @@ function renderDashboard(data) {
     heroSub.innerText = `Locked Margin: ₹${summary.marginUsedINR.toFixed(2)} (Held by Exchange)`;
   }
 
-  document.getElementById('kpiTotalEquity').innerText = `₹${summary.totalEquityINR.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-  document.getElementById('kpiEquitySubtext').innerText = `Virtual Capital: ₹${summary.startingCapitalINR.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  // Account Details Modal
+  const mWalBal = document.getElementById('modalWalletBal');
+  if (mWalBal) mWalBal.innerText = `₹${summary.startingCapitalINR.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  
+  const mTotEq = document.getElementById('modalTotalEquity');
+  if (mTotEq) mTotEq.innerText = `₹${summary.totalEquityINR.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  
+  const mRealBal = document.getElementById('modalRealizedBalance');
+  if (mRealBal) mRealBal.innerText = `₹${summary.realizedBalanceINR.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  
+  const mWinRate = document.getElementById('modalWinRate');
+  if (mWinRate) mWinRate.innerText = `${summary.winRate}%`;
+  
+  const mTradesCount = document.getElementById('modalTradesCount');
+  if (mTradesCount) mTradesCount.innerText = `Total: ${summary.closedPositionsCount} | Wins: ${summary.winCount} | Losses: ${summary.lossCount}`;
 
-  document.getElementById('kpiRealizedBalance').innerText = `₹${summary.realizedBalanceINR.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  if (document.getElementById('kpiTotalEquity')) document.getElementById('kpiTotalEquity').innerText = `₹${summary.totalEquityINR.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  if (document.getElementById('kpiEquitySubtext')) document.getElementById('kpiEquitySubtext').innerText = `Virtual Capital: ₹${summary.startingCapitalINR.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+
+  if (document.getElementById('kpiRealizedBalance')) document.getElementById('kpiRealizedBalance').innerText = `₹${summary.realizedBalanceINR.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
   const realizedNetEl = document.getElementById('kpiRealizedNet');
-  realizedNetEl.innerText = `₹${summary.realizedNetINR.toFixed(2)}`;
-  realizedNetEl.className = `kpi-value ${summary.realizedNetINR >= 0 ? 'text-green' : 'text-red'}`;
-  document.getElementById('kpiRealizedGrossSubtext').innerText = `Gross: $${summary.realizedGrossUSD.toFixed(2)} | Charges: ₹${summary.realizedChargesINR.toFixed(2)}`;
+  if (realizedNetEl) {
+    realizedNetEl.innerText = `₹${summary.realizedNetINR.toFixed(2)}`;
+    realizedNetEl.className = `kpi-value ${summary.realizedNetINR >= 0 ? 'text-green' : 'text-red'}`;
+  }
+  if (document.getElementById('kpiRealizedGrossSubtext')) document.getElementById('kpiRealizedGrossSubtext').innerText = `Gross: $${summary.realizedGrossUSD.toFixed(2)} | Charges: ₹${summary.realizedChargesINR.toFixed(2)}`;
 
   const floatNetEl = document.getElementById('kpiFloatingNet');
-  floatNetEl.innerText = `₹${summary.floatingNetINR.toFixed(2)}`;
-  floatNetEl.className = `kpi-value ${summary.floatingNetINR >= 0 ? 'text-green' : 'text-red'}`;
-  document.getElementById('kpiFloatingSubtext').innerText = `Gross: $${summary.floatingGrossUSD.toFixed(2)} | Charges: ₹${summary.floatingChargesINR.toFixed(2)}`;
+  if (floatNetEl) {
+    floatNetEl.innerText = `₹${summary.floatingNetINR.toFixed(2)}`;
+    floatNetEl.className = `kpi-value ${summary.floatingNetINR >= 0 ? 'text-green' : 'text-red'}`;
+  }
+  if (document.getElementById('kpiFloatingSubtext')) document.getElementById('kpiFloatingSubtext').innerText = `Gross: $${summary.floatingGrossUSD.toFixed(2)} | Charges: ₹${summary.floatingChargesINR.toFixed(2)}`;
 
-  document.getElementById('kpiActivePairs').innerText = `${summary.activePairsCount} / ${summary.maxActivePairs}`;
-  document.getElementById('kpiUniqueRatesCount').innerText = `Processed Rates: ${processedRatesCount} unique`;
+  if (document.getElementById('kpiActivePairs')) document.getElementById('kpiActivePairs').innerText = `${summary.activePairsCount} / ${summary.maxActivePairs}`;
+  if (document.getElementById('kpiUniqueRatesCount')) document.getElementById('kpiUniqueRatesCount').innerText = `Processed Rates: ${processedRatesCount} unique`;
 
-  document.getElementById('kpiAvailableMargin').innerText = `₹${summary.availableMarginINR.toLocaleString('en-IN', { minimumFractionDigits: 2 })}`;
-  document.getElementById('kpiMarginUsed').innerText = `Locked Position Margin: ₹${summary.marginUsedINR.toFixed(2)} (${settings.leverage}x)`;
+  if (document.getElementById('kpiAvailableMargin')) document.getElementById('kpiAvailableMargin').innerText = `₹${summary.availableMarginINR.toLocaleString('en-IN', { minimumFractionDigits: 2 })}`;
+  if (document.getElementById('kpiMarginUsed')) document.getElementById('kpiMarginUsed').innerText = `Locked Margin: ₹${summary.marginUsedINR.toFixed(2)} (${settings.leverage}x)`;
 
-  document.getElementById('kpiWinRate').innerText = `${summary.winRate}%`;
-  document.getElementById('kpiTradesCount').innerText = `Total: ${summary.closedPositionsCount} | Wins: ${summary.winCount} | Losses: ${summary.lossCount}`;
+  if (document.getElementById('kpiWinRate')) document.getElementById('kpiWinRate').innerText = `${summary.winRate}%`;
+  if (document.getElementById('kpiTradesCount')) document.getElementById('kpiTradesCount').innerText = `Total: ${summary.closedPositionsCount} | Wins: ${summary.winCount} | Losses: ${summary.lossCount}`;
 
   // Controls sync
   const instEl = document.getElementById('settingInstrument');

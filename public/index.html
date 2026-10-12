@@ -61,8 +61,8 @@
       <button id="toggleEngineBtn" class="btn btn-primary" onclick="toggleEngineState()">
         <span>▶</span> <span id="toggleEngineBtnText">PAUSE ENGINE</span>
       </button>
+      <button class="btn btn-secondary" style="border: 1px solid #38bdf8; color: #38bdf8; font-weight: 700;" onclick="openAccountDetailsModal()">💰 Account Info</button>
       <button class="btn btn-secondary" onclick="openSettingsModal()">⚙️ Settings</button>
-      <button class="btn btn-warning" onclick="resetAllDataConfirm()">🔄 Reset Data</button>
     </div>
   </header>
 
@@ -75,78 +75,41 @@
       <button class="btn btn-secondary" style="padding: 4px 10px; font-size: 0.75rem;" onclick="openSettingsModal()">Adjust Settings</button>
     </div>
 
-    <!-- Top KPI Cards Grid -->
-    <section class="kpi-grid">
-      <!-- Total Equity -->
-      <div class="kpi-card">
-        <div class="kpi-header">
-          <span class="kpi-title">Total Equity</span>
-          <span class="kpi-icon">💰</span>
+    <!-- Single Top Summary Section (4 Cards Only) -->
+    <section class="top-summary-card" style="background: linear-gradient(135deg, rgba(16, 185, 129, 0.08), rgba(15, 23, 42, 0.95)); border: 1px solid rgba(16, 185, 129, 0.35); border-radius: 14px; padding: 18px 22px; margin-bottom: 20px; box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);">
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px;">
+        
+        <!-- 1. Realized Net P/L -->
+        <div style="background: #0d1117; border: 1px solid var(--border-color); border-radius: 10px; padding: 14px 18px;">
+          <div style="font-size: 0.72rem; color: var(--text-muted); font-weight: 700; text-transform: uppercase;">Realized Net P/L</div>
+          <div style="font-size: 1.5rem; font-weight: 800; font-family: monospace;" id="kpiRealizedNet">₹0.00</div>
+          <div style="font-size: 0.72rem; color: var(--text-dim);" id="kpiRealizedGrossSubtext">Gross: $0.00 | Charges: ₹0.00</div>
         </div>
-        <div class="kpi-value text-blue" id="kpiTotalEquity">₹50,000.00</div>
-        <div class="kpi-subtext" id="kpiEquitySubtext">Starting Virtual Capital: ₹1,03,227.29</div>
-      </div>
 
-      <!-- Realized Balance -->
-      <div class="kpi-card">
-        <div class="kpi-header">
-          <span class="kpi-title">Realized Balance</span>
-          <span class="kpi-icon">🏦</span>
+        <!-- 2. Floating Net P/L -->
+        <div style="background: #0d1117; border: 1px solid var(--border-color); border-radius: 10px; padding: 14px 18px;">
+          <div style="font-size: 0.72rem; color: var(--text-muted); font-weight: 700; text-transform: uppercase;">Floating Net P/L</div>
+          <div style="font-size: 1.5rem; font-weight: 800; font-family: monospace;" id="kpiFloatingNet">₹0.00</div>
+          <div style="font-size: 0.72rem; color: var(--text-dim);" id="kpiFloatingSubtext">Gross: $0.00 | Charges: ₹0.00</div>
         </div>
-        <div class="kpi-value" id="kpiRealizedBalance">₹50,000.00</div>
-        <div class="kpi-subtext" id="kpiBalanceSubtext">Virtual Capital + Realized P/L</div>
-      </div>
 
-      <!-- Realized Net P/L -->
-      <div class="kpi-card">
-        <div class="kpi-header">
-          <span class="kpi-title">Realized Net P/L</span>
-          <span class="kpi-icon">📈</span>
+        <!-- 3. Available Free Margin -->
+        <div style="background: #0d1117; border: 1px solid var(--border-color); border-radius: 10px; padding: 14px 18px;">
+          <div style="font-size: 0.72rem; color: var(--text-muted); font-weight: 700; text-transform: uppercase;">Available Free Margin</div>
+          <div style="font-size: 1.5rem; font-weight: 800; font-family: monospace; color: #38bdf8;" id="kpiAvailableMargin">₹0.00</div>
+          <div style="font-size: 0.72rem; color: var(--text-dim);" id="kpiMarginUsed">Margin Used: ₹0.00 (5x)</div>
         </div>
-        <div class="kpi-value" id="kpiRealizedNet">₹0.00</div>
-        <div class="kpi-subtext" id="kpiRealizedGrossSubtext">Gross: $0.00 | Charges: ₹0.00</div>
-      </div>
 
-      <!-- Floating Net P/L -->
-      <div class="kpi-card">
-        <div class="kpi-header">
-          <span class="kpi-title">Floating Net P/L</span>
-          <span class="kpi-icon">⚡</span>
+        <!-- 4. Active Pairs / Cap -->
+        <div style="background: #0d1117; border: 1px solid var(--border-color); border-radius: 10px; padding: 14px 18px;">
+          <div style="font-size: 0.72rem; color: var(--text-muted); font-weight: 700; text-transform: uppercase;">Active Pairs / Cap 📊</div>
+          <div style="font-size: 1.5rem; font-weight: 800; font-family: monospace; color: #f59e0b;" id="kpiActivePairs">0 / 25</div>
+          <div style="font-size: 0.72rem; color: var(--text-dim);" id="kpiUniqueRatesCount">Processed Rates: 0 unique</div>
         </div>
-        <div class="kpi-value" id="kpiFloatingNet">₹0.00</div>
-        <div class="kpi-subtext" id="kpiFloatingSubtext">Gross: $0.00 | Charges: ₹0.00</div>
-      </div>
 
-      <!-- Active Pairs Cap & Unique Rates -->
-      <div class="kpi-card">
-        <div class="kpi-header">
-          <span class="kpi-title">Active Pairs / Cap</span>
-          <span class="kpi-icon">🔄</span>
-        </div>
-        <div class="kpi-value" id="kpiActivePairs">0 / 25</div>
-        <div class="kpi-subtext" id="kpiUniqueRatesCount">Processed Rates: 0</div>
-      </div>
-
-      <!-- Margin & Buying Power -->
-      <div class="kpi-card">
-        <div class="kpi-header">
-          <span class="kpi-title">Available Margin</span>
-          <span class="kpi-icon">🛡️</span>
-        </div>
-        <div class="kpi-value" id="kpiAvailableMargin">₹50,000.00</div>
-        <div class="kpi-subtext" id="kpiMarginUsed">Margin Used: ₹0.00 (5x)</div>
-      </div>
-
-      <!-- Win Rate / Closed Count -->
-      <div class="kpi-card">
-        <div class="kpi-header">
-          <span class="kpi-title">Closed Trades / Win Rate</span>
-          <span class="kpi-icon">🎯</span>
-        </div>
-        <div class="kpi-value text-green" id="kpiWinRate">0%</div>
-        <div class="kpi-subtext" id="kpiTradesCount">Total: 0 | Wins: 0 | Losses: 0</div>
       </div>
     </section>
+
 
 
     <!-- Main Content Area: Tabs -->
@@ -525,6 +488,47 @@
           <input type="number" id="modalLeverage" class="form-control" value="5" min="1" max="100">
         </div>
         <button class="btn btn-primary" style="margin-top: 10px; font-weight: 800;" onclick="saveModalSettings()">💾 Save & Apply Settings</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Account & Capital Info Modal -->
+  <div id="accountDetailsModal" class="modal-overlay" onclick="if(event.target === this) closeAccountDetailsModal()">
+    <div class="modal-card" style="max-width: 520px; position: relative;">
+      <div class="modal-header">
+        <h3>💰 Mudrex Capital & Account Details</h3>
+        <button class="close-btn" onclick="closeAccountDetailsModal()" style="font-size: 1.5rem; padding: 4px 10px; cursor: pointer; color: #fff;">✕</button>
+      </div>
+      <div style="display: flex; flex-direction: column; gap: 14px;">
+        <div style="background: #0d1117; border: 1px solid var(--border-color); border-radius: 10px; padding: 14px 18px;">
+          <div style="font-size: 0.72rem; color: var(--text-muted); font-weight: 700; text-transform: uppercase;">Mudrex Live Wallet Balance</div>
+          <div style="font-size: 1.6rem; font-weight: 800; font-family: monospace; color: #a7f3d0;" id="modalWalletBal">₹0.00</div>
+          <div style="font-size: 0.75rem; color: var(--text-dim);" id="modalWalletSub">Live Exchange Capital</div>
+        </div>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+          <div style="background: #0d1117; border: 1px solid var(--border-color); border-radius: 8px; padding: 12px 14px;">
+            <div style="font-size: 0.72rem; color: var(--text-muted); font-weight: 700; text-transform: uppercase;">TOTAL EQUITY</div>
+            <div style="font-size: 1.25rem; font-weight: 800; font-family: monospace; color: #38bdf8;" id="modalTotalEquity">₹0.00</div>
+            <div style="font-size: 0.7rem; color: var(--text-dim);" id="modalEquitySub">Capital + Net P/L</div>
+          </div>
+
+          <div style="background: #0d1117; border: 1px solid var(--border-color); border-radius: 8px; padding: 12px 14px;">
+            <div style="font-size: 0.72rem; color: var(--text-muted); font-weight: 700; text-transform: uppercase;">REALIZED BALANCE</div>
+            <div style="font-size: 1.25rem; font-weight: 800; font-family: monospace;" id="modalRealizedBalance">₹0.00</div>
+            <div style="font-size: 0.7rem; color: var(--text-dim);">Capital + Realized P/L</div>
+          </div>
+        </div>
+
+        <div style="background: #0d1117; border: 1px solid var(--border-color); border-radius: 8px; padding: 12px 14px;">
+          <div style="display: flex; justify-content: space-between; align-items: center;">
+            <span style="font-size: 0.78rem; color: var(--text-muted); font-weight: 700; text-transform: uppercase;">CLOSED TRADES / WIN RATE</span>
+            <span style="font-size: 1.15rem; font-weight: 800; color: #10b981;" id="modalWinRate">0%</span>
+          </div>
+          <div style="font-size: 0.75rem; color: var(--text-dim); margin-top: 4px;" id="modalTradesCount">Total: 0 | Wins: 0 | Losses: 0</div>
+        </div>
+
+        <button class="btn btn-secondary" style="width: 100%; margin-top: 4px; background: #374151; color: #fff; font-weight: 700; border: none; padding: 10px; cursor: pointer;" onclick="closeAccountDetailsModal()">✖ Close Window</button>
       </div>
     </div>
   </div>
