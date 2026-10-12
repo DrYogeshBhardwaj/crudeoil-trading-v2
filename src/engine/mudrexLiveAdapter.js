@@ -706,10 +706,11 @@ class MudrexLiveAdapter {
     this.liveOpenPositions = liveOpenPositions;
     this.liveClosedPositions = liveClosedPositions;
 
-    let realizedGrossUSD = 0, realizedNetINR = 0, realizedChargesINR = 0, realizedChargesUSD = 0;
+    let realizedGrossUSD = 0, realizedGrossINR = 0, realizedNetINR = 0, realizedChargesINR = 0, realizedChargesUSD = 0;
     let winCount = 0, lossCount = 0;
     for (const cp of liveClosedPositions) {
       realizedGrossUSD += cp.grossProfitUSD || 0;
+      realizedGrossINR += cp.grossProfitINR || 0;
       realizedNetINR += cp.netProfitINR || 0;
       realizedChargesINR += cp.totalChargesINR || 0;
       realizedChargesUSD += cp.totalChargesUSD || 0;
@@ -791,12 +792,12 @@ class MudrexLiveAdapter {
       summary: {
         startingCapitalINR: displayStartingCap,
         realizedBalanceINR,
-        realizedGrossUSD,
-        realizedGrossINR: realizedGrossUSD * (rateInfo.usdInrRate || 86.5),
+        realizedGrossUSD: Number(realizedGrossUSD.toFixed(4)),
+        realizedGrossINR: Number(realizedGrossINR.toFixed(2)),
         realizedChargesUSD: Number(realizedChargesUSD.toFixed(4)),
         realizedChargesINR: Number(realizedChargesINR.toFixed(2)),
-        realizedNetUSD: realizedNetINR / (rateInfo.usdInrRate || 86.5),
-        realizedNetINR,
+        realizedNetUSD: Number((realizedNetINR / (rateInfo.usdInrRate || 86.5)).toFixed(4)),
+        realizedNetINR: Number(realizedNetINR.toFixed(2)),
         floatingGrossUSD,
         floatingGrossINR: floatingGrossUSD * (rateInfo.usdInrRate || 86.5),
         floatingChargesUSD: 0,

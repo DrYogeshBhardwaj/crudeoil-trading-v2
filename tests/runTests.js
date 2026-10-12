@@ -16,7 +16,7 @@ function sendTestTick(symbol, price, time = Date.now(), status = 'LIVE', usdInrR
 
 async function runTestSuite() {
   console.log('========================================================================');
-  console.log('  RUNNING ENGINE & EXPANDED HISTORICAL BACKTESTER TEST SUITE (1-18)      ');
+  console.log('  RUNNING ENGINE & EXPANDED HISTORICAL BACKTESTER TEST SUITE (1-23)      ');
   console.log('========================================================================\n');
 
   let passedCount = 0;
@@ -42,8 +42,10 @@ async function runTestSuite() {
     { name: 'Test 17 — Entry Rejection Audit and Insufficient Margin Check', fn: test17 },
     { name: 'Test 18 — Position State-Driven Pair-Entry Strategy Verification (Leg Reopening, Idempotency & Cap)', fn: test18 },
     { name: 'Test 19 — Same-Rate Atomic Pair Creation & Missing-Side Re-Entry at Same Rate Verification', fn: test19 },
+    { name: 'Test 20 — Strict Pair Completion Condition Audit (No Re-entry at Unrelated Price)', fn: test20 },
     { name: 'Test 21 — Accounting Formula & Margin Reconciliation Math Verification', fn: test21 },
-    { name: 'Test 22 — Total Charges Paid Summary KPI Aggregation Verification', fn: test22 }
+    { name: 'Test 22 — Total Charges Paid Summary KPI Aggregation Verification', fn: test22 },
+    { name: 'Test 23 — Accounting Rounding Policy & Aggregate Reconciliation Audit', fn: test23 }
   ];
 
   for (const tc of testCases) {
@@ -589,4 +591,36 @@ async function test22() {
   mudrexLive.liveClosedPositions = [];
 }
 
+// Test 23 — Accounting Rounding Policy & Aggregate Reconciliation Audit
+async function test23() {
+  const mudrexLive = require('../src/engine/mudrexLiveAdapter');
+  mudrexLive.liveClosedPositions = [
+    { positionId: 'P-0004-SELL', grossProfitUSD: 0.40, grossProfitINR: 38.78, totalChargesUSD: 0.2713, totalChargesINR: 26.31, netProfitUSD: 0.1287, netProfitINR: 12.47 },
+    { positionId: 'P-0001-SELL', grossProfitUSD: 0.40, grossProfitINR: 38.78, totalChargesUSD: 0.2713, totalChargesINR: 26.31, netProfitUSD: 0.1287, netProfitINR: 12.47 },
+    { positionId: 'P-0003-SELL', grossProfitUSD: 0.40, grossProfitINR: 38.78, totalChargesUSD: 0.2713, totalChargesINR: 26.31, netProfitUSD: 0.1287, netProfitINR: 12.47 },
+    { positionId: 'P-0002-SELL', grossProfitUSD: 0.40, grossProfitINR: 38.78, totalChargesUSD: 0.2712, totalChargesINR: 26.30, netProfitUSD: 0.1288, netProfitINR: 12.48 }
+  ];
+
+  // 1. Trade-level accounting identity check: gross - charges === net
+  for (const cp of mudrexLive.liveClosedPositions) {
+    const calcNet = Number((cp.grossProfitINR - cp.totalChargesINR).toFixed(2));
+    assert(calcNet === cp.netProfitINR, `Trade ${cp.positionId} per-trade rounding mismatch: gross (${cp.grossProfitINR}) - charges (${cp.totalChargesINR}) = ${calcNet}, expected ${cp.netProfitINR}`);
+  }
+
+  const metrics = await mudrexLive.getLiveMetrics();
+  const summary = metrics.summary;
+
+  // 2. Summary totals must match sum of stored closed positions
+  assert(summary.realizedGrossINR === 155.12, `Expected summary.realizedGrossINR to be 155.12, got ${summary.realizedGrossINR}`);
+  assert(summary.realizedChargesINR === 105.23, `Expected summary.realizedChargesINR to be 105.23, got ${summary.realizedChargesINR}`);
+  assert(summary.realizedNetINR === 49.89, `Expected summary.realizedNetINR to be 49.89, got ${summary.realizedNetINR}`);
+
+  // 3. Aggregate accounting identity check: realizedGrossINR - realizedChargesINR === realizedNetINR
+  const aggregateNetCalc = Number((summary.realizedGrossINR - summary.realizedChargesINR).toFixed(2));
+  assert(aggregateNetCalc === summary.realizedNetINR, `Aggregate accounting mismatch: gross (${summary.realizedGrossINR}) - charges (${summary.realizedChargesINR}) = ${aggregateNetCalc}, expected ${summary.realizedNetINR}`);
+
+  mudrexLive.liveClosedPositions = [];
+}
+
 runTestSuite();
+
