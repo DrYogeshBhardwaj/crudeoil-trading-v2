@@ -159,8 +159,15 @@ class MudrexLiveAdapter {
                     pos.mudrexOrderId = this.extractOrderId(res.data);
                     pos.apiStatus = 'REAL_MUDREX_POSITION';
                   } else {
-                    pos.apiStatus = 'LIVE_ENGINE_PAIR (Mudrex API: ' + (typeof res.error === 'object' ? JSON.stringify(res.error) : (res.error || 'Margin Limit')) + ')';
-                    pos.apiError = res.error;
+                    let errStr = typeof res.error === 'object' ? JSON.stringify(res.error) : String(res.error || '');
+                    if (errStr.includes('5002') || errStr.includes('rate limit') || errStr.includes('RATE_LIMIT')) {
+                      pos.apiStatus = 'LIVE_ENGINE_PAIR (RATE_LIMIT_COOLDOWN)';
+                    } else if (errStr.includes('balance') || errStr.includes('margin') || errStr.includes('5001') || errStr.includes('5000')) {
+                      pos.apiStatus = 'LIVE_ENGINE_PAIR (INSUFFICIENT_MARGIN)';
+                    } else {
+                      pos.apiStatus = 'LIVE_ENGINE_PAIR';
+                    }
+                    pos.apiError = errStr;
                   }
                   this.saveState();
                 })
@@ -648,10 +655,18 @@ class MudrexLiveAdapter {
       }
     }
 
-    // Clean up any stale flags
+    // Clean up any stale flags or raw error payloads in apiStatus
     for (const pos of liveOpenPositions) {
       if (pos.apiStatus?.includes('REAL_ORDERS_DISABLED')) {
         delete pos.apiStatus;
+      } else if (pos.apiStatus && (pos.apiStatus.includes('{') || pos.apiStatus.includes('5002') || pos.apiStatus.includes('rate limit') || pos.apiStatus.includes('request_id') || pos.apiStatus.length > 40)) {
+        if (pos.apiStatus.includes('5002') || pos.apiStatus.includes('rate limit')) {
+          pos.apiStatus = 'LIVE_ENGINE_PAIR (RATE_LIMIT_COOLDOWN)';
+        } else if (pos.apiStatus.includes('balance') || pos.apiStatus.includes('margin')) {
+          pos.apiStatus = 'LIVE_ENGINE_PAIR (INSUFFICIENT_MARGIN)';
+        } else {
+          pos.apiStatus = 'LIVE_ENGINE_PAIR';
+        }
       }
     }
 

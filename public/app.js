@@ -910,7 +910,21 @@ function renderActivePositions(positions, symbol, isDhanPage = false, pricePrefi
               <span style="font-size:0.65rem; padding: 2px 6px; border-radius: 4px; background: ${qtyBg}; color: ${qtyColor}; font-weight: 800;">${qtyLabel}</span>
             </div>
             <span style="display:block; margin-top: 2px;"><code style="color:var(--accent-cyan); font-size:0.75rem;">${pos.positionId || 'N/A'}</code></span>
-            ${pos.apiStatus && !pos.apiStatus.includes('REAL_ORDERS_DISABLED') ? `<span style="display:block; font-size:0.62rem; color:${pos.apiStatus.includes('TRANSMITTED') ? '#a7f3d0' : (pos.apiStatus.includes('SENDING') ? '#38bdf8' : '#f87171')}; font-weight:700;">📡 ${pos.apiStatus}</span>` : ''}
+            ${(() => {
+              if (!pos.apiStatus || pos.apiStatus.includes('REAL_ORDERS_DISABLED')) return '';
+              let s = pos.apiStatus;
+              if (s.includes('{') || s.includes('5002') || s.includes('rate limit') || s.includes('request_id') || s.length > 40) {
+                if (s.includes('5002') || s.includes('rate limit')) {
+                  s = 'LIVE_ENGINE_PAIR (RATE_LIMIT_COOLDOWN)';
+                } else if (s.includes('balance') || s.includes('margin')) {
+                  s = 'LIVE_ENGINE_PAIR (INSUFFICIENT_MARGIN)';
+                } else {
+                  s = 'LIVE_ENGINE_PAIR';
+                }
+              }
+              const color = s.includes('REAL_MUDREX') ? '#a7f3d0' : (s.includes('TRANSMITTED') || s.includes('SENDING') ? '#38bdf8' : '#fbbf24');
+              return `<span style="display:block; font-size:0.62rem; color:${color}; font-weight:700; margin-top:2px;">📡 ${s}</span>`;
+            })()}
           </td>
           <td>
             <div style="font-size:0.78rem; color:var(--text-muted);">${pricePrefix}${fmtP(entryPrice)}</div>
