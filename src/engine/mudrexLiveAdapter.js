@@ -886,9 +886,11 @@ class MudrexLiveAdapter {
       if (pos.direction === 'BUY') activeBuyCount++;
       if (pos.direction === 'SELL') activeSellCount++;
       
-      const posPrice = rateInfo.price || pos.currentPrice || pos.entryPrice;
+      const sym = pos.symbol || 'CLUSDT';
+      const symbolRate = rateFeed.getCurrentRate(sym);
+      const posPrice = (symbolRate && symbolRate.price) ? symbolRate.price : (pos.currentPrice || pos.entryPrice);
       const qty = pos.quantity || 1.0;
-      const usdInrRate = rateInfo.usdInrRate || pos.usdInrRateAtEntry || 102.00;
+      const usdInrRate = (symbolRate && symbolRate.usdInrRate) || rateInfo.usdInrRate || pos.usdInrRateAtEntry || 102.00;
       const takerFeeRate = this.settings.takerFeeRate || 0.00075;
       const gstRate = this.settings.gstRate || 0.18;
       const slippageBufferINR = this.settings.slippageBufferINR || 5.0;
@@ -920,6 +922,19 @@ class MudrexLiveAdapter {
     let realizedBalanceINR = startingCapital + realizedNetINR;
     let totalEquityINR = realizedBalanceINR + floatingNetINR;
     let availableMarginINR = Math.max(0, realizedBalanceINR - marginUsedINR);
+
+    // Authoritative 1:1 Mudrex Exchange Margin & Capital Sync
+    if (this.lastAuthCheckRes && this.lastAuthCheckRes.success) {
+      const realFutBal = Number(this.lastAuthCheckRes.futuresBalance || 0);
+      const realLocked = Number(this.lastAuthCheckRes.raw?.futures?.data?.locked_amount || 0);
+      if (realFutBal > 0) {
+        availableMarginINR = realFutBal;
+        if (realLocked > 0) marginUsedINR = realLocked;
+        realizedBalanceINR = Number((availableMarginINR + marginUsedINR).toFixed(2));
+        displayStartingCap = realizedBalanceINR;
+        totalEquityINR = Number((realizedBalanceINR + floatingNetINR).toFixed(2));
+      }
+    }
 
     const closedCount = liveClosedPositions.length;
     const totalTrades = winCount + lossCount;

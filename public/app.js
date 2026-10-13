@@ -607,10 +607,16 @@ function renderDashboard(data) {
   const marginUsedINR = summary.marginUsedINR || 0;
   const marginUsedUSD = marginUsedINR / usdInrRate;
 
-  if (document.getElementById('kpiTotalEquity')) document.getElementById('kpiTotalEquity').innerText = `$${totalEquityUSD.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-  if (document.getElementById('kpiEquitySubtext')) document.getElementById('kpiEquitySubtext').innerText = `Virtual Capital: $${(summary.startingCapitalINR / usdInrRate).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  if (document.getElementById('kpiTotalEquity')) {
+    document.getElementById('kpiTotalEquity').innerHTML = `₹${totalEquityINR.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} <span style="font-size: 1.0rem; opacity: 0.85; font-weight: 700;">($${totalEquityUSD.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })})</span>`;
+  }
+  if (document.getElementById('kpiEquitySubtext')) {
+    document.getElementById('kpiEquitySubtext').innerText = `Virtual Capital: ₹${summary.startingCapitalINR.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ($${(summary.startingCapitalINR / usdInrRate).toFixed(2)})`;
+  }
 
-  if (document.getElementById('kpiRealizedBalance')) document.getElementById('kpiRealizedBalance').innerText = `$${(summary.realizedBalanceINR / usdInrRate).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  if (document.getElementById('kpiRealizedBalance')) {
+    document.getElementById('kpiRealizedBalance').innerHTML = `₹${summary.realizedBalanceINR.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} <span style="font-size: 1.0rem; opacity: 0.85; font-weight: 700;">($${(summary.realizedBalanceINR / usdInrRate).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })})</span>`;
+  }
 
   // 1. Realized Net P/L Card
   const realizedNetEl = document.getElementById('kpiRealizedNet');

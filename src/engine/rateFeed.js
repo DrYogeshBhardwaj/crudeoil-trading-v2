@@ -51,6 +51,7 @@ class RateFeedManager {
   start() {
     console.log('[RateFeed] Starting Live Market Rate Feed...');
     this.initWebSockets();
+    this.pollRestPrices();
     this.startPollingFallback();
     this.startStaleCheckTimer();
     this.fetchUsdInrRate();
