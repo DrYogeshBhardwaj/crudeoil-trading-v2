@@ -905,7 +905,7 @@
             <table class="data-table">
               <thead>
                 <tr>
-                  <th class="sortable-th" onclick="sortTable('buy', 'positionId')">Position <span class="sort-icon" id="sort-buy-positionId">⬍</span></th>
+                  <th class="sortable-th" onclick="sortTable('buy', 'entryTime')">Date/Time (dd/mm/yy) <span class="sort-icon" id="sort-buy-entryTime">⬍</span></th>
                   <th class="sortable-th" onclick="sortTable('buy', 'quantity')">Barrels <span class="sort-icon" id="sort-buy-quantity">⬍</span></th>
                   <th class="sortable-th" onclick="sortTable('buy', 'entryPrice')">Entry <span class="sort-icon" id="sort-buy-entryPrice">⬍</span></th>
                   <th class="sortable-th" onclick="sortTable('buy', 'targetPrice')">Target Exit 🎯 <span class="sort-icon" id="sort-buy-targetPrice">⬍</span></th>
@@ -935,7 +935,7 @@
             <table class="data-table">
               <thead>
                 <tr>
-                  <th class="sortable-th" onclick="sortTable('sell', 'positionId')">Position <span class="sort-icon" id="sort-sell-positionId">⬍</span></th>
+                  <th class="sortable-th" onclick="sortTable('sell', 'entryTime')">Date/Time (dd/mm/yy) <span class="sort-icon" id="sort-sell-entryTime">⬍</span></th>
                   <th class="sortable-th" onclick="sortTable('sell', 'quantity')">Barrels <span class="sort-icon" id="sort-sell-quantity">⬍</span></th>
                   <th class="sortable-th" onclick="sortTable('sell', 'entryPrice')">Entry <span class="sort-icon" id="sort-sell-entryPrice">⬍</span></th>
                   <th class="sortable-th" onclick="sortTable('sell', 'targetPrice')">Target Exit 🎯 <span class="sort-icon" id="sort-sell-targetPrice">⬍</span></th>
@@ -1290,6 +1290,28 @@
       return String(timeVal).replace('T', ' ').slice(0, 19);
     }
 
+    function formatDateTimeIST(timeVal) {
+      if (!timeVal) return '--';
+      try {
+        let clean = String(timeVal);
+        const m = clean.match(/T(\d{2}):(\d{2}):(\d{2})/);
+        if (m) {
+          let h = parseInt(m[1], 10);
+          if (h >= 24) {
+            h = h % 24;
+            clean = clean.replace(/T\d{2}:/, `T${h.toString().padStart(2, '0')}:`);
+          }
+        }
+        const d = new Date(clean);
+        if (!isNaN(d.getTime())) {
+          const dStr = d.toLocaleDateString('en-GB', { timeZone: 'Asia/Kolkata', day: '2-digit', month: '2-digit', year: '2-digit' });
+          const tStr = d.toLocaleTimeString('en-IN', { timeZone: 'Asia/Kolkata', hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true });
+          return `${dStr} ${tStr}`;
+        }
+      } catch (e) {}
+      return String(timeVal).replace('T', ' ').slice(0, 19);
+    }
+
     function sortArray(items, col, dir, extractFn) {
       if (!col || !items || items.length === 0) return items;
       const sorted = [...items];
@@ -1323,7 +1345,10 @@
 
     function getBuySortValue(p, col) {
       const b = p.buy || {};
-      if (col === 'positionId') return b.positionId || '';
+      if (col === 'entryTime' || col === 'positionId') {
+        const t = new Date(b.entryTime || p.createdAt || 0).getTime();
+        return isNaN(t) ? 0 : t;
+      }
       if (col === 'quantity') return b.quantity || 1.0;
       if (col === 'entryPrice') return b.entryPrice || 0;
       if (col === 'targetPrice') return b.targetPrice || 0;
@@ -1334,7 +1359,10 @@
 
     function getSellSortValue(p, col) {
       const s = p.sell || {};
-      if (col === 'positionId') return s.positionId || '';
+      if (col === 'entryTime' || col === 'positionId') {
+        const t = new Date(s.entryTime || p.createdAt || 0).getTime();
+        return isNaN(t) ? 0 : t;
+      }
       if (col === 'quantity') return s.quantity || 1.0;
       if (col === 'entryPrice') return s.entryPrice || 0;
       if (col === 'targetPrice') return s.targetPrice || 0;
@@ -1461,7 +1489,10 @@
         const pnlSign = (p.buy.floatingPnlINR || 0) >= 0 ? '+' : '';
         buyRows.push(`
           <tr>
-            <td><strong>${p.buy.positionId}</strong></td>
+            <td>
+              <strong style="color: #fff; font-size: 0.88rem;">${formatDateTimeIST(p.buy.entryTime || p.createdAt)}</strong>
+              <div style="font-size: 0.70rem; color: var(--text-dim); font-family: var(--font-mono); margin-top: 1px;">${p.buy.positionId}</div>
+            </td>
             <td><strong style="color: var(--accent-gold); font-size: 0.85rem;">${(p.buy.quantity || 1.0).toFixed(1)} BBL</strong></td>
             <td>$${p.buy.entryPrice.toFixed(2)}</td>
             <td style="color: var(--accent-green-bright); font-weight: 800;">$${p.buy.targetPrice.toFixed(2)}</td>
@@ -1476,7 +1507,10 @@
         const pnlSign = (p.sell.floatingPnlINR || 0) >= 0 ? '+' : '';
         sellRows.push(`
           <tr>
-            <td><strong>${p.sell.positionId}</strong></td>
+            <td>
+              <strong style="color: #fff; font-size: 0.88rem;">${formatDateTimeIST(p.sell.entryTime || p.createdAt)}</strong>
+              <div style="font-size: 0.70rem; color: var(--text-dim); font-family: var(--font-mono); margin-top: 1px;">${p.sell.positionId}</div>
+            </td>
             <td><strong style="color: var(--accent-gold); font-size: 0.85rem;">${(p.sell.quantity || 1.0).toFixed(1)} BBL</strong></td>
             <td>$${p.sell.entryPrice.toFixed(2)}</td>
             <td style="color: var(--accent-red-bright); font-weight: 800;">$${p.sell.targetPrice.toFixed(2)}</td>
