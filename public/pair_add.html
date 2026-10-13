@@ -3,14 +3,25 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Mudrex Crude Oil Live Engine — mudrex_crude_live</title>
-  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><circle cx='50' cy='50' r='48' fill='%23047857' stroke='%2334d399' stroke-width='4'/><text x='50' y='66' font-size='58' text-anchor='middle'>⚡</text></svg>">
+  <title>Mudrex Pair-Add Engine — Smart Pair Simulator</title>
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><circle cx='50' cy='50' r='48' fill='%230284c7' stroke='%2338bdf8' stroke-width='4'/><text x='50' y='66' font-size='58' text-anchor='middle'>⚡</text></svg>">
   <link rel="stylesheet" href="style.css?v=20261011_v3">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
   <style>
     .mudrex-brand-badge {
+      background: linear-gradient(135deg, #0284c7, #0369a1);
+      color: #fff;
+      padding: 4px 10px;
+      border-radius: 6px;
+      font-size: 0.75rem;
+      font-weight: 800;
+      letter-spacing: 0.5px;
+      text-transform: uppercase;
+      box-shadow: 0 0 10px rgba(56, 189, 248, 0.4);
+    }
+    .crude-brand-badge {
       background: linear-gradient(135deg, #10b981, #059669);
       color: #fff;
       padding: 4px 10px;
@@ -20,17 +31,6 @@
       letter-spacing: 0.5px;
       text-transform: uppercase;
       box-shadow: 0 0 10px rgba(16, 185, 129, 0.4);
-    }
-    .crude-brand-badge {
-      background: linear-gradient(135deg, #f59e0b, #d97706);
-      color: #fff;
-      padding: 4px 10px;
-      border-radius: 6px;
-      font-size: 0.75rem;
-      font-weight: 800;
-      letter-spacing: 0.5px;
-      text-transform: uppercase;
-      box-shadow: 0 0 10px rgba(245, 158, 11, 0.4);
       margin-left: 6px;
     }
     .modal-qty-btn {
@@ -66,19 +66,19 @@
 <body>
 
   <!-- Safety Banner -->
-  <div class="safety-banner" style="background: linear-gradient(90deg, #065f46, #047857, #065f46); border-bottom: 1px solid #10b981; padding: 4px 10px; font-size: 0.78rem;">
-    <span>⚡ MUDREX CRUDE OIL LIVE REAL TRADING TERMINAL — mudrex_crude_live</span>
+  <div class="safety-banner" style="background: linear-gradient(90deg, #0c4a6e, #0284c7, #0c4a6e); border-bottom: 1px solid #38bdf8; padding: 4px 10px; font-size: 0.78rem;">
+    <span>⚡ MUDREX PAIR-ADD SIMULATOR — Dynamic Smart Pair & Multi-Barrel Engine (Clean Data Mode)</span>
   </div>
 
   <!-- Header Bar -->
   <header class="app-header">
     <div class="brand-section">
-      <div class="brand-logo" style="background: linear-gradient(135deg, #10b981, #059669); box-shadow: 0 0 16px rgba(16, 185, 129, 0.5); font-size: 1.5rem;">⚡</div>
+      <div class="brand-logo" style="background: linear-gradient(135deg, #0284c7, #0369a1); box-shadow: 0 0 16px rgba(56, 189, 248, 0.5); font-size: 1.5rem;">⚡</div>
       <div class="brand-title">
         <h1 style="display: flex; align-items: center; gap: 8px;">
-          Mudrex Crude Live
-          <span class="mudrex-brand-badge" style="background: linear-gradient(135deg, #10b981, #047857);">🔴 LIVE TERMINAL</span>
-          <span class="crude-brand-badge" style="background: linear-gradient(135deg, #f59e0b, #d97706);">🛢️ CRUDE OIL</span>
+          Mudrex Pair-Add
+          <span class="mudrex-brand-badge">🧪 PAIR SIMULATOR</span>
+          <span class="crude-brand-badge">🛢️ CRUDE OIL</span>
         </h1>
       </div>
     </div>

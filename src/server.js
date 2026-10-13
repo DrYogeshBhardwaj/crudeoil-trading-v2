@@ -3,6 +3,7 @@ const cors = require('cors');
 const path = require('path');
 const rateFeed = require('./engine/rateFeed');
 const paperEngine = require('./engine/paperEngine');
+const pairAddEngine = require('./engine/pairAddEngine');
 const backtest = require('./engine/backtest');
 const mcxBacktest = require('./engine/mcxBacktest');
 
@@ -75,12 +76,27 @@ app.get('/api/mudrex-debug', async (req, res) => {
   }
 });
 
-// 1. Dashboard Metrics (Supporting Mudrex Live Mode)
-app.get(['/api/metrics', '/api/mudrex/metrics', '/api/mudrex-metrics'], async (req, res) => {
+// 1. Dashboard Metrics (Supporting Mudrex Live, Pair-Add, & Paper Modes)
+app.get(['/api/metrics', '/api/mudrex/metrics', '/api/mudrex-metrics', '/api/pair-add/metrics'], async (req, res) => {
   try {
-    const isMudrexLive = (req.path.includes('mudrex') && !req.path.includes('calc')) || req.query.mode === 'mudrex_live' || (req.headers.referer && (req.headers.referer.includes('mudrex_live') || req.headers.referer.includes('mudrex-live')) && !req.headers.referer.includes('calc'));
+    const referer = (req.headers.referer || '').toLowerCase();
+    const path = req.path.toLowerCase();
+    const mode = (req.query.mode || '').toLowerCase();
+
+    const isPairAdd = path.includes('pair-add') || mode === 'pair_add' || referer.includes('pair_add') || referer.includes('pair-add');
+    const isMudrexLive = !isPairAdd && (
+      path.includes('mudrex') ||
+      mode === 'mudrex_live' ||
+      referer.includes('mudrex_live') ||
+      referer.includes('mudrex-live') ||
+      referer.includes('mudrex_crude') ||
+      referer.includes('mudrex-crude')
+    ) && !path.includes('calc') && !referer.includes('calc');
+
     let metrics;
-    if (isMudrexLive) {
+    if (isPairAdd) {
+      metrics = pairAddEngine.getMetrics();
+    } else if (isMudrexLive) {
       const mudrexLive = require('./engine/mudrexLiveAdapter');
       metrics = await mudrexLive.getLiveMetrics();
     } else {
@@ -99,12 +115,23 @@ app.get('/api/stream', async (req, res) => {
   res.setHeader('Connection', 'keep-alive');
   res.flushHeaders();
 
-  const isMudrexLive = req.query.mode === 'mudrex_live' || (req.headers.referer && (req.headers.referer.includes('mudrex_live') || req.headers.referer.includes('mudrex-live')));
+  const referer = (req.headers.referer || '').toLowerCase();
+  const mode = (req.query.mode || '').toLowerCase();
+  const isPairAdd = mode === 'pair_add' || referer.includes('pair_add') || referer.includes('pair-add');
+  const isMudrexLive = !isPairAdd && (
+    mode === 'mudrex_live' ||
+    referer.includes('mudrex_live') ||
+    referer.includes('mudrex-live') ||
+    referer.includes('mudrex_crude') ||
+    referer.includes('mudrex-crude')
+  ) && !referer.includes('calc');
 
   const sendUpdate = async () => {
     try {
       let metrics;
-      if (isMudrexLive) {
+      if (isPairAdd) {
+        metrics = pairAddEngine.getMetrics();
+      } else if (isMudrexLive) {
         const mudrexLive = require('./engine/mudrexLiveAdapter');
         metrics = await mudrexLive.getLiveMetrics();
       } else {
@@ -241,12 +268,54 @@ app.post('/api/manual-trade', (req, res) => {
   }
 });
 
-// 5b. Smart "Pair-Add" Endpoint (Checks B/S at current rate -> adds missing leg or full pair)
-app.post('/api/pair-add', (req, res) => {
+// 5b. Smart "Pair-Add" Actions & Simulator Endpoints
+app.post(['/api/pair-add', '/api/pair-add/trade'], (req, res) => {
   try {
-    const { symbol = 'CLUSDT', price = null, quantity = 1.0, targetMove = 0.20 } = req.body;
-    const result = paperEngine.smartPairAdd(symbol, price, Number(quantity), Number(targetMove));
-    res.json({ success: true, ...result });
+    const { action = 'PAIR', symbol = 'CLUSDT', price = null, quantity = 1.0, targetMove = 0.20 } = req.body;
+    let result;
+    if (action === 'SMART_PAIR' || action === 'SMART') {
+      result = pairAddEngine.smartPairAdd(symbol, price, Number(quantity), Number(targetMove));
+    } else {
+      result = pairAddEngine.createNewPair(symbol, price, Number(quantity), Number(targetMove));
+    }
+    res.json(result);
+  } catch (err) {
+    res.status(400).json({ success: false, error: err.message });
+  }
+});
+
+app.post('/api/pair-add/toggle-engine', (req, res) => {
+  try {
+    const isRunning = pairAddEngine.toggleEngine();
+    res.json({ success: true, isEngineRunning: isRunning });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+app.post('/api/pair-add/reset', (req, res) => {
+  try {
+    const result = pairAddEngine.resetEngine();
+    res.json(result);
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+app.post('/api/pair-add/settings', (req, res) => {
+  try {
+    const settings = pairAddEngine.updateSettings(req.body);
+    res.json({ success: true, settings });
+  } catch (err) {
+    res.status(400).json({ success: false, error: err.message });
+  }
+});
+
+app.post('/api/pair-add/manual-close', (req, res) => {
+  try {
+    const { positionId } = req.body;
+    pairAddEngine.manualClosePosition(positionId);
+    res.json({ success: true, message: `Position ${positionId} closed.` });
   } catch (err) {
     res.status(400).json({ success: false, error: err.message });
   }

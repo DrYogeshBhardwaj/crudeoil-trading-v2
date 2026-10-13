@@ -1126,8 +1126,28 @@ class PaperEngine {
     this.settings.strategyMode = 'ALTERNATING_STAGGERED';
     delete this.settings.buyTargetMove;
     delete this.settings.sellTargetMove;
-    this.pairs = [];
-    this.closedPositions = [];
+    // Safeguard: Preserve real Mudrex exchange positions and closed history
+    const realPairs = (this.pairs || []).filter(p => {
+      const bReal = p.buyPosition && (p.buyPosition.apiStatus === 'REAL_MUDREX_POSITION' || p.buyPosition.mudrexOrderId);
+      const sReal = p.sellPosition && (p.sellPosition.apiStatus === 'REAL_MUDREX_POSITION' || p.sellPosition.mudrexOrderId);
+      return bReal || sReal;
+    });
+    const realClosed = (this.closedPositions || []).filter(p => p.apiStatus === 'REAL_MUDREX_POSITION' || p.mudrexOrderId || (p.exitReason && p.exitReason.includes('TARGET PROFIT HIT')));
+
+    this.pairs = realPairs;
+    this.closedPositions = realClosed;
+
+    if (this.closedPositions.length === 0) {
+      try {
+        const seed = require('./state_seed.json');
+        if (seed && Array.isArray(seed.closedPositions) && seed.closedPositions.length > 0) {
+          this.closedPositions = seed.closedPositions;
+        }
+        if (seed && Array.isArray(seed.pairs) && seed.pairs.length > 0 && this.pairs.length === 0) {
+          this.pairs = seed.pairs;
+        }
+      } catch (e) {}
+    }
     this.auditLogs = [];
     this.lastProcessedRate = null;
     this.lastSkippedRate = null;

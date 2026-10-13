@@ -635,12 +635,14 @@ class MudrexLiveAdapter {
 
   resetLiveEngine() {
     this.settings.contractQuantity = 1.0;
-    this.settings.profitTargetMove = 0.20;
-    this.liveOpenPositions = [];
-    this.liveClosedPositions = [];
+    // Safeguard: Never delete or wipe live real Mudrex exchange positions
+    this.liveOpenPositions = (this.liveOpenPositions || []).filter(p => p.apiStatus === 'REAL_MUDREX_POSITION' || p.mudrexOrderId);
     this.processedRates.clear();
     this.userClosedRealPositionIds.clear();
     this.pairCounter = 1;
+    if (this.settings.syncRealMudrexPositions && this.isRealExecutionEnabled()) {
+      this.fetchPositions().catch(() => {});
+    }
     this.saveState();
   }
 

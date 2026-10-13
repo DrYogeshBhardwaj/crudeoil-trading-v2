@@ -119,9 +119,16 @@ class DatabaseManager {
         }
       }
 
-      // 2. Load from JSON backups and merge if DB missing records
+      // 2. Load seed reference and backup JSON state
+      let seedState = null;
+      if (fs.existsSync(STATE_SEED_FILE)) {
+        try {
+          seedState = JSON.parse(fs.readFileSync(STATE_SEED_FILE, 'utf8'));
+        } catch (e) {}
+      }
+
       let jsonBackupState = null;
-      const jsonBackupPath = [TMP_BACKUP_FILE, STATE_JSON_FILE, STATE_SEED_FILE].find(p => fs.existsSync(p));
+      const jsonBackupPath = [TMP_BACKUP_FILE, STATE_JSON_FILE].find(p => fs.existsSync(p));
       if (jsonBackupPath) {
         try {
           const raw = fs.readFileSync(jsonBackupPath, 'utf8');
@@ -130,19 +137,28 @@ class DatabaseManager {
         } catch (e) {}
       }
 
-      if (dbState && jsonBackupState) {
-        if ((!dbState.closedPositions || dbState.closedPositions.length === 0) && jsonBackupState.closedPositions && jsonBackupState.closedPositions.length > 0) {
-          dbState.closedPositions = jsonBackupState.closedPositions;
-        }
-        if ((!dbState.pairs || dbState.pairs.length === 0) && jsonBackupState.pairs && jsonBackupState.pairs.length > 0) {
-          dbState.pairs = jsonBackupState.pairs;
-        }
-        if (!dbState.dailyTracker && jsonBackupState.dailyTracker) {
-          dbState.dailyTracker = jsonBackupState.dailyTracker;
+      let finalState = dbState || jsonBackupState || seedState || {};
+
+      // Safeguard: Ensure the authoritative 33 closed trades from seedState are NEVER lost
+      if (seedState && Array.isArray(seedState.closedPositions)) {
+        if (!Array.isArray(finalState.closedPositions) || finalState.closedPositions.length < seedState.closedPositions.length) {
+          const existingIds = new Set((finalState.closedPositions || []).map(p => p.positionId));
+          const mergedClosed = [...(finalState.closedPositions || [])];
+          for (const sPos of seedState.closedPositions) {
+            if (!existingIds.has(sPos.positionId)) {
+              mergedClosed.push(sPos);
+              existingIds.add(sPos.positionId);
+            }
+          }
+          finalState.closedPositions = mergedClosed;
         }
       }
 
-      let finalState = dbState || jsonBackupState;
+      // Safeguard: Ensure active pairs from seedState are preserved if current state has none
+      if (seedState && Array.isArray(seedState.pairs) && (!Array.isArray(finalState.pairs) || finalState.pairs.length === 0)) {
+        finalState.pairs = seedState.pairs;
+      }
+
       if (finalState) {
         finalState.isEngineRunning = true;
         if (!finalState.settings) finalState.settings = {};
@@ -294,6 +310,16 @@ class DatabaseManager {
     if (fs.existsSync(TMP_BACKUP_FILE)) {
       try { fs.unlinkSync(TMP_BACKUP_FILE); } catch (e) {}
     }
+    let seedClosed = [];
+    let seedPairs = [];
+    if (fs.existsSync(STATE_SEED_FILE)) {
+      try {
+        const s = JSON.parse(fs.readFileSync(STATE_SEED_FILE, 'utf8'));
+        seedClosed = s.closedPositions || [];
+        seedPairs = s.pairs || [];
+      } catch (e) {}
+    }
+
     const cleanSeed = {
       settings: {
         startingCapitalINR: 119923.61,
@@ -313,13 +339,13 @@ class DatabaseManager {
         usdInrRate: 95.91,
         dailyLossCircuitBreakerINR: 2000
       },
-      pairs: [],
-      closedPositions: [],
+      pairs: seedPairs,
+      closedPositions: seedClosed,
       auditLogs: [{
         id: `LOG-${Date.now()}`,
         timestamp: new Date().toISOString(),
         event: "ENGINE_RESET",
-        details: "All engine positions, processed rates, and history reset cleanly to fresh capital."
+        details: "Simulated state reset. Authoritative closed trades and live positions preserved."
       }],
       processedRates: { CLUSDT: [], XAGUSDT: [], BTCUSDT: [] },
       lastProcessedRate: null,
@@ -332,7 +358,6 @@ class DatabaseManager {
     };
     try {
       fs.writeFileSync(STATE_JSON_FILE, JSON.stringify(cleanSeed, null, 2), 'utf8');
-      fs.writeFileSync(STATE_SEED_FILE, JSON.stringify(cleanSeed, null, 2), 'utf8');
     } catch (e) {}
   }
 }

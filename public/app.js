@@ -203,11 +203,26 @@ function toggleBtModeDisplay() {
   }
 }
 
+function isPairAddContext() {
+  const p = window.location.pathname.toLowerCase();
+  return p.includes('pair_add') || p.includes('pair-add');
+}
+
+function isMudrexLiveContext() {
+  const p = window.location.pathname.toLowerCase();
+  if (isPairAddContext()) return false;
+  return (p.includes('mudrex') || !!document.getElementById('mudrexLiveStartBtn')) && !p.includes('calc');
+}
+
 let fallbackInterval = null;
 
 function initRealtimeStream() {
-  const isMudrexLivePage = window.location.pathname.includes('mudrex_live') || window.location.pathname.includes('mudrex-live') || !!document.getElementById('mudrexLiveStartBtn');
-  const streamUrl = isMudrexLivePage ? '/api/stream?mode=mudrex_live' : '/api/stream';
+  let streamUrl = '/api/stream';
+  if (isPairAddContext()) {
+    streamUrl = '/api/stream?mode=pair_add';
+  } else if (isMudrexLiveContext()) {
+    streamUrl = '/api/stream?mode=mudrex_live';
+  }
 
   // Fetch immediately on page load so UI is updated without waiting
   fetchMetricsFallback();
@@ -240,8 +255,12 @@ function initRealtimeStream() {
 }
 
 function fetchMetricsFallback() {
-  const isMudrexLivePage = window.location.pathname.includes('mudrex_live') || window.location.pathname.includes('mudrex-live') || !!document.getElementById('mudrexLiveStartBtn');
-  const endpoint = isMudrexLivePage ? '/api/mudrex/metrics' : '/api/metrics';
+  let endpoint = '/api/metrics';
+  if (isPairAddContext()) {
+    endpoint = '/api/pair-add/metrics';
+  } else if (isMudrexLiveContext()) {
+    endpoint = '/api/mudrex/metrics';
+  }
 
   fetch(endpoint)
     .then(r => r.json())
@@ -1313,7 +1332,8 @@ function applySettingChange() {
 
 function manualClose(positionId) {
   if (confirm(`Manually close position ${positionId} at current market price?`)) {
-    fetch('/api/manual-close', {
+    const endpoint = isPairAddContext() ? '/api/pair-add/manual-close' : '/api/manual-close';
+    fetch(endpoint, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ positionId })
@@ -1327,7 +1347,8 @@ function manualClose(positionId) {
 }
 
 function resetAllData() {
-  fetch('/api/reset-data', { method: 'POST' })
+  const endpoint = isPairAddContext() ? '/api/pair-add/reset' : '/api/reset-data';
+  fetch(endpoint, { method: 'POST' })
     .then(r => r.json())
     .then(res => {
       alert('✅ ' + (res.message || 'Engine reset successfully!'));
@@ -1635,7 +1656,8 @@ function renderAuditLogs(logs) {
 }
 
 function toggleEngineState() {
-  fetch('/api/toggle-engine', { method: 'POST' })
+  const endpoint = isPairAddContext() ? '/api/pair-add/toggle-engine' : '/api/toggle-engine';
+  fetch(endpoint, { method: 'POST' })
     .then(r => r.json())
     .then(res => {
       if (res && res.success) {
@@ -1654,24 +1676,30 @@ window.toggleEngineState = toggleEngineState;
 window.updateProfitExitTarget = async function(val) {
   const targetMove = parseFloat(val) || 0.20;
   try {
-    const res = await fetch('/api/settings', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ profitTargetMove: targetMove })
-    });
-    const data = await res.json();
-    if (data.success) {
-      fetch('/api/mudrex/settings', {
+    if (isPairAddContext()) {
+      await fetch('/api/pair-add/settings', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ profitTargetMove: targetMove })
+      });
+    } else {
+      await fetch('/api/settings', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ profitTargetMove: targetMove })
+      });
+      await fetch('/api/mudrex/settings', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ profitTargetMove: targetMove })
       }).catch(() => {});
-
-      const modalTarget = document.getElementById('tradeTargetSelect');
-      if (modalTarget) modalTarget.value = targetMove.toFixed(2);
-      if (typeof updateModalCalculations === 'function') updateModalCalculations();
-      alert(`🎯 Main Profit Exit Target set to $${targetMove.toFixed(2)} move!\n\nEngine ab sabhi naye trades ko $${targetMove.toFixed(2)} target par profit book karke close karega.`);
     }
+
+    const modalTarget = document.getElementById('tradeTargetSelect');
+    if (modalTarget) modalTarget.value = targetMove.toFixed(2);
+    if (typeof updateModalCalculations === 'function') updateModalCalculations();
+    alert(`🎯 Main Profit Exit Target set to $${targetMove.toFixed(2)} move!\n\nEngine ab sabhi naye trades ko $${targetMove.toFixed(2)} target par profit book karke close karega.`);
+    fetchMetricsFallback();
   } catch (err) {
     alert('Error setting profit exit value: ' + err.message);
   }
@@ -2183,7 +2211,15 @@ window.executePairTradeModal = async function() {
 
   try {
     let res, data;
-    if (currentModalTradeMode === 'SMART_PAIR') {
+    if (isPairAddContext()) {
+      const action = currentModalTradeMode === 'SMART_PAIR' ? 'SMART_PAIR' : 'PAIR';
+      res = await fetch('/api/pair-add/trade', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action, symbol: 'CLUSDT', price, quantity, targetMove })
+      });
+      data = await res.json();
+    } else if (currentModalTradeMode === 'SMART_PAIR') {
       res = await fetch('/api/pair-add', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
