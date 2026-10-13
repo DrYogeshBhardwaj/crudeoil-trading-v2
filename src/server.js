@@ -471,6 +471,40 @@ app.get('/api/crude-live-mudrex/data', async (req, res) => {
       }
     } catch (e) {}
 
+    let mudrexNetSummary = null;
+    if (exchangePositions.length > 0) {
+      const mainPos = exchangePositions[0];
+      const posQty = Number(mainPos.quantity || 0);
+      const posEntry = Number(mainPos.entryPrice || 0);
+      const isShort = (mainPos.direction === 'SELL' || mainPos.direction === 'SHORT');
+      
+      let pnlUSD = 0;
+      if (posQty > 0 && posEntry > 0) {
+        pnlUSD = isShort ? (posEntry - livePrice) * posQty : (livePrice - posEntry) * posQty;
+      }
+      const pnlINR = pnlUSD * usdInrRate;
+      const initialMarginINR = mainPos.initialMarginINR || lockedINR || 208242.61;
+      const pnlPercent = initialMarginINR > 0 ? (pnlINR / initialMarginINR) * 100 : 0;
+      const liqPrice = isShort ? posEntry * 1.18 : posEntry * 0.82;
+
+      mudrexNetSummary = {
+        symbol: mainPos.symbol || 'CLUSDT',
+        positionId: mainPos.positionId || mainPos.exchangePositionId,
+        direction: mainPos.direction,
+        sideDisplay: isShort ? 'SHORT' : 'LONG',
+        quantity: posQty,
+        entryPrice: Number(posEntry.toFixed(2)),
+        currentPrice: Number(livePrice.toFixed(2)),
+        initialMarginINR: Number(initialMarginINR.toFixed(2)),
+        initialMarginUSD: Number((initialMarginINR / usdInrRate).toFixed(2)),
+        unrealisedPnlUSD: Number(pnlUSD.toFixed(2)),
+        unrealisedPnlINR: Number(pnlINR.toFixed(2)),
+        unrealisedPnlPercent: Number(pnlPercent.toFixed(2)),
+        liquidationPrice: Number(liqPrice.toFixed(2)),
+        leverage: 5
+      };
+    }
+
     // 3. Engine Active Pairs (Tracking BOTH BUY and SELL legs for each pair)
     const openPairs = (paperEngine.pairs || []).filter(p => p.status !== 'CLOSED').map(p => {
       const b = p.buyPosition;
@@ -573,6 +607,7 @@ app.get('/api/crude-live-mudrex/data', async (req, res) => {
       mudrexExchange: {
         positions: exchangePositions,
         count: exchangePositions.length,
+        netSummary: mudrexNetSummary,
         note: 'Mudrex operates in One-Way Net Mode. All orders merge into a single net exchange position.'
       },
       engine: {
@@ -638,6 +673,76 @@ app.post('/api/crude-live-mudrex/action', async (req, res) => {
         mudrexLive.transmitPendingLiveOrders().catch(() => {});
       }
       return res.json({ success: true, message: `New Crude Pair created at $${price.toFixed(2)}.` });
+    } else if (action === 'closeMudrexExchangePosition') {
+      // 1. Fetch current exchange position
+      const pRes = await mudrexLive.fetchPositions();
+      const posList = (pRes && pRes.success && Array.isArray(pRes.data)) ? pRes.data : [];
+      let mudrexCloseRes = null;
+      let closedQty = 0;
+      let closedPosId = '';
+
+      if (posList.length > 0) {
+        const targetPos = posList[0];
+        closedPosId = targetPos.positionId || targetPos.exchangePositionId;
+        closedQty = targetPos.quantity;
+        const sym = (targetPos.symbol || 'CLUSDT').replace('-', '');
+        const dir = targetPos.direction;
+        const oppSide = (dir === 'BUY' || dir === 'LONG') ? 'SELL' : 'BUY';
+        const oppOrderType = oppSide === 'BUY' ? 'LONG' : 'SHORT';
+
+        if (closedPosId) {
+          mudrexCloseRes = await mudrexLive.closeRealPosition(closedPosId, sym);
+        }
+
+        if (!mudrexCloseRes || !mudrexCloseRes.success) {
+          const body = {
+            trade_currency: 'INR',
+            symbol: sym,
+            side: oppSide,
+            order_type: oppOrderType,
+            trigger_type: 'MARKET',
+            type: 'MARKET',
+            quantity: String(closedQty),
+            reduce_only: true
+          };
+          const orderUrl = `${mudrexLive.baseUrl}/futures/${sym}/order?is_symbol=true&trade_currency=INR`;
+          mudrexCloseRes = await mudrexLive.request('POST', orderUrl, body);
+        }
+
+        if (closedPosId) {
+          mudrexLive.userClosedRealPositionIds.add(String(closedPosId));
+        }
+      }
+
+      // Synchronize local paper engine open pairs
+      const cur = rateFeed.getCurrentRate('CLUSDT');
+      const closeRate = cur ? cur.price : paperEngine.lastProcessedRate || 93.30;
+      const usdInrRate = cur ? (cur.usdInrRate || 102.00) : 102.00;
+
+      if (Array.isArray(paperEngine.pairs)) {
+        for (const pair of paperEngine.pairs) {
+          if (pair.status !== 'CLOSED') {
+            if (pair.buyPosition && pair.buyPosition.status === 'OPEN') {
+              paperEngine.closePosition(pair, pair.buyPosition, closeRate, Date.now(), usdInrRate, 'MANUAL_MUDREX_CLOSE_ALL');
+            }
+            if (pair.sellPosition && pair.sellPosition.status === 'OPEN') {
+              paperEngine.closePosition(pair, pair.sellPosition, closeRate, Date.now(), usdInrRate, 'MANUAL_MUDREX_CLOSE_ALL');
+            }
+            pair.status = 'CLOSED';
+          }
+        }
+        paperEngine.saveState();
+      }
+
+      mudrexLive.lastFetchPositionsRes = null;
+      mudrexLive.lastFetchPositionsTime = 0;
+      mudrexLive.saveState();
+
+      return res.json({
+        success: true,
+        message: `Mudrex position close command executed. Qty: ${closedQty} BBL. Engine pairs synchronized.`,
+        mudrexResult: mudrexCloseRes
+      });
     }
 
     return res.status(400).json({ success: false, error: 'Unknown action.' });
