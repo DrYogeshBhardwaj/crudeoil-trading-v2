@@ -584,6 +584,13 @@
       letter-spacing: 0.5px;
     }
 
+    .exit-price-big {
+      font-size: 1.05rem !important;
+      font-weight: 800 !important;
+      color: #38bdf8 !important;
+      letter-spacing: 0.5px;
+    }
+
     .badge {
       display: inline-flex;
       align-items: center;
@@ -878,10 +885,6 @@
         <span>⚖️ Split Columns (BUY vs SELL)</span>
         <span class="tab-badge" id="badgeBuySellCount">0 / 0</span>
       </button>
-      <button class="tab-btn" onclick="switchTab('tabExchange')">
-        <span>🏛️ Mudrex Exchange View</span>
-        <span class="tab-badge" id="badgeExchangeCount">1</span>
-      </button>
       <button class="tab-btn" onclick="switchTab('tabClosed')">
         <span>📜 Closed Trades History</span>
         <span class="tab-badge" id="badgeClosedCount">33</span>
@@ -987,36 +990,6 @@
       </div>
     </section>
 
-    <!-- TAB 3: Mudrex Exchange View -->
-    <section id="tabExchange" class="tab-content">
-      <div class="table-container">
-        <div class="table-toolbar">
-          <div class="table-title">
-            <span>🏛️ Real Mudrex Exchange Verified Position</span>
-            <span style="font-size: 0.76rem; color: var(--text-dim);">Live API data from Mudrex Futures Endpoint</span>
-          </div>
-        </div>
-        <div style="overflow-x: auto;">
-          <table class="data-table">
-            <thead>
-              <tr>
-                <th class="sortable-th" onclick="sortTable('exchange', 'symbol')">Symbol <span class="sort-icon" id="sort-exchange-symbol">⬍</span></th>
-                <th class="sortable-th" onclick="sortTable('exchange', 'side')">Side <span class="sort-icon" id="sort-exchange-side">⬍</span></th>
-                <th class="sortable-th" onclick="sortTable('exchange', 'quantity')">Quantity <span class="sort-icon" id="sort-exchange-quantity">⬍</span></th>
-                <th class="sortable-th" onclick="sortTable('exchange', 'entryPrice')">Entry Price <span class="sort-icon" id="sort-exchange-entryPrice">⬍</span></th>
-                <th class="sortable-th" onclick="sortTable('exchange', 'currentPrice')">Current Price <span class="sort-icon" id="sort-exchange-currentPrice">⬍</span></th>
-                <th class="sortable-th" onclick="sortTable('exchange', 'margin')">Initial Margin <span class="sort-icon" id="sort-exchange-margin">⬍</span></th>
-                <th class="sortable-th" onclick="sortTable('exchange', 'positionId')">Position ID <span class="sort-icon" id="sort-exchange-positionId">⬍</span></th>
-                <th class="sortable-th" onclick="sortTable('exchange', 'status')">Status <span class="sort-icon" id="sort-exchange-status">⬍</span></th>
-              </tr>
-            </thead>
-            <tbody id="exchangeTableBody">
-              <tr><td colspan="8" class="empty-state">Loading exchange data...</td></tr>
-            </tbody>
-          </table>
-        </div>
-      </div>
-    </section>
 
     <!-- TAB 4: Closed Trades History (Exit Time, Big Net INR, USD, Side, Entry, Exit, Position ID Last) -->
     <section id="tabClosed" class="tab-content">
@@ -1036,10 +1009,10 @@
               <tr>
                 <th class="sortable-th" onclick="sortTable('closed', 'exitTime')">Exit Time (IST) <span class="sort-icon" id="sort-closed-exitTime">▼</span></th>
                 <th class="sortable-th" onclick="sortTable('closed', 'netINR')">Net Profit (₹ INR) <span class="sort-icon" id="sort-closed-netINR">⬍</span></th>
+                <th class="sortable-th" onclick="sortTable('closed', 'exitPrice')">Exit Price <span class="sort-icon" id="sort-closed-exitPrice">⬍</span></th>
                 <th class="sortable-th" onclick="sortTable('closed', 'netUSD')">Net Profit ($ USD) <span class="sort-icon" id="sort-closed-netUSD">⬍</span></th>
                 <th class="sortable-th" onclick="sortTable('closed', 'side')">Side <span class="sort-icon" id="sort-closed-side">⬍</span></th>
                 <th class="sortable-th" onclick="sortTable('closed', 'entryPrice')">Entry Price <span class="sort-icon" id="sort-closed-entryPrice">⬍</span></th>
-                <th class="sortable-th" onclick="sortTable('closed', 'exitPrice')">Exit Price <span class="sort-icon" id="sort-closed-exitPrice">⬍</span></th>
                 <th class="sortable-th" onclick="sortTable('closed', 'positionId')">Position ID <span class="sort-icon" id="sort-closed-positionId">⬍</span></th>
               </tr>
             </thead>
@@ -1252,7 +1225,8 @@
       // Badges & Subtitles
       document.getElementById('badgePairsCount').innerText = pairs.length;
       document.getElementById('badgeBuySellCount').innerText = `${engine.activeBuyCount || 0} / ${engine.activeSellCount || 0}`;
-      document.getElementById('badgeExchangeCount').innerText = (exchange.positions || []).length;
+      const badgeEx = document.getElementById('badgeExchangeCount');
+      if (badgeEx) badgeEx.innerText = (exchange.positions || []).length;
       document.getElementById('badgeClosedCount').innerText = (data.closedPositions || []).length;
       document.getElementById('activePairsSummaryText').innerText = `${pairs.length} Pairs Active (${pairs.length} BUY Legs + ${pairs.length} SELL Legs)`;
 
@@ -1548,6 +1522,7 @@
 
     function renderExchangeTable(positions) {
       const tbody = document.getElementById('exchangeTableBody');
+      if (!tbody) return;
       if (!positions || positions.length === 0) {
         tbody.innerHTML = '<tr><td colspan="8" class="empty-state">No open positions on Mudrex exchange.</td></tr>';
         return;
@@ -1594,10 +1569,10 @@
           <tr>
             <td><strong style="color: #fff; font-size: 0.92rem;">${formatExitTimeIST(cp.exitTime || cp.closedTimestamp)}</strong></td>
             <td class="${pnlClass} pnl-big">${sign}₹${netINR.toFixed(2)}</td>
+            <td class="exit-price-big">$${cp.exitPrice ? Number(cp.exitPrice).toFixed(2) : '--'}</td>
             <td class="${pnlClass}" style="font-weight: 700; font-size: 0.88rem;">${sign}$${netUSD.toFixed(2)}</td>
             <td><span class="badge ${badgeClass}">${side}</span></td>
             <td>$${cp.entryPrice ? Number(cp.entryPrice).toFixed(2) : '--'}</td>
-            <td>$${cp.exitPrice ? Number(cp.exitPrice).toFixed(2) : '--'}</td>
             <td><span style="font-family: var(--font-mono); font-size: 0.78rem; color: var(--text-dim);">${cp.positionId || '--'}</span></td>
           </tr>
         `;
