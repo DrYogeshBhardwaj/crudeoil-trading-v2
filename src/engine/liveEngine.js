@@ -134,6 +134,18 @@ class PaperEngine {
       
       if (pair.status === 'CLOSED') continue;
 
+      // Prune legacy test dummy pairs (e.g. entry rate >= $98.0 or test IDs PAIR-0049/0050)
+      const testBPrice = bOpen ? pair.buyPosition.entryPrice : null;
+      const testSPrice = sOpen ? pair.sellPosition.entryPrice : null;
+      const testRate = testBPrice !== null ? testBPrice : testSPrice;
+      if (testRate !== null && (testRate >= 98.0 || pair.pairId === 'PAIR-0049' || pair.pairId === 'PAIR-0050')) {
+        if (pair.buyPosition) pair.buyPosition.status = 'CLOSED';
+        if (pair.sellPosition) pair.sellPosition.status = 'CLOSED';
+        pair.status = 'CLOSED';
+        removedCount++;
+        continue;
+      }
+
       // In LIVE mode: Prune phantom pairs that were never filled on Mudrex
       if (this.settings.tradingMode === 'LIVE' && process.env.IS_TEST !== 'true' && process.env.NODE_ENV !== 'test') {
         const bFailed = pair.buyPosition && (

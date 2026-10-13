@@ -877,11 +877,7 @@
 
     <!-- Tabs Navigation Bar -->
     <nav class="tabs-bar">
-      <button class="tab-btn active" onclick="switchTab('tabPairs')">
-        <span>🔀 Hedged Pairs (All Legs)</span>
-        <span class="tab-badge" id="badgePairsCount">0</span>
-      </button>
-      <button class="tab-btn" onclick="switchTab('tabSplit')">
+      <button class="tab-btn active" onclick="switchTab('tabSplit')">
         <span>⚖️ Split Columns (BUY vs SELL)</span>
         <span class="tab-badge" id="badgeBuySellCount">0 / 0</span>
       </button>
@@ -891,44 +887,8 @@
       </button>
     </nav>
 
-    <!-- TAB 1: Hedged Pairs (All Legs View) -->
-    <section id="tabPairs" class="tab-content active">
-      <div class="table-container">
-        <div class="table-toolbar">
-          <div class="table-title">
-            <span>🟢 Active Hedged Pairs Monitor</span>
-            <span style="font-size: 0.78rem; color: var(--text-dim);">Both BUY & SELL legs active per pair</span>
-          </div>
-          <div style="font-size: 0.8rem; font-weight: 700; color: var(--text-muted);" id="activePairsSummaryText">
-            0 Pairs Active
-          </div>
-        </div>
-
-        <div style="overflow-x: auto;">
-          <table class="data-table">
-            <thead>
-              <tr>
-                <th class="sortable-th" onclick="sortTable('pairs', 'pairId')">Pair ID <span class="sort-icon" id="sort-pairs-pairId">⬍</span></th>
-                <th class="sortable-th" onclick="sortTable('pairs', 'buyEntry')">BUY Leg (Entry ➔ Exit) <span class="sort-icon" id="sort-pairs-buyEntry">⬍</span></th>
-                <th class="sortable-th" onclick="sortTable('pairs', 'buyPnl')">BUY Floating P/L <span class="sort-icon" id="sort-pairs-buyPnl">⬍</span></th>
-                <th class="sortable-th" onclick="sortTable('pairs', 'sellEntry')">SELL Leg (Entry ➔ Exit) <span class="sort-icon" id="sort-pairs-sellEntry">⬍</span></th>
-                <th class="sortable-th" onclick="sortTable('pairs', 'sellPnl')">SELL Floating P/L <span class="sort-icon" id="sort-pairs-sellPnl">⬍</span></th>
-                <th class="sortable-th" onclick="sortTable('pairs', 'netPnl')">Net Pair P/L <span class="sort-icon" id="sort-pairs-netPnl">⬍</span></th>
-                <th class="sortable-th" onclick="sortTable('pairs', 'status')">Order Status <span class="sort-icon" id="sort-pairs-status">⬍</span></th>
-              </tr>
-            </thead>
-            <tbody id="pairsTableBody">
-              <tr>
-                <td colspan="7" class="empty-state">Loading active pairs...</td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-      </div>
-    </section>
-
-    <!-- TAB 2: Split Columns (BUY vs SELL) -->
-    <section id="tabSplit" class="tab-content">
+    <!-- TAB 1: Split Columns (BUY vs SELL) [DEFAULT VIEW] -->
+    <section id="tabSplit" class="tab-content active">
       <div class="split-grid">
         <!-- BUY Column -->
         <div class="table-container" style="border-top: 3px solid var(--accent-green);">
@@ -1223,12 +1183,14 @@
       }
 
       // Badges & Subtitles
-      document.getElementById('badgePairsCount').innerText = pairs.length;
+      const badgePairs = document.getElementById('badgePairsCount');
+      if (badgePairs) badgePairs.innerText = pairs.length;
       document.getElementById('badgeBuySellCount').innerText = `${engine.activeBuyCount || 0} / ${engine.activeSellCount || 0}`;
       const badgeEx = document.getElementById('badgeExchangeCount');
       if (badgeEx) badgeEx.innerText = (exchange.positions || []).length;
       document.getElementById('badgeClosedCount').innerText = (data.closedPositions || []).length;
-      document.getElementById('activePairsSummaryText').innerText = `${pairs.length} Pairs Active (${pairs.length} BUY Legs + ${pairs.length} SELL Legs)`;
+      const activePairsText = document.getElementById('activePairsSummaryText');
+      if (activePairsText) activePairsText.innerText = `${pairs.length} Pairs Active (${pairs.length} BUY Legs + ${pairs.length} SELL Legs)`;
 
       const closedList = data.closedPositions || [];
       const sumClosedNetINR = closedList.reduce((sum, c) => sum + (c.netProfitINR !== undefined ? c.netProfitINR : ((c.netProfitUSD || 0) * usdInr)), 0);
@@ -1244,9 +1206,9 @@
       }
 
       // Render Tables with active sorting
-      renderPairsTable(pairs);
+      if (document.getElementById('pairsTableBody')) renderPairsTable(pairs);
       renderSplitTables(pairs);
-      renderExchangeTable(exchange.positions || []);
+      if (document.getElementById('exchangeTableBody')) renderExchangeTable(exchange.positions || []);
       renderClosedTable(closedList);
     }
 
