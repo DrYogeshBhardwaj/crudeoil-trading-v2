@@ -2096,31 +2096,43 @@ window.syncSelectedBarrels = function(val) {
   updateQuickMarginDisplay();
 };
 
+function isPairAddContext() {
+  const path = (window.location.pathname || '').toLowerCase();
+  const href = (window.location.href || '').toLowerCase();
+  return path.includes('pair_add') || path.includes('pair-add') || href.includes('pair_add') || href.includes('pair-add');
+}
+window.isPairAddContext = isPairAddContext;
+
 window.updateQuickMarginDisplay = function() {
   const q = modalSelectedBarrels || 10;
   const p = modalLivePrice || 91.35;
   const usdInr = modalUsdInrRate || 102.00;
   const leverage = 5;
 
-  const legUSD = (q * p) / leverage;
+  const legTotalAmountUSD = q * p;
+  const legTotalAmountINR = legTotalAmountUSD * usdInr;
+  const pairTotalAmountUSD = legTotalAmountUSD * 2;
+  const pairTotalAmountINR = legTotalAmountINR * 2;
+
+  const legUSD = legTotalAmountUSD / leverage;
   const legINR = legUSD * usdInr;
-  const pairUSD = legUSD * 2;
+  const pairUSD = pairTotalAmountUSD / leverage;
   const pairINR = legINR * 2;
 
   const quickEl = document.getElementById('quickMarginText');
   if (quickEl) {
-    quickEl.innerHTML = `₹${Math.round(legINR).toLocaleString('en-IN')} ($${legUSD.toFixed(2)}) Leg &nbsp;|&nbsp; ₹${Math.round(pairINR).toLocaleString('en-IN')} ($${pairUSD.toFixed(2)}) Pair`;
+    quickEl.innerHTML = `Total Amt: ₹${Math.round(pairTotalAmountINR).toLocaleString('en-IN')} ($${pairTotalAmountUSD.toFixed(2)}) &nbsp;|&nbsp; 💰 Min Margin (5x): ₹${Math.round(pairINR).toLocaleString('en-IN')} ($${pairUSD.toFixed(2)})`;
   }
 
   const bannerBarrels = document.getElementById('bannerSelectedBarrels');
   if (bannerBarrels) bannerBarrels.innerText = `${q} Barrel${q > 1 ? 's' : ''}`;
 
   const bannerFormula = document.getElementById('bannerMarginFormula');
-  if (bannerFormula) bannerFormula.innerText = `Position Size: $${(q * p).toFixed(2)} (~₹${Math.round(q * p * usdInr).toLocaleString('en-IN')}) | Live Crude Rate: $${p.toFixed(2)}`;
+  if (bannerFormula) bannerFormula.innerText = `Total Amount: ₹${Math.round(pairTotalAmountINR).toLocaleString('en-IN')} ($${pairTotalAmountUSD.toFixed(2)}) | Min Margin (5x): ₹${Math.round(pairINR).toLocaleString('en-IN')} | Live Rate: $${p.toFixed(2)}`;
 
   const bannerMargin = document.getElementById('bannerMarginRequired');
   if (bannerMargin) {
-    bannerMargin.innerHTML = `₹${Math.round(legINR).toLocaleString('en-IN')} ($${legUSD.toFixed(2)}) 1 Leg &nbsp;|&nbsp; ₹${Math.round(pairINR).toLocaleString('en-IN')} ($${pairUSD.toFixed(2)}) Full Pair`;
+    bannerMargin.innerHTML = `Total Amt: ₹${Math.round(pairTotalAmountINR).toLocaleString('en-IN')} &nbsp;|&nbsp; 💰 Min Margin (5x): ₹${Math.round(pairINR).toLocaleString('en-IN')} ($${pairUSD.toFixed(2)}) Full Pair`;
   }
 };
 
@@ -2331,10 +2343,15 @@ window.updateModalCalculations = function() {
   const qty = modalSelectedBarrels || 10;
   const leverage = 5;
 
-  const legMarginUSD = (p * qty) / leverage;
-  const legMarginINR = legMarginUSD * usdInr;
-  const pairMarginUSD = legMarginUSD * 2;
-  const pairMarginINR = legMarginINR * 2;
+  const legTotalAmountUSD = p * qty;
+  const legTotalAmountINR = legTotalAmountUSD * usdInr;
+  const pairTotalAmountUSD = legTotalAmountUSD * 2;
+  const pairTotalAmountINR = legTotalAmountINR * 2;
+
+  const legMarginUSD = legTotalAmountUSD / leverage;
+  const legMarginINR = legTotalAmountINR / leverage;
+  const pairMarginUSD = pairTotalAmountUSD / leverage;
+  const pairMarginINR = pairTotalAmountINR / leverage;
 
   const targetSelect = document.getElementById('tradeTargetSelect');
   const targetMove = targetSelect ? parseFloat(targetSelect.value) || 0.20 : 0.20;
@@ -2342,9 +2359,20 @@ window.updateModalCalculations = function() {
   const profitUSD = targetMove * qty;
   const profitINR = profitUSD * usdInr;
 
+  const isSingleLeg = currentModalTradeMode === 'SMART_PAIR' && modalRateScanState && ((modalRateScanState.hasBuy && !modalRateScanState.hasSell) || (!modalRateScanState.hasBuy && modalRateScanState.hasSell));
+
+  const totalDisplay = document.getElementById('modalTotalAmountDisplay');
+  if (totalDisplay) {
+    if (isSingleLeg) {
+      totalDisplay.innerHTML = `₹${Math.round(legTotalAmountINR).toLocaleString('en-IN')} <span style="opacity:0.85">($${legTotalAmountUSD.toFixed(2)})</span> [1 Leg]`;
+    } else {
+      totalDisplay.innerHTML = `₹${Math.round(pairTotalAmountINR).toLocaleString('en-IN')} <span style="opacity:0.85">($${pairTotalAmountUSD.toFixed(2)})</span> [Full Pair: BUY + SELL]`;
+    }
+  }
+
   const marginDisplay = document.getElementById('modalRequiredMarginDisplay');
   if (marginDisplay) {
-    if (currentModalTradeMode === 'SMART_PAIR' && modalRateScanState && ((modalRateScanState.hasBuy && !modalRateScanState.hasSell) || (!modalRateScanState.hasBuy && modalRateScanState.hasSell))) {
+    if (isSingleLeg) {
       marginDisplay.innerHTML = `₹${Math.round(legMarginINR).toLocaleString('en-IN')} <span style="opacity:0.85">($${legMarginUSD.toFixed(2)})</span> [1 Leg]`;
     } else {
       marginDisplay.innerHTML = `₹${Math.round(pairMarginINR).toLocaleString('en-IN')} <span style="opacity:0.85">($${pairMarginUSD.toFixed(2)})</span> [Full Pair]`;
@@ -2373,26 +2401,19 @@ window.executePairTradeModal = async function() {
 
   try {
     let res, data;
+    const action = currentModalTradeMode === 'SMART_PAIR' ? 'SMART_PAIR' : 'PAIR';
     if (isPairAddContext()) {
-      const action = currentModalTradeMode === 'SMART_PAIR' ? 'SMART_PAIR' : 'PAIR';
       res = await fetch('/api/pair-add/trade', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ action, symbol: 'CLUSDT', price, quantity, targetMove })
       });
       data = await res.json();
-    } else if (currentModalTradeMode === 'SMART_PAIR') {
-      res = await fetch('/api/pair-add', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ symbol: 'CLUSDT', price, quantity, targetMove })
-      });
-      data = await res.json();
     } else {
       res = await fetch('/api/manual-trade', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'PAIR', symbol: 'CLUSDT', quantity, targetMove })
+        body: JSON.stringify({ action, symbol: 'CLUSDT', price, quantity, targetMove })
       });
       data = await res.json();
     }

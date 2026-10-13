@@ -164,10 +164,22 @@ class PairAddEngine {
     this.lastProcessedRate = price;
     this.saveState();
 
+    const leverage = this.settings.leverage || 5;
+    const legTotalUSD = price * quantity;
+    const legTotalINR = legTotalUSD * usdInrRate;
+    const pairTotalUSD = legTotalUSD * 2;
+    const pairTotalINR = legTotalINR * 2;
+    const legMarginINR = legTotalINR / leverage;
+    const pairMarginINR = pairTotalINR / leverage;
+
     return {
       success: true,
-      message: `Created Pair ${pairId} (BUY & SELL) at $${price.toFixed(2)} with ${quantity} Barrels`,
-      pair
+      message: `Created Pair ${pairId} (BUY & SELL) at $${price.toFixed(2)} with ${quantity} Barrels | Total Amt: ₹${Math.round(pairTotalINR).toLocaleString('en-IN')} ($${pairTotalUSD.toFixed(2)}) | Min Margin (5x): ₹${Math.round(pairMarginINR).toLocaleString('en-IN')}`,
+      pair,
+      totalAmountINR: Number(pairTotalINR.toFixed(2)),
+      totalAmountUSD: Number(pairTotalUSD.toFixed(2)),
+      requiredMarginINR: Number(pairMarginINR.toFixed(2)),
+      requiredMarginUSD: Number((pairMarginINR / usdInrRate).toFixed(2))
     };
   }
 
@@ -373,10 +385,12 @@ class PairAddEngine {
   }
 
   handleRateEvent(type, data) {
-    if (type !== 'TICK' || !data || !data.price) return;
+    const isTick = (type === 'tick' || type === 'TICK');
+    if (!isTick || !data || !data.price) return;
+    if (data.symbol && data.symbol !== (this.settings.instrument || 'CLUSDT')) return;
     if (!this.isEngineRunning) return;
 
-    const price = data.price;
+    const price = Number(Number(data.price).toFixed(2));
     const usdInrRate = data.usdInrRate || this.settings.usdInrRate || 96.00;
     let stateChanged = false;
 
@@ -445,6 +459,95 @@ class PairAddEngine {
       if (!bOpen && !sOpen) {
         p.status = 'CLOSED';
         stateChanged = true;
+      }
+    }
+
+    // --- AUTOMATIC SMART PAIR ON LIVE RATE CHANGE ---
+    // Rule: Whenever live rate changes, if no active pair has both B & S at that exact rate, take a new Smart Pair!
+    const maxPairs = this.settings.maxActivePairs || 100;
+    const activePairs = this.pairs.filter(p => p.status === 'ACTIVE');
+    const isRateChanged = (this.lastProcessedRate === null || Math.abs(this.lastProcessedRate - price) >= 0.01);
+
+    if (isRateChanged && activePairs.length < maxPairs) {
+      const tolerance = 0.02; // 2 cents price match tolerance
+      let fullPairExists = false;
+      let missingLegPair = null;
+      let missingLegDirection = null;
+
+      for (const p of activePairs) {
+        const bOpen = p.buyPosition && p.buyPosition.status === 'OPEN';
+        const sOpen = p.sellPosition && p.sellPosition.status === 'OPEN';
+
+        if (bOpen && sOpen) {
+          const entry = p.entryRate || (p.buyPosition ? p.buyPosition.entryPrice : null);
+          if (entry !== null && Math.abs(entry - price) <= tolerance) {
+            fullPairExists = true;
+            break;
+          }
+        } else if (bOpen && !sOpen) {
+          if (p.buyPosition && Math.abs(p.buyPosition.entryPrice - price) <= tolerance) {
+            missingLegPair = p;
+            missingLegDirection = 'SELL';
+          }
+        } else if (!bOpen && sOpen) {
+          if (p.sellPosition && Math.abs(p.sellPosition.entryPrice - price) <= tolerance) {
+            missingLegPair = p;
+            missingLegDirection = 'BUY';
+          }
+        }
+      }
+
+      if (!fullPairExists) {
+        if (missingLegPair && missingLegDirection) {
+          // Re-balance existing incomplete pair at this rate
+          const now = new Date().toISOString();
+          const targetMove = this.settings.profitTargetMove || 0.20;
+          const qty = this.settings.contractQuantity || 1.0;
+
+          if (missingLegDirection === 'SELL') {
+            missingLegPair.sellPosition = {
+              pairId: missingLegPair.pairId,
+              positionId: `${missingLegPair.pairId}-SELL-${Date.now().toString().slice(-4)}`,
+              direction: 'SELL',
+              symbol: missingLegPair.symbol || 'CLUSDT',
+              entryTime: now,
+              entryPrice: price,
+              currentPrice: price,
+              targetExitPrice: Number((price - targetMove).toFixed(2)),
+              quantity: qty,
+              status: 'OPEN',
+              mode: 'PAIR_ADD'
+            };
+            missingLegPair.status = 'ACTIVE';
+            stateChanged = true;
+            this.lastProcessedRate = price;
+          } else if (missingLegDirection === 'BUY') {
+            missingLegPair.buyPosition = {
+              pairId: missingLegPair.pairId,
+              positionId: `${missingLegPair.pairId}-BUY-${Date.now().toString().slice(-4)}`,
+              direction: 'BUY',
+              symbol: missingLegPair.symbol || 'CLUSDT',
+              entryTime: now,
+              entryPrice: price,
+              currentPrice: price,
+              targetExitPrice: Number((price + targetMove).toFixed(2)),
+              quantity: qty,
+              status: 'OPEN',
+              mode: 'PAIR_ADD'
+            };
+            missingLegPair.status = 'ACTIVE';
+            stateChanged = true;
+            this.lastProcessedRate = price;
+          }
+        } else {
+          // Neither BUY nor SELL exists at this rate level -> Create NEW full Smart Pair!
+          this.createNewPair('CLUSDT', price, this.settings.contractQuantity || 1.0, this.settings.profitTargetMove || 0.20);
+          stateChanged = true;
+          this.lastProcessedRate = price;
+        }
+      } else {
+        // Full pair already exists at this rate level -> Record lastProcessedRate so we don't repeat on same tick
+        this.lastProcessedRate = price;
       }
     }
 

@@ -767,8 +767,15 @@
 
         <!-- Margin & Profit Display Callout Box (Full 5x Leverage Breakdown) -->
         <div style="background: rgba(15, 23, 42, 0.9); border: 1px solid rgba(245, 158, 11, 0.45); border-radius: 10px; padding: 14px 16px;">
+          <!-- 1. Total Trade Amount Row -->
           <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; border-bottom: 1px solid rgba(255,255,255,0.08); padding-bottom: 6px;">
-            <span style="font-size: 0.75rem; color: #fbbf24; font-weight: 800; text-transform: uppercase;">MIN MARGIN (5x LEVERAGE):</span>
+            <span style="font-size: 0.75rem; color: #38bdf8; font-weight: 800; text-transform: uppercase;">💼 TOTAL TRADE AMOUNT (कुल राशि):</span>
+            <span id="modalTotalAmountDisplay" style="font-size: 1.15rem; font-weight: 900; color: #7dd3fc; font-family: monospace;">₹1,86,660 ($1,830.00)</span>
+          </div>
+
+          <!-- 2. Min Margin (5x) Row -->
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; border-bottom: 1px solid rgba(255,255,255,0.08); padding-bottom: 6px;">
+            <span style="font-size: 0.75rem; color: #fbbf24; font-weight: 800; text-transform: uppercase;">💰 MIN MARGIN (5x LEVERAGE):</span>
             <span id="modalRequiredMarginDisplay" style="font-size: 1.15rem; font-weight: 900; color: #fef08a; font-family: monospace;">₹18,635 ($182.70) 1 Leg | ₹37,271 ($365.40) Pair</span>
           </div>
           <div style="display: flex; justify-content: space-between; align-items: center; font-size: 0.78rem; color: #94a3b8; margin-bottom: 8px;">
