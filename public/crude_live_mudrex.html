@@ -10,6 +10,9 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Outfit:wght@500;600;700;800;900&family=JetBrains+Mono:wght@500;700;800&display=swap" rel="stylesheet">
   
+  <!-- High-Res Dynamic SVG Favicon -->
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ccircle cx='50' cy='50' r='48' fill='%23090d16' stroke='%2338bdf8' stroke-width='4'/%3E%3Cpath d='M30 35 C30 25, 70 25, 70 35 L70 65 C70 75, 30 75, 30 65 Z' fill='%230284c7' stroke='%2338bdf8' stroke-width='3'/%3E%3Cellipse cx='50' cy='35' rx='20' ry='7' fill='%2338bdf8'/%3E%3Ctext x='50' y='60' font-size='22' font-family='sans-serif' font-weight='900' fill='%23ffffff' text-anchor='middle'%3ECL%3C/text%3E%3Ccircle cx='76' cy='24' r='8' fill='%2310b981'/%3E%3C/svg%3E">
+  
   <style>
     :root {
       --bg-dark: #070a12;
@@ -301,6 +304,11 @@
     .ticker-rate-value.rate-red {
       color: var(--accent-red-bright);
       text-shadow: 0 0 20px rgba(239, 68, 68, 0.35);
+    }
+
+    .ticker-rate-value.rate-gold {
+      color: var(--accent-gold);
+      text-shadow: 0 0 20px rgba(245, 158, 11, 0.35);
     }
 
     .ticker-sub {
@@ -739,17 +747,13 @@
         <div class="ticker-sub" id="sellTargetDist" style="color: var(--accent-red-bright);">Distance: --</div>
       </div>
 
-      <!-- Strategy Info -->
+      <!-- Total Active Pairs & Engine Configuration -->
       <div class="ticker-block border-left">
         <div class="ticker-label">
-          <span>⚡ ENGINE CONFIGURATION</span>
+          <span>⚡ TOTAL ACTIVE PAIRS</span>
         </div>
-        <div style="font-size: 0.92rem; font-weight: 700; color: #fff; margin-top: 4px;">
-          1.0 Barrel per Leg | 5x Leverage
-        </div>
-        <div class="ticker-sub" style="margin-top: 4px;">
-          Auto-Add on Rate Change: <span style="color: var(--accent-green-bright); font-weight: 800;">ACTIVE</span>
-        </div>
+        <div class="ticker-rate-value rate-gold" id="heroActivePairsCount">0 PAIRS</div>
+        <div class="ticker-sub" id="heroConfigSubtext">1.0 B/Leg | 5x Lev | Auto-Add: ACTIVE</div>
       </div>
     </section>
 
@@ -1155,6 +1159,17 @@
       document.getElementById('sellTargetRate').innerText = `$${sellTarget.toFixed(2)}`;
       document.getElementById('buyTargetDist').innerText = `Distance: +$1.00 (+₹${(1.00 * usdInr).toFixed(2)})`;
       document.getElementById('sellTargetDist').innerText = `Distance: -$1.00 (-₹${(1.00 * usdInr).toFixed(2)})`;
+
+      // Hero Total Active Pairs (Prominent Display)
+      const pairs = engine.pairs || [];
+      const heroPairsEl = document.getElementById('heroActivePairsCount');
+      if (heroPairsEl) {
+        heroPairsEl.innerText = `${pairs.length} PAIRS`;
+      }
+      const heroConfigSub = document.getElementById('heroConfigSubtext');
+      if (heroConfigSub) {
+        heroConfigSub.innerText = `${engine.activeBuyCount || 0} BUY / ${engine.activeSellCount || 0} SELL | 1.0B 5x`;
+      }
 
       // 3. Financial Metrics (Both ₹ and $ required)
       document.getElementById('kpiAvailableMarginINR').innerText = `₹${wallet.availableMarginINR.toLocaleString('en-IN', { minimumFractionDigits: 2 })}`;
