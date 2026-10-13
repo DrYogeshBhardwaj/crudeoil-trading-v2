@@ -620,10 +620,18 @@ app.get('/api/crude-live-mudrex/data', async (req, res) => {
         pauseReason: paperEngine.pauseReason || '',
         pairsCount: openPairs.length,
         contractQuantity: paperEngine.settings.contractQuantity || 2.0,
-        profitTargetMove: paperEngine.settings.profitTargetMove || 0.30,
+        profitTargetMove: paperEngine.settings.profitTargetMove || 0.25,
         activeBuyCount: openPairs.filter(p => p.buy && p.buy.status === 'OPEN').length,
         activeSellCount: openPairs.filter(p => p.sell && p.sell.status === 'OPEN').length,
         pairs: openPairs
+      },
+      punarjanm: {
+        count: paperEngine.punarjanmCount || 0,
+        currentCycleName: `Punarjanm${(paperEngine.punarjanmCount || 0) + 1}`,
+        lastCycleName: paperEngine.punarjanmCount ? `Punarjanm${paperEngine.punarjanmCount}` : 'None',
+        basketTargetINR: paperEngine.settings.basketProfitTargetINR || 100,
+        autoEnabled: paperEngine.settings.autoPunarjanmEnabled !== false,
+        lastSummary: paperEngine.lastPunarjanmSummary || null
       },
       pnl: {
         totalRealizedINR,
@@ -677,75 +685,16 @@ app.post('/api/crude-live-mudrex/action', async (req, res) => {
         mudrexLive.transmitPendingLiveOrders().catch(() => {});
       }
       return res.json({ success: true, message: `New Crude Pair created at $${price.toFixed(2)}.` });
-    } else if (action === 'closeMudrexExchangePosition') {
-      // 1. Fetch current exchange position
-      const pRes = await mudrexLive.fetchPositions();
-      const posList = (pRes && pRes.success && Array.isArray(pRes.data)) ? pRes.data : [];
-      let mudrexCloseRes = null;
-      let closedQty = 0;
-      let closedPosId = '';
-
-      if (posList.length > 0) {
-        const targetPos = posList[0];
-        closedPosId = targetPos.positionId || targetPos.exchangePositionId;
-        closedQty = targetPos.quantity;
-        const sym = (targetPos.symbol || 'CLUSDT').replace('-', '');
-        const dir = targetPos.direction;
-        const oppSide = (dir === 'BUY' || dir === 'LONG') ? 'SELL' : 'BUY';
-        const oppOrderType = oppSide === 'BUY' ? 'LONG' : 'SHORT';
-
-        if (closedPosId) {
-          mudrexCloseRes = await mudrexLive.closeRealPosition(closedPosId, sym);
-        }
-
-        if (!mudrexCloseRes || !mudrexCloseRes.success) {
-          const body = {
-            trade_currency: 'INR',
-            symbol: sym,
-            side: oppSide,
-            order_type: oppOrderType,
-            trigger_type: 'MARKET',
-            type: 'MARKET',
-            quantity: String(closedQty),
-            reduce_only: true
-          };
-          const orderUrl = `${mudrexLive.baseUrl}/futures/${sym}/order?is_symbol=true&trade_currency=INR`;
-          mudrexCloseRes = await mudrexLive.request('POST', orderUrl, body);
-        }
-
-        if (closedPosId) {
-          mudrexLive.userClosedRealPositionIds.add(String(closedPosId));
-        }
-      }
-
-      // Synchronize local paper engine open pairs
+    } else if (action === 'punarjanm' || action === 'closeMudrexExchangePosition') {
       const cur = rateFeed.getCurrentRate('CLUSDT');
       const closeRate = cur ? cur.price : paperEngine.lastProcessedRate || 93.30;
       const usdInrRate = cur ? (cur.usdInrRate || 102.00) : 102.00;
-
-      if (Array.isArray(paperEngine.pairs)) {
-        for (const pair of paperEngine.pairs) {
-          if (pair.status !== 'CLOSED') {
-            if (pair.buyPosition && pair.buyPosition.status === 'OPEN') {
-              paperEngine.closePosition(pair, pair.buyPosition, closeRate, Date.now(), usdInrRate, 'MANUAL_MUDREX_CLOSE_ALL');
-            }
-            if (pair.sellPosition && pair.sellPosition.status === 'OPEN') {
-              paperEngine.closePosition(pair, pair.sellPosition, closeRate, Date.now(), usdInrRate, 'MANUAL_MUDREX_CLOSE_ALL');
-            }
-            pair.status = 'CLOSED';
-          }
-        }
-        paperEngine.saveState();
-      }
-
-      mudrexLive.lastFetchPositionsRes = null;
-      mudrexLive.lastFetchPositionsTime = 0;
-      mudrexLive.saveState();
-
+      
+      const punarjanmResult = await paperEngine.executePunarjanm('MANUAL_USER_REQUEST', closeRate, usdInrRate);
       return res.json({
         success: true,
-        message: `Mudrex position close command executed. Qty: ${closedQty} BBL. Engine pairs synchronized.`,
-        mudrexResult: mudrexCloseRes
+        message: punarjanmResult.message || `Punarjanm #${punarjanmResult.cycleNumber} executed successfully!`,
+        punarjanm: punarjanmResult
       });
     }
 

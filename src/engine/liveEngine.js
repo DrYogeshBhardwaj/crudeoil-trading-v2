@@ -9,9 +9,11 @@ class PaperEngine {
       leverage: 5,
       instrument: 'CLUSDT',
       profitTargetMode: 'PRICE_MOVE',
-      profitTargetMove: 0.30,
-      buyTargetMove: 0.30,
-      sellTargetMove: 0.30,
+      profitTargetMove: 0.25, // $0.25 Target Move (User-Configured)
+      buyTargetMove: 0.25,
+      sellTargetMove: 0.25,
+      basketProfitTargetINR: 100, // ₹100 Punarjanm Basket Profit Threshold (Testing Mode)
+      autoPunarjanmEnabled: true,
       autoAiTargetMode: false,
       targetDisabled: false,
       maxActivePairs: 500,
@@ -33,6 +35,9 @@ class PaperEngine {
     this.pairs = [];
     this.closedPositions = [];
     this.auditLogs = [];
+    this.punarjanmCount = 0;
+    this.lastPunarjanmSummary = null;
+    this.lastPunarjanmTime = 0;
     
     // Processed rates sets per instrument to prevent duplicate pairs on identical rates
     this.processedRates = {
@@ -86,12 +91,16 @@ class PaperEngine {
       this.settings.startingCapitalINR = 119923.61; // ₹1,19,923.61 INR capital (Live Mudrex balance)
       this.settings.maxActivePairs = 500; // 500 Active Pairs Cap
       this.settings.contractQuantity = 2.0; // 2.0 Barrels per pair
-      this.settings.profitTargetMove = 0.30; // $0.30 Target Move
-      this.settings.buyTargetMove = 0.30;
-      this.settings.sellTargetMove = 0.30;
+      this.settings.profitTargetMove = 0.25; // $0.25 Target Move (User-Configured)
+      this.settings.buyTargetMove = 0.25;
+      this.settings.sellTargetMove = 0.25;
+      this.settings.basketProfitTargetINR = 100; // ₹100 Punarjanm Basket Profit Threshold (Testing Mode)
+      this.settings.autoPunarjanmEnabled = true;
       this.settings.profitTargetMode = 'PRICE_MOVE';
       this.settings.tradingMode = 'LIVE';
       this.settings.realOrdersDisabled = false;
+      if (saved.punarjanmCount !== undefined) this.punarjanmCount = saved.punarjanmCount;
+      if (saved.lastPunarjanmSummary) this.lastPunarjanmSummary = saved.lastPunarjanmSummary;
       if (saved.pairs) this.pairs = saved.pairs;
       if (saved.closedPositions) this.closedPositions = saved.closedPositions;
       if (saved.auditLogs) this.auditLogs = saved.auditLogs.slice(-500);
@@ -184,7 +193,9 @@ class PaperEngine {
       processedRates: processedRatesObj,
       lastProcessedRate: this.lastProcessedRate,
       dailyTracker: this.dailyTracker,
-      isEngineRunning: this.isEngineRunning
+      isEngineRunning: this.isEngineRunning,
+      punarjanmCount: this.punarjanmCount || 0,
+      lastPunarjanmSummary: this.lastPunarjanmSummary || null
     });
   }
 
@@ -253,6 +264,34 @@ class PaperEngine {
 
     // 1. Evaluate Target Exits for Open Positions on EVERY tick
     this.evaluateTargetExits(normalizedPrice, time, usdInrRate, symbol);
+
+    // Auto-Punarjanm Cycle Check (Idempotency throttle: 30 seconds cooldown)
+    if (this.settings.autoPunarjanmEnabled && this.settings.basketProfitTargetINR > 0) {
+      if (!this.lastPunarjanmTime || (time - this.lastPunarjanmTime > 30000)) {
+        try {
+          const mudrexLive = require('./mudrexLiveAdapter');
+          let currentNetPnlINR = 0;
+          if (mudrexLive.lastFetchPositionsRes && mudrexLive.lastFetchPositionsRes.data && mudrexLive.lastFetchPositionsRes.data.length > 0) {
+            const mainPos = mudrexLive.lastFetchPositionsRes.data[0];
+            const posQty = Number(mainPos.quantity || 0);
+            const posEntry = Number(mainPos.entryPrice || mainPos.entry_price || 0);
+            const isShort = mainPos.direction === 'SELL' || mainPos.direction === 'SHORT';
+            if (posQty > 0 && posEntry > 0) {
+              const pnlUSD = isShort ? (posEntry - normalizedPrice) * posQty : (normalizedPrice - posEntry) * posQty;
+              currentNetPnlINR = pnlUSD * (usdInrRate || 102.00);
+            }
+          }
+          if (currentNetPnlINR >= this.settings.basketProfitTargetINR) {
+            this.lastPunarjanmTime = time;
+            console.log(`[Auto-Punarjanm] Triggering Rebirth Cycle! Mudrex Net Profit: +₹${currentNetPnlINR.toFixed(2)} >= Target ₹${this.settings.basketProfitTargetINR}`);
+            this.executePunarjanm(`AUTO_BASKET_PROFIT (+₹${currentNetPnlINR.toFixed(2)})`, normalizedPrice, usdInrRate).catch(err => {
+              console.error('[Auto-Punarjanm] Execution error:', err.message);
+            });
+            return;
+          }
+        } catch (e) {}
+      }
+    }
 
     // 2. Check if engine is enabled and market feed is LIVE
     if (!this.isEngineRunning) {
@@ -515,8 +554,8 @@ class PaperEngine {
     const pairSeq = (this.pairs.length + 1).toString().padStart(4, '0');
     const pairId = `PAIR-${pairSeq}`;
     
-    let bMove = customTargetMove !== undefined ? customTargetMove : (this.settings.profitTargetMove || this.settings.buyTargetMove || 1.00);
-    let sMove = customTargetMove !== undefined ? customTargetMove : (this.settings.profitTargetMove || this.settings.sellTargetMove || 1.00);
+    let bMove = customTargetMove !== undefined ? customTargetMove : (this.settings.profitTargetMove || this.settings.buyTargetMove || 0.25);
+    let sMove = customTargetMove !== undefined ? customTargetMove : (this.settings.profitTargetMove || this.settings.sellTargetMove || 0.25);
     
     // BUY Target: Entry + BUY Target Move
     const buyTarget = this.settings.targetDisabled ? null : this.normalizePrice(entryPrice + bMove, symbol);
@@ -596,6 +635,135 @@ class PaperEngine {
     });
 
     this.saveState();
+    return pair;
+  }
+
+  async executePunarjanm(reason = 'MANUAL_USER_REQUEST', customPrice = null, customUsdInrRate = null) {
+    const rateFeed = require('./rateFeed');
+    const cur = rateFeed.getCurrentRate('CLUSDT');
+    const closeRate = customPrice || (cur ? cur.price : (this.lastProcessedRate || 93.50));
+    const usdInrRate = customUsdInrRate || (cur ? (cur.usdInrRate || 102.00) : 102.00);
+
+    this.punarjanmCount = (this.punarjanmCount || 0) + 1;
+    const cycleTag = `Punarjanm${this.punarjanmCount}`;
+
+    let mudrexCloseRes = null;
+    let closedQty = 0;
+    let closedPosId = '';
+    let mudrexPnlINR = 0;
+
+    // 1. Close Real Mudrex Position if exists
+    try {
+      const mudrexLive = require('./mudrexLiveAdapter');
+      const pRes = await mudrexLive.fetchPositions();
+      const posList = (pRes && pRes.success && Array.isArray(pRes.data)) ? pRes.data : [];
+
+      if (posList.length > 0) {
+        const targetPos = posList[0];
+        closedPosId = targetPos.positionId || targetPos.exchangePositionId;
+        closedQty = targetPos.quantity;
+        mudrexPnlINR = Number(targetPos.unrealized_pnl || targetPos.unrealised_pnl || 0);
+        const sym = (targetPos.symbol || 'CLUSDT').replace('-', '');
+        const dir = targetPos.direction;
+        const oppSide = (dir === 'BUY' || dir === 'LONG') ? 'SELL' : 'BUY';
+        const oppOrderType = oppSide === 'BUY' ? 'LONG' : 'SHORT';
+
+        if (closedPosId) {
+          mudrexCloseRes = await mudrexLive.closeRealPosition(closedPosId, sym);
+        }
+
+        if (!mudrexCloseRes || !mudrexCloseRes.success) {
+          const body = {
+            trade_currency: 'INR',
+            symbol: sym,
+            side: oppSide,
+            order_type: oppOrderType,
+            trigger_type: 'MARKET',
+            type: 'MARKET',
+            quantity: String(closedQty),
+            reduce_only: true
+          };
+          const orderUrl = `${mudrexLive.baseUrl}/futures/${sym}/order?is_symbol=true&trade_currency=INR`;
+          mudrexCloseRes = await mudrexLive.request('POST', orderUrl, body);
+        }
+
+        if (closedPosId) {
+          mudrexLive.userClosedRealPositionIds.add(String(closedPosId));
+        }
+      }
+
+      mudrexLive.lastFetchPositionsRes = null;
+      mudrexLive.lastFetchPositionsTime = 0;
+      mudrexLive.saveState();
+    } catch (e) {
+      console.warn(`[${cycleTag}] Mudrex position close dispatch error:`, e.message);
+    }
+
+    // 2. Synchronize and complete all existing open legs in engine memory
+    let flushedPairsCount = 0;
+    if (Array.isArray(this.pairs)) {
+      for (const pair of this.pairs) {
+        if (pair.status !== 'CLOSED') {
+          flushedPairsCount++;
+          if (pair.buyPosition && pair.buyPosition.status === 'OPEN') {
+            this.closePosition(pair, pair.buyPosition, closeRate, Date.now(), usdInrRate, `${cycleTag} Basket Harvest (${reason})`);
+          }
+          if (pair.sellPosition && pair.sellPosition.status === 'OPEN') {
+            this.closePosition(pair, pair.sellPosition, closeRate, Date.now(), usdInrRate, `${cycleTag} Basket Harvest (${reason})`);
+          }
+          pair.status = 'CLOSED';
+        }
+      }
+    }
+
+    // 3. Clear active pairs memory & unique rate grid so new pairs can be opened freely!
+    this.pairs = this.pairs.filter(p => p.status === 'ACTIVE'); // will be []
+    if (this.processedRates && this.processedRates.CLUSDT) {
+      this.processedRates.CLUSDT.clear();
+    }
+    this.lastProcessedRate = null;
+    this.lastSkippedRate = null;
+
+    // 4. Update Punarjanm Tracker
+    this.lastPunarjanmSummary = {
+      cycleName: cycleTag,
+      cycleNumber: this.punarjanmCount,
+      timestamp: new Date().toISOString(),
+      price: closeRate,
+      reason,
+      closedMudrexQty: closedQty,
+      flushedPairsCount,
+      mudrexPnlINR,
+      status: 'SUCCESS'
+    };
+
+    // 5. Unpause engine and spawn fresh 2.0B pair at the new current price with 0.25 target move!
+    this.engineStatus = 'RUNNING';
+    this.isEngineRunning = true;
+    this.pauseReason = '';
+
+    const newPair = this.createNewPair('CLUSDT', closeRate, Date.now(), usdInrRate, this.settings.contractQuantity, this.settings.profitTargetMove || 0.25);
+
+    this.logAudit('PUNARJANM_CYCLE_COMPLETED', {
+      cycleName: cycleTag,
+      cycleNumber: this.punarjanmCount,
+      reason,
+      price: closeRate,
+      closedMudrexQty: closedQty,
+      flushedPairs: flushedPairsCount,
+      mudrexPnlINR
+    });
+
+    this.saveState();
+
+    return {
+      success: true,
+      cycleName: cycleTag,
+      cycleNumber: this.punarjanmCount,
+      message: `${cycleTag} completed successfully! Mudrex closed (${closedQty} BBL), ${flushedPairsCount} pairs flushed, fresh 2.0B pair birthed at $${closeRate.toFixed(2)}.`,
+      punarjanmSummary: this.lastPunarjanmSummary,
+      newPair
+    };
   }
 
   smartPairAdd(symbol = 'CLUSDT', targetPrice = null, quantity = 1.0, targetMove = 0.20) {

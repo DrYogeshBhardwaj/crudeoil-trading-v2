@@ -15,11 +15,16 @@
 ## 3. Position Sizing & Margin Policy
 - Default contract size is **2.0 Barrels** per pair (user-configured).
 - Leverage is **5x**.
-- Profit Target Move default is **$0.30** (user-configured setting).
+- Profit Target Move default is **$0.25** (user-configured setting, yielding +₹11.30 to +₹12.30 net profit per 2.0B trade after all Mudrex fees & GST).
 - Margin check must always use authoritative available margin based only on actually OPEN positions, immediately freeing margin when any leg closes.
 
-## 4. UI Updates & Data Integrity Shield (Admin Password: 340556)
-- **Live Trading Data Must NEVER Be Touched or Cleared**: Closed trade history (+₹2,540.90 / 33 trades), open positions, active pairs, and balance/margin states must NEVER be cleared or modified during UI styling, frontend refactoring, or minor feature changes.
+## 4. Punarjanm (Basket Profit Harvest & Rebirth Cycle) Rule
+- **Threshold**: ₹100 INR (`basketProfitTargetINR: 100`) for testing mode.
+- **Sequential Numbering**: Cycles are sequentially named `Punarjanm 1`, `Punarjanm 2`, `Punarjanm 3`, etc.
+- **Action**: When Mudrex net position reaches $\ge$ ₹100 profit (or triggered manually with PIN `340556`), it market-closes the exchange position to lock in the profit, flushes stale pairs into closed history, resets the price grid, frees all margin, and immediately spawns a fresh 2.0B pair at the live price.
+
+## 5. UI Updates & Data Integrity Shield (Admin Password: 340556)
+- **Live Trading Data Must NEVER Be Touched or Cleared**: Closed trade history, open positions, active pairs, and balance/margin states must NEVER be cleared or modified during UI styling, frontend refactoring, or minor feature changes.
 - **Admin Password Protection (`340556`)**:
-  - All destructive and configuration operations (`Reset Data`, `Settings`, `Mudrex API Keys`, `Account Info`, `Pair Kharidne Ka Option`, `Start/Pause Engine`) are protected behind Admin password `340556`.
+  - All destructive and configuration operations (`Reset Data`, `Settings`, `Mudrex API Keys`, `Account Info`, `Pair Kharidne Ka Option`, `Punarjanm`, `Start/Pause Engine`) are protected behind Admin password `340556`.
   - No action that can alter engine state or reset data can be performed without verifying password `340556`.

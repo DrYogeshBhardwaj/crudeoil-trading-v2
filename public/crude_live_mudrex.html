@@ -1081,6 +1081,10 @@
         <button class="btn btn-green" onclick="promptAction('addNewPair')">
           <span>➕ ADD NEW PAIR</span>
         </button>
+        <button class="btn btn-purple" id="punarjanmBtn" onclick="promptAction('punarjanm')" style="background: linear-gradient(135deg, #7c3aed, #db2777); border: 1px solid #f472b6; box-shadow: 0 0 16px rgba(219, 39, 119, 0.45); font-weight: 800; color: #fff;">
+          <span>✨ PUNARJANM (₹100)</span>
+          <span class="badge" id="navPunarjanmBadge" style="background: rgba(0,0,0,0.5); font-size: 0.72rem; padding: 2px 6px; border-radius: 4px; margin-left: 4px;">Punarjanm 1</span>
+        </button>
         <button class="btn btn-blue" id="mudrexDataBtn" onclick="openMudrexDataModal()">
           <span>⚡ MUDREX DATA</span>
           <span class="badge" id="navMudrexBadge" style="background: rgba(0,0,0,0.4); font-size: 0.72rem; padding: 2px 6px; border-radius: 4px; margin-left: 4px;">109 BBL</span>
@@ -1399,10 +1403,14 @@
         sub.innerText = 'Enter Admin PIN (340556) to create a new 2.0 Barrels Hedged Pair at current market price.';
       } else if (action === 'closeMudrexExchangePosition') {
         const netSum = (cachedData && cachedData.mudrexExchange && cachedData.mudrexExchange.netSummary) || {};
-        const q = netSum.quantity || 109;
+        const q = netSum.quantity || 16;
         const side = netSum.sideDisplay || 'SHORT';
         title.innerText = `Close Mudrex ${side} ${q} BBL Position`;
         sub.innerText = `Enter Admin PIN (340556) to market-close the ${q} Barrels position on Mudrex exchange and release margin.`;
+      } else if (action === 'punarjanm') {
+        const nextCycle = (cachedData && cachedData.punarjanm && cachedData.punarjanm.currentCycleName) || 'Punarjanm 1';
+        title.innerText = `✨ Execute ${nextCycle} (Rebirth Cycle)`;
+        sub.innerText = `Enter Admin PIN (340556) to harvest Mudrex profit, flush stale pairs, release locked margin, and spawn a fresh 2.0B pair at the live rate.`;
       }
 
       modal.style.display = 'flex';
@@ -1439,6 +1447,8 @@
         actionEndpointAction = 'addNewPair';
       } else if (currentPendingAction === 'closeMudrexExchangePosition') {
         actionEndpointAction = 'closeMudrexExchangePosition';
+      } else if (currentPendingAction === 'punarjanm') {
+        actionEndpointAction = 'punarjanm';
       }
 
       try {
@@ -1450,8 +1460,8 @@
         const json = await res.json();
         if (json.success) {
           closePinModal();
-          if (actionEndpointAction === 'closeMudrexExchangePosition') {
-            alert('Mudrex position close command executed! ' + (json.message || ''));
+          if (actionEndpointAction === 'punarjanm' || actionEndpointAction === 'closeMudrexExchangePosition') {
+            alert('✨ ' + (json.message || 'Punarjanm cycle executed successfully!'));
           }
           await fetchTerminalData();
         } else {
@@ -1514,11 +1524,18 @@
 
       document.getElementById('lastUpdateTime').innerText = `Sync: ${new Date().toLocaleTimeString('en-IN', { timeZone: 'Asia/Kolkata' })} IST`;
 
+      if (data.punarjanm) {
+        const pBadge = document.getElementById('navPunarjanmBadge');
+        if (pBadge) {
+          pBadge.innerText = data.punarjanm.currentCycleName || 'Punarjanm 1';
+        }
+      }
+
       // 2. Ticker Hero
       const crudeEl = document.getElementById('liveCrudePrice');
       crudeEl.innerText = `$${livePrice.toFixed(2)}`;
       
-      const targetMove = engine.profitTargetMove || 0.30;
+      const targetMove = engine.profitTargetMove || 0.25;
       const contractQty = engine.contractQuantity || 2.0;
       const pairs = engine.pairs || [];
 
