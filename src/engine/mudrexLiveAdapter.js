@@ -206,7 +206,13 @@ class MudrexLiveAdapter {
       }
     } catch (authErr) {}
 
+    // STRICT CRUDE OIL ONLY ENFORCEMENT: Never trade Silver (XAG) or Bitcoin (BTC)
     const rawSym = (symbol || 'CLUSDT').toUpperCase();
+    if (!rawSym.includes('CL')) {
+      console.warn(`[Mudrex Live Adapter] REJECTED non-Crude order for ${rawSym}. Only CLUSDT (Crude Oil) is permitted.`);
+      return { success: false, error: `NON_CRUDE_TRADING_BLOCKED: Only Crude Oil (CLUSDT) is permitted. Blocked trade for ${rawSym}.` };
+    }
+
     const symb = rawSym === 'CL-USDT' ? 'CLUSDT' : rawSym;
     const dashSymb = rawSym === 'CLUSDT' ? 'CL-USDT' : rawSym;
     const sideUpper = (side || 'BUY').toUpperCase();
@@ -343,15 +349,20 @@ class MudrexLiveAdapter {
     try {
       if (process.env.NODE_ENV === 'test') return;
 
+      // STRICT PROTECTION: Mudrex Live Engine is strictly locked to CRUDE OIL ONLY (CLUSDT)
+      const allowedInstrument = (this.settings && this.settings.instrument) || 'CLUSDT';
+      if (tick && tick.symbol && tick.symbol !== allowedInstrument) {
+        return; // Reject any non-Crude ticks (e.g. Silver/XAG, Bitcoin/BTC) immediately!
+      }
+
       const paperEngine = require('./paperEngine');
       paperEngine.processTick(tick);
       if (!paperEngine.isEngineRunning) return;
 
-      const symbol = tick.symbol || paperEngine.settings.instrument || 'CLUSDT';
+      const symbol = 'CLUSDT';
       const price = tick.price;
       if (!price) return;
-      const decimals = symbol === 'BTCUSDT' ? 2 : (symbol === 'XAGUSDT' ? 4 : 2);
-      const normPrice = Number(price.toFixed(decimals));
+      const normPrice = Number(price.toFixed(2));
 
       if (!this.recentPrices) this.recentPrices = [];
       this.recentPrices.push(normPrice);
@@ -366,12 +377,18 @@ class MudrexLiveAdapter {
             const isAlreadyReal = pos && (pos.mudrexOrderId || pos.apiStatus === 'REAL_MUDREX_POSITION' || isTransmitting);
             const canTransmit = !isAlreadyReal && Date.now() > this.rateLimitUntil;
             if (pos && pos.status === 'OPEN' && canTransmit) {
+              const posSymbol = (pos.symbol || pair.symbol || 'CLUSDT').toUpperCase();
+              if (!posSymbol.includes('CL')) {
+                console.warn(`[Mudrex Live Adapter] Skipping non-Crude position: ${pos.positionId} (${posSymbol})`);
+                continue;
+              }
+
               pos.apiStatus = 'TRANSMITTING_TO_MUDREX';
               pos.transmittingSince = Date.now();
               const qty = this.settings.contractQuantity || pos.quantity || 1.0;
               const lev = this.settings.leverage || 5;
 
-              this.createRealOrder({ symbol, side: pos.direction, quantity: qty, leverage: lev })
+              this.createRealOrder({ symbol: 'CLUSDT', side: pos.direction, quantity: qty, leverage: lev })
                 .then(res => {
                   if (res.success) {
                     pos.mudrexOrderId = this.extractOrderId(res.data);
