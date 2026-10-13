@@ -405,6 +405,33 @@ app.get('/api/mudrex/metrics', async (req, res) => {
   }
 });
 
+// Mudrex API Order & Position Diagnostic Endpoint
+app.get('/api/mudrex/order-diagnostic', async (req, res) => {
+  try {
+    const mudrexLive = require('./engine/mudrexLiveAdapter');
+    const symb = 'CLUSDT';
+    const orderId = req.query.orderId || '01a135aa-fcfb-7aa5-b63f-1cce4bcb0094';
+    
+    const [rOrder, rOpenOrders, rPositions, rUserOrders] = await Promise.all([
+      mudrexLive.request('GET', `${mudrexLive.baseUrl}/futures/${symb}/order/${orderId}?trade_currency=INR`),
+      mudrexLive.request('GET', `${mudrexLive.baseUrl}/futures/orders?symbol=${symb}&trade_currency=INR`),
+      mudrexLive.request('GET', `${mudrexLive.baseUrl}/futures/positions?trade_currency=INR`),
+      mudrexLive.request('GET', `${mudrexLive.baseUrl}/futures/${symb}/orders?trade_currency=INR`)
+    ]);
+
+    res.json({
+      success: true,
+      testedOrderId: orderId,
+      orderDetail: rOrder,
+      openOrders: rOpenOrders,
+      positions: rPositions,
+      symbolOrders: rUserOrders
+    });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
 // 7. Historical Backtest Simulation
 app.post('/api/backtest', async (req, res) => {
   try {
