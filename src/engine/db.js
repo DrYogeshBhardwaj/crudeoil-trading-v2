@@ -265,9 +265,6 @@ class DatabaseManager {
       fs.writeFileSync(tmpPath, JSON.stringify(state, null, 2), 'utf8');
       fs.renameSync(tmpPath, STATE_JSON_FILE);
       try { fs.writeFileSync(TMP_BACKUP_FILE, JSON.stringify(state, null, 2), 'utf8'); } catch (e) {}
-      if (!process.env.IS_TEST && process.env.NODE_ENV !== 'test') {
-        try { fs.writeFileSync(STATE_SEED_FILE, JSON.stringify(state, null, 2), 'utf8'); } catch (e) {}
-      }
     } catch (err) {
       console.error('[DBMS] JSON Backup Save Error:', err);
     }
