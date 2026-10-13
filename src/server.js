@@ -590,6 +590,8 @@ app.get('/api/crude-live-mudrex/data', async (req, res) => {
       rate: {
         symbol: 'CLUSDT',
         price: livePrice,
+        markPrice: rateInfo.markPrice || livePrice,
+        indexPrice: rateInfo.indexPrice || livePrice,
         usdInrRate,
         updatedAt: rateInfo.timestamp || new Date().toISOString()
       },

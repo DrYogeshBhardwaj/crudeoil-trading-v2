@@ -566,6 +566,50 @@
         "entryFeeUSD": 0.1398,
         "usdInrRateAtEntry": 95.91
       }
+    },
+    {
+      "pairId": "PAIR-0014",
+      "symbol": "CLUSDT",
+      "createdTime": "2026-10-13T19:03:30.097Z",
+      "createdTimestamp": 1791918210097,
+      "entryRate": 93.43,
+      "status": "ACTIVE",
+      "buyPosition": {
+        "positionId": "P-0014-BUY",
+        "pairId": "PAIR-0014",
+        "direction": "BUY",
+        "symbol": "CLUSDT",
+        "entryTime": "2026-10-13T19:03:30.097Z",
+        "entryTimestamp": 1791918210097,
+        "entryPrice": 93.43,
+        "quantity": 2,
+        "contractMultiplier": 1,
+        "targetExitPrice": 93.73,
+        "targetMove": 0.3,
+        "status": "OPEN",
+        "entryFeeUSD": 0.1401,
+        "usdInrRateAtEntry": 95.91,
+        "mudrexOrderId": "01a136a6-4ef3-7cf4-8090-51c73f351707",
+        "apiStatus": "REAL_MUDREX_POSITION"
+      },
+      "sellPosition": {
+        "positionId": "P-0014-SELL",
+        "pairId": "PAIR-0014",
+        "direction": "SELL",
+        "symbol": "CLUSDT",
+        "entryTime": "2026-10-13T19:03:30.097Z",
+        "entryTimestamp": 1791918210097,
+        "entryPrice": 93.43,
+        "quantity": 2,
+        "contractMultiplier": 1,
+        "targetExitPrice": 93.13,
+        "targetMove": 0.3,
+        "status": "OPEN",
+        "entryFeeUSD": 0.1401,
+        "usdInrRateAtEntry": 95.91,
+        "mudrexOrderId": "01a136a6-525c-7231-a9c6-13889bf46cd3",
+        "apiStatus": "REAL_MUDREX_POSITION"
+      }
     }
   ],
   "closedPositions": [

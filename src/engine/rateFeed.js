@@ -130,6 +130,24 @@ class RateFeedManager {
         this.fetchRestPrice(symbol);
       }
     }
+    this.fetchMarkPrices();
+  }
+
+  fetchMarkPrices() {
+    const url = 'https://fapi.binance.com/fapi/v1/premiumIndex?symbol=CLUSDT';
+    http.get(url, (res) => {
+      let body = '';
+      res.on('data', chunk => body += chunk);
+      res.on('end', () => {
+        try {
+          const data = JSON.parse(body);
+          if (data && data.markPrice && this.rates.CLUSDT) {
+            this.rates.CLUSDT.markPrice = parseFloat(data.markPrice);
+            this.rates.CLUSDT.indexPrice = parseFloat(data.indexPrice);
+          }
+        } catch (e) {}
+      });
+    }).on('error', () => {});
   }
 
   fetchRestPrice(symbol) {
@@ -238,6 +256,8 @@ class RateFeedManager {
     return {
       symbol,
       price: data ? data.price : null,
+      markPrice: data && data.markPrice ? data.markPrice : (data ? data.price : null),
+      indexPrice: data && data.indexPrice ? data.indexPrice : (data ? data.price : null),
       lastTime: data ? data.lastTime : 0,
       lastTickTimeString: data && data.lastTime ? new Date(data.lastTime).toLocaleTimeString() : 'N/A',
       receivedTime: data ? data.receivedTime : 0,

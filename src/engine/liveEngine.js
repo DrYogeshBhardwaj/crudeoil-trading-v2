@@ -780,74 +780,56 @@ class PaperEngine {
 
       // Check BUY position
       const buy = pair.buyPosition;
-      if (buy && buy.status === 'OPEN' && buy.targetExitPrice !== null) {
+      if (buy && (buy.status === 'OPEN' || buy.status === 'UNRESOLVED_EXIT_FAILED' || buy.status === 'EXIT_PENDING') && buy.targetExitPrice !== null) {
         if (currentPrice >= buy.targetExitPrice) {
+          const exitPrice = Number(buy.targetExitPrice || currentPrice);
+          // 1. Authoritative Close in Engine Ledger (Guarantees Realized Trade & Profit is ALWAYS recorded)
+          this.closePosition(pair, buy, exitPrice, currentTimestamp, currentUsdInrRate, 'BUY TARGET PROFIT HIT');
+          stateChanged = true;
+
+          // 2. Dispatch real Mudrex exit if live exchange position
           const isReal = buy.apiStatus === 'REAL_MUDREX_POSITION' || buy.mudrexOrderId || buy.ledger === 'LIVE';
           if (isReal) {
-            buy.status = 'EXIT_PENDING';
-            buy.exitReason = 'BUY TARGET PROFIT HIT (TRIGGERED)';
-            stateChanged = true;
             try {
               const mudrexLive = require('./mudrexLiveAdapter');
-              mudrexLive.executeRealExit(pair, buy, currentPrice, currentTimestamp, currentUsdInrRate, 'BUY TARGET PROFIT HIT')
+              mudrexLive.executeRealExit(pair, buy, exitPrice, currentTimestamp, currentUsdInrRate, 'BUY TARGET PROFIT HIT')
                 .then(res => {
-                  if (res && res.success) {
-                    const bDone = !pair.buyPosition || pair.buyPosition.status === 'CLOSED';
-                    const sDone = !pair.sellPosition || pair.sellPosition.status === 'CLOSED';
-                    if (bDone && sDone) {
-                      pair.status = 'CLOSED';
-                      pair.closedTime = new Date().toISOString();
-                      this.logAudit('PAIR_FULLY_CLOSED', { pairId: pair.pairId });
-                    }
-                    this.saveState();
-                  }
+                  this.saveState();
                 })
                 .catch(err => {
-                  console.error('[Paper Engine] Real buy exit dispatch error:', err.message);
+                  console.error('[Live Engine] Real buy exit dispatch error:', err.message);
                 });
             } catch (liveErr) {
-              console.error('[Paper Engine] Adapter error on buy exit:', liveErr.message);
+              console.error('[Live Engine] Adapter error on buy exit:', liveErr.message);
             }
-          } else {
-            this.closePosition(pair, buy, currentPrice, currentTimestamp, currentUsdInrRate, 'BUY TARGET PROFIT HIT');
-            stateChanged = true;
           }
         }
       }
 
       // Check SELL position
       const sell = pair.sellPosition;
-      if (sell && sell.status === 'OPEN' && sell.targetExitPrice !== null) {
+      if (sell && (sell.status === 'OPEN' || sell.status === 'UNRESOLVED_EXIT_FAILED' || sell.status === 'EXIT_PENDING') && sell.targetExitPrice !== null) {
         if (currentPrice <= sell.targetExitPrice) {
+          const exitPrice = Number(sell.targetExitPrice || currentPrice);
+          // 1. Authoritative Close in Engine Ledger (Guarantees Realized Trade & Profit is ALWAYS recorded)
+          this.closePosition(pair, sell, exitPrice, currentTimestamp, currentUsdInrRate, 'SELL TARGET PROFIT HIT');
+          stateChanged = true;
+
+          // 2. Dispatch real Mudrex exit if live exchange position
           const isReal = sell.apiStatus === 'REAL_MUDREX_POSITION' || sell.mudrexOrderId || sell.ledger === 'LIVE';
           if (isReal) {
-            sell.status = 'EXIT_PENDING';
-            sell.exitReason = 'SELL TARGET PROFIT HIT (TRIGGERED)';
-            stateChanged = true;
             try {
               const mudrexLive = require('./mudrexLiveAdapter');
-              mudrexLive.executeRealExit(pair, sell, currentPrice, currentTimestamp, currentUsdInrRate, 'SELL TARGET PROFIT HIT')
+              mudrexLive.executeRealExit(pair, sell, exitPrice, currentTimestamp, currentUsdInrRate, 'SELL TARGET PROFIT HIT')
                 .then(res => {
-                  if (res && res.success) {
-                    const bDone = !pair.buyPosition || pair.buyPosition.status === 'CLOSED';
-                    const sDone = !pair.sellPosition || pair.sellPosition.status === 'CLOSED';
-                    if (bDone && sDone) {
-                      pair.status = 'CLOSED';
-                      pair.closedTime = new Date().toISOString();
-                      this.logAudit('PAIR_FULLY_CLOSED', { pairId: pair.pairId });
-                    }
-                    this.saveState();
-                  }
+                  this.saveState();
                 })
                 .catch(err => {
-                  console.error('[Paper Engine] Real sell exit dispatch error:', err.message);
+                  console.error('[Live Engine] Real sell exit dispatch error:', err.message);
                 });
             } catch (liveErr) {
-              console.error('[Paper Engine] Adapter error on sell exit:', liveErr.message);
+              console.error('[Live Engine] Adapter error on sell exit:', liveErr.message);
             }
-          } else {
-            this.closePosition(pair, sell, currentPrice, currentTimestamp, currentUsdInrRate, 'SELL TARGET PROFIT HIT');
-            stateChanged = true;
           }
         }
       }
