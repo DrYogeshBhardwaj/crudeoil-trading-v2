@@ -1496,12 +1496,18 @@
         toggleBtn.innerHTML = '<span>⏸ PAUSE ENGINE</span>';
         toggleBtn.className = 'btn btn-amber';
       } else {
-        let pReason = engine.pauseReason || 'ENGINE PAUSED';
-        if (pReason.includes('INSUFFICIENT MARGIN') && wallet && wallet.spotBalanceINR > 0) {
-          pReason += ` | Transfer Spot (₹${wallet.spotBalanceINR.toLocaleString('en-IN', { minimumFractionDigits: 2 })}) to Futures in Mudrex App to resume`;
+        const pReason = engine.pauseReason || '';
+        let shortText = 'ENGINE PAUSED';
+        if (pReason.includes('INSUFFICIENT MARGIN') || pReason.includes('MARGIN')) {
+          shortText = 'PAUSED · LOW MARGIN';
+        } else if (pReason.includes('STALE')) {
+          shortText = 'PAUSED · STALE FEED';
+        } else if (pReason.includes('STOPPED')) {
+          shortText = 'ENGINE STOPPED';
         }
-        statusLabel.innerText = `PAUSED (${pReason})`;
+        statusLabel.innerText = shortText;
         statusInd.className = 'status-indicator status-paused';
+        statusInd.title = pReason || 'Engine paused';
         toggleBtn.innerHTML = '<span>▶️ START ENGINE</span>';
         toggleBtn.className = 'btn btn-green';
       }
