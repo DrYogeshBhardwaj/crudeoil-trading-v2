@@ -615,37 +615,47 @@ function renderDashboard(data) {
   // 1. Realized Net P/L Card
   const realizedNetEl = document.getElementById('kpiRealizedNet');
   if (realizedNetEl) {
-    const rSign = realizedNetUSD >= 0 ? '+' : '-';
-    const rLabel = realizedNetUSD >= 0 ? 'PROFIT' : 'LOSS';
-    realizedNetEl.innerText = `${rSign}$${Math.abs(realizedNetUSD).toFixed(2)} ${rLabel}`;
-    realizedNetEl.className = `kpi-value ${realizedNetUSD >= 0 ? 'text-green' : 'text-red'}`;
+    const rSign = realizedNetINR >= 0 ? '+' : '-';
+    const rLabel = realizedNetINR >= 0 ? 'PROFIT' : 'LOSS';
+    const inrStr = Math.abs(realizedNetINR).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    const usdStr = Math.abs(realizedNetUSD).toFixed(2);
+    realizedNetEl.innerHTML = `${rSign}₹${inrStr} <span style="font-size: 1.05rem; opacity: 0.85; font-weight: 700;">(${rSign}$${usdStr})</span> <span style="font-size: 0.85rem; font-weight: 800;">${rLabel}</span>`;
+    realizedNetEl.className = `kpi-value ${realizedNetINR >= 0 ? 'text-green' : 'text-red'}`;
   }
   if (document.getElementById('kpiRealizedGrossSubtext')) {
-    document.getElementById('kpiRealizedGrossSubtext').innerText = `Gross: +$${realizedGrossUSD.toFixed(2)} | Charges: -$${realizedChargesUSD.toFixed(2)}`;
+    const grossINR = summary.realizedGrossINR || (realizedGrossUSD * usdInrRate);
+    const chargesINR = summary.realizedChargesINR || (realizedChargesUSD * usdInrRate);
+    document.getElementById('kpiRealizedGrossSubtext').innerText = `Gross: +₹${grossINR.toFixed(2)} (+$${realizedGrossUSD.toFixed(2)}) | Charges: -₹${chargesINR.toFixed(2)} (-$${realizedChargesUSD.toFixed(2)})`;
   }
 
   // 2. Floating Net P/L Card
   const floatNetEl = document.getElementById('kpiFloatingNet');
   if (floatNetEl) {
-    const fSign = floatingNetUSD >= 0 ? '+' : '-';
-    const fLabel = floatingNetUSD >= 0 ? 'PROFIT' : 'LOSS';
-    floatNetEl.innerText = `${fSign}$${Math.abs(floatingNetUSD).toFixed(2)} ${fLabel}`;
-    floatNetEl.className = `kpi-value ${floatingNetUSD >= 0 ? 'text-green' : 'text-red'}`;
+    const fSign = floatingNetINR >= 0 ? '+' : '-';
+    const fLabel = floatingNetINR >= 0 ? 'PROFIT' : 'LOSS';
+    const inrStr = Math.abs(floatingNetINR).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    const usdStr = Math.abs(floatingNetUSD).toFixed(2);
+    floatNetEl.innerHTML = `${fSign}₹${inrStr} <span style="font-size: 1.05rem; opacity: 0.85; font-weight: 700;">(${fSign}$${usdStr})</span> <span style="font-size: 0.85rem; font-weight: 800;">${fLabel}</span>`;
+    floatNetEl.className = `kpi-value ${floatingNetINR >= 0 ? 'text-green' : 'text-red'}`;
   }
   if (document.getElementById('kpiFloatingSubtext')) {
-    document.getElementById('kpiFloatingSubtext').innerText = `Gross: ${floatingGrossUSD >= 0 ? '+' : ''}$${floatingGrossUSD.toFixed(2)} | Charges: -$${floatingChargesUSD.toFixed(2)}`;
+    const floatGrossINR = summary.floatingGrossINR || (floatingGrossUSD * usdInrRate);
+    const floatChargesINR = summary.floatingChargesINR || (floatingChargesUSD * usdInrRate);
+    document.getElementById('kpiFloatingSubtext').innerText = `Gross: ${floatingGrossUSD >= 0 ? '+' : '-'}₹${Math.abs(floatGrossINR).toFixed(2)} (${floatingGrossUSD >= 0 ? '+' : ''}$${floatingGrossUSD.toFixed(2)}) | Charges: -₹${floatChargesINR.toFixed(2)}`;
   }
 
   // 3. Estimated Total P/L Card (Realized + Floating)
   const estNetEl = document.getElementById('kpiEstTotalNet');
   if (estNetEl) {
-    const eSign = estTotalNetUSD >= 0 ? '+' : '-';
-    const eLabel = estTotalNetUSD >= 0 ? 'PROFIT' : 'LOSS';
-    estNetEl.innerText = `${eSign}$${Math.abs(estTotalNetUSD).toFixed(2)} ${eLabel}`;
-    estNetEl.className = `kpi-value ${estTotalNetUSD >= 0 ? 'text-green' : 'text-red'}`;
+    const eSign = estTotalNetINR >= 0 ? '+' : '-';
+    const eLabel = estTotalNetINR >= 0 ? 'PROFIT' : 'LOSS';
+    const inrStr = Math.abs(estTotalNetINR).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    const usdStr = Math.abs(estTotalNetUSD).toFixed(2);
+    estNetEl.innerHTML = `${eSign}₹${inrStr} <span style="font-size: 1.05rem; opacity: 0.85; font-weight: 700;">(${eSign}$${usdStr})</span> <span style="font-size: 0.85rem; font-weight: 800;">${eLabel}</span>`;
+    estNetEl.className = `kpi-value ${estTotalNetINR >= 0 ? 'text-green' : 'text-red'}`;
   }
   if (document.getElementById('kpiEstTotalSubtext')) {
-    document.getElementById('kpiEstTotalSubtext').innerText = `Realized (${realizedNetUSD >= 0 ? '+' : ''}$${realizedNetUSD.toFixed(2)}) + Floating (${floatingNetUSD >= 0 ? '+' : ''}$${floatingNetUSD.toFixed(2)})`;
+    document.getElementById('kpiEstTotalSubtext').innerText = `Realized (${realizedNetINR >= 0 ? '+' : ''}₹${realizedNetINR.toFixed(2)}) + Floating (${floatingNetINR >= 0 ? '+' : ''}₹${floatingNetINR.toFixed(2)})`;
   }
 
   // 4. Active Pairs / Cap Card
@@ -659,13 +669,13 @@ function renderDashboard(data) {
 
   // 5. Simulated Margin & Equity Callout Bar
   if (document.getElementById('kpiAvailableMargin')) {
-    document.getElementById('kpiAvailableMargin').innerText = `$${availableMarginUSD.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+    document.getElementById('kpiAvailableMargin').innerHTML = `₹${availableMarginINR.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} <span style="font-size: 1.0rem; opacity: 0.8; font-weight: 700;">($${availableMarginUSD.toFixed(2)})</span>`;
   }
   if (document.getElementById('kpiSimulatedEquity')) {
-    document.getElementById('kpiSimulatedEquity').innerText = `$${totalEquityUSD.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+    document.getElementById('kpiSimulatedEquity').innerHTML = `₹${totalEquityINR.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} <span style="font-size: 0.95rem; opacity: 0.8; font-weight: 700;">($${totalEquityUSD.toFixed(2)})</span>`;
   }
   if (document.getElementById('kpiMarginUsed')) {
-    document.getElementById('kpiMarginUsed').innerText = `Locked Margin: $${marginUsedUSD.toFixed(2)} (${settings.leverage || 5}x)`;
+    document.getElementById('kpiMarginUsed').innerText = `Locked Margin: ₹${marginUsedINR.toFixed(2)} ($${marginUsedUSD.toFixed(2)}) (${settings.leverage || 5}x)`;
   }
 
   if (document.getElementById('kpiWinRate')) document.getElementById('kpiWinRate').innerText = `${summary.winRate}%`;
@@ -1104,8 +1114,8 @@ function renderActivePositions(positions, symbol, isDhanPage = false, pricePrefi
             ` : '<span style="color:var(--text-dim)">DISABLED</span>'}
           </td>
           <td style="text-align: right;">
-            <div class="${netClass}" style="font-size:1.25rem; font-weight:900; font-family:monospace;">${posSign}$${Math.abs(posFloatingNetUSD).toFixed(2)} ${posLabel}</div>
-            <div style="font-size:0.75rem; color:var(--text-muted);">NET FLOATING P/L (USD)</div>
+            <div class="${netClass}" style="font-size:1.15rem; font-weight:900; font-family:monospace;">${posSign}₹${Math.abs(floatingNetINR).toFixed(2)} <span style="font-size:0.85rem; opacity:0.85; font-weight:700;">(${posSign}$${Math.abs(posFloatingNetUSD).toFixed(2)})</span> ${posLabel}</div>
+            <div style="font-size:0.75rem; color:var(--text-muted);">NET FLOATING P/L (₹ / $)</div>
           </td>
           <td style="text-align: center;">
             <button class="btn btn-danger" style="padding: 4px 10px; font-size: 0.8rem; font-weight:800; border-radius: 6px; cursor: pointer;" onclick="manualClose('${pos.positionId}')">Close</button>
@@ -1120,7 +1130,6 @@ function renderActivePositions(positions, symbol, isDhanPage = false, pricePrefi
     const buyHtml = renderSideRows(buyPositions, true);
     if (buyTbody.innerHTML !== buyHtml) buyTbody.innerHTML = buyHtml;
   }
-
   if (sellTbody) {
     const sellHtml = renderSideRows(sellPositions, false);
     if (sellTbody.innerHTML !== sellHtml) sellTbody.innerHTML = sellHtml;
@@ -1150,9 +1159,13 @@ function renderClosedPositions(positions, symbol, isDhanPage = false, pricePrefi
       const exitPrice = rawExit * priceMultiplier;
       const targetPrice = rawTarget !== null ? rawTarget * priceMultiplier : null;
 
+      const rateRef = pos.usdInrRate || 96.96;
       const grossProfitUSD = typeof pos.grossProfitUSD === 'number' ? pos.grossProfitUSD : 0;
-      const totalChargesUSD = typeof pos.totalChargesUSD === 'number' ? pos.totalChargesUSD : ((pos.totalChargesINR || 0) / (pos.usdInrRate || 96.96));
-      const netProfitUSD = typeof pos.netProfitUSD === 'number' ? pos.netProfitUSD : ((pos.netProfitINR || 0) / (pos.usdInrRate || 96.96));
+      const totalChargesUSD = typeof pos.totalChargesUSD === 'number' ? pos.totalChargesUSD : ((pos.totalChargesINR || 0) / rateRef);
+      const netProfitUSD = typeof pos.netProfitUSD === 'number' ? pos.netProfitUSD : ((pos.netProfitINR || 0) / rateRef);
+      const netProfitINR = typeof pos.netProfitINR === 'number' ? pos.netProfitINR : (netProfitUSD * rateRef);
+      const grossProfitINR = typeof pos.grossProfitINR === 'number' ? pos.grossProfitINR : (grossProfitUSD * rateRef);
+      const totalChargesINR = typeof pos.totalChargesINR === 'number' ? pos.totalChargesINR : (totalChargesUSD * rateRef);
 
       const grossClass = grossProfitUSD >= 0 ? 'text-green' : 'text-red';
       const netClass = netProfitUSD >= 0 ? 'text-green' : 'text-red';
@@ -1167,10 +1180,10 @@ function renderClosedPositions(positions, symbol, isDhanPage = false, pricePrefi
           <td style="font-family: monospace;">$${fmtP(entryPrice)}</td>
           <td style="font-family: monospace;">$${fmtP(exitPrice)}</td>
           <td>${targetPrice !== null ? `<span class="target-price-badge" style="font-family: monospace;">$${fmtP(targetPrice)}</span>` : 'N/A'}</td>
-          <td class="${grossClass}" style="font-weight: 800; font-family: monospace;">+$${grossProfitUSD.toFixed(2)}</td>
-          <td style="color: #f87171; font-weight: 800; font-family: monospace;">-$${totalChargesUSD.toFixed(2)}</td>
-          <td class="${netClass}" style="font-weight: 900; font-family: monospace;">${netProfitUSD >= 0 ? '+' : '-'}$${Math.abs(netProfitUSD).toFixed(2)} ${netProfitUSD >= 0 ? 'PROFIT' : 'LOSS'}</td>
-          <td style="font-size: 0.82rem; color: var(--text-muted); font-weight: 700;">₹${pos.usdInrRate || 96.96}</td>
+          <td class="${grossClass}" style="font-weight: 800; font-family: monospace;">+₹${grossProfitINR.toFixed(2)} <span style="font-size:0.75rem; opacity:0.8;">(+$${grossProfitUSD.toFixed(2)})</span></td>
+          <td style="color: #f87171; font-weight: 800; font-family: monospace;">-₹${totalChargesINR.toFixed(2)} <span style="font-size:0.75rem; opacity:0.8;">(-$${totalChargesUSD.toFixed(2)})</span></td>
+          <td class="${netClass}" style="font-weight: 900; font-family: monospace;">${netProfitINR >= 0 ? '+' : '-'}₹${Math.abs(netProfitINR).toFixed(2)} <span style="font-size:0.8rem; opacity:0.85;">(${netProfitUSD >= 0 ? '+' : '-'}$${Math.abs(netProfitUSD).toFixed(2)})</span></td>
+          <td style="font-size: 0.82rem; color: var(--text-muted); font-weight: 700;">₹${rateRef}</td>
           <td><span class="badge-reason">${pos.exitReason || 'TARGET HIT'}</span></td>
         </tr>
       `;

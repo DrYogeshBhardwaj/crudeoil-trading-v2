@@ -17,18 +17,19 @@ class MudrexLiveAdapter {
 
     this.settings = {
       instrument: 'CLUSDT',
-      profitTargetMove: 0.20,
+      profitTargetMove: 1.0,
       buyTargetMove: 0.20,
       sellTargetMove: 0.20,
       autoAiTargetMode: true,
       targetDisabled: false,
-      maxActivePairs: 25,
+      maxActivePairs: 500,
       contractQuantity: 1.0,
       leverage: 5,
       takerFeeRate: 0.00075, // 0.075% strict fee
       gstRate: 0.18, // 18% GST on fees
       slippageBufferINR: 5.0, // ₹5.00 funding & slippage buffer
-      usdInrRate: 102.00 // 1 USD = 102.00 INR (Mudrex INR Futures Rate)
+      usdInrRate: 102.00, // 1 USD = 102.00 INR (Mudrex INR Futures Rate)
+      syncRealMudrexPositions: true
     };
 
     this.initFromStorage();
@@ -633,11 +634,16 @@ class MudrexLiveAdapter {
   }
 
   resetLiveEngine() {
-    this.liveOpenPositions = [];
-    this.liveClosedPositions = [];
+    this.settings.contractQuantity = 1.0;
+    // Safeguard: Never delete or wipe live real Mudrex exchange positions
+    this.liveOpenPositions = (this.liveOpenPositions || []).filter(p => p.apiStatus === 'REAL_MUDREX_POSITION' || p.mudrexOrderId);
     this.processedRates.clear();
     this.userClosedRealPositionIds.clear();
     this.pairCounter = 1;
+    if (this.settings.syncRealMudrexPositions && this.isRealExecutionEnabled()) {
+      this.fetchPositions().catch(() => {});
+    }
+    this.saveState();
   }
 
   manualCloseLivePosition(positionId) {
@@ -987,15 +993,6 @@ class MudrexLiveAdapter {
 
 
 
-  resetLiveEngine() {
-    this.settings.contractQuantity = 1.0;
-    this.liveOpenPositions = [];
-    this.liveClosedPositions = [];
-    this.processedRates.clear();
-    this.pairCounter = 1;
-    this.userClosedRealPositionIds.clear();
-    this.saveState();
-  }
 }
 
 module.exports = new MudrexLiveAdapter();
