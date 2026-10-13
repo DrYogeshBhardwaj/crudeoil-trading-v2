@@ -228,6 +228,18 @@
       box-shadow: 0 6px 18px rgba(2, 132, 199, 0.55);
     }
 
+    .btn-blue {
+      background: linear-gradient(135deg, #1d4ed8, #2563eb);
+      color: #fff;
+      box-shadow: 0 4px 14px rgba(37, 99, 235, 0.4);
+      border: 1px solid rgba(96, 165, 250, 0.4);
+    }
+    .btn-blue:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 6px 20px rgba(37, 99, 235, 0.65);
+    }
+
+
     .btn-outline {
       background: rgba(255, 255, 255, 0.06);
       color: var(--text-main);
@@ -1069,6 +1081,10 @@
         <button class="btn btn-green" onclick="promptAction('addNewPair')">
           <span>➕ ADD NEW PAIR</span>
         </button>
+        <button class="btn btn-blue" id="mudrexDataBtn" onclick="openMudrexDataModal()">
+          <span>⚡ MUDREX DATA</span>
+          <span class="badge" id="navMudrexBadge" style="background: rgba(0,0,0,0.4); font-size: 0.72rem; padding: 2px 6px; border-radius: 4px; margin-left: 4px;">109 BBL</span>
+        </button>
         <button class="btn btn-outline" onclick="fetchTerminalData()">
           <span>🔄 REFRESH</span>
         </button>
@@ -1167,71 +1183,6 @@
       </div>
     </section>
 
-    <!-- Mudrex Real Live Exchange Position Card -->
-    <section class="mudrex-position-card" id="mudrexExchangeCard">
-      <div class="mudrex-card-header">
-        <div class="mudrex-card-title-group">
-          <div class="mudrex-live-indicator"></div>
-          <div>
-            <div class="mudrex-title">
-              <span>⚡ MUDREX REAL EXCHANGE POSITION</span>
-              <span class="badge-one-way">1-WAY NET MODE</span>
-              <span class="badge-mudrex-side" id="mudrexSideBadge">SHORT 109 BBL</span>
-            </div>
-            <div class="mudrex-sub">
-              Crude Oil (CL-USDT) · 5x Cross Leverage · Direct Mudrex Real Live Position
-            </div>
-          </div>
-        </div>
-
-        <div class="mudrex-pnl-pill-container">
-          <div class="mudrex-pnl-label">LIVE UNREALISED P&amp;L</div>
-          <div class="mudrex-pnl-badge pnl-badge-positive" id="mudrexLivePnlBadge">+₹0.00 (+0.00%)</div>
-        </div>
-      </div>
-
-      <div class="mudrex-card-body">
-        <div class="mudrex-stat-box">
-          <div class="mudrex-stat-label">Position Side &amp; Size</div>
-          <div class="mudrex-stat-val" id="mudrexStatSize" style="color: var(--accent-red-bright);">SHORT · 109.0 BBL</div>
-          <div class="mudrex-stat-sub">109 Barrels Contract</div>
-        </div>
-
-        <div class="mudrex-stat-box">
-          <div class="mudrex-stat-label">Avg Entry Price</div>
-          <div class="mudrex-stat-val" id="mudrexStatEntry">$93.32</div>
-          <div class="mudrex-stat-sub" id="mudrexStatEntryINR">≈ ₹8,950.32 / bbl</div>
-        </div>
-
-        <div class="mudrex-stat-box">
-          <div class="mudrex-stat-label">Market Live Rate</div>
-          <div class="mudrex-stat-val rate-cyan" id="mudrexStatCurrent">$93.31</div>
-          <div class="mudrex-stat-sub" id="mudrexStatDiff">-$0.01 (-0.01%)</div>
-        </div>
-
-        <div class="mudrex-stat-box">
-          <div class="mudrex-stat-label">Locked Margin (Held)</div>
-          <div class="mudrex-stat-val" id="mudrexStatMargin">₹2,08,242.61</div>
-          <div class="mudrex-stat-sub" id="mudrexStatMarginUSD">$2,171.23 Locked</div>
-        </div>
-
-        <div class="mudrex-stat-box">
-          <div class="mudrex-stat-label">Est. Liquidation Price</div>
-          <div class="mudrex-stat-val" id="mudrexStatLiq" style="color: var(--accent-gold);">$110.12</div>
-          <div class="mudrex-stat-sub">5x Cross Margin Safety</div>
-        </div>
-
-        <div class="mudrex-stat-box action-box">
-          <button class="btn btn-close-mudrex" id="closeMudrexPositionBtn" onclick="promptAction('closeMudrexExchangePosition')">
-            <span>❌ CLOSE MUDREX POSITION</span>
-          </button>
-          <div class="mudrex-stat-sub" style="font-size: 0.68rem; color: var(--text-dim); text-align: center;">
-            Market Exit &amp; Margin Release · PIN: 340556
-          </div>
-        </div>
-      </div>
-    </section>
-
     <!-- Tabs Navigation Bar -->
     <nav class="tabs-bar">
       <button class="tab-btn active" onclick="switchTab('tabSplit')">
@@ -1246,134 +1197,56 @@
 
     <!-- TAB 1: Split Columns (BUY vs SELL) [DEFAULT VIEW] -->
     <section id="tabSplit" class="tab-content active">
-      <!-- Top Active Bids Hero Summary Grid -->
-      <div class="top-bids-hero-grid">
-        <!-- Top Active BUY Bid -->
-        <div class="top-bid-card buy-card">
-          <div class="top-bid-header">
-            <div class="top-bid-title-group">
-              <span class="bid-dot green-dot"></span>
-              <span class="top-bid-heading">🎯 TOP ACTIVE BUY BID</span>
-            </div>
-            <span class="top-bid-badge badge-buy" id="topBuyLegId">P-0013-BUY</span>
-          </div>
-          <div class="top-bid-main">
-            <div class="bid-metric">
-              <span class="lbl">Barrels</span>
-              <span class="val" id="topBuyQty">2.0 BBL</span>
-            </div>
-            <div class="bid-metric">
-              <span class="lbl">Entry Price</span>
-              <span class="val" id="topBuyEntry">$93.29</span>
-            </div>
-            <div class="bid-metric">
-              <span class="lbl">Target Exit 🎯</span>
-              <span class="val highlight-green" id="topBuyTarget">$93.59</span>
-            </div>
-            <div class="bid-metric">
-              <span class="lbl">Dist to Exit</span>
-              <span class="val" id="topBuyDist">+$0.28 (+₹26.85)</span>
+      <div class="split-grid">
+        <!-- BUY Column -->
+        <div class="table-container" style="border-top: 3px solid var(--accent-green);">
+          <div class="table-toolbar">
+            <div class="table-title" style="color: var(--accent-green-bright);">
+              <span>🟢 Active BUY Positions (Long)</span>
+              <span class="badge badge-buy" id="splitBuyBadge">0 Active</span>
             </div>
           </div>
-          <div class="top-bid-footer">
-            <span id="topBuyTime">13/10/26 11:21:05 pm</span>
-            <span style="color: var(--accent-green-bright); font-weight: 700;">🟢 Nearest Buy Leg to Market Exit</span>
+          <div style="overflow-x: auto;">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th class="sortable-th" onclick="sortTable('buy', 'entryTime')">Date/Time (dd/mm/yy) <span class="sort-icon" id="sort-buy-entryTime">⬍</span></th>
+                  <th class="sortable-th" onclick="sortTable('buy', 'quantity')">Barrels <span class="sort-icon" id="sort-buy-quantity">⬍</span></th>
+                  <th class="sortable-th" onclick="sortTable('buy', 'entryPrice')">Entry <span class="sort-icon" id="sort-buy-entryPrice">⬍</span></th>
+                  <th class="sortable-th" onclick="sortTable('buy', 'targetPrice')">Target Exit 🎯 <span class="sort-icon" id="sort-buy-targetPrice">⬍</span></th>
+                  <th class="sortable-th" onclick="sortTable('buy', 'distToTarget')">Dist to Exit <span class="sort-icon" id="sort-buy-distToTarget">⬍</span></th>
+                </tr>
+              </thead>
+              <tbody id="splitBuyTableBody">
+                <tr><td colspan="5" class="empty-state">No active BUY positions</td></tr>
+              </tbody>
+            </table>
           </div>
         </div>
 
-        <!-- Top Active SELL Bid -->
-        <div class="top-bid-card sell-card">
-          <div class="top-bid-header">
-            <div class="top-bid-title-group">
-              <span class="bid-dot red-dot"></span>
-              <span class="top-bid-heading">🎯 TOP ACTIVE SELL BID</span>
-            </div>
-            <span class="top-bid-badge badge-sell" id="topSellLegId">P-0013-SELL</span>
-          </div>
-          <div class="top-bid-main">
-            <div class="bid-metric">
-              <span class="lbl">Barrels</span>
-              <span class="val" id="topSellQty">2.0 BBL</span>
-            </div>
-            <div class="bid-metric">
-              <span class="lbl">Entry Price</span>
-              <span class="val" id="topSellEntry">$93.29</span>
-            </div>
-            <div class="bid-metric">
-              <span class="lbl">Target Exit 🎯</span>
-              <span class="val highlight-red" id="topSellTarget">$92.99</span>
-            </div>
-            <div class="bid-metric">
-              <span class="lbl">Dist to Exit</span>
-              <span class="val" id="topSellDist">-$0.32 (-₹30.69)</span>
+        <!-- SELL Column -->
+        <div class="table-container" style="border-top: 3px solid var(--accent-red);">
+          <div class="table-toolbar">
+            <div class="table-title" style="color: var(--accent-red-bright);">
+              <span>🔴 Active SELL Positions (Short)</span>
+              <span class="badge badge-sell" id="splitSellBadge">0 Active</span>
             </div>
           </div>
-          <div class="top-bid-footer">
-            <span id="topSellTime">13/10/26 11:21:05 pm</span>
-            <span style="color: var(--accent-red-bright); font-weight: 700;">🔴 Nearest Sell Leg to Market Exit</span>
-          </div>
-        </div>
-      </div>
-
-      <!-- Collapsible Detailed Tables Accordion Bar -->
-      <div class="table-accordion-bar" id="accordionToggleBtn" onclick="toggleDetailedTables()">
-        <span id="accordionToggleIcon">▼</span>
-        <span id="accordionToggleText">Hide All Underlying Open Orders (1 BUY, 13 SELL)</span>
-      </div>
-
-      <!-- Detailed Tables Container (Visible by Default) -->
-      <div id="detailedTablesContainer" style="display: block;">
-        <div class="split-grid">
-          <!-- BUY Column -->
-          <div class="table-container" style="border-top: 3px solid var(--accent-green);">
-            <div class="table-toolbar">
-              <div class="table-title" style="color: var(--accent-green-bright);">
-                <span>🟢 Active BUY Positions (Long)</span>
-                <span class="badge badge-buy" id="splitBuyBadge">0 Active</span>
-              </div>
-            </div>
-            <div style="overflow-x: auto;">
-              <table class="data-table">
-                <thead>
-                  <tr>
-                    <th class="sortable-th" onclick="sortTable('buy', 'entryTime')">Date/Time (dd/mm/yy) <span class="sort-icon" id="sort-buy-entryTime">⬍</span></th>
-                    <th class="sortable-th" onclick="sortTable('buy', 'quantity')">Barrels <span class="sort-icon" id="sort-buy-quantity">⬍</span></th>
-                    <th class="sortable-th" onclick="sortTable('buy', 'entryPrice')">Entry <span class="sort-icon" id="sort-buy-entryPrice">⬍</span></th>
-                    <th class="sortable-th" onclick="sortTable('buy', 'targetPrice')">Target Exit 🎯 <span class="sort-icon" id="sort-buy-targetPrice">⬍</span></th>
-                    <th class="sortable-th" onclick="sortTable('buy', 'distToTarget')">Dist to Exit <span class="sort-icon" id="sort-buy-distToTarget">⬍</span></th>
-                  </tr>
-                </thead>
-                <tbody id="splitBuyTableBody">
-                  <tr><td colspan="5" class="empty-state">No active BUY positions</td></tr>
-                </tbody>
-              </table>
-            </div>
-          </div>
-
-          <!-- SELL Column -->
-          <div class="table-container" style="border-top: 3px solid var(--accent-red);">
-            <div class="table-toolbar">
-              <div class="table-title" style="color: var(--accent-red-bright);">
-                <span>🔴 Active SELL Positions (Short)</span>
-                <span class="badge badge-sell" id="splitSellBadge">0 Active</span>
-              </div>
-            </div>
-            <div style="overflow-x: auto;">
-              <table class="data-table">
-                <thead>
-                  <tr>
-                    <th class="sortable-th" onclick="sortTable('sell', 'entryTime')">Date/Time (dd/mm/yy) <span class="sort-icon" id="sort-sell-entryTime">⬍</span></th>
-                    <th class="sortable-th" onclick="sortTable('sell', 'quantity')">Barrels <span class="sort-icon" id="sort-sell-quantity">⬍</span></th>
-                    <th class="sortable-th" onclick="sortTable('sell', 'entryPrice')">Entry <span class="sort-icon" id="sort-sell-entryPrice">⬍</span></th>
-                    <th class="sortable-th" onclick="sortTable('sell', 'targetPrice')">Target Exit 🎯 <span class="sort-icon" id="sort-sell-targetPrice">⬍</span></th>
-                    <th class="sortable-th" onclick="sortTable('sell', 'distToTarget')">Dist to Exit <span class="sort-icon" id="sort-sell-distToTarget">⬍</span></th>
-                  </tr>
-                </thead>
-                <tbody id="splitSellTableBody">
-                  <tr><td colspan="5" class="empty-state">No active SELL positions</td></tr>
-                </tbody>
-              </table>
-            </div>
+          <div style="overflow-x: auto;">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th class="sortable-th" onclick="sortTable('sell', 'entryTime')">Date/Time (dd/mm/yy) <span class="sort-icon" id="sort-sell-entryTime">⬍</span></th>
+                  <th class="sortable-th" onclick="sortTable('sell', 'quantity')">Barrels <span class="sort-icon" id="sort-sell-quantity">⬍</span></th>
+                  <th class="sortable-th" onclick="sortTable('sell', 'entryPrice')">Entry <span class="sort-icon" id="sort-sell-entryPrice">⬍</span></th>
+                  <th class="sortable-th" onclick="sortTable('sell', 'targetPrice')">Target Exit 🎯 <span class="sort-icon" id="sort-sell-targetPrice">⬍</span></th>
+                  <th class="sortable-th" onclick="sortTable('sell', 'distToTarget')">Dist to Exit <span class="sort-icon" id="sort-sell-distToTarget">⬍</span></th>
+                </tr>
+              </thead>
+              <tbody id="splitSellTableBody">
+                <tr><td colspan="5" class="empty-state">No active SELL positions</td></tr>
+              </tbody>
+            </table>
           </div>
         </div>
       </div>
@@ -1415,8 +1288,71 @@
 
   </div>
 
+  <!-- Mudrex Live Exchange Data Modal (Opens via '⚡ MUDREX DATA' button) -->
+  <div class="modal-overlay" id="mudrexDataModal" onclick="if(event.target === this) closeMudrexDataModal()">
+    <div class="modal-card" style="max-width: 880px; width: 95%; padding: 26px; border: 1px solid rgba(59, 130, 246, 0.5); box-shadow: 0 25px 70px rgba(0, 0, 0, 0.85); background: linear-gradient(145deg, #0b1329, #080d1e);">
+      <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 14px; margin-bottom: 20px;">
+        <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
+          <span style="display: inline-block; width: 10px; height: 10px; border-radius: 50%; background: #38bdf8; box-shadow: 0 0 10px #38bdf8;"></span>
+          <h3 class="modal-title" style="margin: 0; font-size: 1.25rem; color: #fff;">⚡ MUDREX REAL EXCHANGE DATA</h3>
+          <span class="badge-one-way" style="background: rgba(56, 189, 248, 0.15); color: #38bdf8; font-size: 0.72rem; padding: 2px 8px; border-radius: 4px; border: 1px solid rgba(56, 189, 248, 0.3);">1-WAY NET MODE</span>
+          <span id="modalMudrexSideBadge" style="background: rgba(239, 68, 68, 0.15); color: #ef4444; font-size: 0.75rem; padding: 3px 10px; border-radius: 4px; font-weight: 700; border: 1px solid rgba(239, 68, 68, 0.3);">SHORT 109 BBL</span>
+        </div>
+        <div style="display: flex; align-items: center; gap: 12px;">
+          <div class="mudrex-pnl-badge pnl-badge-positive" id="modalMudrexLivePnlBadge" style="font-size: 0.9rem; padding: 4px 14px; border-radius: 20px; font-weight: 800;">+₹0.00 (+0.00%)</div>
+          <button onclick="closeMudrexDataModal()" style="background: none; border: none; color: var(--text-muted); font-size: 1.5rem; cursor: pointer; padding: 0 6px; line-height: 1;">✕</button>
+        </div>
+      </div>
+
+      <div class="mudrex-card-body" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 12px; margin-bottom: 22px;">
+        <div class="mudrex-stat-box">
+          <div class="mudrex-stat-label">Position Side &amp; Size</div>
+          <div class="mudrex-stat-val" id="mudrexStatSize" style="color: var(--accent-red-bright); font-size: 1.15rem;">SHORT · 109.0 BBL</div>
+          <div class="mudrex-stat-sub">109 Barrels Contract</div>
+        </div>
+
+        <div class="mudrex-stat-box">
+          <div class="mudrex-stat-label">Avg Entry Price</div>
+          <div class="mudrex-stat-val" id="mudrexStatEntry" style="font-size: 1.15rem;">$93.32</div>
+          <div class="mudrex-stat-sub" id="mudrexStatEntryINR">≈ ₹8,950.32 / bbl</div>
+        </div>
+
+        <div class="mudrex-stat-box">
+          <div class="mudrex-stat-label">Market Live Rate</div>
+          <div class="mudrex-stat-val rate-cyan" id="mudrexStatCurrent" style="font-size: 1.15rem;">$93.31</div>
+          <div class="mudrex-stat-sub" id="mudrexStatDiff">-$0.01 (-0.01%)</div>
+        </div>
+
+        <div class="mudrex-stat-box">
+          <div class="mudrex-stat-label">Locked Margin (Held)</div>
+          <div class="mudrex-stat-val" id="mudrexStatMargin" style="font-size: 1.15rem;">₹2,08,242.61</div>
+          <div class="mudrex-stat-sub" id="mudrexStatMarginUSD">$2,171.23 Locked</div>
+        </div>
+
+        <div class="mudrex-stat-box">
+          <div class="mudrex-stat-label">Est. Liquidation Price</div>
+          <div class="mudrex-stat-val" id="mudrexStatLiq" style="color: var(--accent-gold); font-size: 1.15rem;">$110.12</div>
+          <div class="mudrex-stat-sub">5x Cross Margin Safety</div>
+        </div>
+      </div>
+
+      <div style="background: rgba(15, 23, 42, 0.7); border: 1px solid rgba(255,255,255,0.08); border-radius: 12px; padding: 16px 20px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 14px;">
+        <div>
+          <div style="font-size: 0.9rem; color: #fff; font-weight: 700;">Direct Exchange Market Exit &amp; Margin Release</div>
+          <div style="font-size: 0.75rem; color: var(--text-dim); margin-top: 2px;">Market-close the entire 109 Barrels net position on Mudrex exchange and release ₹2,08,242.61 locked margin. Protected by PIN: 340556.</div>
+        </div>
+        <div style="display: flex; gap: 10px; align-items: center;">
+          <button class="btn btn-outline" onclick="closeMudrexDataModal()">Close</button>
+          <button class="btn btn-close-mudrex" id="closeMudrexPositionBtn" onclick="promptAction('closeMudrexExchangePosition')">
+            <span>❌ CLOSE MUDREX POSITION</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <!-- Admin PIN Modal (PIN 340556) -->
-  <div class="modal-overlay" id="pinModal">
+  <div class="modal-overlay" id="pinModal" style="z-index: 1200;">
     <div class="modal-card">
       <h3 class="modal-title" id="modalActionTitle">Admin Security Verification</h3>
       <p class="modal-subtitle" id="modalActionSubtitle">Please enter Admin PIN (340556) to confirm this action.</p>
@@ -1478,19 +1414,14 @@
       currentPendingAction = null;
     }
 
-    function toggleDetailedTables() {
-      const container = document.getElementById('detailedTablesContainer');
-      const icon = document.getElementById('accordionToggleIcon');
-      const text = document.getElementById('accordionToggleText');
-      if (container.style.display === 'none') {
-        container.style.display = 'block';
-        icon.innerText = '▼';
-        text.innerText = text.innerText.replace('Show', 'Hide');
-      } else {
-        container.style.display = 'none';
-        icon.innerText = '▶️';
-        text.innerText = text.innerText.replace('Hide', 'Show');
-      }
+    function openMudrexDataModal() {
+      const modal = document.getElementById('mudrexDataModal');
+      if (modal) modal.style.display = 'flex';
+    }
+
+    function closeMudrexDataModal() {
+      const modal = document.getElementById('mudrexDataModal');
+      if (modal) modal.style.display = 'none';
     }
 
     async function executePendingAction() {
@@ -1694,16 +1625,19 @@
         const pnlSign = pnlINR >= 0 ? '+' : '';
         const pnlBadgeClass = pnlINR >= 0 ? 'pnl-badge-positive' : 'pnl-badge-negative';
 
-        const sideBadge = document.getElementById('mudrexSideBadge');
-        if (sideBadge) {
-          sideBadge.innerText = `${side} ${posQty} BBL`;
-          sideBadge.style.color = sideColor;
+        const navBadge = document.getElementById('navMudrexBadge');
+        if (navBadge) navBadge.innerText = `${side} ${posQty} BBL`;
+
+        const modalSideBadge = document.getElementById('modalMudrexSideBadge');
+        if (modalSideBadge) {
+          modalSideBadge.innerText = `${side} ${posQty} BBL`;
+          modalSideBadge.style.color = sideColor;
         }
 
-        const pnlBadge = document.getElementById('mudrexLivePnlBadge');
-        if (pnlBadge) {
-          pnlBadge.className = `mudrex-pnl-badge ${pnlBadgeClass}`;
-          pnlBadge.innerText = `${pnlSign}₹${pnlINR.toFixed(2)} (${pnlSign}${pnlPercent.toFixed(2)}%)`;
+        const modalPnlBadge = document.getElementById('modalMudrexLivePnlBadge');
+        if (modalPnlBadge) {
+          modalPnlBadge.className = `mudrex-pnl-badge ${pnlBadgeClass}`;
+          modalPnlBadge.innerText = `${pnlSign}₹${pnlINR.toFixed(2)} (${pnlSign}${pnlPercent.toFixed(2)}%)`;
         }
 
         const statSize = document.getElementById('mudrexStatSize');
@@ -1742,13 +1676,16 @@
           closeBtn.disabled = false;
         }
       } else {
-        const sideBadge = document.getElementById('mudrexSideBadge');
-        if (sideBadge) sideBadge.innerText = 'FLAT (0 BBL)';
-        const pnlBadge = document.getElementById('mudrexLivePnlBadge');
-        if (pnlBadge) {
-          pnlBadge.className = 'mudrex-pnl-badge';
-          pnlBadge.innerText = '₹0.00 (0.00%)';
+        const navBadge = document.getElementById('navMudrexBadge');
+        if (navBadge) navBadge.innerText = '0 BBL';
+        const modalSideBadge = document.getElementById('modalMudrexSideBadge');
+        if (modalSideBadge) modalSideBadge.innerText = 'FLAT (0 BBL)';
+        const modalPnlBadge = document.getElementById('modalMudrexLivePnlBadge');
+        if (modalPnlBadge) {
+          modalPnlBadge.className = 'mudrex-pnl-badge';
+          modalPnlBadge.innerText = '₹0.00 (0.00%)';
         }
+
         const statSize = document.getElementById('mudrexStatSize');
         if (statSize) statSize.innerText = 'FLAT · 0.0 BBL';
         const statEntry = document.getElementById('mudrexStatEntry');
@@ -2093,63 +2030,6 @@
 
       buyTbody.innerHTML = buyRows.length > 0 ? buyRows.join('') : '<tr><td colspan="5" class="empty-state">No active BUY positions</td></tr>';
       sellTbody.innerHTML = sellRows.length > 0 ? sellRows.join('') : '<tr><td colspan="5" class="empty-state">No active SELL positions</td></tr>';
-
-      // Populate Top Active Bids Cards (Immediate Target Bids)
-      const livePrice = (cachedData && cachedData.rate && cachedData.rate.price) || 92.90;
-      const usdInr = (cachedData && cachedData.rate && cachedData.rate.usdInrRate) || 102.00;
-
-      // Nearest active BUY to livePrice
-      const topBuy = buyPairs.length > 0
-        ? [...buyPairs].sort((a, b) => Math.abs(a.buy.targetPrice - livePrice) - Math.abs(b.buy.targetPrice - livePrice))[0].buy
-        : null;
-
-      // Nearest active SELL to livePrice
-      const topSell = sellPairs.length > 0
-        ? [...sellPairs].sort((a, b) => Math.abs(a.sell.targetPrice - livePrice) - Math.abs(b.sell.targetPrice - livePrice))[0].sell
-        : null;
-
-      if (topBuy) {
-        document.getElementById('topBuyLegId').innerText = topBuy.positionId;
-        document.getElementById('topBuyQty').innerText = `${(topBuy.quantity || 2.0).toFixed(1)} BBL`;
-        document.getElementById('topBuyEntry').innerText = `$${topBuy.entryPrice.toFixed(2)}`;
-        document.getElementById('topBuyTarget').innerText = `$${topBuy.targetPrice.toFixed(2)}`;
-        const bDist = Number((topBuy.targetPrice - livePrice).toFixed(2));
-        const bSign = bDist >= 0 ? '+' : '';
-        document.getElementById('topBuyDist').innerText = `${bSign}$${bDist.toFixed(2)} (${bSign}₹${(bDist * usdInr).toFixed(2)})`;
-        document.getElementById('topBuyTime').innerText = formatDateTimeIST(topBuy.entryTime || topBuy.createdAt);
-      } else {
-        document.getElementById('topBuyLegId').innerText = 'None Active';
-        document.getElementById('topBuyQty').innerText = '--';
-        document.getElementById('topBuyEntry').innerText = '--';
-        document.getElementById('topBuyTarget').innerText = '--';
-        document.getElementById('topBuyDist').innerText = '--';
-        document.getElementById('topBuyTime').innerText = '--';
-      }
-
-      if (topSell) {
-        document.getElementById('topSellLegId').innerText = topSell.positionId;
-        document.getElementById('topSellQty').innerText = `${(topSell.quantity || 2.0).toFixed(1)} BBL`;
-        document.getElementById('topSellEntry').innerText = `$${topSell.entryPrice.toFixed(2)}`;
-        document.getElementById('topSellTarget').innerText = `$${topSell.targetPrice.toFixed(2)}`;
-        const sDist = Number((livePrice - topSell.targetPrice).toFixed(2));
-        const sSign = sDist >= 0 ? '+' : '';
-        document.getElementById('topSellDist').innerText = `${sSign}$${sDist.toFixed(2)} (${sSign}₹${(sDist * usdInr).toFixed(2)})`;
-        document.getElementById('topSellTime').innerText = formatDateTimeIST(topSell.entryTime || topSell.createdAt);
-      } else {
-        document.getElementById('topSellLegId').innerText = 'None Active';
-        document.getElementById('topSellQty').innerText = '--';
-        document.getElementById('topSellEntry').innerText = '--';
-        document.getElementById('topSellTarget').innerText = '--';
-        document.getElementById('topSellDist').innerText = '--';
-        document.getElementById('topSellTime').innerText = '--';
-      }
-
-      const accordionText = document.getElementById('accordionToggleText');
-      if (accordionText) {
-        const isHidden = document.getElementById('detailedTablesContainer').style.display === 'none';
-        const prefix = isHidden ? 'Show' : 'Hide';
-        accordionText.innerText = `${prefix} All Underlying Open Orders (${buyRows.length} BUY, ${sellRows.length} SELL)`;
-      }
     }
 
     function renderExchangeTable(positions) {
