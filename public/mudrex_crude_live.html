@@ -254,15 +254,20 @@
       background: linear-gradient(135deg, rgba(15, 23, 42, 0.9), rgba(10, 15, 30, 0.95));
       border: 1px solid var(--card-border);
       border-radius: 16px;
-      padding: 18px 24px;
+      padding: 16px 22px;
       display: grid;
-      grid-template-columns: 1.4fr 1fr 1fr 1.2fr;
-      gap: 18px;
+      grid-template-columns: 1fr 1.6fr 0.9fr 0.9fr 0.8fr;
+      gap: 16px;
       box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
       align-items: center;
     }
 
-    @media (max-width: 1100px) {
+    @media (max-width: 1400px) {
+      .hero-ticker-banner {
+        grid-template-columns: 1fr 1.5fr 1fr;
+      }
+    }
+    @media (max-width: 900px) {
       .hero-ticker-banner {
         grid-template-columns: 1fr 1fr;
       }
@@ -271,6 +276,30 @@
       .hero-ticker-banner {
         grid-template-columns: 1fr;
       }
+    }
+
+    .target-chip {
+      background: rgba(255, 255, 255, 0.08);
+      border: 1px solid rgba(255, 255, 255, 0.18);
+      color: #cbd5e1;
+      font-family: var(--font-mono);
+      font-size: 0.70rem;
+      font-weight: 800;
+      padding: 2px 7px;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+    .target-chip:hover {
+      background: rgba(56, 189, 248, 0.25);
+      border-color: var(--accent-cyan);
+      color: #fff;
+    }
+    .target-chip.active {
+      background: linear-gradient(135deg, #10b981, #059669);
+      border-color: #34d399;
+      color: #fff;
+      box-shadow: 0 0 8px rgba(16, 185, 129, 0.45);
     }
 
     .ticker-block {
@@ -1106,10 +1135,43 @@
         <div class="ticker-sub" id="liveRateSubtext">USD/INR: ₹102.00 | 2.0 Barrels Lot</div>
       </div>
 
+      <!-- Live Mudrex Unrealised PnL (R/G) & Punarjanm Basket Controls -->
+      <div class="ticker-block border-left ticker-block-mudrex" style="display: flex; flex-direction: column; justify-content: center; gap: 4px;">
+        <div class="ticker-label" style="display: flex; justify-content: space-between; align-items: center;">
+          <span style="display: inline-flex; align-items: center; gap: 6px;">
+            <span class="mudrex-live-indicator" id="heroMudrexIndicator" style="width: 8px; height: 8px; border-radius: 50%; background: #ef4444; display: inline-block;"></span>
+            <span>MUDREX LIVE UNREALISED P&amp;L</span>
+          </span>
+          <span class="badge" id="heroMudrexSideBadge" style="background: rgba(239, 68, 68, 0.25); border: 1px solid #ef4444; color: #f87171; font-weight: 800; font-size: 0.72rem; padding: 2px 7px; border-radius: 5px;">SHORT 16 BBL</span>
+        </div>
+        <div class="ticker-rate-value" id="heroMudrexPnlVal" style="font-size: 1.95rem; line-height: 1.1; font-family: var(--font-display); font-weight: 900; color: #ef4444;">₹0.00</div>
+        
+        <div style="display: flex; justify-content: space-between; align-items: center; gap: 6px; flex-wrap: wrap; margin-top: 3px;">
+          <div class="ticker-sub" id="heroMudrexSubtext" style="font-size: 0.75rem; font-family: var(--font-mono); color: var(--text-dim);">Entry: $93.74 | Liq: $110.61</div>
+          
+          <div style="display: inline-flex; align-items: center; gap: 5px; flex-wrap: wrap;">
+            <!-- Target Chips -->
+            <div class="target-chip-group" style="display: inline-flex; align-items: center; gap: 3px; background: rgba(0,0,0,0.4); padding: 2px 5px; border-radius: 7px; border: 1px solid rgba(255,255,255,0.12);">
+              <span style="font-size: 0.66rem; color: var(--text-muted); font-weight: 800;">TARGET:</span>
+              <button type="button" class="target-chip active" id="chipTarget100" onclick="quickSetBasketTarget(100)">₹100</button>
+              <button type="button" class="target-chip" id="chipTarget250" onclick="quickSetBasketTarget(250)">₹250</button>
+              <button type="button" class="target-chip" id="chipTarget500" onclick="quickSetBasketTarget(500)">₹500</button>
+              <button type="button" class="target-chip" id="chipTarget1000" onclick="quickSetBasketTarget(1000)">₹1k</button>
+              <button type="button" class="target-chip" onclick="promptCustomBasketTarget()" title="Custom Target">✏️</button>
+            </div>
+
+            <!-- Instant Harvest Button -->
+            <button type="button" class="btn" onclick="promptAction('punarjanm')" id="heroHarvestBtn" style="padding: 4px 10px; font-size: 0.74rem; border-radius: 7px; background: linear-gradient(135deg, #7c3aed, #db2777); color: #fff; font-weight: 800; border: 1px solid #f472b6; cursor: pointer; display: inline-flex; align-items: center; gap: 4px; box-shadow: 0 0 10px rgba(219, 39, 119, 0.4);">
+              ⚡ HARVEST NOW
+            </button>
+          </div>
+        </div>
+      </div>
+
       <!-- BUY Target Exit Callout -->
       <div class="ticker-block border-left">
         <div class="ticker-label">
-          <span id="buyTargetLabel">🎯 BUY TARGET EXIT (+$0.30)</span>
+          <span id="buyTargetLabel">🎯 BUY TARGET EXIT (+$0.25)</span>
         </div>
         <div class="ticker-rate-value rate-green" id="buyTargetRate">$0.00</div>
         <div class="ticker-sub" id="buyTargetDist" style="color: var(--accent-green-bright);">Distance: --</div>
@@ -1118,7 +1180,7 @@
       <!-- SELL Target Exit Callout -->
       <div class="ticker-block border-left">
         <div class="ticker-label">
-          <span id="sellTargetLabel">🎯 SELL TARGET EXIT (-$0.30)</span>
+          <span id="sellTargetLabel">🎯 SELL TARGET EXIT (-$0.25)</span>
         </div>
         <div class="ticker-rate-value rate-red" id="sellTargetRate">$0.00</div>
         <div class="ticker-sub" id="sellTargetDist" style="color: var(--accent-red-bright);">Distance: --</div>
@@ -1472,6 +1534,39 @@
       }
     }
 
+    async function quickSetBasketTarget(targetINR) {
+      const pin = prompt(`Enter Admin PIN (340556) to set Punarjanm Target to ₹${targetINR} INR:`);
+      if (!pin) return;
+      try {
+        const res = await fetch('/api/crude-live-mudrex/action', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: 'updateBasketTarget', targetINR, password: pin })
+        });
+        const json = await res.json();
+        if (json.success) {
+          alert(`✅ Punarjanm Basket Profit Target updated to ₹${targetINR} INR!`);
+          await fetchTerminalData();
+        } else {
+          alert('Failed: ' + (json.error || 'Incorrect PIN'));
+        }
+      } catch (e) {
+        alert('Error: ' + e.message);
+      }
+    }
+
+    function promptCustomBasketTarget() {
+      const curr = cachedData?.punarjanm?.basketTargetINR || 100;
+      const custom = prompt(`Enter custom Punarjanm target in INR (₹):\n(Current: ₹${curr})`, curr);
+      if (!custom) return;
+      const num = parseFloat(custom);
+      if (isNaN(num) || num <= 0) {
+        alert('Please enter a valid positive number');
+        return;
+      }
+      quickSetBasketTarget(num);
+    }
+
     async function fetchTerminalData() {
       try {
         const res = await fetch('/api/crude-live-mudrex/data');
@@ -1653,6 +1748,42 @@
 
         const navBadge = document.getElementById('navMudrexBadge');
         if (navBadge) navBadge.innerText = `${side} ${posQty} BBL`;
+
+        // Update Hero Ticker Live Mudrex Unrealised P&L (R/G)
+        const heroPnlVal = document.getElementById('heroMudrexPnlVal');
+        if (heroPnlVal) {
+          heroPnlVal.innerText = `${pnlSign}₹${pnlINR.toFixed(2)} (${pnlSign}$${pnlUSD.toFixed(2)})`;
+          heroPnlVal.style.color = pnlINR >= 0 ? 'var(--accent-green-bright)' : 'var(--accent-red-bright)';
+          heroPnlVal.style.textShadow = pnlINR >= 0 ? '0 0 20px rgba(16, 185, 129, 0.4)' : '0 0 20px rgba(239, 68, 68, 0.4)';
+        }
+
+        const heroSideBadge = document.getElementById('heroMudrexSideBadge');
+        if (heroSideBadge) {
+          heroSideBadge.innerText = `${side} ${posQty} BBL`;
+          heroSideBadge.style.color = sideColor;
+          heroSideBadge.style.borderColor = sideColor;
+        }
+
+        const heroSub = document.getElementById('heroMudrexSubtext');
+        if (heroSub) {
+          heroSub.innerText = `Entry: $${posEntry.toFixed(2)} | Liq: $${liqPrice.toFixed(2)} | ${pnlSign}${pnlPercent.toFixed(2)}%`;
+        }
+
+        const heroInd = document.getElementById('heroMudrexIndicator');
+        if (heroInd) {
+          heroInd.style.background = pnlINR >= 0 ? '#10b981' : '#ef4444';
+          heroInd.style.boxShadow = pnlINR >= 0 ? '0 0 10px #10b981' : '0 0 10px #ef4444';
+        }
+
+        // Update Target Chips active status
+        const curTarget = (data.punarjanm && data.punarjanm.basketTargetINR) || 100;
+        ['100', '250', '500', '1000'].forEach(v => {
+          const c = document.getElementById('chipTarget' + v);
+          if (c) {
+            if (curTarget === Number(v)) c.classList.add('active');
+            else c.classList.remove('active');
+          }
+        });
 
         const modalSideBadge = document.getElementById('modalMudrexSideBadge');
         if (modalSideBadge) {

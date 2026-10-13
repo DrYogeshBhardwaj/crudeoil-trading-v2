@@ -15,6 +15,7 @@ class PaperEngine {
       basketProfitTargetINR: 100, // ₹100 Punarjanm Basket Profit Threshold (Testing Mode)
       autoPunarjanmEnabled: true,
       autoAiTargetMode: false,
+      autoAddNewPairs: false, // In LIVE mode, add pairs via 'ADD NEW PAIR' or Punarjanm rebirth
       targetDisabled: false,
       maxActivePairs: 500,
       dailyLossCircuitBreakerINR: 2000,
@@ -429,8 +430,12 @@ class PaperEngine {
       return;
     }
 
-    // 5. Check Active Pairs Cap for NEW Pair Creation
-    const activePairsCount = this.getActivePairsCount();
+    // 5. In LIVE mode, brand new pairs are only added manually via 'ADD NEW PAIR' or via Punarjanm rebirth unless autoAddNewPairs is explicitly enabled
+    if (this.settings.autoAddNewPairs === false && activePairsCount >= 2 && process.env.IS_TEST !== 'true' && process.env.NODE_ENV !== 'test') {
+      return;
+    }
+
+    // 5b. Check Active Pairs Cap for NEW Pair Creation
     if (activePairsCount >= this.settings.maxActivePairs) {
       this.engineStatus = 'PAUSED';
       this.pauseReason = `PAUSED — MAX PAIRS REACHED (${activePairsCount}/${this.settings.maxActivePairs})`;

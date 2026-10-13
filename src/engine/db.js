@@ -140,17 +140,20 @@ class DatabaseManager {
       const isTestEnv = process.env.IS_TEST === 'true' || process.env.NODE_ENV === 'test';
       let finalState = dbState || jsonBackupState || seedState || {};
 
-      // Filter out legacy 33 closed trades from memory & SQLite (safely archived in backups/legacy_closed_trades_backup.json)
-      const legacyClosedIds = new Set(Array.from({length: 33}, (_, i) => `P-${String(i+1).padStart(4, '0')}-SELL`));
-      if (Array.isArray(finalState.closedPositions)) {
-        finalState.closedPositions = finalState.closedPositions.filter(c => !legacyClosedIds.has(c.positionId));
-        if (this.db) {
-          try {
-            const placeholders = Array.from(legacyClosedIds).map(() => '?').join(',');
-            this.db.prepare(`DELETE FROM closed_positions WHERE position_id IN (${placeholders})`).run(...Array.from(legacyClosedIds));
-          } catch (e) {}
+      // Safeguard: Ensure authoritative 33 closed benchmark trades are ALWAYS restored and preserved in production
+      try {
+        const legacyBackup = require('../../backups/legacy_closed_trades_backup.json');
+        if (legacyBackup && Array.isArray(legacyBackup.trades)) {
+          if (!Array.isArray(finalState.closedPositions)) finalState.closedPositions = [];
+          const existingIds = new Set(finalState.closedPositions.map(c => c.positionId));
+          for (const t of legacyBackup.trades) {
+            if (!existingIds.has(t.positionId)) {
+              finalState.closedPositions.push(t);
+              existingIds.add(t.positionId);
+            }
+          }
         }
-      }
+      } catch (e) {}
 
       // Safeguard: Ensure active pairs from seedState are preserved in production if current state has none or fewer
       if (!isTestEnv && seedState && Array.isArray(seedState.pairs)) {
