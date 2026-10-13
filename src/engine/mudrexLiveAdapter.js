@@ -302,11 +302,13 @@ class MudrexLiveAdapter {
         for (const pair of paperEngine.pairs) {
           if (pair.status === 'CLOSED') continue;
           for (const pos of [pair.buyPosition, pair.sellPosition]) {
-            const isAlreadyReal = pos && (pos.mudrexOrderId || pos.apiStatus === 'REAL_MUDREX_POSITION' || pos.apiStatus === 'TRANSMITTING_TO_MUDREX');
+            const isTransmitting = pos && pos.apiStatus === 'TRANSMITTING_TO_MUDREX' && (!pos.transmittingSince || (Date.now() - pos.transmittingSince < 30000));
+            const isAlreadyReal = pos && (pos.mudrexOrderId || pos.apiStatus === 'REAL_MUDREX_POSITION' || isTransmitting);
             const canTransmit = !isAlreadyReal && Date.now() > this.rateLimitUntil;
             if (pos && pos.status === 'OPEN' && canTransmit) {
               pos.apiStatus = 'TRANSMITTING_TO_MUDREX';
-              const qty = this.settings.contractQuantity || pos.quantity || 5.0;
+              pos.transmittingSince = Date.now();
+              const qty = this.settings.contractQuantity || pos.quantity || 1.0;
               const lev = this.settings.leverage || 5;
 
               this.createRealOrder({ symbol, side: pos.direction, quantity: qty, leverage: lev })
@@ -424,6 +426,10 @@ class MudrexLiveAdapter {
 
       req.on('error', (err) => {
         resolve({ success: false, error: err.message });
+      });
+
+      req.setTimeout(25000, () => {
+        req.destroy(new Error('REQUEST_TIMEOUT (Mudrex API request timed out after 25s)'));
       });
 
       if (payload) req.write(payload);

@@ -52,7 +52,8 @@ async function runTestSuite() {
     { name: 'Test 27 — Historic Paper Positions Exclusion', fn: test27 },
     { name: 'Test 28 — Execution State Consistency Across Health, Metrics & Storage', fn: test28 },
     { name: 'Test 29 — Fail-Closed Execution Control Under Missing Credentials or Env Override', fn: test29 },
-    { name: 'Test 30 — Fail-Closed Order Rejection', fn: test30 }
+    { name: 'Test 30 — Fail-Closed Order Rejection', fn: test30 },
+    { name: 'Test 31 — Available Margin Accurately Accounts for Closed Legs in Active Pairs', fn: test31 }
   ];
 
   for (const tc of testCases) {
@@ -727,5 +728,29 @@ async function test30() {
   assert(res.error === 'REAL_ORDERS_DISABLED', `Expected error REAL_ORDERS_DISABLED, got ${res.error}`);
 }
 
+// Test 31 — Available Margin Accurately Accounts for Closed Legs in Active Pairs
+function test31() {
+  paperEngine.settings.instrument = 'CLUSDT';
+  paperEngine.settings.contractQuantity = 1.0;
+  paperEngine.settings.startingCapitalINR = 6500; // Capital for 1 active pair + 1 leg (~₹3,114 required per full pair)
+  paperEngine.settings.profitTargetMove = 0.20;
+
+  // 1. Open Pair 1 at $90.00 (Consumes ~₹3,114, leaves ~₹3,386 available)
+  sendTestTick('CLUSDT', 90.00);
+  assert(paperEngine.pairs.length === 1, 'Pair 1 opened successfully');
+  
+  // 2. Move price to $90.25 -> BUY position reaches target and closes, freeing margin for Pair 2!
+  sendTestTick('CLUSDT', 90.25);
+  const p1 = paperEngine.pairs[0];
+  assert(p1.buyPosition.status === 'CLOSED', 'BUY leg closed at profit target');
+  assert(p1.sellPosition.status === 'OPEN', 'SELL leg remains OPEN');
+
+  // 3. Engine must immediately utilize freed margin and create Pair 2 without hitting false INSUFFICIENT MARGIN!
+  assert(paperEngine.pairs.length === 2, 'Engine opened Pair 2 using margin freed up by closed leg');
+  assert(paperEngine.engineStatus === 'RUNNING', 'Engine remains RUNNING without false INSUFFICIENT MARGIN pause');
+  assert(!paperEngine.pauseReason.includes('INSUFFICIENT MARGIN'), 'Pause reason is not INSUFFICIENT MARGIN');
+}
+
 runTestSuite();
+
 

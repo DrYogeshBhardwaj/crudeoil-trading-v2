@@ -4,7 +4,7 @@ const storage = require('./storage');
 class PaperEngine {
   constructor() {
     this.settings = {
-      startingCapitalINR: 350000,
+      startingCapitalINR: 119923.61,
       contractQuantity: 1.0,
       leverage: 5,
       instrument: 'CLUSDT',
@@ -360,22 +360,22 @@ class PaperEngine {
       return;
     }
 
-    // 6. Check Available Margin for NEW Pair (1 BUY + 1 SELL of 2 Barrels)
-    const qty = this.settings.contractQuantity || 2.0;
+    // 6. Check Available Margin for NEW Pair (1 BUY + 1 SELL of contractQuantity)
+    const qty = this.settings.contractQuantity || 1.0;
     const mult = this.contractMultipliers[symbol] || 1.0;
     const leverage = this.settings.leverage || 5;
     const reqMarginPairINR = ((normalizedPrice * qty * mult * usdInrRate) / leverage) * 2;
 
-    const paperMarginUsedINR = activePairs.length * reqMarginPairINR;
-    const startingCap = this.settings.startingCapitalINR || 350000;
-    this.settings.startingCapitalINR = startingCap;
-    const paperAvailableMarginINR = Math.max(0, startingCap - paperMarginUsedINR);
+    const metrics = this.getDashboardMetrics();
+    const paperAvailableMarginINR = (metrics && metrics.summary && metrics.summary.availableMarginINR !== undefined)
+      ? metrics.summary.availableMarginINR
+      : Math.max(0, (this.settings.startingCapitalINR || 119923.61) - reqMarginPairINR);
 
     if (paperAvailableMarginINR < reqMarginPairINR) {
       this.engineStatus = 'PAUSED';
       this.pauseReason = `PAUSED — INSUFFICIENT MARGIN (Required: ₹${reqMarginPairINR.toFixed(2)}, Available: ₹${paperAvailableMarginINR.toFixed(2)})`;
       if (this.lastSkippedRate !== `MARGIN-${normalizedPrice}`) {
-        this.logAudit('ENTRY_REJECTED', `ENTRY REJECTED — INSUFFICIENT MARGIN (Required ₹${reqMarginPairINR.toFixed(2)} for 2 Barrels Pair, Available: ₹${paperAvailableMarginINR.toFixed(2)})`);
+        this.logAudit('ENTRY_REJECTED', `ENTRY REJECTED — INSUFFICIENT MARGIN (Required ₹${reqMarginPairINR.toFixed(2)} for ${qty} Barrels Pair, Available: ₹${paperAvailableMarginINR.toFixed(2)})`);
         this.lastSkippedRate = `MARGIN-${normalizedPrice}`;
       }
       return;
@@ -888,7 +888,7 @@ class PaperEngine {
       }
     }
 
-    const startingCap = Math.max(350000, this.settings.startingCapitalINR || 350000);
+    const startingCap = this.settings.startingCapitalINR || 119923.61;
     this.settings.startingCapitalINR = startingCap;
     const realizedBalanceINR = startingCap + realizedNetINR;
     const totalEquityINR = realizedBalanceINR + floatingNetINR;
