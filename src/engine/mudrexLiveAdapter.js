@@ -1258,11 +1258,20 @@ class MudrexLiveAdapter {
     // 3. Simulated Paper Benchmark Ledger (The 33 historical seed trades)
     let paperClosedTrades = [];
     try {
-      const seed = require('./state_seed.json');
-      if (seed && Array.isArray(seed.closedPositions)) {
-        paperClosedTrades = seed.closedPositions;
+      const legacyBackup = require('../../backups/legacy_closed_trades_backup.json');
+      if (legacyBackup && Array.isArray(legacyBackup.trades) && legacyBackup.trades.length > 0) {
+        paperClosedTrades = legacyBackup.trades;
       }
     } catch (e) {}
+
+    if (paperClosedTrades.length === 0) {
+      try {
+        const seed = require('./state_seed.json');
+        if (seed && Array.isArray(seed.closedPositions) && seed.closedPositions.length > 0) {
+          paperClosedTrades = seed.closedPositions;
+        }
+      } catch (e) {}
+    }
 
     if (paperClosedTrades.length === 0 && Array.isArray(paperEngine.closedPositions)) {
       paperClosedTrades = paperEngine.closedPositions.filter(p => p.source === 'SIMULATED_SEED' || !p.ledger || p.ledger === 'PAPER');
