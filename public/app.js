@@ -623,6 +623,72 @@ function renderDashboard(data) {
     updateAdminButtonState();
   }
 
+  window.lastReceivedData = data;
+
+  // Render Execution Gate Banner
+  const gateBanner = document.getElementById('executionGateBanner');
+  const gateTitle = document.getElementById('gateStatusTitle');
+  const gateDesc = document.getElementById('gateStatusDesc');
+  const gateBadge = document.getElementById('gateBadge');
+  const gateIcon = document.getElementById('gateIcon');
+
+  const execGate = data.executionGate || { approved: false, status: 'LOCKED_FAIL_CLOSED' };
+  if (gateBanner && gateTitle && gateBadge) {
+    if (execGate.approved) {
+      gateBanner.style.background = 'rgba(16, 185, 129, 0.15)';
+      gateBanner.style.borderColor = '#10b981';
+      gateTitle.style.color = '#34d399';
+      gateTitle.innerText = 'LIVE EXECUTION GATE: APPROVED (REAL ORDERS ACTIVE)';
+      if (gateDesc) gateDesc.innerText = 'Engine has authorized permissions to send real Mudrex exit and entry orders.';
+      gateBadge.style.background = 'rgba(16, 185, 129, 0.25)';
+      gateBadge.style.color = '#34d399';
+      gateBadge.style.borderColor = '#10b981';
+      gateBadge.innerText = 'GATE_APPROVED';
+      if (gateIcon) gateIcon.innerText = '🟢';
+    } else {
+      gateBanner.style.background = 'rgba(220, 38, 38, 0.15)';
+      gateBanner.style.borderColor = '#ef4444';
+      gateTitle.style.color = '#f87171';
+      gateTitle.innerText = 'FAIL-CLOSED EXECUTION GATE: LOCKED (READ-ONLY MONITORING)';
+      if (gateDesc) gateDesc.innerText = 'Live order dispatch is strictly disabled until explicit gate approval. All live Mudrex positions are protected.';
+      gateBadge.style.background = 'rgba(239, 68, 68, 0.25)';
+      gateBadge.style.color = '#f87171';
+      gateBadge.style.borderColor = '#ef4444';
+      gateBadge.innerText = 'LOCKED_FAIL_CLOSED';
+      if (gateIcon) gateIcon.innerText = '🔒';
+    }
+  }
+
+  // Update Unresolved badge count
+  const unresCountEl = document.getElementById('unresolvedBadgeCount');
+  if (unresCountEl) {
+    unresCountEl.innerText = (data.unresolvedLedger && data.unresolvedLedger.count) || 0;
+  }
+
+  // Select summary based on currentLedgerView
+  if (typeof window.currentLedgerView === 'undefined') {
+    window.currentLedgerView = 'LIVE';
+  }
+
+  let activeLedger = data.liveLedger;
+  if (window.currentLedgerView === 'PAPER' && data.paperLedger) {
+    activeLedger = data.paperLedger;
+    if (data.paperLedger.summary) {
+      summary = { ...summary, ...data.paperLedger.summary };
+    }
+  } else if (window.currentLedgerView === 'UNRESOLVED' && data.unresolvedLedger) {
+    activeLedger = data.unresolvedLedger;
+  } else if (data.liveLedger && data.liveLedger.summary) {
+    summary = data.liveLedger.summary;
+  }
+
+  const ledgerSourceEl = document.getElementById('ledgerSourceTimestamp');
+  if (ledgerSourceEl && activeLedger) {
+    const src = activeLedger.source || 'MUDREX_EXCHANGE_VERIFIED';
+    const ts = activeLedger.timestamp ? new Date(activeLedger.timestamp).toLocaleTimeString('en-IN', { timeZone: 'Asia/Kolkata' }) : '';
+    ledgerSourceEl.innerText = `Source: ${src} | ${ts} IST`;
+  }
+
   // Engine Pause Alert Banner (Disabled per user request)
   const alertBanner = document.getElementById('engineAlertBanner');
   if (alertBanner) {
@@ -892,15 +958,53 @@ function renderDashboard(data) {
   }
   if (document.getElementById('closedSummaryNetUSD')) document.getElementById('closedSummaryNetUSD').innerText = `$${summary.realizedNetUSD.toFixed(4)} Net`;
 
-  // Render Tables
-  renderActivePositions(openPositions, settings.instrument, isDhanPage, pricePrefix, priceMultiplier, priceDecimals);
-  renderClosedPositions(closedPositions, settings.instrument, isDhanPage, pricePrefix, priceMultiplier, priceDecimals);
+  // Render Tables according to active ledger
+  let displayOpenPositions = openPositions;
+  let displayClosedPositions = closedPositions;
+
+  if (window.currentLedgerView === 'PAPER' && data.paperLedger) {
+    displayClosedPositions = data.paperLedger.closedPositions || [];
+  } else if (window.currentLedgerView === 'UNRESOLVED' && data.unresolvedLedger) {
+    displayOpenPositions = data.unresolvedLedger.positions || [];
+    displayClosedPositions = [];
+  } else if (data.liveLedger) {
+    displayOpenPositions = data.liveLedger.openPositions || openPositions;
+    displayClosedPositions = data.liveLedger.closedPositions || closedPositions;
+  }
+
+  renderActivePositions(displayOpenPositions, settings.instrument, isDhanPage, pricePrefix, priceMultiplier, priceDecimals);
+  renderClosedPositions(displayClosedPositions, settings.instrument, isDhanPage, pricePrefix, priceMultiplier, priceDecimals);
   
   const logsTab = document.getElementById('tabLogs') || document.getElementById('tabContentAuditLogs');
   if (logsTab && logsTab.classList.contains('active')) {
     renderAuditLogs(auditLogs);
   }
 }
+
+window.switchLedgerView = function(view) {
+  window.currentLedgerView = view;
+  const btnLive = document.getElementById('btnLedgerLive');
+  const btnPaper = document.getElementById('btnLedgerPaper');
+  const btnUnresolved = document.getElementById('btnLedgerUnresolved');
+
+  if (btnLive && btnPaper && btnUnresolved) {
+    btnLive.style.background = view === 'LIVE' ? '#10b981' : 'rgba(255, 255, 255, 0.08)';
+    btnLive.style.color = view === 'LIVE' ? '#fff' : '#94a3b8';
+    btnLive.style.borderColor = view === 'LIVE' ? '#34d399' : 'rgba(255, 255, 255, 0.15)';
+
+    btnPaper.style.background = view === 'PAPER' ? '#0284c7' : 'rgba(255, 255, 255, 0.08)';
+    btnPaper.style.color = view === 'PAPER' ? '#fff' : '#94a3b8';
+    btnPaper.style.borderColor = view === 'PAPER' ? '#38bdf8' : 'rgba(255, 255, 255, 0.15)';
+
+    btnUnresolved.style.background = view === 'UNRESOLVED' ? '#ef4444' : 'rgba(255, 255, 255, 0.08)';
+    btnUnresolved.style.color = view === 'UNRESOLVED' ? '#fff' : '#94a3b8';
+    btnUnresolved.style.borderColor = view === 'UNRESOLVED' ? '#f87171' : 'rgba(255, 255, 255, 0.15)';
+  }
+
+  if (window.lastReceivedData) {
+    updateDashboardUI(window.lastReceivedData);
+  }
+};
 
 let buySortKey = 'distToExit';
 let buySortDir = 'asc';
@@ -1171,6 +1275,16 @@ function renderActivePositions(positions, symbol, isDhanPage = false, pricePrefi
               const color = s.includes('REAL_MUDREX') ? '#a7f3d0' : (s.includes('TRANSMITTED') || s.includes('SENDING') ? '#38bdf8' : '#fbbf24');
               return `<span style="display:block; font-size:0.65rem; color:${color}; font-weight:700; margin-top:2px;">📡 ${s}</span>`;
             })()}
+            ${pos.isProtectedExistingExchangePosition ? `
+              <div style="margin-top: 4px; display: inline-flex; align-items: center; gap: 4px; background: rgba(245, 158, 11, 0.2); border: 1px solid #f59e0b; color: #fbbf24; padding: 2px 6px; border-radius: 4px; font-size: 0.68rem; font-weight: 800;">
+                🛡️ PROTECTED REAL POSITION (${pos.hasExchangeSideProtection ? 'EXCHANGE TP/SL SET' : 'NO EXCHANGE TP/SL'})
+              </div>
+            ` : ''}
+            ${pos.status === 'EXIT_PENDING' ? `
+              <div style="margin-top: 4px; display: inline-flex; align-items: center; gap: 4px; background: rgba(239, 68, 68, 0.2); border: 1px solid #ef4444; color: #f87171; padding: 2px 6px; border-radius: 4px; font-size: 0.68rem; font-weight: 800;">
+                ⏳ EXIT PENDING VERIFICATION
+              </div>
+            ` : ''}
           </td>
           <td>
             ${formatISTDate(pos.entryTime)}

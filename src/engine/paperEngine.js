@@ -750,8 +750,34 @@ class PaperEngine {
       const buy = pair.buyPosition;
       if (buy.status === 'OPEN' && buy.targetExitPrice !== null) {
         if (currentPrice >= buy.targetExitPrice) {
-          this.closePosition(pair, buy, currentPrice, currentTimestamp, currentUsdInrRate, 'BUY TARGET PROFIT HIT');
-          stateChanged = true;
+          const isReal = buy.apiStatus === 'REAL_MUDREX_POSITION' || buy.mudrexOrderId || buy.ledger === 'LIVE';
+          if (isReal) {
+            buy.status = 'EXIT_PENDING';
+            buy.exitReason = 'BUY TARGET PROFIT HIT (TRIGGERED)';
+            stateChanged = true;
+            try {
+              const mudrexLive = require('./mudrexLiveAdapter');
+              mudrexLive.executeRealExit(pair, buy, currentPrice, currentTimestamp, currentUsdInrRate, 'BUY TARGET PROFIT HIT')
+                .then(res => {
+                  if (res && res.success) {
+                    if (pair.buyPosition.status === 'CLOSED' && pair.sellPosition.status === 'CLOSED') {
+                      pair.status = 'CLOSED';
+                      pair.closedTime = new Date().toISOString();
+                      this.logAudit('PAIR_FULLY_CLOSED', { pairId: pair.pairId });
+                    }
+                    this.saveState();
+                  }
+                })
+                .catch(err => {
+                  console.error('[Paper Engine] Real buy exit dispatch error:', err.message);
+                });
+            } catch (liveErr) {
+              console.error('[Paper Engine] Adapter error on buy exit:', liveErr.message);
+            }
+          } else {
+            this.closePosition(pair, buy, currentPrice, currentTimestamp, currentUsdInrRate, 'BUY TARGET PROFIT HIT');
+            stateChanged = true;
+          }
         }
       }
 
@@ -759,8 +785,34 @@ class PaperEngine {
       const sell = pair.sellPosition;
       if (sell.status === 'OPEN' && sell.targetExitPrice !== null) {
         if (currentPrice <= sell.targetExitPrice) {
-          this.closePosition(pair, sell, currentPrice, currentTimestamp, currentUsdInrRate, 'SELL TARGET PROFIT HIT');
-          stateChanged = true;
+          const isReal = sell.apiStatus === 'REAL_MUDREX_POSITION' || sell.mudrexOrderId || sell.ledger === 'LIVE';
+          if (isReal) {
+            sell.status = 'EXIT_PENDING';
+            sell.exitReason = 'SELL TARGET PROFIT HIT (TRIGGERED)';
+            stateChanged = true;
+            try {
+              const mudrexLive = require('./mudrexLiveAdapter');
+              mudrexLive.executeRealExit(pair, sell, currentPrice, currentTimestamp, currentUsdInrRate, 'SELL TARGET PROFIT HIT')
+                .then(res => {
+                  if (res && res.success) {
+                    if (pair.buyPosition.status === 'CLOSED' && pair.sellPosition.status === 'CLOSED') {
+                      pair.status = 'CLOSED';
+                      pair.closedTime = new Date().toISOString();
+                      this.logAudit('PAIR_FULLY_CLOSED', { pairId: pair.pairId });
+                    }
+                    this.saveState();
+                  }
+                })
+                .catch(err => {
+                  console.error('[Paper Engine] Real sell exit dispatch error:', err.message);
+                });
+            } catch (liveErr) {
+              console.error('[Paper Engine] Adapter error on sell exit:', liveErr.message);
+            }
+          } else {
+            this.closePosition(pair, sell, currentPrice, currentTimestamp, currentUsdInrRate, 'SELL TARGET PROFIT HIT');
+            stateChanged = true;
+          }
         }
       }
 
@@ -857,7 +909,9 @@ class PaperEngine {
       netProfitINR: Number(netINR.toFixed(2)),
       usdInrRate,
       exitReason,
-      holdingDurationSec
+      holdingDurationSec,
+      ledger: position.ledger || 'PAPER',
+      source: position.source || 'SIMULATED'
     };
 
     // Store in closed positions history
@@ -1126,27 +1180,33 @@ class PaperEngine {
     this.settings.strategyMode = 'ALTERNATING_STAGGERED';
     delete this.settings.buyTargetMove;
     delete this.settings.sellTargetMove;
-    // Safeguard: Preserve real Mudrex exchange positions and closed history
-    const realPairs = (this.pairs || []).filter(p => {
-      const bReal = p.buyPosition && (p.buyPosition.apiStatus === 'REAL_MUDREX_POSITION' || p.buyPosition.mudrexOrderId);
-      const sReal = p.sellPosition && (p.sellPosition.apiStatus === 'REAL_MUDREX_POSITION' || p.sellPosition.mudrexOrderId);
-      return bReal || sReal;
-    });
-    const realClosed = (this.closedPositions || []).filter(p => p.apiStatus === 'REAL_MUDREX_POSITION' || p.mudrexOrderId || (p.exitReason && p.exitReason.includes('TARGET PROFIT HIT')));
+    const isTestEnv = process.env.IS_TEST === 'true' || process.env.NODE_ENV === 'test';
+    if (isTestEnv) {
+      this.pairs = [];
+      this.closedPositions = [];
+    } else {
+      // Safeguard: Preserve real Mudrex exchange positions and closed history
+      const realPairs = (this.pairs || []).filter(p => {
+        const bReal = p.buyPosition && (p.buyPosition.apiStatus === 'REAL_MUDREX_POSITION' || p.buyPosition.mudrexOrderId || p.buyPosition.ledger === 'LIVE');
+        const sReal = p.sellPosition && (p.sellPosition.apiStatus === 'REAL_MUDREX_POSITION' || p.sellPosition.mudrexOrderId || p.sellPosition.ledger === 'LIVE');
+        return bReal || sReal;
+      });
+      const realClosed = (this.closedPositions || []).filter(p => p.apiStatus === 'REAL_MUDREX_POSITION' || p.mudrexOrderId || p.ledger === 'LIVE');
 
-    this.pairs = realPairs;
-    this.closedPositions = realClosed;
+      this.pairs = realPairs;
+      this.closedPositions = realClosed;
 
-    if (this.closedPositions.length === 0) {
-      try {
-        const seed = require('./state_seed.json');
-        if (seed && Array.isArray(seed.closedPositions) && seed.closedPositions.length > 0) {
-          this.closedPositions = seed.closedPositions;
-        }
-        if (seed && Array.isArray(seed.pairs) && seed.pairs.length > 0 && this.pairs.length === 0) {
-          this.pairs = seed.pairs;
-        }
-      } catch (e) {}
+      if (this.closedPositions.length === 0) {
+        try {
+          const seed = require('./state_seed.json');
+          if (seed && Array.isArray(seed.closedPositions) && seed.closedPositions.length > 0) {
+            this.closedPositions = seed.closedPositions;
+          }
+          if (seed && Array.isArray(seed.pairs) && seed.pairs.length > 0 && this.pairs.length === 0) {
+            this.pairs = seed.pairs;
+          }
+        } catch (e) {}
+      }
     }
     this.auditLogs = [];
     this.lastProcessedRate = null;

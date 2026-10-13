@@ -137,15 +137,18 @@ class DatabaseManager {
         } catch (e) {}
       }
 
+      const isTestEnv = process.env.IS_TEST === 'true' || process.env.NODE_ENV === 'test';
       let finalState = dbState || jsonBackupState || seedState || {};
 
-      // Safeguard: Ensure the authoritative 33 closed trades from seedState are NEVER lost
-      if (seedState && Array.isArray(seedState.closedPositions)) {
+      // Safeguard: Ensure the authoritative 33 closed benchmark trades from seedState are NEVER lost in production
+      if (!isTestEnv && seedState && Array.isArray(seedState.closedPositions)) {
         if (!Array.isArray(finalState.closedPositions) || finalState.closedPositions.length < seedState.closedPositions.length) {
           const existingIds = new Set((finalState.closedPositions || []).map(p => p.positionId));
           const mergedClosed = [...(finalState.closedPositions || [])];
           for (const sPos of seedState.closedPositions) {
             if (!existingIds.has(sPos.positionId)) {
+              if (!sPos.ledger) sPos.ledger = 'PAPER';
+              if (!sPos.source) sPos.source = 'SIMULATED_SEED';
               mergedClosed.push(sPos);
               existingIds.add(sPos.positionId);
             }
@@ -154,9 +157,14 @@ class DatabaseManager {
         }
       }
 
-      // Safeguard: Ensure active pairs from seedState are preserved if current state has none
-      if (seedState && Array.isArray(seedState.pairs) && (!Array.isArray(finalState.pairs) || finalState.pairs.length === 0)) {
+      // Safeguard: Ensure active pairs from seedState are preserved in production if current state has none
+      if (!isTestEnv && seedState && Array.isArray(seedState.pairs) && (!Array.isArray(finalState.pairs) || finalState.pairs.length === 0)) {
         finalState.pairs = seedState.pairs;
+      }
+
+      // Preserve verified Real Mudrex Closed Trades if present in seed
+      if (seedState && Array.isArray(seedState.realMudrexClosedTrades)) {
+        finalState.realMudrexClosedTrades = seedState.realMudrexClosedTrades;
       }
 
       if (finalState) {
@@ -310,9 +318,10 @@ class DatabaseManager {
     if (fs.existsSync(TMP_BACKUP_FILE)) {
       try { fs.unlinkSync(TMP_BACKUP_FILE); } catch (e) {}
     }
+    const isTestEnv = process.env.IS_TEST === 'true' || process.env.NODE_ENV === 'test';
     let seedClosed = [];
     let seedPairs = [];
-    if (fs.existsSync(STATE_SEED_FILE)) {
+    if (!isTestEnv && fs.existsSync(STATE_SEED_FILE)) {
       try {
         const s = JSON.parse(fs.readFileSync(STATE_SEED_FILE, 'utf8'));
         seedClosed = s.closedPositions || [];

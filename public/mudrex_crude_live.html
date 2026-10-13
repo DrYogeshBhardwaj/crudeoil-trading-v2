@@ -185,6 +185,37 @@
       <button class="btn btn-secondary" style="padding: 4px 10px; font-size: 0.75rem; border: 1px solid #ef4444; color: #f87171;" onclick="resetAllDataConfirm()">🧹 Reset Engine Data</button>
     </div>
 
+    <!-- Fail-Closed Execution Gate Banner -->
+    <div id="executionGateBanner" style="background: rgba(220, 38, 38, 0.15); border: 1px solid #ef4444; border-radius: 12px; padding: 12px 20px; margin-bottom: 14px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px;">
+      <div style="display: flex; align-items: center; gap: 12px;">
+        <span style="font-size: 1.35rem;" id="gateIcon">🔒</span>
+        <div>
+          <strong id="gateStatusTitle" style="color: #f87171; font-size: 0.88rem; text-transform: uppercase; letter-spacing: 0.5px;">FAIL-CLOSED EXECUTION GATE: LOCKED (READ-ONLY MONITORING)</strong>
+          <div id="gateStatusDesc" style="color: #cbd5e1; font-size: 0.78rem;">Live order dispatch is strictly disabled until explicit gate approval. All live Mudrex positions are protected.</div>
+        </div>
+      </div>
+      <span id="gateBadge" style="background: rgba(239, 68, 68, 0.25); color: #f87171; border: 1px solid #ef4444; font-size: 0.75rem; font-weight: 900; padding: 5px 12px; border-radius: 6px;">LOCKED_FAIL_CLOSED</span>
+    </div>
+
+    <!-- 3-Ledger Architecture Switcher Toolbar -->
+    <div style="background: rgba(13, 17, 23, 0.95); border: 1px solid rgba(255, 255, 255, 0.12); border-radius: 12px; padding: 12px 18px; margin-bottom: 16px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 14px;">
+      <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
+        <span style="font-size: 0.82rem; font-weight: 800; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.5px;">Ledger View:</span>
+        <div style="display: flex; gap: 8px; flex-wrap: wrap;" id="ledgerToggleGroup">
+          <button id="btnLedgerLive" class="btn" style="background: #10b981; color: #fff; font-weight: 900; font-size: 0.82rem; padding: 7px 14px; border-radius: 6px; border: 1px solid #34d399; cursor: pointer; box-shadow: 0 0 10px rgba(16, 185, 129, 0.35);" onclick="switchLedgerView('LIVE')">
+            🔴 LIVE REAL MONEY LEDGER
+          </button>
+          <button id="btnLedgerPaper" class="btn" style="background: rgba(255, 255, 255, 0.08); color: #94a3b8; font-weight: 800; font-size: 0.82rem; padding: 7px 14px; border-radius: 6px; border: 1px solid rgba(255, 255, 255, 0.15); cursor: pointer;" onclick="switchLedgerView('PAPER')">
+            🧪 SIMULATED BENCHMARK LEDGER
+          </button>
+          <button id="btnLedgerUnresolved" class="btn" style="background: rgba(255, 255, 255, 0.08); color: #94a3b8; font-weight: 800; font-size: 0.82rem; padding: 7px 14px; border-radius: 6px; border: 1px solid rgba(255, 255, 255, 0.15); cursor: pointer;" onclick="switchLedgerView('UNRESOLVED')">
+            ⚠️ UNRESOLVED (<span id="unresolvedBadgeCount">0</span>)
+          </button>
+        </div>
+      </div>
+      <div style="font-size: 0.75rem; color: #94a3b8;" id="ledgerSourceTimestamp">Source: MUDREX_EXCHANGE_VERIFIED | Reconciled</div>
+    </div>
+
     <!-- Single Top Summary Section (4 Prominent Cards Only) -->
     <section class="top-summary-card" style="background: linear-gradient(135deg, rgba(16, 185, 129, 0.08), rgba(15, 23, 42, 0.95)); border: 1px solid rgba(16, 185, 129, 0.35); border-radius: 16px; padding: 22px; margin-bottom: 16px; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);">
       <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 18px;">
