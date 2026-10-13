@@ -1,3 +1,4 @@
+process.env.IS_TEST = 'true';
 const paperEngine = require('../src/engine/paperEngine');
 const backtest = require('../src/engine/backtest');
 const rateFeed = require('../src/engine/rateFeed');

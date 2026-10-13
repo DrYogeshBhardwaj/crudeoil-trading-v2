@@ -130,6 +130,18 @@ class DatabaseManager {
         } catch (e) {}
       }
 
+      if (dbState && jsonBackupState) {
+        if ((!dbState.closedPositions || dbState.closedPositions.length === 0) && jsonBackupState.closedPositions && jsonBackupState.closedPositions.length > 0) {
+          dbState.closedPositions = jsonBackupState.closedPositions;
+        }
+        if ((!dbState.pairs || dbState.pairs.length === 0) && jsonBackupState.pairs && jsonBackupState.pairs.length > 0) {
+          dbState.pairs = jsonBackupState.pairs;
+        }
+        if (!dbState.dailyTracker && jsonBackupState.dailyTracker) {
+          dbState.dailyTracker = jsonBackupState.dailyTracker;
+        }
+      }
+
       let finalState = dbState || jsonBackupState;
       if (finalState) {
         finalState.isEngineRunning = true;
@@ -229,7 +241,9 @@ class DatabaseManager {
       fs.writeFileSync(tmpPath, JSON.stringify(state, null, 2), 'utf8');
       fs.renameSync(tmpPath, STATE_JSON_FILE);
       try { fs.writeFileSync(TMP_BACKUP_FILE, JSON.stringify(state, null, 2), 'utf8'); } catch (e) {}
-      try { fs.writeFileSync(STATE_SEED_FILE, JSON.stringify(state, null, 2), 'utf8'); } catch (e) {}
+      if (!process.env.IS_TEST && process.env.NODE_ENV !== 'test') {
+        try { fs.writeFileSync(STATE_SEED_FILE, JSON.stringify(state, null, 2), 'utf8'); } catch (e) {}
+      }
     } catch (err) {
       console.error('[DBMS] JSON Backup Save Error:', err);
     }
@@ -317,7 +331,6 @@ class DatabaseManager {
       isEngineRunning: true
     };
     try {
-      fs.writeFileSync(STATE_SEED_FILE, JSON.stringify(cleanSeed, null, 2), 'utf8');
       fs.writeFileSync(STATE_JSON_FILE, JSON.stringify(cleanSeed, null, 2), 'utf8');
     } catch (e) {}
   }
