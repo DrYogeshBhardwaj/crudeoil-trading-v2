@@ -769,13 +769,13 @@
           <span>🛢️ CLUSDT CRUDE OIL LIVE RATE</span>
         </div>
         <div class="ticker-rate-value rate-cyan" id="liveCrudePrice">$0.00</div>
-        <div class="ticker-sub" id="liveRateSubtext">USD/INR: ₹102.00 | 1 Barrel Lot</div>
+        <div class="ticker-sub" id="liveRateSubtext">USD/INR: ₹102.00 | 2.0 Barrels Lot</div>
       </div>
 
       <!-- BUY Target Exit Callout -->
       <div class="ticker-block border-left">
         <div class="ticker-label">
-          <span>🎯 BUY TARGET EXIT (+$1.00)</span>
+          <span id="buyTargetLabel">🎯 BUY TARGET EXIT (+$0.30)</span>
         </div>
         <div class="ticker-rate-value rate-green" id="buyTargetRate">$0.00</div>
         <div class="ticker-sub" id="buyTargetDist" style="color: var(--accent-green-bright);">Distance: --</div>
@@ -784,7 +784,7 @@
       <!-- SELL Target Exit Callout -->
       <div class="ticker-block border-left">
         <div class="ticker-label">
-          <span>🎯 SELL TARGET EXIT (-$1.00)</span>
+          <span id="sellTargetLabel">🎯 SELL TARGET EXIT (-$0.30)</span>
         </div>
         <div class="ticker-rate-value rate-red" id="sellTargetRate">$0.00</div>
         <div class="ticker-sub" id="sellTargetDist" style="color: var(--accent-red-bright);">Distance: --</div>
@@ -796,7 +796,7 @@
           <span>⚡ TOTAL ACTIVE PAIRS</span>
         </div>
         <div class="ticker-rate-value rate-gold" id="heroActivePairsCount">0 PAIRS</div>
-        <div class="ticker-sub" id="heroConfigSubtext">1.0 B/Leg | 5x Lev | Auto-Add: ACTIVE</div>
+        <div class="ticker-sub" id="heroConfigSubtext">2.0 B/Leg | 5x Lev | Auto-Add: ACTIVE</div>
       </div>
     </section>
 
@@ -1124,12 +1124,22 @@
       const crudeEl = document.getElementById('liveCrudePrice');
       crudeEl.innerText = `$${livePrice.toFixed(2)}`;
       
-      const buyTarget = livePrice + 1.00;
-      const sellTarget = livePrice - 1.00;
+      const targetMove = engine.profitTargetMove || 0.30;
+      const contractQty = engine.contractQuantity || 2.0;
+      const buyTarget = livePrice + targetMove;
+      const sellTarget = livePrice - targetMove;
       document.getElementById('buyTargetRate').innerText = `$${buyTarget.toFixed(2)}`;
       document.getElementById('sellTargetRate').innerText = `$${sellTarget.toFixed(2)}`;
-      document.getElementById('buyTargetDist').innerText = `Distance: +$1.00 (+₹${(1.00 * usdInr).toFixed(2)})`;
-      document.getElementById('sellTargetDist').innerText = `Distance: -$1.00 (-₹${(1.00 * usdInr).toFixed(2)})`;
+      document.getElementById('buyTargetDist').innerText = `Distance: +$${targetMove.toFixed(2)} (+₹${(targetMove * usdInr).toFixed(2)})`;
+      document.getElementById('sellTargetDist').innerText = `Distance: -$${targetMove.toFixed(2)} (-₹${(targetMove * usdInr).toFixed(2)})`;
+
+      const buyLabel = document.getElementById('buyTargetLabel');
+      if (buyLabel) buyLabel.innerText = `🎯 BUY TARGET EXIT (+$${targetMove.toFixed(2)})`;
+      const sellLabel = document.getElementById('sellTargetLabel');
+      if (sellLabel) sellLabel.innerText = `🎯 SELL TARGET EXIT (-$${targetMove.toFixed(2)})`;
+
+      const liveRateSub = document.getElementById('liveRateSubtext');
+      if (liveRateSub) liveRateSub.innerText = `USD/INR: ₹${usdInr.toFixed(2)} | ${contractQty.toFixed(1)} Barrels Lot`;
 
       // Hero Total Active Pairs (Prominent Display)
       const pairs = engine.pairs || [];
@@ -1139,7 +1149,7 @@
       }
       const heroConfigSub = document.getElementById('heroConfigSubtext');
       if (heroConfigSub) {
-        heroConfigSub.innerText = `${engine.activeBuyCount || 0} BUY / ${engine.activeSellCount || 0} SELL | 1.0B 5x`;
+        heroConfigSub.innerText = `${engine.activeBuyCount || 0} BUY / ${engine.activeSellCount || 0} SELL | ${contractQty.toFixed(1)}B 5x`;
       }
 
       // 3. Financial Metrics (Both ₹ and $ required)
