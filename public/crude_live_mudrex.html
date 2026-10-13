@@ -548,6 +548,42 @@
       background: rgba(255, 255, 255, 0.025);
     }
 
+    .sortable-th {
+      cursor: pointer;
+      user-select: none;
+      transition: background 0.15s ease, color 0.15s ease;
+      white-space: nowrap;
+    }
+
+    .sortable-th:hover {
+      background: rgba(56, 189, 248, 0.18) !important;
+      color: #fff !important;
+    }
+
+    .sort-icon {
+      display: inline-block;
+      margin-left: 5px;
+      font-size: 0.72rem;
+      opacity: 0.55;
+      color: var(--text-muted);
+    }
+
+    .sort-active {
+      color: var(--accent-cyan) !important;
+      background: rgba(56, 189, 248, 0.1) !important;
+    }
+
+    .sort-active .sort-icon {
+      opacity: 1;
+      color: var(--accent-gold);
+    }
+
+    .pnl-big {
+      font-size: 1.05rem !important;
+      font-weight: 900 !important;
+      letter-spacing: 0.5px;
+    }
+
     .badge {
       display: inline-flex;
       align-items: center;
@@ -869,13 +905,13 @@
           <table class="data-table">
             <thead>
               <tr>
-                <th>Pair ID</th>
-                <th>BUY Leg (Entry ➔ Exit)</th>
-                <th>BUY Floating P/L</th>
-                <th>SELL Leg (Entry ➔ Exit)</th>
-                <th>SELL Floating P/L</th>
-                <th>Net Pair P/L</th>
-                <th>Order Status</th>
+                <th class="sortable-th" onclick="sortTable('pairs', 'pairId')">Pair ID <span class="sort-icon" id="sort-pairs-pairId">⬍</span></th>
+                <th class="sortable-th" onclick="sortTable('pairs', 'buyEntry')">BUY Leg (Entry ➔ Exit) <span class="sort-icon" id="sort-pairs-buyEntry">⬍</span></th>
+                <th class="sortable-th" onclick="sortTable('pairs', 'buyPnl')">BUY Floating P/L <span class="sort-icon" id="sort-pairs-buyPnl">⬍</span></th>
+                <th class="sortable-th" onclick="sortTable('pairs', 'sellEntry')">SELL Leg (Entry ➔ Exit) <span class="sort-icon" id="sort-pairs-sellEntry">⬍</span></th>
+                <th class="sortable-th" onclick="sortTable('pairs', 'sellPnl')">SELL Floating P/L <span class="sort-icon" id="sort-pairs-sellPnl">⬍</span></th>
+                <th class="sortable-th" onclick="sortTable('pairs', 'netPnl')">Net Pair P/L <span class="sort-icon" id="sort-pairs-netPnl">⬍</span></th>
+                <th class="sortable-th" onclick="sortTable('pairs', 'status')">Order Status <span class="sort-icon" id="sort-pairs-status">⬍</span></th>
               </tr>
             </thead>
             <tbody id="pairsTableBody">
@@ -906,11 +942,11 @@
             <table class="data-table">
               <thead>
                 <tr>
-                  <th>Position</th>
-                  <th>Entry</th>
-                  <th>Target Exit 🎯</th>
-                  <th>Dist to Exit</th>
-                  <th>Floating P/L</th>
+                  <th class="sortable-th" onclick="sortTable('buy', 'positionId')">Position <span class="sort-icon" id="sort-buy-positionId">⬍</span></th>
+                  <th class="sortable-th" onclick="sortTable('buy', 'entryPrice')">Entry <span class="sort-icon" id="sort-buy-entryPrice">⬍</span></th>
+                  <th class="sortable-th" onclick="sortTable('buy', 'targetPrice')">Target Exit 🎯 <span class="sort-icon" id="sort-buy-targetPrice">⬍</span></th>
+                  <th class="sortable-th" onclick="sortTable('buy', 'distToTarget')">Dist to Exit <span class="sort-icon" id="sort-buy-distToTarget">⬍</span></th>
+                  <th class="sortable-th" onclick="sortTable('buy', 'floatingPnl')">Floating P/L <span class="sort-icon" id="sort-buy-floatingPnl">⬍</span></th>
                 </tr>
               </thead>
               <tbody id="splitBuyTableBody">
@@ -935,11 +971,11 @@
             <table class="data-table">
               <thead>
                 <tr>
-                  <th>Position</th>
-                  <th>Entry</th>
-                  <th>Target Exit 🎯</th>
-                  <th>Dist to Exit</th>
-                  <th>Floating P/L</th>
+                  <th class="sortable-th" onclick="sortTable('sell', 'positionId')">Position <span class="sort-icon" id="sort-sell-positionId">⬍</span></th>
+                  <th class="sortable-th" onclick="sortTable('sell', 'entryPrice')">Entry <span class="sort-icon" id="sort-sell-entryPrice">⬍</span></th>
+                  <th class="sortable-th" onclick="sortTable('sell', 'targetPrice')">Target Exit 🎯 <span class="sort-icon" id="sort-sell-targetPrice">⬍</span></th>
+                  <th class="sortable-th" onclick="sortTable('sell', 'distToTarget')">Dist to Exit <span class="sort-icon" id="sort-sell-distToTarget">⬍</span></th>
+                  <th class="sortable-th" onclick="sortTable('sell', 'floatingPnl')">Floating P/L <span class="sort-icon" id="sort-sell-floatingPnl">⬍</span></th>
                 </tr>
               </thead>
               <tbody id="splitSellTableBody">
@@ -964,14 +1000,14 @@
           <table class="data-table">
             <thead>
               <tr>
-                <th>Symbol</th>
-                <th>Side</th>
-                <th>Quantity</th>
-                <th>Entry Price</th>
-                <th>Current Price</th>
-                <th>Initial Margin</th>
-                <th>Position ID</th>
-                <th>Status</th>
+                <th class="sortable-th" onclick="sortTable('exchange', 'symbol')">Symbol <span class="sort-icon" id="sort-exchange-symbol">⬍</span></th>
+                <th class="sortable-th" onclick="sortTable('exchange', 'side')">Side <span class="sort-icon" id="sort-exchange-side">⬍</span></th>
+                <th class="sortable-th" onclick="sortTable('exchange', 'quantity')">Quantity <span class="sort-icon" id="sort-exchange-quantity">⬍</span></th>
+                <th class="sortable-th" onclick="sortTable('exchange', 'entryPrice')">Entry Price <span class="sort-icon" id="sort-exchange-entryPrice">⬍</span></th>
+                <th class="sortable-th" onclick="sortTable('exchange', 'currentPrice')">Current Price <span class="sort-icon" id="sort-exchange-currentPrice">⬍</span></th>
+                <th class="sortable-th" onclick="sortTable('exchange', 'margin')">Initial Margin <span class="sort-icon" id="sort-exchange-margin">⬍</span></th>
+                <th class="sortable-th" onclick="sortTable('exchange', 'positionId')">Position ID <span class="sort-icon" id="sort-exchange-positionId">⬍</span></th>
+                <th class="sortable-th" onclick="sortTable('exchange', 'status')">Status <span class="sort-icon" id="sort-exchange-status">⬍</span></th>
               </tr>
             </thead>
             <tbody id="exchangeTableBody">
@@ -982,7 +1018,7 @@
       </div>
     </section>
 
-    <!-- TAB 4: Closed Trades History -->
+    <!-- TAB 4: Closed Trades History (Exit Time, Big Net INR, USD, Side, Entry, Exit, Position ID Last) -->
     <section id="tabClosed" class="tab-content">
       <div class="table-container">
         <div class="table-toolbar">
@@ -998,13 +1034,13 @@
           <table class="data-table">
             <thead>
               <tr>
-                <th>Position ID</th>
-                <th>Side</th>
-                <th>Entry Price</th>
-                <th>Exit Price</th>
-                <th>Exit Time (IST)</th>
-                <th>Net Profit (₹ INR)</th>
-                <th>Net Profit ($ USD)</th>
+                <th class="sortable-th" onclick="sortTable('closed', 'exitTime')">Exit Time (IST) <span class="sort-icon" id="sort-closed-exitTime">▼</span></th>
+                <th class="sortable-th" onclick="sortTable('closed', 'netINR')">Net Profit (₹ INR) <span class="sort-icon" id="sort-closed-netINR">⬍</span></th>
+                <th class="sortable-th" onclick="sortTable('closed', 'netUSD')">Net Profit ($ USD) <span class="sort-icon" id="sort-closed-netUSD">⬍</span></th>
+                <th class="sortable-th" onclick="sortTable('closed', 'side')">Side <span class="sort-icon" id="sort-closed-side">⬍</span></th>
+                <th class="sortable-th" onclick="sortTable('closed', 'entryPrice')">Entry Price <span class="sort-icon" id="sort-closed-entryPrice">⬍</span></th>
+                <th class="sortable-th" onclick="sortTable('closed', 'exitPrice')">Exit Price <span class="sort-icon" id="sort-closed-exitPrice">⬍</span></th>
+                <th class="sortable-th" onclick="sortTable('closed', 'positionId')">Position ID <span class="sort-icon" id="sort-closed-positionId">⬍</span></th>
               </tr>
             </thead>
             <tbody id="closedTableBody">
@@ -1213,18 +1249,181 @@
         pill.innerHTML = `<span>EXCHANGE NET: FLAT (0 Positions)</span>`;
       }
 
-      // Badges
+      // Badges & Subtitles
       document.getElementById('badgePairsCount').innerText = pairs.length;
       document.getElementById('badgeBuySellCount').innerText = `${engine.activeBuyCount || 0} / ${engine.activeSellCount || 0}`;
       document.getElementById('badgeExchangeCount').innerText = (exchange.positions || []).length;
       document.getElementById('badgeClosedCount').innerText = (data.closedPositions || []).length;
       document.getElementById('activePairsSummaryText').innerText = `${pairs.length} Pairs Active (${pairs.length} BUY Legs + ${pairs.length} SELL Legs)`;
 
-      // Render Tables
+      const closedList = data.closedPositions || [];
+      const sumClosedNetINR = closedList.reduce((sum, c) => sum + (c.netProfitINR !== undefined ? c.netProfitINR : ((c.netProfitUSD || 0) * usdInr)), 0);
+      const sumClosedNetUSD = sumClosedNetINR / usdInr;
+      const closedSign = sumClosedNetINR >= 0 ? '+' : '';
+      const closedNetEl = document.getElementById('closedTradesTotalNet');
+      if (closedNetEl) {
+        closedNetEl.innerText = `Net: ${closedSign}₹${sumClosedNetINR.toLocaleString('en-IN', { minimumFractionDigits: 2 })} (${closedSign}$${sumClosedNetUSD.toFixed(2)})`;
+      }
+      const closedSummarySub = document.getElementById('closedTradesSummarySub');
+      if (closedSummarySub) {
+        closedSummarySub.innerText = `Total: ${closedList.length} Trades | Realized Net: ${closedSign}₹${sumClosedNetINR.toFixed(2)}`;
+      }
+
+      // Render Tables with active sorting
       renderPairsTable(pairs);
       renderSplitTables(pairs);
       renderExchangeTable(exchange.positions || []);
-      renderClosedTable(data.closedPositions || []);
+      renderClosedTable(closedList);
+    }
+
+    // --- UNIVERSAL COLUMN SORTING ENGINE ---
+    const sortState = {
+      pairs: { col: null, dir: 'asc' },
+      buy: { col: null, dir: 'asc' },
+      sell: { col: null, dir: 'asc' },
+      exchange: { col: null, dir: 'asc' },
+      closed: { col: 'exitTime', dir: 'desc' }
+    };
+
+    function sortTable(tableKey, colKey) {
+      const state = sortState[tableKey];
+      if (state.col === colKey) {
+        state.dir = state.dir === 'asc' ? 'desc' : 'asc';
+      } else {
+        state.col = colKey;
+        // Default P/L, Margin, and Time to 'desc' on first click, others to 'asc'
+        const lower = colKey.toLowerCase();
+        state.dir = (lower.includes('pnl') || lower.includes('profit') || lower.includes('time') || lower.includes('margin')) ? 'desc' : 'asc';
+      }
+      updateSortIcons(tableKey);
+      if (cachedData) renderTerminalUI(cachedData);
+    }
+
+    function updateSortIcons(tableKey) {
+      const state = sortState[tableKey];
+      document.querySelectorAll(`[id^="sort-${tableKey}-"]`).forEach(el => {
+        el.innerText = '⬍';
+        el.parentElement.classList.remove('sort-active');
+      });
+      if (state.col) {
+        const iconEl = document.getElementById(`sort-${tableKey}-${state.col}`);
+        if (iconEl) {
+          iconEl.innerText = state.dir === 'asc' ? '▲' : '▼';
+          iconEl.parentElement.classList.add('sort-active');
+        }
+      }
+    }
+
+    function extractNumber(val) {
+      if (typeof val === 'number') return val;
+      if (!val) return 0;
+      const num = parseFloat(String(val).replace(/[^0-9.-]/g, ''));
+      return isNaN(num) ? 0 : num;
+    }
+
+    function formatExitTimeIST(timeVal) {
+      if (!timeVal) return '--';
+      try {
+        let clean = String(timeVal);
+        // Fix invalid 24+ hour ISO format (e.g. T25:53:00)
+        const m = clean.match(/T(\d{2}):(\d{2}):(\d{2})/);
+        if (m) {
+          let h = parseInt(m[1], 10);
+          if (h >= 24) {
+            h = h % 24;
+            clean = clean.replace(/T\d{2}:/, `T${h.toString().padStart(2, '0')}:`);
+          }
+        }
+        const d = new Date(clean);
+        if (!isNaN(d.getTime())) {
+          return d.toLocaleTimeString('en-IN', { timeZone: 'Asia/Kolkata', hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true });
+        }
+      } catch (e) {}
+      return String(timeVal).replace('T', ' ').slice(0, 19);
+    }
+
+    function sortArray(items, col, dir, extractFn) {
+      if (!col || !items || items.length === 0) return items;
+      const sorted = [...items];
+      sorted.sort((a, b) => {
+        const valA = extractFn(a, col);
+        const valB = extractFn(b, col);
+        if (valA === valB) return 0;
+        if (valA === null || valA === undefined) return 1;
+        if (valB === null || valB === undefined) return -1;
+        let res = 0;
+        if (typeof valA === 'number' && typeof valB === 'number') {
+          res = valA - valB;
+        } else {
+          res = String(valA).localeCompare(String(valB), undefined, { numeric: true, sensitivity: 'base' });
+        }
+        return dir === 'desc' ? -res : res;
+      });
+      return sorted;
+    }
+
+    function getPairSortValue(p, col) {
+      if (col === 'pairId') return p.pairId || '';
+      if (col === 'buyEntry') return p.buy?.entryPrice || 0;
+      if (col === 'buyPnl') return p.buy?.floatingPnlINR || 0;
+      if (col === 'sellEntry') return p.sell?.entryPrice || 0;
+      if (col === 'sellPnl') return p.sell?.floatingPnlINR || 0;
+      if (col === 'netPnl') return p.netPairPnlINR || 0;
+      if (col === 'status') return p.status || '';
+      return 0;
+    }
+
+    function getBuySortValue(p, col) {
+      const b = p.buy || {};
+      if (col === 'positionId') return b.positionId || '';
+      if (col === 'entryPrice') return b.entryPrice || 0;
+      if (col === 'targetPrice') return b.targetPrice || 0;
+      if (col === 'distToTarget') return b.distToTarget || 0;
+      if (col === 'floatingPnl') return b.floatingPnlINR || 0;
+      return 0;
+    }
+
+    function getSellSortValue(p, col) {
+      const s = p.sell || {};
+      if (col === 'positionId') return s.positionId || '';
+      if (col === 'entryPrice') return s.entryPrice || 0;
+      if (col === 'targetPrice') return s.targetPrice || 0;
+      if (col === 'distToTarget') return s.distToTarget || 0;
+      if (col === 'floatingPnl') return s.floatingPnlINR || 0;
+      return 0;
+    }
+
+    function getExchangeSortValue(pos, col) {
+      if (col === 'symbol') return pos.symbol || '';
+      if (col === 'side') return (pos.order_type || pos.side || '').toUpperCase();
+      if (col === 'quantity') return extractNumber(pos.quantity);
+      if (col === 'entryPrice') return extractNumber(pos.entry_price);
+      if (col === 'currentPrice') return extractNumber(pos.current_price);
+      if (col === 'margin') return extractNumber(pos.initial_margin);
+      if (col === 'positionId') return pos.id || pos.position_id || '';
+      if (col === 'status') return pos.status || '';
+      return 0;
+    }
+
+    function getClosedSortValue(cp, col) {
+      const netINR = cp.netProfitINR !== undefined ? cp.netProfitINR : (cp.netProfitUSD * 102);
+      const netUSD = cp.netProfitUSD !== undefined ? cp.netProfitUSD : (netINR / 102);
+      if (col === 'exitTime') {
+        let clean = String(cp.exitTime || cp.closedTimestamp || '');
+        const m = clean.match(/T(\d{2}):/);
+        if (m && parseInt(m[1], 10) >= 24) {
+          clean = clean.replace(/T\d{2}:/, `T${(parseInt(m[1], 10) % 24).toString().padStart(2, '0')}:`);
+        }
+        const t = new Date(clean).getTime();
+        return isNaN(t) ? 0 : t;
+      }
+      if (col === 'netINR') return netINR;
+      if (col === 'netUSD') return netUSD;
+      if (col === 'side') return cp.direction || (cp.positionId && cp.positionId.includes('BUY') ? 'BUY' : 'SELL');
+      if (col === 'entryPrice') return extractNumber(cp.entryPrice);
+      if (col === 'exitPrice') return extractNumber(cp.exitPrice);
+      if (col === 'positionId') return cp.positionId || '';
+      return 0;
     }
 
     function renderPairsTable(pairs) {
@@ -1234,7 +1433,9 @@
         return;
       }
 
-      tbody.innerHTML = pairs.map(p => {
+      const sorted = sortArray(pairs, sortState.pairs.col, sortState.pairs.dir, getPairSortValue);
+
+      tbody.innerHTML = sorted.map(p => {
         const b = p.buy || {};
         const s = p.sell || {};
 
@@ -1296,36 +1497,41 @@
       let totalBuyINR = 0;
       let totalSellINR = 0;
 
-      pairs.forEach(p => {
-        if (p.buy && p.buy.status === 'OPEN') {
-          totalBuyINR += p.buy.floatingPnlINR || 0;
-          const pnlClass = (p.buy.floatingPnlINR || 0) >= 0 ? 'pnl-positive' : 'pnl-negative';
-          const pnlSign = (p.buy.floatingPnlINR || 0) >= 0 ? '+' : '';
-          buyRows.push(`
-            <tr>
-              <td><strong>${p.buy.positionId}</strong></td>
-              <td>$${p.buy.entryPrice.toFixed(2)}</td>
-              <td style="color: var(--accent-green-bright); font-weight: 800;">$${p.buy.targetPrice.toFixed(2)}</td>
-              <td>${p.buy.distToTarget >= 0 ? '+' : ''}$${p.buy.distToTarget.toFixed(2)}</td>
-              <td class="${pnlClass}">${pnlSign}₹${p.buy.floatingPnlINR.toFixed(2)}</td>
-            </tr>
-          `);
-        }
+      const buyPairs = pairs.filter(p => p.buy && p.buy.status === 'OPEN');
+      const sellPairs = pairs.filter(p => p.sell && p.sell.status === 'OPEN');
 
-        if (p.sell && p.sell.status === 'OPEN') {
-          totalSellINR += p.sell.floatingPnlINR || 0;
-          const pnlClass = (p.sell.floatingPnlINR || 0) >= 0 ? 'pnl-positive' : 'pnl-negative';
-          const pnlSign = (p.sell.floatingPnlINR || 0) >= 0 ? '+' : '';
-          sellRows.push(`
-            <tr>
-              <td><strong>${p.sell.positionId}</strong></td>
-              <td>$${p.sell.entryPrice.toFixed(2)}</td>
-              <td style="color: var(--accent-red-bright); font-weight: 800;">$${p.sell.targetPrice.toFixed(2)}</td>
-              <td>${p.sell.distToTarget >= 0 ? '+' : ''}$${p.sell.distToTarget.toFixed(2)}</td>
-              <td class="${pnlClass}">${pnlSign}₹${p.sell.floatingPnlINR.toFixed(2)}</td>
-            </tr>
-          `);
-        }
+      buyPairs.forEach(p => totalBuyINR += (p.buy.floatingPnlINR || 0));
+      sellPairs.forEach(p => totalSellINR += (p.sell.floatingPnlINR || 0));
+
+      const sortedBuyPairs = sortArray(buyPairs, sortState.buy.col, sortState.buy.dir, getBuySortValue);
+      const sortedSellPairs = sortArray(sellPairs, sortState.sell.col, sortState.sell.dir, getSellSortValue);
+
+      sortedBuyPairs.forEach(p => {
+        const pnlClass = (p.buy.floatingPnlINR || 0) >= 0 ? 'pnl-positive' : 'pnl-negative';
+        const pnlSign = (p.buy.floatingPnlINR || 0) >= 0 ? '+' : '';
+        buyRows.push(`
+          <tr>
+            <td><strong>${p.buy.positionId}</strong></td>
+            <td>$${p.buy.entryPrice.toFixed(2)}</td>
+            <td style="color: var(--accent-green-bright); font-weight: 800;">$${p.buy.targetPrice.toFixed(2)}</td>
+            <td>${p.buy.distToTarget >= 0 ? '+' : ''}$${p.buy.distToTarget.toFixed(2)}</td>
+            <td class="${pnlClass}">${pnlSign}₹${p.buy.floatingPnlINR.toFixed(2)}</td>
+          </tr>
+        `);
+      });
+
+      sortedSellPairs.forEach(p => {
+        const pnlClass = (p.sell.floatingPnlINR || 0) >= 0 ? 'pnl-positive' : 'pnl-negative';
+        const pnlSign = (p.sell.floatingPnlINR || 0) >= 0 ? '+' : '';
+        sellRows.push(`
+          <tr>
+            <td><strong>${p.sell.positionId}</strong></td>
+            <td>$${p.sell.entryPrice.toFixed(2)}</td>
+            <td style="color: var(--accent-red-bright); font-weight: 800;">$${p.sell.targetPrice.toFixed(2)}</td>
+            <td>${p.sell.distToTarget >= 0 ? '+' : ''}$${p.sell.distToTarget.toFixed(2)}</td>
+            <td class="${pnlClass}">${pnlSign}₹${p.sell.floatingPnlINR.toFixed(2)}</td>
+          </tr>
+        `);
       });
 
       document.getElementById('splitBuyBadge').innerText = `${buyRows.length} Active`;
@@ -1347,7 +1553,9 @@
         return;
       }
 
-      tbody.innerHTML = positions.map(pos => {
+      const sortedExchange = sortArray(positions, sortState.exchange.col, sortState.exchange.dir, getExchangeSortValue);
+
+      tbody.innerHTML = sortedExchange.map(pos => {
         const side = (pos.order_type || pos.side || 'SHORT').toUpperCase();
         const badgeClass = side === 'BUY' || side === 'LONG' ? 'badge-buy' : 'badge-sell';
         return `
@@ -1372,7 +1580,9 @@
         return;
       }
 
-      tbody.innerHTML = closedPositions.slice(-50).reverse().map(cp => {
+      const sortedList = sortArray(closedPositions, sortState.closed.col, sortState.closed.dir, getClosedSortValue);
+
+      tbody.innerHTML = sortedList.map(cp => {
         const netINR = cp.netProfitINR !== undefined ? cp.netProfitINR : (cp.netProfitUSD * 102);
         const netUSD = cp.netProfitUSD !== undefined ? cp.netProfitUSD : (netINR / 102);
         const pnlClass = netINR >= 0 ? 'pnl-positive' : 'pnl-negative';
@@ -1382,13 +1592,13 @@
 
         return `
           <tr>
-            <td><strong>${cp.positionId || '--'}</strong></td>
+            <td><strong style="color: #fff; font-size: 0.92rem;">${formatExitTimeIST(cp.exitTime || cp.closedTimestamp)}</strong></td>
+            <td class="${pnlClass} pnl-big">${sign}₹${netINR.toFixed(2)}</td>
+            <td class="${pnlClass}" style="font-weight: 700; font-size: 0.88rem;">${sign}$${netUSD.toFixed(2)}</td>
             <td><span class="badge ${badgeClass}">${side}</span></td>
             <td>$${cp.entryPrice ? Number(cp.entryPrice).toFixed(2) : '--'}</td>
             <td>$${cp.exitPrice ? Number(cp.exitPrice).toFixed(2) : '--'}</td>
-            <td>${cp.exitTime ? new Date(cp.exitTime).toLocaleTimeString('en-IN', { timeZone: 'Asia/Kolkata' }) : '--'}</td>
-            <td class="${pnlClass}">${sign}₹${netINR.toFixed(2)}</td>
-            <td class="${pnlClass}">${sign}$${netUSD.toFixed(2)}</td>
+            <td><span style="font-family: var(--font-mono); font-size: 0.78rem; color: var(--text-dim);">${cp.positionId || '--'}</span></td>
           </tr>
         `;
       }).join('');
