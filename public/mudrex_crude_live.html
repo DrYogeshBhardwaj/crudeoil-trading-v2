@@ -124,38 +124,33 @@
         <span style="font-size: 0.72rem; color: #34d399; font-weight: 800; text-transform: uppercase;">Exit Target:</span>
         <select id="mainProfitExitSelect" onchange="updateProfitExitTarget(this.value)" style="background: #080c14; border: 1px solid #10b981; color: #34d399; font-weight: 900; font-size: 0.85rem; padding: 5px 8px; border-radius: 6px; outline: none; cursor: pointer;">
           <option value="0.15">$0.15 Move</option>
-          <option value="0.20" selected>$0.20 (Scalp)</option>
+          <option value="0.20">$0.20 Move</option>
           <option value="0.25">$0.25 Move</option>
           <option value="0.30">$0.30 Move</option>
           <option value="0.50">$0.50 Move</option>
-          <option value="1.00">$1.00 Move</option>
+          <option value="1.00" selected>$1.00 Move (Default)</option>
         </select>
       </div>
 
-      <!-- 3. Quick Barrels Selector, Live Min Margin (5x) Display & Trading Buttons: Pair & Smart Pair -->
+      <!-- 3. Quick Barrels Selector, Live Min Margin (5x) Display & Trading Button: Normal Pair -->
       <div style="display: inline-flex; align-items: center; gap: 8px; background: rgba(13, 17, 23, 0.95); border: 1px solid rgba(56, 189, 248, 0.35); padding: 4px 10px; border-radius: 8px; flex-wrap: wrap;">
         <span style="font-size: 0.72rem; color: #94a3b8; font-weight: 800; text-transform: uppercase;">Barrels:</span>
         <select id="quickBarrelsSelect" onchange="syncSelectedBarrels(this.value)" style="background: #080c14; border: 1px solid rgba(56, 189, 248, 0.5); color: #38bdf8; font-weight: 800; font-size: 0.85rem; padding: 5px 8px; border-radius: 6px; outline: none; cursor: pointer;">
-          <option value="1">1 Barrel</option>
+          <option value="1" selected>1 Barrel (Default)</option>
           <option value="2">2 Barrels</option>
           <option value="5">5 Barrels</option>
-          <option value="10" selected>10 Barrels</option>
+          <option value="10">10 Barrels</option>
         </select>
 
         <!-- Live Required Margin (5x Leverage) Dynamic Callout Badge -->
         <div id="quickMarginBadge" style="background: rgba(245, 158, 11, 0.15); border: 1px solid rgba(245, 158, 11, 0.4); padding: 4px 8px; border-radius: 6px; font-size: 0.75rem; font-weight: 800; color: #fbbf24; white-space: nowrap; display: inline-flex; align-items: center; gap: 4px;">
           <span>💰 Min Amt (5x):</span>
-          <strong id="quickMarginText" style="color: #fef08a; font-family: monospace;">₹18,635 ($182.70) Leg | ₹37,271 ($365.40) Pair</strong>
+          <strong id="quickMarginText" style="color: #fef08a; font-family: monospace;">₹1,864 ($18.27) Leg | ₹3,727 ($36.54) Pair</strong>
         </div>
 
-        <!-- Pair Button -->
-        <button id="btnHeaderPair" class="btn" style="background: linear-gradient(135deg, #0284c7, #0369a1); color: #fff; font-weight: 900; font-size: 0.85rem; padding: 6px 12px; border-radius: 6px; border: 1px solid #38bdf8; cursor: pointer; display: inline-flex; align-items: center; gap: 4px; box-shadow: 0 0 10px rgba(56, 189, 248, 0.35);" onclick="openPairModalWithMode('PAIR')">
-          <span>➕ Pair</span>
-        </button>
-
-        <!-- Smart Pair Button -->
-        <button id="btnHeaderSmartPair" class="btn" style="background: linear-gradient(135deg, #10b981, #047857); color: #fff; font-weight: 900; font-size: 0.85rem; padding: 6px 12px; border-radius: 6px; border: 1px solid #34d399; cursor: pointer; display: inline-flex; align-items: center; gap: 4px; box-shadow: 0 0 12px rgba(16, 185, 129, 0.4);" onclick="openPairModalWithMode('SMART_PAIR')">
-          <span>⚡ Smart Pair</span>
+        <!-- Normal Pair Button -->
+        <button id="btnHeaderPair" class="btn" style="background: linear-gradient(135deg, #0284c7, #0369a1); color: #fff; font-weight: 900; font-size: 0.85rem; padding: 6px 14px; border-radius: 6px; border: 1px solid #38bdf8; cursor: pointer; display: inline-flex; align-items: center; gap: 4px; box-shadow: 0 0 10px rgba(56, 189, 248, 0.35);" onclick="openPairModalWithMode('PAIR')">
+          <span>➕ Normal Pair</span>
         </button>
       </div>
 
@@ -692,27 +687,18 @@
   </div>
 
   <!-- Pair & Smart Pair Trading Modal Window -->
+  <!-- Normal Pair Trading Modal Window (1 BUY + 1 SELL) -->
   <div id="tradeModal" class="modal-overlay" style="display: none;" onclick="if(event.target === this) closeTradeModal()">
     <div class="modal-card" style="max-width: 540px; position: relative; background: #0d1117; border: 1px solid rgba(56, 189, 248, 0.4); border-radius: 16px; box-shadow: 0 20px 60px rgba(0,0,0,0.85); padding: 22px;">
       <div class="modal-header" style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 12px; margin-bottom: 14px;">
         <div style="display: flex; align-items: center; gap: 10px;">
-          <span style="font-size: 1.6rem;" id="modalTitleIcon">⚡</span>
+          <span style="font-size: 1.6rem;" id="modalTitleIcon">➕</span>
           <div>
-            <h3 id="modalTradeTitle" style="margin: 0; font-size: 1.25rem; font-weight: 900; color: #38bdf8;">Pair Trading Window</h3>
-            <span id="modalTradeSubtitle" style="font-size: 0.75rem; color: #94a3b8; font-weight: 700;">Mudrex Crude Oil Live Scalping</span>
+            <h3 id="modalTradeTitle" style="margin: 0; font-size: 1.25rem; font-weight: 900; color: #38bdf8;">Normal Pair Trading Window</h3>
+            <span id="modalTradeSubtitle" style="font-size: 0.75rem; color: #94a3b8; font-weight: 700;">Mudrex Crude Oil: 1 BUY + 1 SELL Instant Hedged Pair</span>
           </div>
         </div>
         <button class="close-btn" onclick="closeTradeModal()" style="font-size: 1.5rem; background: none; border: none; padding: 4px 10px; cursor: pointer; color: #94a3b8;">✕</button>
-      </div>
-
-      <!-- Mode Selector Tabs (Pair vs Smart Pair) -->
-      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 14px;">
-        <button id="tabModePair" type="button" class="btn" style="background: #0284c7; color: #fff; font-weight: 900; font-size: 0.88rem; padding: 10px; border-radius: 8px; border: 1px solid #38bdf8; cursor: pointer;" onclick="switchTradeModalMode('PAIR')">
-          ➕ Standard Pair (B + S)
-        </button>
-        <button id="tabModeSmartPair" type="button" class="btn" style="background: #1e293b; color: #94a3b8; font-weight: 900; font-size: 0.88rem; padding: 10px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.15); cursor: pointer;" onclick="switchTradeModalMode('SMART_PAIR')">
-          ⚡ Smart Pair (Auto B/S)
-        </button>
       </div>
 
       <div style="display: flex; flex-direction: column; gap: 14px;">
@@ -725,43 +711,32 @@
           </div>
           <div style="text-align: right;">
             <div style="font-size: 0.72rem; color: #94a3b8; font-weight: 800; text-transform: uppercase;">USD / INR:</div>
-            <div id="modalTradeUsdInr" style="font-size: 1.15rem; font-weight: 800; font-family: monospace; color: #f59e0b;">₹95.91</div>
+            <div id="modalTradeUsdInr" style="font-size: 1.15rem; font-weight: 800; font-family: monospace; color: #f59e0b;">₹102.00</div>
           </div>
         </div>
 
-        <!-- Smart Pair Live Detection Box (Visible only when in SMART_PAIR mode) -->
-        <div id="smartPairScanBox" style="display: none; background: #080c14; border: 1px solid rgba(16, 185, 129, 0.4); border-radius: 10px; padding: 14px;">
-          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
-            <span style="font-size: 0.75rem; color: #94a3b8; font-weight: 800; text-transform: uppercase;">Current Rate Leg Status:</span>
-            <span id="smartScanBadge" class="badge-status badge-balanced" style="font-size: 0.72rem; padding: 3px 8px;">Scanning...</span>
-          </div>
-          <div id="smartScanDecisionText" style="font-size: 0.85rem; font-weight: 700; color: #34d399; line-height: 1.4;">
-            🔍 Analyzing position state at live rate...
-          </div>
-        </div>
-
-        <!-- Barrels Quantity Selector -->
+        <!-- Barrels Quantity Selector (Default 1.0 Barrel per pair) -->
         <div>
-          <label style="font-size: 0.8rem; color: #94a3b8; font-weight: 800; display: block; margin-bottom: 6px; text-transform: uppercase;">Quantity (Barrels):</label>
+          <label style="font-size: 0.8rem; color: #94a3b8; font-weight: 800; display: block; margin-bottom: 6px; text-transform: uppercase;">Quantity (Barrels Per Leg):</label>
           <div style="display: flex; gap: 8px; flex-wrap: wrap;">
-            <button type="button" class="btn modal-qty-btn" onclick="setModalBarrels(1)">1 B</button>
+            <button type="button" class="btn modal-qty-btn active" onclick="setModalBarrels(1)">1 B</button>
             <button type="button" class="btn modal-qty-btn" onclick="setModalBarrels(2)">2 B</button>
             <button type="button" class="btn modal-qty-btn" onclick="setModalBarrels(5)">5 B</button>
-            <button type="button" class="btn modal-qty-btn active" onclick="setModalBarrels(10)">10 Barrels</button>
-            <input type="number" id="tradeQtyInput" value="10" min="1" max="100" step="1" oninput="onModalCustomQtyChange(this.value)" style="width: 70px; background: #080c14; border: 1px solid #38bdf8; border-radius: 6px; color: #fff; font-weight: 800; text-align: center; font-size: 0.95rem; outline: none; padding: 6px;" />
+            <button type="button" class="btn modal-qty-btn" onclick="setModalBarrels(10)">10 Barrels</button>
+            <input type="number" id="tradeQtyInput" value="1" min="1" max="100" step="1" oninput="onModalCustomQtyChange(this.value)" style="width: 70px; background: #080c14; border: 1px solid #38bdf8; border-radius: 6px; color: #fff; font-weight: 800; text-align: center; font-size: 0.95rem; outline: none; padding: 6px;" />
           </div>
         </div>
 
-        <!-- Target Exit Move -->
+        <!-- Target Exit Move (Default $1.00 Move) -->
         <div>
           <label style="font-size: 0.8rem; color: #94a3b8; font-weight: 800; display: block; margin-bottom: 6px; text-transform: uppercase;">Target Exit Move ($):</label>
           <select id="tradeTargetSelect" onchange="updateModalCalculations()" class="form-control" style="width: 100%; background: #080c14; border: 1px solid rgba(56, 189, 248, 0.4); border-radius: 8px; color: #fff; font-weight: 800; padding: 9px; font-size: 0.9rem; outline: none;">
             <option value="0.15">$0.15 Target Move</option>
-            <option value="0.20" selected>$0.20 Target Move ($0.20 UP / $0.20 DOWN)</option>
+            <option value="0.20">$0.20 Target Move</option>
             <option value="0.25">$0.25 Target Move</option>
             <option value="0.30">$0.30 Target Move</option>
             <option value="0.50">$0.50 Target Move</option>
-            <option value="1.00">$1.00 Target Move</option>
+            <option value="1.00" selected>$1.00 Target Move (Default: $1.00 UP / $1.00 DOWN)</option>
           </select>
         </div>
 
@@ -770,27 +745,27 @@
           <!-- 1. Total Trade Amount Row -->
           <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; border-bottom: 1px solid rgba(255,255,255,0.08); padding-bottom: 6px;">
             <span style="font-size: 0.75rem; color: #38bdf8; font-weight: 800; text-transform: uppercase;">💼 TOTAL TRADE AMOUNT (कुल राशि):</span>
-            <span id="modalTotalAmountDisplay" style="font-size: 1.15rem; font-weight: 900; color: #7dd3fc; font-family: monospace;">₹1,86,660 ($1,830.00)</span>
+            <span id="modalTotalAmountDisplay" style="font-size: 1.15rem; font-weight: 900; color: #7dd3fc; font-family: monospace;">₹18,666 ($183.00) [Full Pair: BUY + SELL]</span>
           </div>
 
           <!-- 2. Min Margin (5x) Row -->
           <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; border-bottom: 1px solid rgba(255,255,255,0.08); padding-bottom: 6px;">
             <span style="font-size: 0.75rem; color: #fbbf24; font-weight: 800; text-transform: uppercase;">💰 MIN MARGIN (5x LEVERAGE):</span>
-            <span id="modalRequiredMarginDisplay" style="font-size: 1.15rem; font-weight: 900; color: #fef08a; font-family: monospace;">₹18,635 ($182.70) 1 Leg | ₹37,271 ($365.40) Pair</span>
+            <span id="modalRequiredMarginDisplay" style="font-size: 1.15rem; font-weight: 900; color: #fef08a; font-family: monospace;">₹1,864 ($18.27) 1 Leg | ₹3,727 ($36.54) Pair</span>
           </div>
           <div style="display: flex; justify-content: space-between; align-items: center; font-size: 0.78rem; color: #94a3b8; margin-bottom: 8px;">
             <span>● 1 Leg (BUY ya SELL): <strong style="color:#38bdf8;">5x Margin Required</strong></span>
-            <span>● Full Pair (BUY + SELL): <strong style="color:#f59e0b;">2x Margin Required</strong></span>
+            <span>● Full Pair (1 BUY + 1 SELL): <strong style="color:#f59e0b;">2x Margin Required</strong></span>
           </div>
           <div style="display: flex; justify-content: space-between; align-items: center; background: rgba(16, 185, 129, 0.1); border: 1px solid rgba(16, 185, 129, 0.3); border-radius: 6px; padding: 6px 10px;">
             <span style="font-size: 0.75rem; color: #34d399; font-weight: 800;">🎯 PROJECTED PROFIT ON TARGET:</span>
-            <span id="modalProjectedProfitDisplay" style="font-size: 1.1rem; font-weight: 900; color: #34d399; font-family: monospace;">+₹204.00 (+$2.00)</span>
+            <span id="modalProjectedProfitDisplay" style="font-size: 1.1rem; font-weight: 900; color: #34d399; font-family: monospace;">+₹102.00 (+$1.00)</span>
           </div>
         </div>
 
         <!-- Action Button -->
-        <button id="modalExecuteBtn" class="btn" style="padding: 13px; font-weight: 900; font-size: 1.05rem; background: linear-gradient(135deg, #10b981, #059669); color: #fff; border-radius: 8px; border: 1px solid #34d399; box-shadow: 0 0 16px rgba(16, 185, 129, 0.4); cursor: pointer;" onclick="executePairTradeModal()">
-          🚀 Instant Pair Kharidein (10 Barrels)
+        <button id="modalExecuteBtn" class="btn" style="padding: 13px; font-weight: 900; font-size: 1.05rem; background: linear-gradient(135deg, #0284c7, #0369a1); color: #fff; border-radius: 8px; border: 1px solid #38bdf8; box-shadow: 0 0 16px rgba(56, 189, 248, 0.4); cursor: pointer;" onclick="executePairTradeModal()">
+          🚀 Instant Normal Pair Kharidein (1 BUY + 1 SELL)
         </button>
 
         <button type="button" class="btn btn-secondary" style="width: 100%; background: #1e293b; color: #94a3b8; font-weight: 700; border: 1px solid rgba(255,255,255,0.1); padding: 8px; cursor: pointer; border-radius: 8px;" onclick="closeTradeModal()">✖ Close Window</button>
@@ -850,17 +825,14 @@
         <!-- Section 1: Engine Execution Controls -->
         <div style="background: #080c14; border: 1px solid rgba(56, 189, 248, 0.25); border-radius: 12px; padding: 16px;">
           <div style="font-size: 0.78rem; font-weight: 800; color: #38bdf8; text-transform: uppercase; margin-bottom: 10px; letter-spacing: 0.5px;">⚡ Engine Live Operations</div>
-          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 10px;">
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
             <button id="mudrexStartEngineMainBtn" class="btn" style="background: linear-gradient(135deg, #10b981, #047857); color: #fff; font-weight: 900; font-size: 0.9rem; padding: 12px; border-radius: 8px; border: 1px solid #34d399; box-shadow: 0 0 14px rgba(16, 185, 129, 0.4); cursor: pointer;" onclick="toggleEngineState()">
               <span>🚀 START ENGINE</span>
             </button>
             <button class="btn" style="background: linear-gradient(135deg, #0284c7, #0369a1); color: #fff; font-weight: 900; font-size: 0.9rem; padding: 12px; border-radius: 8px; border: 1px solid #38bdf8; box-shadow: 0 0 14px rgba(56, 189, 248, 0.4); cursor: pointer;" onclick="closeAdminControlCenter(); openPairModalWithMode('PAIR');">
-              <span>➕ Pair Kharidne Ka Option</span>
+              <span>➕ Normal Pair Kharidein</span>
             </button>
           </div>
-          <button class="btn" style="width: 100%; background: linear-gradient(135deg, #059669, #10b981); color: #fff; font-weight: 900; font-size: 0.88rem; padding: 10px; border-radius: 8px; border: 1px solid #34d399; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 6px;" onclick="closeAdminControlCenter(); openPairModalWithMode('SMART_PAIR');">
-            <span>⚡ Smart Pair (Auto B/S Balancer)</span>
-          </button>
         </div>
 
         <!-- Section 2: Engine Configuration & Mudrex Credentials -->
@@ -896,6 +868,6 @@
     </div>
   </div>
 
-  <script src="app.js?v=20261013_v4"></script>
+  <script src="app.js?v=20261013_v6"></script>
 </body>
 </html>

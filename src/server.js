@@ -247,10 +247,10 @@ app.post('/api/manual-close', (req, res) => {
 // 6. Manual Trade Placement (Instant Pair, Buy, or Sell)
 app.post('/api/manual-trade', (req, res) => {
   try {
-    const { action, symbol = 'CLUSDT', quantity = 1.0, targetMove = 0.20 } = req.body;
+    const { action, symbol = 'CLUSDT', quantity = 1.0, targetMove = 1.00 } = req.body;
     const rateInfo = rateFeed.getCurrentRate(symbol);
-    const price = rateInfo.price || 93.15;
-    const usdInrRate = rateInfo.usdInrRate || 86.5;
+    const price = rateInfo.price || 92.10;
+    const usdInrRate = rateInfo.usdInrRate || 102.00;
 
     if (action === 'BUY' || action === 'LONG') {
       const pos = paperEngine.createSinglePosition('BUY', symbol, price, Number(quantity), Number(targetMove), usdInrRate);

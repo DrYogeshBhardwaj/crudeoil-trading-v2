@@ -1011,76 +1011,59 @@ class MudrexLiveAdapter {
 
   async fetchPositions() {
     const now = Date.now();
-    if (this.lastFetchPositionsRes && (now - this.lastFetchPositionsTime < 15000)) {
+    if (this.lastFetchPositionsRes && (now - this.lastFetchPositionsTime < 10000)) {
       return this.lastFetchPositionsRes;
     }
 
-    const symbol = 'CLUSDT';
-    const endpoints = [
-      `${this.baseUrl}/futures/positions?trade_currency=INR`,
-      `${this.baseUrl}/futures/${symbol}/positions?trade_currency=INR`,
-      `${this.v2Url}/futures/positions?trade_currency=INR`,
-      `${this.baseUrl}/futures/open_orders?trade_currency=INR`,
-      `${this.v2Url}/futures/open_orders?trade_currency=INR`
-    ];
-
+    const endpoint = `${this.baseUrl}/futures/positions?trade_currency=INR`;
     let combinedItems = [];
     const seenPosIds = new Set();
 
-    for (const url of endpoints) {
-      try {
-        const res = await this.request('GET', url);
-        if (res.success && res.data !== undefined && res.data !== null) {
-          let list = [];
-          if (Array.isArray(res.data)) {
-            list = res.data;
-          } else if (Array.isArray(res.data.data)) {
-            list = res.data.data;
-          } else if (Array.isArray(res.data.positions)) {
-            list = res.data.positions;
-          } else if (Array.isArray(res.data.orders)) {
-            list = res.data.orders;
-          } else if (typeof res.data === 'object' && (res.data.position_id || res.data.id || res.data.order_id)) {
-            list = [res.data];
-          }
-
-          for (const item of list) {
-            if (!item || typeof item !== 'object') continue;
-            const posId = item.position_id || item.id || item.order_id || item.orderId || item.positionId;
-            if (posId && seenPosIds.has(String(posId))) continue;
-            if (posId) seenPosIds.add(String(posId));
-
-            const statusStr = String(item.status || item.position_status || item.state || item.order_status || '').toUpperCase();
-            if (['CLOSED', 'FILLED', 'CANCELLED', 'EXPIRED', 'COMPLETED', 'REJECTED', 'DONE', 'INACTIVE'].includes(statusStr)) {
-              continue;
-            }
-            if (item.closed === true || item.is_closed === true) continue;
-            if (item.quantity !== undefined && Number(item.quantity || item.qty || 0) <= 0) continue;
-            const pairId = item.pair_id || item.pairId;
-            if (posId && (this.userClosedRealPositionIds.has(posId) || this.userClosedRealPositionIds.has(String(posId)))) continue;
-            if (pairId && (this.userClosedRealPositionIds.has(pairId) || this.userClosedRealPositionIds.has(String(pairId)))) continue;
-
-            combinedItems.push(item);
-          }
+    try {
+      const res = await this.request('GET', endpoint);
+      if (res.success && res.data !== undefined && res.data !== null) {
+        let list = [];
+        if (Array.isArray(res.data)) {
+          list = res.data;
+        } else if (Array.isArray(res.data.data)) {
+          list = res.data.data;
+        } else if (Array.isArray(res.data.positions)) {
+          list = res.data.positions;
+        } else if (typeof res.data === 'object' && (res.data.position_id || res.data.id)) {
+          list = [res.data];
         }
-      } catch (e) {
-        console.warn(`[Mudrex Live Adapter] Error querying ${url}:`, e.message);
+
+        for (const item of list) {
+          if (!item || typeof item !== 'object') continue;
+          const posId = item.position_id || item.id || item.order_id || item.orderId || item.positionId;
+          if (posId && seenPosIds.has(String(posId))) continue;
+          if (posId) seenPosIds.add(String(posId));
+
+          const statusStr = String(item.status || item.position_status || item.state || item.order_status || '').toUpperCase();
+          if (['CLOSED', 'FILLED', 'CANCELLED', 'EXPIRED', 'COMPLETED', 'REJECTED', 'DONE', 'INACTIVE'].includes(statusStr)) {
+            continue;
+          }
+          if (item.closed === true || item.is_closed === true) continue;
+          if (item.quantity !== undefined && Number(item.quantity || item.qty || 0) <= 0) continue;
+          if (posId && (this.userClosedRealPositionIds.has(posId) || this.userClosedRealPositionIds.has(String(posId)))) continue;
+
+          combinedItems.push(item);
+        }
       }
+    } catch (e) {
+      console.warn('[Mudrex Live Adapter] Error querying positions:', e.message);
     }
 
     if (combinedItems.length > 0) {
       const parsedPositions = combinedItems.map((item, idx) => {
         const direction = (item.side || item.direction || item.order_type || 'BUY').toUpperCase().includes('SHORT') || (item.side === 'SELL') ? 'SELL' : 'BUY';
-        const entryPrice = Number(item.entry_price || item.price || item.entryPrice || 91.15);
+        const entryPrice = Number(item.entry_price || item.price || item.entryPrice || 92.10);
         const qty = Number(item.quantity || item.qty || 1.0);
         const posId = item.position_id || item.id || item.order_id || item.orderId || item.positionId || `P-REAL-${idx + 1}`;
-        const pairId = item.pair_id || item.pairId || `PAIR-${(idx + 1).toString().padStart(4, '0')}`;
+        const pairId = item.pair_id || item.pairId || `PAIR-MUDREX-${(idx + 1).toString().padStart(2, '0')}`;
 
-        if (this.userClosedRealPositionIds.has(posId) || this.userClosedRealPositionIds.has(pairId) || this.userClosedRealPositionIds.has(`P-REAL-${idx + 1}`)) {
-          return null;
-        }
-
-        const targetExit = item.takeprofit_price ? Number(item.takeprofit_price) : (direction === 'BUY' ? Number((entryPrice + 1.00).toFixed(2)) : Number((entryPrice - 1.00).toFixed(2)));
+        const sym = (item.symbol || 'CLUSDT').replace('-', '');
+        const targetExit = item.takeprofit_price ? Number(item.takeprofit_price) : (direction === 'BUY' ? Number((entryPrice + (this.settings.profitTargetMove || 1.0)).toFixed(2)) : Number((entryPrice - (this.settings.profitTargetMove || 1.0)).toFixed(2)));
         const isProtected = EXISTING_PROTECTED_POSITION_IDS.has(String(posId)) || EXISTING_PROTECTED_POSITION_IDS.has(String(item.position_id)) || EXISTING_PROTECTED_POSITION_IDS.has(String(item.id));
         const hasExchangeSideProtection = Boolean(item.takeprofit_price || item.is_takeprofit || item.stoploss_price || item.is_stoploss);
 
@@ -1089,7 +1072,7 @@ class MudrexLiveAdapter {
           positionId: posId,
           exchangePositionId: posId,
           direction,
-          symbol: item.symbol || symbol,
+          symbol: sym,
           entryTime: item.created_at || item.created_time || new Date().toISOString(),
           entryPrice,
           currentPrice: entryPrice,
@@ -1101,7 +1084,8 @@ class MudrexLiveAdapter {
           apiStatus: 'REAL_MUDREX_POSITION',
           isProtectedExistingExchangePosition: isProtected,
           hasExchangeSideProtection,
-          protectionWarning: !hasExchangeSideProtection ? 'EXCHANGE_SIDE_PROTECTION_MISSING (TP=0, SL=0). DO NOT AUTO-CLOSE WITHOUT USER INSTRUCTION.' : null
+          protectionWarning: !hasExchangeSideProtection ? 'EXCHANGE_SIDE_PROTECTION_MISSING (TP=0, SL=0). DO NOT AUTO-CLOSE WITHOUT USER INSTRUCTION.' : null,
+          initialMarginINR: item.initial_margin ? Number(item.initial_margin) : null
         };
       }).filter(Boolean);
 
@@ -1136,51 +1120,11 @@ class MudrexLiveAdapter {
       } catch (e) {}
     }
 
-    // Default authoritative fallback for the 2 real open positions if offline or during sync delay
-    if (verifiedLivePositions.length === 0) {
-      verifiedLivePositions = [
-        {
-          pairId: 'PAIR-MUDREX-REAL-01',
-          positionId: '01a131a2-b58a-7f31-9288-39f8044fda20',
-          exchangePositionId: '01a131a2-b58a-7f31-9288-39f8044fda20',
-          direction: 'BUY',
-          symbol: 'CLUSDT',
-          entryTime: '2026-10-13T05:25:00.000Z',
-          entryPrice: 91.5183,
-          currentPrice: rateFeed.getCurrentRate('CLUSDT').price || 91.20,
-          targetExitPrice: 92.5183,
-          quantity: 25.0,
-          status: 'OPEN',
-          ledger: 'LIVE',
-          source: 'MUDREX_EXCHANGE',
-          apiStatus: 'REAL_MUDREX_POSITION',
-          isProtectedExistingExchangePosition: true,
-          hasExchangeSideProtection: false,
-          protectionWarning: 'EXCHANGE_SIDE_PROTECTION_MISSING (TP=0, SL=0). DO NOT AUTO-CLOSE WITHOUT USER INSTRUCTION.'
-        },
-        {
-          pairId: 'PAIR-MUDREX-REAL-02',
-          positionId: '01a131a2-38ab-76e2-81f4-76361d242b1b',
-          exchangePositionId: '01a131a2-38ab-76e2-81f4-76361d242b1b',
-          direction: 'SELL',
-          symbol: 'XAGUSDT',
-          entryTime: '2026-10-13T05:25:00.000Z',
-          entryPrice: 60.5758,
-          currentPrice: rateFeed.getCurrentRate('XAGUSDT').price || 60.40,
-          targetExitPrice: 59.5758,
-          quantity: 27.0,
-          status: 'OPEN',
-          ledger: 'LIVE',
-          source: 'MUDREX_EXCHANGE',
-          apiStatus: 'REAL_MUDREX_POSITION',
-          isProtectedExistingExchangePosition: true,
-          hasExchangeSideProtection: false,
-          protectionWarning: 'EXCHANGE_SIDE_PROTECTION_MISSING (TP=0, SL=0). DO NOT AUTO-CLOSE WITHOUT USER INSTRUCTION.'
-        }
-      ];
+    if (verifiedLivePositions.length > 0) {
+      this.liveOpenPositions = verifiedLivePositions;
+    } else if (Array.isArray(this.liveOpenPositions) && this.liveOpenPositions.length > 0) {
+      verifiedLivePositions = this.liveOpenPositions.filter(p => p.status === 'OPEN');
     }
-
-    this.liveOpenPositions = verifiedLivePositions;
 
     // 2. Verified Real Mudrex Closed Trades (The 18 real closed losses)
     let realClosedTrades = [];
@@ -1201,10 +1145,18 @@ class MudrexLiveAdapter {
     let liveRealizedGrossINR = 0, liveRealizedChargesINR = 0, liveRealizedNetINR = 0;
     let liveWinCount = 0, liveLossCount = 0;
     for (const cp of realClosedTrades) {
-      liveRealizedGrossINR += cp.grossProfitINR || 0;
-      liveRealizedChargesINR += cp.totalChargesINR || 0;
-      liveRealizedNetINR += cp.netProfitINR || 0;
-      if ((cp.netProfitINR || 0) >= 0) liveWinCount++;
+      const gUSD = cp.grossProfitUSD || 0;
+      const cUSD = cp.totalChargesUSD || 0;
+      const nUSD = cp.netProfitUSD !== undefined ? cp.netProfitUSD : (gUSD - cUSD);
+      const rateRef = cp.usdInrRate || (this.settings.usdInrRate || 102.00);
+      const gINR = cp.grossProfitINR || (gUSD * rateRef);
+      const cINR = cp.totalChargesINR || (cUSD * rateRef);
+      const nINR = cp.netProfitINR || (nUSD * rateRef);
+
+      liveRealizedGrossINR += gINR;
+      liveRealizedChargesINR += cINR;
+      liveRealizedNetINR += nINR;
+      if (nINR >= 0) liveWinCount++;
       else liveLossCount++;
     }
     const liveExchangeRate = this.settings.usdInrRate || 102.00;
@@ -1215,7 +1167,9 @@ class MudrexLiveAdapter {
     const liveWinRate = liveClosedCount > 0 ? Math.round((liveWinCount / liveClosedCount) * 100) : 0;
 
     // Calculate Real Floating P/L on Open Positions
-    let liveFloatingGrossUSD = 0, liveFloatingGrossINR = 0, liveFloatingNetINR = 0, liveMarginUsedINR = 77166.16;
+    let liveFloatingGrossUSD = 0, liveFloatingGrossINR = 0, liveFloatingNetINR = 0;
+    let dynamicMarginUsedINR = 0;
+
     for (const pos of verifiedLivePositions) {
       const sym = pos.symbol || 'CLUSDT';
       const symbolRate = rateFeed.getCurrentRate(sym);
@@ -1243,12 +1197,18 @@ class MudrexLiveAdapter {
       liveFloatingGrossUSD += pGrossUSD;
       liveFloatingGrossINR += pGrossINR;
       liveFloatingNetINR += pNetINR;
+
+      if (pos.initialMarginINR) {
+        dynamicMarginUsedINR += pos.initialMarginINR;
+      } else {
+        dynamicMarginUsedINR += (pos.entryPrice * qty * liveExchangeRate) / 5;
+      }
     }
+    dynamicMarginUsedINR = Number(dynamicMarginUsedINR.toFixed(2));
 
     // Authoritative 1:1 Mudrex Exchange Margin & Capital
-    let availableMarginINR = 38799.69;
-    let marginUsedINR = 77166.16;
-    let futuresEquityINR = 115965.85;
+    let availableMarginINR = 116191.46;
+    let marginUsedINR = dynamicMarginUsedINR;
     let spotBalanceINR = 3227.28;
 
     if (this.lastAuthCheckRes && this.lastAuthCheckRes.success) {
@@ -1258,8 +1218,8 @@ class MudrexLiveAdapter {
       if (realFutBal > 0) availableMarginINR = realFutBal;
       if (realLocked > 0) marginUsedINR = realLocked;
       if (realSpot > 0) spotBalanceINR = realSpot;
-      futuresEquityINR = Number((availableMarginINR + marginUsedINR).toFixed(2));
     }
+    const futuresEquityINR = Number((availableMarginINR + marginUsedINR).toFixed(2));
 
     // 3. Simulated Paper Benchmark Ledger (The 33 historical seed trades)
     let paperClosedTrades = [];

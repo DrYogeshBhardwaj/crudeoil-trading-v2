@@ -2163,7 +2163,9 @@ window.openPairModalWithMode = async function(mode = 'PAIR') {
   // Read header barrels
   const headerSelect = document.getElementById('quickBarrelsSelect');
   if (headerSelect) {
-    modalSelectedBarrels = parseFloat(headerSelect.value) || 10;
+    modalSelectedBarrels = parseFloat(headerSelect.value) || 1;
+  } else {
+    modalSelectedBarrels = 1;
   }
   const inputEl = document.getElementById('tradeQtyInput');
   if (inputEl) inputEl.value = modalSelectedBarrels;
@@ -2242,12 +2244,12 @@ window.switchTradeModalMode = async function(mode) {
       tabSmart.style.borderColor = 'rgba(255,255,255,0.15)';
       tabSmart.style.boxShadow = 'none';
     }
-    if (titleEl) titleEl.innerText = '➕ Pair Trading Window';
+    if (titleEl) titleEl.innerText = '➕ Normal Pair Trading Window';
     if (subtitleEl) subtitleEl.innerText = 'Mudrex Crude Oil: 1 BUY + 1 SELL instant Hedged Pair';
     if (iconEl) iconEl.innerText = '➕';
     if (scanBox) scanBox.style.display = 'none';
     if (execBtn) {
-      execBtn.innerText = `🚀 Instant Pair Kharidein (${modalSelectedBarrels} Barrels)`;
+      execBtn.innerText = `🚀 Instant Normal Pair Kharidein (${modalSelectedBarrels} Barrel${modalSelectedBarrels > 1 ? 's' : ''})`;
       execBtn.style.background = 'linear-gradient(135deg, #0284c7, #0369a1)';
       execBtn.style.borderColor = '#38bdf8';
     }
@@ -2359,7 +2361,7 @@ function updateModalQtyButtons(qty) {
 window.updateModalCalculations = function() {
   const p = modalLivePrice || 91.17;
   const usdInr = modalUsdInrRate || 102.00;
-  const qty = modalSelectedBarrels || 10;
+  const qty = modalSelectedBarrels || 1;
   const leverage = 5;
 
   const legTotalAmountUSD = p * qty;
@@ -2373,7 +2375,7 @@ window.updateModalCalculations = function() {
   const pairMarginINR = pairTotalAmountINR / leverage;
 
   const targetSelect = document.getElementById('tradeTargetSelect');
-  const targetMove = targetSelect ? parseFloat(targetSelect.value) || 0.20 : 0.20;
+  const targetMove = targetSelect ? parseFloat(targetSelect.value) || 1.00 : 1.00;
 
   const profitUSD = targetMove * qty;
   const profitINR = profitUSD * usdInr;
@@ -2385,7 +2387,7 @@ window.updateModalCalculations = function() {
     if (isSingleLeg) {
       totalDisplay.innerHTML = `₹${Math.round(legTotalAmountINR).toLocaleString('en-IN')} <span style="opacity:0.85">($${legTotalAmountUSD.toFixed(2)})</span> [1 Leg]`;
     } else {
-      totalDisplay.innerHTML = `₹${Math.round(pairTotalAmountINR).toLocaleString('en-IN')} <span style="opacity:0.85">($${pairTotalAmountUSD.toFixed(2)})</span> [Full Pair: BUY + SELL]`;
+      totalDisplay.innerHTML = `₹${Math.round(pairTotalAmountINR).toLocaleString('en-IN')} <span style="opacity:0.85">($${pairTotalAmountUSD.toFixed(2)})</span> [Full Pair: 1 BUY + 1 SELL]`;
     }
   }
 
@@ -2394,7 +2396,7 @@ window.updateModalCalculations = function() {
     if (isSingleLeg) {
       marginDisplay.innerHTML = `₹${Math.round(legMarginINR).toLocaleString('en-IN')} <span style="opacity:0.85">($${legMarginUSD.toFixed(2)})</span> [1 Leg]`;
     } else {
-      marginDisplay.innerHTML = `₹${Math.round(pairMarginINR).toLocaleString('en-IN')} <span style="opacity:0.85">($${pairMarginUSD.toFixed(2)})</span> [Full Pair]`;
+      marginDisplay.innerHTML = `₹${Math.round(pairMarginINR).toLocaleString('en-IN')} <span style="opacity:0.85">($${pairMarginUSD.toFixed(2)})</span> [Full Pair: 1 BUY + 1 SELL]`;
     }
   }
 
@@ -2408,14 +2410,14 @@ window.updateModalCalculations = function() {
 
 window.executePairTradeModal = async function() {
   const targetSelect = document.getElementById('tradeTargetSelect');
-  const targetMove = targetSelect ? parseFloat(targetSelect.value) || 0.20 : 0.20;
-  const quantity = modalSelectedBarrels || 10;
+  const targetMove = targetSelect ? parseFloat(targetSelect.value) || 1.00 : 1.00;
+  const quantity = modalSelectedBarrels || 1;
   const price = modalLivePrice;
 
   const execBtn = document.getElementById('modalExecuteBtn');
   if (execBtn) {
     execBtn.disabled = true;
-    execBtn.innerText = `⏳ Order Processing (${quantity} Barrels)...`;
+    execBtn.innerText = `⏳ Order Processing (${quantity} Barrel${quantity > 1 ? 's' : ''})...`;
   }
 
   try {
@@ -2453,7 +2455,7 @@ window.executePairTradeModal = async function() {
       if (currentModalTradeMode === 'SMART_PAIR') {
         execBtn.innerText = `⚡ Execute Smart Pair (${quantity} Barrels)`;
       } else {
-        execBtn.innerText = `🚀 Instant Pair Kharidein (${quantity} Barrels)`;
+        execBtn.innerText = `🚀 Instant Normal Pair Kharidein (${quantity} Barrel${quantity > 1 ? 's' : ''})`;
       }
     }
   }

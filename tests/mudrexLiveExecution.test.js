@@ -411,12 +411,22 @@ async function test10_actualRealizedPnlMatchesVerifiedFills() {
 
 // 11. Open-position floating P/L -> Strictly separate from realised P/L
 async function test11_floatingPnlSeparatedFromRealized() {
+  mudrexLive.liveOpenPositions = [{
+    positionId: 'TEST-POS-FLOATING',
+    direction: 'BUY',
+    symbol: 'CLUSDT',
+    quantity: 1,
+    entryPrice: 90.00,
+    currentPrice: 91.00,
+    status: 'OPEN'
+  }];
   const metrics = await mudrexLive.getLiveMetrics();
   const live = metrics.liveLedger.summary;
 
   assert.notStrictEqual(live.realizedNetINR, live.totalNetINR, 'Realized and Total P/L are separated');
   assert.strictEqual(typeof live.floatingNetINR, 'number', 'Floating Net INR is separately reported');
   assert.strictEqual(live.totalNetINR, Number((live.realizedNetINR + live.floatingNetINR).toFixed(2)), 'Total Net equals Realized + Floating');
+  mudrexLive.liveOpenPositions = [];
 }
 
 // 12. Fees and funding -> Included only when supported by authoritative records

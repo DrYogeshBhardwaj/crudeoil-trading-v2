@@ -9,12 +9,12 @@ class PaperEngine {
       leverage: 5,
       instrument: 'CLUSDT',
       profitTargetMode: 'PRICE_MOVE',
-      profitTargetMove: 0.20,
-      buyTargetMove: 0.20,
-      sellTargetMove: 0.20,
-      autoAiTargetMode: true,
+      profitTargetMove: 1.0,
+      buyTargetMove: 1.0,
+      sellTargetMove: 1.0,
+      autoAiTargetMode: false,
       targetDisabled: false,
-      maxActivePairs: 100,
+      maxActivePairs: 500,
       dailyLossCircuitBreakerINR: 2000,
       takerFeeRate: 0.00075, // 0.075% strict fee
       gstRate: 0.18, // 18% GST on fees
@@ -87,9 +87,11 @@ class PaperEngine {
       this.settings.maxActivePairs = 500; // 500 Active Pairs Cap
       this.settings.contractQuantity = 1.0; // 1.0 Barrel per pair
       this.settings.profitTargetMove = 1.0; // $1.00 Target Move
+      this.settings.buyTargetMove = 1.0;
+      this.settings.sellTargetMove = 1.0;
+      this.settings.profitTargetMode = 'PRICE_MOVE';
       this.settings.tradingMode = 'LIVE';
       this.settings.realOrdersDisabled = false;
-      this.settings.strategyMode = 'ALTERNATING_STAGGERED';
       if (saved.pairs) this.pairs = saved.pairs;
       if (saved.closedPositions) this.closedPositions = saved.closedPositions;
       if (saved.auditLogs) this.auditLogs = saved.auditLogs.slice(-500);
@@ -466,25 +468,8 @@ class PaperEngine {
     const pairSeq = (this.pairs.length + 1).toString().padStart(4, '0');
     const pairId = `PAIR-${pairSeq}`;
     
-    let bMove = customTargetMove !== undefined ? customTargetMove : ((this.settings.profitTargetMode === 'PRICE_MOVE' && this.settings.profitTargetMove !== undefined) ? this.settings.profitTargetMove : (this.settings.buyTargetMove || this.settings.profitTargetMove || 0.20));
-    let sMove = customTargetMove !== undefined ? customTargetMove : ((this.settings.profitTargetMode === 'PRICE_MOVE' && this.settings.profitTargetMove !== undefined) ? this.settings.profitTargetMove : (this.settings.sellTargetMove || this.settings.profitTargetMove || 0.20));
-
-    if (customTargetMove === undefined) {
-      if (this.settings.profitTargetMode === 'STRATEGY' || (this.settings.strategyMode === 'ALTERNATING_STAGGERED' && this.settings.profitTargetMode !== 'PRICE_MOVE')) {
-        const altIdx = this.pairs.length % 4;
-        if (altIdx === 0) { bMove = 0.20; sMove = 0.20; }
-        else if (altIdx === 1) { bMove = 0.20; sMove = 0.30; }
-        else if (altIdx === 2) { bMove = 0.30; sMove = 0.20; }
-        else { bMove = 0.15; sMove = 0.25; }
-      } else if (this.settings.autoAiTargetMode && this.settings.profitTargetMode !== 'PRICE_MOVE') {
-        try {
-          const mudrexLive = require('./mudrexLiveAdapter');
-          const aiInfo = mudrexLive.calculateAiTargets();
-          bMove = aiInfo.buyTargetMove;
-          sMove = aiInfo.sellTargetMove;
-        } catch (e) {}
-      }
-    }
+    let bMove = customTargetMove !== undefined ? customTargetMove : (this.settings.profitTargetMove || this.settings.buyTargetMove || 1.00);
+    let sMove = customTargetMove !== undefined ? customTargetMove : (this.settings.profitTargetMove || this.settings.sellTargetMove || 1.00);
     
     // BUY Target: Entry + BUY Target Move
     const buyTarget = this.settings.targetDisabled ? null : this.normalizePrice(entryPrice + bMove, symbol);

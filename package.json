@@ -5,6 +5,8 @@
   "main": "src/server.js",
   "scripts": {
     "start": "node src/server.js",
+    "pair-add": "node scripts/localPairAddServer.js",
+    "local:pair-add": "node scripts/localPairAddServer.js",
     "test": "node tests/runTests.js"
   },
   "dependencies": {
