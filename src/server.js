@@ -444,17 +444,22 @@ app.get('/api/crude-live-mudrex/data', async (req, res) => {
     const livePrice = Number(rateInfo.price || 92.90);
     const usdInrRate = Number(rateInfo.usdInrRate || 102.00);
 
-    // 1. Authoritative Mudrex Wallet Balance
+    // 1. Authoritative Mudrex Wallet Balance (Live from Mudrex API)
     let availINR = 105843.00;
     let lockedINR = 9513.15;
-    if (mudrexLive.lastAuthCheckRes && mudrexLive.lastAuthCheckRes.success) {
-      if (typeof mudrexLive.lastAuthCheckRes.futuresBalance === 'number') {
-        availINR = mudrexLive.lastAuthCheckRes.futuresBalance;
+    let spotINR = 0;
+    try {
+      const auth = await mudrexLive.testAuthentication(false);
+      if (auth && auth.success) {
+        if (typeof auth.futuresBalance === 'number') availINR = auth.futuresBalance;
+        if (auth.raw?.futures?.data?.locked_amount) lockedINR = Number(auth.raw.futures.data.locked_amount);
+        if (typeof auth.spotBalance === 'number') spotINR = auth.spotBalance;
+      } else if (mudrexLive.lastAuthCheckRes && mudrexLive.lastAuthCheckRes.success) {
+        if (typeof mudrexLive.lastAuthCheckRes.futuresBalance === 'number') availINR = mudrexLive.lastAuthCheckRes.futuresBalance;
+        if (mudrexLive.lastAuthCheckRes.raw?.futures?.data?.locked_amount) lockedINR = Number(mudrexLive.lastAuthCheckRes.raw.futures.data.locked_amount);
+        if (typeof mudrexLive.lastAuthCheckRes.spotBalance === 'number') spotINR = mudrexLive.lastAuthCheckRes.spotBalance;
       }
-      if (mudrexLive.lastAuthCheckRes.raw?.futures?.data?.locked_amount) {
-        lockedINR = Number(mudrexLive.lastAuthCheckRes.raw.futures.data.locked_amount);
-      }
-    }
+    } catch (authErr) {}
     const equityINR = Number((availINR + lockedINR).toFixed(2));
 
     // 2. Mudrex Real Exchange Position (One-Way Net Mode)
@@ -557,6 +562,8 @@ app.get('/api/crude-live-mudrex/data', async (req, res) => {
         lockedMarginUSD: Number((lockedINR / usdInrRate).toFixed(2)),
         equityINR: Number(equityINR.toFixed(2)),
         equityUSD: Number((equityINR / usdInrRate).toFixed(2)),
+        spotBalanceINR: Number(spotINR.toFixed(2)),
+        spotBalanceUSD: Number((spotINR / usdInrRate).toFixed(2)),
         usdInrRate
       },
       mudrexExchange: {

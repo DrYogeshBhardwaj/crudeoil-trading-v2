@@ -1172,8 +1172,16 @@
       }
 
       // 3. Financial Metrics (Both ₹ and $ required)
-      document.getElementById('kpiAvailableMarginINR').innerText = `₹${wallet.availableMarginINR.toLocaleString('en-IN', { minimumFractionDigits: 2 })}`;
-      document.getElementById('kpiAvailableMarginUSD').innerText = `$${wallet.availableMarginUSD.toFixed(2)} Available`;
+      const availValINR = typeof wallet.availableMarginINR === 'number' ? wallet.availableMarginINR : 0;
+      const availValUSD = typeof wallet.availableMarginUSD === 'number' ? wallet.availableMarginUSD : 0;
+      const spotValINR = typeof wallet.spotBalanceINR === 'number' ? wallet.spotBalanceINR : 0;
+      
+      document.getElementById('kpiAvailableMarginINR').innerText = `₹${availValINR.toLocaleString('en-IN', { minimumFractionDigits: 2 })}`;
+      let availSub = `$${availValUSD.toFixed(2)} Available`;
+      if (spotValINR > 0) {
+        availSub += ` | Spot: ₹${spotValINR.toLocaleString('en-IN', { minimumFractionDigits: 2 })}`;
+      }
+      document.getElementById('kpiAvailableMarginUSD').innerText = availSub;
 
       document.getElementById('kpiLockedMarginINR').innerText = `₹${wallet.lockedMarginINR.toLocaleString('en-IN', { minimumFractionDigits: 2 })}`;
       document.getElementById('kpiLockedMarginUSD').innerText = `$${wallet.lockedMarginUSD.toFixed(2)} Locked`;
