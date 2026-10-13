@@ -1,0 +1,1380 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Crude-Live-Mudrex — Live Pair Trading Desk</title>
+  
+  <!-- Modern Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Outfit:wght@500;600;700;800;900&family=JetBrains+Mono:wght@500;700;800&display=swap" rel="stylesheet">
+  
+  <style>
+    :root {
+      --bg-dark: #070a12;
+      --bg-surface: rgba(15, 23, 42, 0.75);
+      --card-border: rgba(56, 189, 248, 0.18);
+      --card-border-green: rgba(16, 185, 129, 0.3);
+      --card-border-red: rgba(239, 68, 68, 0.3);
+      
+      --accent-cyan: #38bdf8;
+      --accent-green: #10b981;
+      --accent-green-bright: #34d399;
+      --accent-red: #ef4444;
+      --accent-red-bright: #f87171;
+      --accent-gold: #f59e0b;
+      --accent-purple: #a855f7;
+      
+      --text-main: #f8fafc;
+      --text-muted: #94a3b8;
+      --text-dim: #64748b;
+      
+      --font-main: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      --font-display: 'Outfit', sans-serif;
+      --font-mono: 'JetBrains Mono', monospace;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      background-color: var(--bg-dark);
+      background-image: 
+        radial-gradient(at 0% 0%, rgba(56, 189, 248, 0.08) 0px, transparent 50%),
+        radial-gradient(at 100% 0%, rgba(16, 185, 129, 0.08) 0px, transparent 50%),
+        radial-gradient(at 50% 100%, rgba(168, 85, 247, 0.05) 0px, transparent 60%);
+      color: var(--text-main);
+      font-family: var(--font-main);
+      min-height: 100vh;
+      padding: 16px 20px 40px;
+    }
+
+    .container {
+      max-width: 1560px;
+      margin: 0 auto;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    /* Top Navigation Header */
+    .top-navbar {
+      background: var(--bg-surface);
+      backdrop-filter: blur(16px);
+      border: 1px solid var(--card-border);
+      border-radius: 16px;
+      padding: 14px 22px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 14px;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.45);
+    }
+
+    .brand-section {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+
+    .brand-logo-badge {
+      width: 44px;
+      height: 44px;
+      border-radius: 12px;
+      background: linear-gradient(135deg, #0284c7, #10b981);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.5rem;
+      box-shadow: 0 4px 16px rgba(16, 185, 129, 0.35);
+    }
+
+    .brand-text h1 {
+      font-family: var(--font-display);
+      font-size: 1.45rem;
+      font-weight: 900;
+      letter-spacing: -0.5px;
+      background: linear-gradient(135deg, #ffffff 40%, #94a3b8);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .brand-text .page-tag {
+      font-size: 0.72rem;
+      font-weight: 800;
+      padding: 2px 8px;
+      border-radius: 6px;
+      background: rgba(56, 189, 248, 0.15);
+      border: 1px solid rgba(56, 189, 248, 0.4);
+      color: var(--accent-cyan);
+      -webkit-text-fill-color: var(--accent-cyan);
+      letter-spacing: 0.4px;
+    }
+
+    .brand-text p {
+      font-size: 0.76rem;
+      color: var(--text-muted);
+      font-weight: 600;
+      margin-top: 2px;
+    }
+
+    .nav-center-pill {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      background: rgba(0, 0, 0, 0.35);
+      padding: 6px 14px;
+      border-radius: 12px;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+    }
+
+    .status-indicator {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 0.8rem;
+      font-weight: 800;
+      padding: 5px 12px;
+      border-radius: 20px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .status-running {
+      background: rgba(16, 185, 129, 0.16);
+      border: 1px solid rgba(16, 185, 129, 0.5);
+      color: var(--accent-green-bright);
+    }
+
+    .status-paused {
+      background: rgba(245, 158, 11, 0.16);
+      border: 1px solid rgba(245, 158, 11, 0.5);
+      color: var(--accent-gold);
+    }
+
+    .pulse-dot {
+      width: 9px;
+      height: 9px;
+      border-radius: 50%;
+      background: currentColor;
+      box-shadow: 0 0 10px currentColor;
+      animation: pulseAnim 1.4s infinite;
+    }
+
+    @keyframes pulseAnim {
+      0%, 100% { opacity: 0.35; transform: scale(0.9); }
+      50% { opacity: 1; transform: scale(1.15); }
+    }
+
+    .nav-actions {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .btn {
+      font-family: var(--font-main);
+      font-weight: 700;
+      font-size: 0.82rem;
+      padding: 9px 16px;
+      border-radius: 10px;
+      border: none;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    .btn-green {
+      background: linear-gradient(135deg, #10b981, #059669);
+      color: #fff;
+      box-shadow: 0 4px 14px rgba(16, 185, 129, 0.35);
+    }
+    .btn-green:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 6px 18px rgba(16, 185, 129, 0.55);
+    }
+
+    .btn-amber {
+      background: linear-gradient(135deg, #f59e0b, #d97706);
+      color: #fff;
+      box-shadow: 0 4px 14px rgba(245, 158, 11, 0.35);
+    }
+    .btn-amber:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 6px 18px rgba(245, 158, 11, 0.55);
+    }
+
+    .btn-cyan {
+      background: linear-gradient(135deg, #0284c7, #0369a1);
+      color: #fff;
+      box-shadow: 0 4px 14px rgba(2, 132, 199, 0.35);
+    }
+    .btn-cyan:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 6px 18px rgba(2, 132, 199, 0.55);
+    }
+
+    .btn-outline {
+      background: rgba(255, 255, 255, 0.06);
+      color: var(--text-main);
+      border: 1px solid rgba(255, 255, 255, 0.14);
+    }
+    .btn-outline:hover {
+      background: rgba(255, 255, 255, 0.12);
+    }
+
+    /* Live Rate Ticker Hero Banner */
+    .hero-ticker-banner {
+      background: linear-gradient(135deg, rgba(15, 23, 42, 0.9), rgba(10, 15, 30, 0.95));
+      border: 1px solid var(--card-border);
+      border-radius: 16px;
+      padding: 18px 24px;
+      display: grid;
+      grid-template-columns: 1.4fr 1fr 1fr 1.2fr;
+      gap: 18px;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
+      align-items: center;
+    }
+
+    @media (max-width: 1100px) {
+      .hero-ticker-banner {
+        grid-template-columns: 1fr 1fr;
+      }
+    }
+    @media (max-width: 640px) {
+      .hero-ticker-banner {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .ticker-block {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .ticker-block.border-left {
+      border-left: 1px solid rgba(255, 255, 255, 0.08);
+      padding-left: 18px;
+    }
+
+    .ticker-label {
+      font-size: 0.72rem;
+      font-weight: 800;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.6px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .ticker-rate-value {
+      font-family: var(--font-display);
+      font-size: 2.5rem;
+      font-weight: 900;
+      line-height: 1.1;
+      letter-spacing: -0.5px;
+      transition: color 0.3s;
+    }
+
+    .ticker-rate-value.rate-cyan {
+      color: var(--accent-cyan);
+      text-shadow: 0 0 20px rgba(56, 189, 248, 0.35);
+    }
+
+    .ticker-rate-value.rate-green {
+      color: var(--accent-green-bright);
+      text-shadow: 0 0 20px rgba(16, 185, 129, 0.35);
+    }
+
+    .ticker-rate-value.rate-red {
+      color: var(--accent-red-bright);
+      text-shadow: 0 0 20px rgba(239, 68, 68, 0.35);
+    }
+
+    .ticker-sub {
+      font-size: 0.76rem;
+      color: var(--text-dim);
+      font-weight: 600;
+      font-family: var(--font-mono);
+    }
+
+    /* KPI Summary Row */
+    .kpi-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+      gap: 14px;
+    }
+
+    .kpi-card {
+      background: var(--bg-surface);
+      backdrop-filter: blur(14px);
+      border: 1px solid var(--card-border);
+      border-radius: 14px;
+      padding: 16px 20px;
+      box-shadow: 0 6px 24px rgba(0, 0, 0, 0.3);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .kpi-card::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 3px;
+      background: transparent;
+    }
+    .kpi-card.kpi-green::before { background: var(--accent-green); }
+    .kpi-card.kpi-cyan::before { background: var(--accent-cyan); }
+    .kpi-card.kpi-gold::before { background: var(--accent-gold); }
+    .kpi-card.kpi-purple::before { background: var(--accent-purple); }
+
+    .kpi-header {
+      font-size: 0.72rem;
+      font-weight: 800;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.6px;
+      margin-bottom: 6px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .kpi-val-primary {
+      font-family: var(--font-display);
+      font-size: 1.65rem;
+      font-weight: 900;
+      color: #fff;
+      line-height: 1.2;
+    }
+
+    .kpi-val-secondary {
+      font-family: var(--font-mono);
+      font-size: 0.84rem;
+      font-weight: 700;
+      margin-top: 4px;
+      color: var(--text-muted);
+    }
+
+    /* Mudrex Exchange One-Way Notice Banner */
+    .exchange-notice-banner {
+      background: rgba(15, 23, 42, 0.85);
+      border: 1px solid rgba(245, 158, 11, 0.35);
+      border-left: 4px solid var(--accent-gold);
+      border-radius: 12px;
+      padding: 14px 20px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 12px;
+      box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3);
+    }
+
+    .exchange-notice-content {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+
+    .exchange-notice-icon {
+      font-size: 1.6rem;
+    }
+
+    .exchange-notice-title {
+      font-size: 0.88rem;
+      font-weight: 800;
+      color: #fff;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .exchange-notice-desc {
+      font-size: 0.78rem;
+      color: var(--text-muted);
+      margin-top: 2px;
+    }
+
+    .exchange-pos-pill {
+      background: rgba(239, 68, 68, 0.18);
+      border: 1px solid rgba(239, 68, 68, 0.45);
+      color: var(--accent-red-bright);
+      padding: 6px 14px;
+      border-radius: 8px;
+      font-family: var(--font-mono);
+      font-size: 0.82rem;
+      font-weight: 800;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    /* Tabs & Content Sections */
+    .tabs-bar {
+      display: flex;
+      gap: 8px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+      padding-bottom: 8px;
+      flex-wrap: wrap;
+    }
+
+    .tab-btn {
+      font-family: var(--font-main);
+      font-weight: 800;
+      font-size: 0.85rem;
+      padding: 10px 18px;
+      border-radius: 10px;
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      color: var(--text-muted);
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      transition: all 0.2s;
+    }
+
+    .tab-btn:hover {
+      background: rgba(255, 255, 255, 0.1);
+      color: #fff;
+    }
+
+    .tab-btn.active {
+      background: rgba(56, 189, 248, 0.18);
+      border-color: rgba(56, 189, 248, 0.5);
+      color: var(--accent-cyan);
+    }
+
+    .tab-badge {
+      background: rgba(255, 255, 255, 0.12);
+      padding: 2px 7px;
+      border-radius: 12px;
+      font-size: 0.72rem;
+      font-family: var(--font-mono);
+    }
+
+    .tab-btn.active .tab-badge {
+      background: var(--accent-cyan);
+      color: #000;
+      font-weight: 900;
+    }
+
+    /* Content Area */
+    .tab-content {
+      display: none;
+    }
+    .tab-content.active {
+      display: block;
+    }
+
+    /* Data Tables */
+    .table-container {
+      background: var(--bg-surface);
+      backdrop-filter: blur(14px);
+      border: 1px solid var(--card-border);
+      border-radius: 14px;
+      overflow: hidden;
+      box-shadow: 0 8px 30px rgba(0, 0, 0, 0.35);
+    }
+
+    .table-toolbar {
+      padding: 14px 20px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+
+    .table-title {
+      font-family: var(--font-display);
+      font-size: 1.05rem;
+      font-weight: 800;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .data-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.84rem;
+    }
+
+    .data-table th {
+      text-align: left;
+      padding: 11px 16px;
+      color: var(--text-muted);
+      font-size: 0.72rem;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+      background: rgba(0, 0, 0, 0.2);
+    }
+
+    .data-table td {
+      padding: 13px 16px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+      vertical-align: middle;
+      font-family: var(--font-mono);
+    }
+
+    .data-table tr:hover td {
+      background: rgba(255, 255, 255, 0.025);
+    }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      padding: 3px 8px;
+      border-radius: 6px;
+      font-size: 0.72rem;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0.4px;
+    }
+
+    .badge-buy {
+      background: rgba(16, 185, 129, 0.18);
+      border: 1px solid rgba(16, 185, 129, 0.4);
+      color: var(--accent-green-bright);
+    }
+
+    .badge-sell {
+      background: rgba(239, 68, 68, 0.18);
+      border: 1px solid rgba(239, 68, 68, 0.4);
+      color: var(--accent-red-bright);
+    }
+
+    .badge-open {
+      background: rgba(56, 189, 248, 0.15);
+      border: 1px solid rgba(56, 189, 248, 0.35);
+      color: var(--accent-cyan);
+    }
+
+    .pnl-positive {
+      color: var(--accent-green-bright);
+      font-weight: 800;
+    }
+
+    .pnl-negative {
+      color: var(--accent-red-bright);
+      font-weight: 800;
+    }
+
+    .pnl-neutral {
+      color: var(--text-muted);
+      font-weight: 700;
+    }
+
+    .empty-state {
+      text-align: center;
+      padding: 40px 20px;
+      color: var(--text-dim);
+      font-size: 0.9rem;
+      font-family: var(--font-main);
+    }
+
+    /* Split Grid for BUY vs SELL columns */
+    .split-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+    }
+
+    @media (max-width: 1024px) {
+      .split-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    /* Modal for PIN 340556 */
+    .modal-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0, 0, 0, 0.8);
+      backdrop-filter: blur(8px);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 1000;
+    }
+
+    .modal-card {
+      background: #0f172a;
+      border: 1px solid var(--accent-cyan);
+      border-radius: 16px;
+      padding: 26px;
+      max-width: 420px;
+      width: 90%;
+      box-shadow: 0 20px 50px rgba(0, 0, 0, 0.7);
+    }
+
+    .modal-title {
+      font-family: var(--font-display);
+      font-size: 1.25rem;
+      font-weight: 800;
+      color: #fff;
+      margin-bottom: 6px;
+    }
+
+    .modal-subtitle {
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      margin-bottom: 20px;
+    }
+
+    .modal-input {
+      width: 100%;
+      padding: 12px 14px;
+      border-radius: 10px;
+      background: rgba(0, 0, 0, 0.4);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      color: #fff;
+      font-size: 1.1rem;
+      font-family: var(--font-mono);
+      text-align: center;
+      letter-spacing: 4px;
+      margin-bottom: 20px;
+    }
+    .modal-input:focus {
+      outline: none;
+      border-color: var(--accent-cyan);
+      box-shadow: 0 0 14px rgba(56, 189, 248, 0.4);
+    }
+
+    .modal-buttons {
+      display: flex;
+      gap: 10px;
+      justify-content: flex-end;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="container">
+    
+    <!-- Top Navigation Header -->
+    <header class="top-navbar">
+      <div class="brand-section">
+        <div class="brand-logo-badge">🛢️</div>
+        <div class="brand-text">
+          <h1>
+            Crude-Live-Mudrex
+            <span class="page-tag">PRO DESK</span>
+          </h1>
+          <p>Mudrex Futures Engine — CLUSDT Hedged Pair Strategy & Exchange Sync</p>
+        </div>
+      </div>
+
+      <div class="nav-center-pill">
+        <div class="status-indicator status-running" id="engineStatusIndicator">
+          <span class="pulse-dot"></span>
+          <span id="engineStatusLabel">ENGINE RUNNING</span>
+        </div>
+        <div style="font-size: 0.75rem; color: var(--text-dim); font-family: var(--font-mono);" id="lastUpdateTime">
+          Sync: --
+        </div>
+      </div>
+
+      <div class="nav-actions">
+        <button class="btn btn-amber" id="toggleEngineBtn" onclick="promptAction('toggleEngine')">
+          <span>⏸ PAUSE ENGINE</span>
+        </button>
+        <button class="btn btn-green" onclick="promptAction('addNewPair')">
+          <span>➕ ADD NEW PAIR</span>
+        </button>
+        <button class="btn btn-outline" onclick="fetchTerminalData()">
+          <span>🔄 REFRESH</span>
+        </button>
+      </div>
+    </header>
+
+    <!-- Live Rate Ticker Hero Banner -->
+    <section class="hero-ticker-banner">
+      <!-- Live Price Callout -->
+      <div class="ticker-block">
+        <div class="ticker-label">
+          <span>🛢️ CLUSDT CRUDE OIL LIVE RATE</span>
+        </div>
+        <div class="ticker-rate-value rate-cyan" id="liveCrudePrice">$0.00</div>
+        <div class="ticker-sub" id="liveRateSubtext">USD/INR: ₹102.00 | 1 Barrel Lot</div>
+      </div>
+
+      <!-- BUY Target Exit Callout -->
+      <div class="ticker-block border-left">
+        <div class="ticker-label">
+          <span>🎯 BUY TARGET EXIT (+$1.00)</span>
+        </div>
+        <div class="ticker-rate-value rate-green" id="buyTargetRate">$0.00</div>
+        <div class="ticker-sub" id="buyTargetDist" style="color: var(--accent-green-bright);">Distance: --</div>
+      </div>
+
+      <!-- SELL Target Exit Callout -->
+      <div class="ticker-block border-left">
+        <div class="ticker-label">
+          <span>🎯 SELL TARGET EXIT (-$1.00)</span>
+        </div>
+        <div class="ticker-rate-value rate-red" id="sellTargetRate">$0.00</div>
+        <div class="ticker-sub" id="sellTargetDist" style="color: var(--accent-red-bright);">Distance: --</div>
+      </div>
+
+      <!-- Strategy Info -->
+      <div class="ticker-block border-left">
+        <div class="ticker-label">
+          <span>⚡ ENGINE CONFIGURATION</span>
+        </div>
+        <div style="font-size: 0.92rem; font-weight: 700; color: #fff; margin-top: 4px;">
+          1.0 Barrel per Leg | 5x Leverage
+        </div>
+        <div class="ticker-sub" style="margin-top: 4px;">
+          Auto-Add on Rate Change: <span style="color: var(--accent-green-bright); font-weight: 800;">ACTIVE</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- Financial Metrics KPI Cards (Both ₹ and $ per rule) -->
+    <section class="kpi-grid">
+      <!-- Available Free Margin -->
+      <div class="kpi-card kpi-green">
+        <div class="kpi-header">
+          <span>Mudrex Available Margin</span>
+          <span>💼 WALLET</span>
+        </div>
+        <div class="kpi-val-primary" id="kpiAvailableMarginINR">₹0.00</div>
+        <div class="kpi-val-secondary" id="kpiAvailableMarginUSD">$0.00 Available</div>
+      </div>
+
+      <!-- Locked Margin (Exchange Held) -->
+      <div class="kpi-card kpi-purple">
+        <div class="kpi-header">
+          <span>Locked Margin (5x)</span>
+          <span>🔒 HELD</span>
+        </div>
+        <div class="kpi-val-primary" id="kpiLockedMarginINR">₹0.00</div>
+        <div class="kpi-val-secondary" id="kpiLockedMarginUSD">$0.00 Locked</div>
+      </div>
+
+      <!-- Total Equity -->
+      <div class="kpi-card kpi-cyan">
+        <div class="kpi-header">
+          <span>Total Account Equity</span>
+          <span>📈 BALANCE</span>
+        </div>
+        <div class="kpi-val-primary" id="kpiEquityINR">₹0.00</div>
+        <div class="kpi-val-secondary" id="kpiEquityUSD">$0.00 Total</div>
+      </div>
+
+      <!-- Total Realized Net Profit (33 Trades) -->
+      <div class="kpi-card kpi-green">
+        <div class="kpi-header">
+          <span>Realized Net Profit</span>
+          <span>🏆 CLOSED</span>
+        </div>
+        <div class="kpi-val-primary" style="color: var(--accent-green-bright);" id="kpiRealizedNetINR">+₹2,540.90</div>
+        <div class="kpi-val-secondary" id="kpiRealizedNetUSD">+ $26.21 Net (33 Trades)</div>
+      </div>
+
+      <!-- Live Floating Net P/L -->
+      <div class="kpi-card kpi-gold">
+        <div class="kpi-header">
+          <span>Floating Net P/L</span>
+          <span>⚡ LIVE P/L</span>
+        </div>
+        <div class="kpi-val-primary" id="kpiFloatingNetINR">₹0.00</div>
+        <div class="kpi-val-secondary" id="kpiFloatingNetUSD">$0.00 Unrealized</div>
+      </div>
+    </section>
+
+    <!-- Mudrex Exchange One-Way Notice Banner -->
+    <section class="exchange-notice-banner">
+      <div class="exchange-notice-content">
+        <div class="exchange-notice-icon">ℹ️</div>
+        <div>
+          <div class="exchange-notice-title">
+            Mudrex Exchange Official Net Position
+            <span style="font-size: 0.72rem; padding: 2px 7px; background: rgba(245, 158, 11, 0.2); border: 1px solid rgba(245, 158, 11, 0.4); border-radius: 6px; color: var(--accent-gold);">
+              ONE-WAY NET MODE
+            </span>
+          </div>
+          <div class="exchange-notice-desc">
+            Mudrex Futures automatically merges orders into a single net position. Our engine manages each individual paired leg (BUY & SELL) with independent target exits.
+          </div>
+        </div>
+      </div>
+
+      <div class="exchange-pos-pill" id="exchangeNetPositionPill">
+        <span>EXCHANGE POSITION: SHORT 15 Barrels</span>
+      </div>
+    </section>
+
+    <!-- Tabs Navigation Bar -->
+    <nav class="tabs-bar">
+      <button class="tab-btn active" onclick="switchTab('tabPairs')">
+        <span>🔀 Hedged Pairs (All Legs)</span>
+        <span class="tab-badge" id="badgePairsCount">0</span>
+      </button>
+      <button class="tab-btn" onclick="switchTab('tabSplit')">
+        <span>⚖️ Split Columns (BUY vs SELL)</span>
+        <span class="tab-badge" id="badgeBuySellCount">0 / 0</span>
+      </button>
+      <button class="tab-btn" onclick="switchTab('tabExchange')">
+        <span>🏛️ Mudrex Exchange View</span>
+        <span class="tab-badge" id="badgeExchangeCount">1</span>
+      </button>
+      <button class="tab-btn" onclick="switchTab('tabClosed')">
+        <span>📜 Closed Trades History</span>
+        <span class="tab-badge" id="badgeClosedCount">33</span>
+      </button>
+    </nav>
+
+    <!-- TAB 1: Hedged Pairs (All Legs View) -->
+    <section id="tabPairs" class="tab-content active">
+      <div class="table-container">
+        <div class="table-toolbar">
+          <div class="table-title">
+            <span>🟢 Active Hedged Pairs Monitor</span>
+            <span style="font-size: 0.78rem; color: var(--text-dim);">Both BUY & SELL legs active per pair</span>
+          </div>
+          <div style="font-size: 0.8rem; font-weight: 700; color: var(--text-muted);" id="activePairsSummaryText">
+            0 Pairs Active
+          </div>
+        </div>
+
+        <div style="overflow-x: auto;">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Pair ID</th>
+                <th>BUY Leg (Entry ➔ Exit)</th>
+                <th>BUY Floating P/L</th>
+                <th>SELL Leg (Entry ➔ Exit)</th>
+                <th>SELL Floating P/L</th>
+                <th>Net Pair P/L</th>
+                <th>Order Status</th>
+              </tr>
+            </thead>
+            <tbody id="pairsTableBody">
+              <tr>
+                <td colspan="7" class="empty-state">Loading active pairs...</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- TAB 2: Split Columns (BUY vs SELL) -->
+    <section id="tabSplit" class="tab-content">
+      <div class="split-grid">
+        <!-- BUY Column -->
+        <div class="table-container" style="border-top: 3px solid var(--accent-green);">
+          <div class="table-toolbar">
+            <div class="table-title" style="color: var(--accent-green-bright);">
+              <span>🟢 Active BUY Positions (Long)</span>
+              <span class="badge badge-buy" id="splitBuyBadge">0 Active</span>
+            </div>
+            <div style="font-weight: 800; color: var(--accent-green-bright);" id="splitBuyTotalPnl">
+              P/L: ₹0.00
+            </div>
+          </div>
+          <div style="overflow-x: auto;">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>Position</th>
+                  <th>Entry</th>
+                  <th>Target Exit 🎯</th>
+                  <th>Dist to Exit</th>
+                  <th>Floating P/L</th>
+                </tr>
+              </thead>
+              <tbody id="splitBuyTableBody">
+                <tr><td colspan="5" class="empty-state">No active BUY positions</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- SELL Column -->
+        <div class="table-container" style="border-top: 3px solid var(--accent-red);">
+          <div class="table-toolbar">
+            <div class="table-title" style="color: var(--accent-red-bright);">
+              <span>🔴 Active SELL Positions (Short)</span>
+              <span class="badge badge-sell" id="splitSellBadge">0 Active</span>
+            </div>
+            <div style="font-weight: 800; color: var(--accent-red-bright);" id="splitSellTotalPnl">
+              P/L: ₹0.00
+            </div>
+          </div>
+          <div style="overflow-x: auto;">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>Position</th>
+                  <th>Entry</th>
+                  <th>Target Exit 🎯</th>
+                  <th>Dist to Exit</th>
+                  <th>Floating P/L</th>
+                </tr>
+              </thead>
+              <tbody id="splitSellTableBody">
+                <tr><td colspan="5" class="empty-state">No active SELL positions</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- TAB 3: Mudrex Exchange View -->
+    <section id="tabExchange" class="tab-content">
+      <div class="table-container">
+        <div class="table-toolbar">
+          <div class="table-title">
+            <span>🏛️ Real Mudrex Exchange Verified Position</span>
+            <span style="font-size: 0.76rem; color: var(--text-dim);">Live API data from Mudrex Futures Endpoint</span>
+          </div>
+        </div>
+        <div style="overflow-x: auto;">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Symbol</th>
+                <th>Side</th>
+                <th>Quantity</th>
+                <th>Entry Price</th>
+                <th>Current Price</th>
+                <th>Initial Margin</th>
+                <th>Position ID</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody id="exchangeTableBody">
+              <tr><td colspan="8" class="empty-state">Loading exchange data...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- TAB 4: Closed Trades History -->
+    <section id="tabClosed" class="tab-content">
+      <div class="table-container">
+        <div class="table-toolbar">
+          <div class="table-title">
+            <span>📜 Realized Closed Trades History</span>
+            <span style="font-size: 0.76rem; color: var(--text-dim);" id="closedTradesSummarySub">Total: 33 Trades | Win Rate: 100%</span>
+          </div>
+          <div style="font-size: 0.88rem; font-weight: 800; color: var(--accent-green-bright);" id="closedTradesTotalNet">
+            Net: +₹2,540.90 (+ $26.21)
+          </div>
+        </div>
+        <div style="overflow-x: auto;">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Position ID</th>
+                <th>Side</th>
+                <th>Entry Price</th>
+                <th>Exit Price</th>
+                <th>Exit Time (IST)</th>
+                <th>Net Profit (₹ INR)</th>
+                <th>Net Profit ($ USD)</th>
+              </tr>
+            </thead>
+            <tbody id="closedTableBody">
+              <tr><td colspan="7" class="empty-state">Loading closed trades...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+  </div>
+
+  <!-- Admin PIN Modal (PIN 340556) -->
+  <div class="modal-overlay" id="pinModal">
+    <div class="modal-card">
+      <h3 class="modal-title" id="modalActionTitle">Admin Security Verification</h3>
+      <p class="modal-subtitle" id="modalActionSubtitle">Please enter Admin PIN (340556) to confirm this action.</p>
+      
+      <input type="password" id="adminPinInput" class="modal-input" maxlength="6" placeholder="••••••" autofocus>
+      
+      <div class="modal-buttons">
+        <button class="btn btn-outline" onclick="closePinModal()">Cancel</button>
+        <button class="btn btn-cyan" id="confirmActionBtn" onclick="executePendingAction()">Verify & Proceed</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Client-Side Real-Time Trading Controller -->
+  <script>
+    let currentPendingAction = null;
+    let cachedData = null;
+
+    function switchTab(tabId) {
+      document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+      document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+
+      const activeBtn = Array.from(document.querySelectorAll('.tab-btn')).find(b => b.getAttribute('onclick').includes(tabId));
+      if (activeBtn) activeBtn.classList.add('active');
+
+      const content = document.getElementById(tabId);
+      if (content) content.classList.add('active');
+    }
+
+    function promptAction(action) {
+      currentPendingAction = action;
+      const modal = document.getElementById('pinModal');
+      const title = document.getElementById('modalActionTitle');
+      const sub = document.getElementById('modalActionSubtitle');
+      const pinInput = document.getElementById('adminPinInput');
+
+      pinInput.value = '';
+      if (action === 'toggleEngine') {
+        const isRunning = cachedData && cachedData.engine && cachedData.engine.status === 'RUNNING';
+        title.innerText = isRunning ? 'Pause Live Engine' : 'Start Live Engine';
+        sub.innerText = `Enter Admin PIN (340556) to ${isRunning ? 'pause' : 'resume'} the Crude Oil trading engine.`;
+      } else if (action === 'addNewPair') {
+        title.innerText = 'Add New Crude Pair';
+        sub.innerText = 'Enter Admin PIN (340556) to create a new 1.0 Barrel Hedged Pair at current market price.';
+      }
+
+      modal.style.display = 'flex';
+      pinInput.focus();
+    }
+
+    function closePinModal() {
+      document.getElementById('pinModal').style.display = 'none';
+      currentPendingAction = null;
+    }
+
+    async function executePendingAction() {
+      const pin = document.getElementById('adminPinInput').value.trim();
+      if (!pin) {
+        alert('Please enter Admin PIN');
+        return;
+      }
+
+      let actionEndpointAction = '';
+      if (currentPendingAction === 'toggleEngine') {
+        const isRunning = cachedData && cachedData.engine && cachedData.engine.status === 'RUNNING';
+        actionEndpointAction = isRunning ? 'pauseEngine' : 'startEngine';
+      } else if (currentPendingAction === 'addNewPair') {
+        actionEndpointAction = 'addNewPair';
+      }
+
+      try {
+        const res = await fetch('/api/crude-live-mudrex/action', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: actionEndpointAction, password: pin })
+        });
+        const json = await res.json();
+        if (json.success) {
+          closePinModal();
+          await fetchTerminalData();
+        } else {
+          alert('Action Failed: ' + (json.error || 'Incorrect PIN'));
+        }
+      } catch (err) {
+        alert('Error: ' + err.message);
+      }
+    }
+
+    async function fetchTerminalData() {
+      try {
+        const res = await fetch('/api/crude-live-mudrex/data');
+        if (!res.ok) return;
+        const data = await res.json();
+        if (data.success) {
+          cachedData = data;
+          renderTerminalUI(data);
+        }
+      } catch (err) {
+        console.warn('[Terminal] Poll Error:', err.message);
+      }
+    }
+
+    function renderTerminalUI(data) {
+      const rate = data.rate || {};
+      const wallet = data.wallet || {};
+      const engine = data.engine || {};
+      const pnl = data.pnl || {};
+      const exchange = data.mudrexExchange || {};
+      const usdInr = rate.usdInrRate || 102.00;
+      const livePrice = rate.price || 92.90;
+
+      // 1. Header & Engine Status
+      const statusLabel = document.getElementById('engineStatusLabel');
+      const statusInd = document.getElementById('engineStatusIndicator');
+      const toggleBtn = document.getElementById('toggleEngineBtn');
+
+      if (engine.status === 'RUNNING') {
+        statusLabel.innerText = 'ENGINE RUNNING';
+        statusInd.className = 'status-indicator status-running';
+        toggleBtn.innerHTML = '<span>⏸ PAUSE ENGINE</span>';
+        toggleBtn.className = 'btn btn-amber';
+      } else {
+        statusLabel.innerText = engine.pauseReason ? `PAUSED (${engine.pauseReason})` : 'ENGINE PAUSED';
+        statusInd.className = 'status-indicator status-paused';
+        toggleBtn.innerHTML = '<span>▶️ START ENGINE</span>';
+        toggleBtn.className = 'btn btn-green';
+      }
+
+      document.getElementById('lastUpdateTime').innerText = `Sync: ${new Date().toLocaleTimeString('en-IN', { timeZone: 'Asia/Kolkata' })} IST`;
+
+      // 2. Ticker Hero
+      const crudeEl = document.getElementById('liveCrudePrice');
+      crudeEl.innerText = `$${livePrice.toFixed(2)}`;
+      
+      const buyTarget = livePrice + 1.00;
+      const sellTarget = livePrice - 1.00;
+      document.getElementById('buyTargetRate').innerText = `$${buyTarget.toFixed(2)}`;
+      document.getElementById('sellTargetRate').innerText = `$${sellTarget.toFixed(2)}`;
+      document.getElementById('buyTargetDist').innerText = `Distance: +$1.00 (+₹${(1.00 * usdInr).toFixed(2)})`;
+      document.getElementById('sellTargetDist').innerText = `Distance: -$1.00 (-₹${(1.00 * usdInr).toFixed(2)})`;
+
+      // 3. Financial Metrics (Both ₹ and $ required)
+      document.getElementById('kpiAvailableMarginINR').innerText = `₹${wallet.availableMarginINR.toLocaleString('en-IN', { minimumFractionDigits: 2 })}`;
+      document.getElementById('kpiAvailableMarginUSD').innerText = `$${wallet.availableMarginUSD.toFixed(2)} Available`;
+
+      document.getElementById('kpiLockedMarginINR').innerText = `₹${wallet.lockedMarginINR.toLocaleString('en-IN', { minimumFractionDigits: 2 })}`;
+      document.getElementById('kpiLockedMarginUSD').innerText = `$${wallet.lockedMarginUSD.toFixed(2)} Locked`;
+
+      document.getElementById('kpiEquityINR').innerText = `₹${wallet.equityINR.toLocaleString('en-IN', { minimumFractionDigits: 2 })}`;
+      document.getElementById('kpiEquityUSD').innerText = `$${wallet.equityUSD.toFixed(2)} Total`;
+
+      const rINR = pnl.totalRealizedINR || 2540.90;
+      const rUSD = pnl.totalRealizedUSD || 26.21;
+      const rSign = rINR >= 0 ? '+' : '';
+      document.getElementById('kpiRealizedNetINR').innerText = `${rSign}₹${rINR.toLocaleString('en-IN', { minimumFractionDigits: 2 })}`;
+      document.getElementById('kpiRealizedNetUSD').innerText = `${rSign}$${rUSD.toFixed(2)} Net (${pnl.closedTradesCount || 33} Trades)`;
+
+      const fINR = pnl.totalFloatingINR || 0;
+      const fUSD = pnl.totalFloatingUSD || 0;
+      const fSign = fINR >= 0 ? '+' : '';
+      const fColor = fINR >= 0 ? 'var(--accent-green-bright)' : 'var(--accent-red-bright)';
+      const floatEl = document.getElementById('kpiFloatingNetINR');
+      floatEl.innerText = `${fSign}₹${fINR.toLocaleString('en-IN', { minimumFractionDigits: 2 })}`;
+      floatEl.style.color = fColor;
+      document.getElementById('kpiFloatingNetUSD').innerText = `${fSign}$${fUSD.toFixed(2)} Unrealized`;
+
+      // 4. Mudrex Exchange Pill
+      const exPos = (exchange.positions && exchange.positions.length > 0) ? exchange.positions[0] : null;
+      const pill = document.getElementById('exchangeNetPositionPill');
+      if (exPos) {
+        pill.innerHTML = `<span>EXCHANGE NET: ${exPos.order_type || exPos.side || 'SHORT'} ${exPos.quantity} Barrels @ $${Number(exPos.entry_price).toFixed(2)} | Margin: ₹${Number(exPos.initial_margin || 9513.15).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>`;
+      } else {
+        pill.innerHTML = `<span>EXCHANGE NET: FLAT (0 Positions)</span>`;
+      }
+
+      // Badges
+      const pairs = engine.pairs || [];
+      document.getElementById('badgePairsCount').innerText = pairs.length;
+      document.getElementById('badgeBuySellCount').innerText = `${engine.activeBuyCount || 0} / ${engine.activeSellCount || 0}`;
+      document.getElementById('badgeExchangeCount').innerText = (exchange.positions || []).length;
+      document.getElementById('badgeClosedCount').innerText = (data.closedPositions || []).length;
+      document.getElementById('activePairsSummaryText').innerText = `${pairs.length} Pairs Active (${pairs.length} BUY Legs + ${pairs.length} SELL Legs)`;
+
+      // Render Tables
+      renderPairsTable(pairs);
+      renderSplitTables(pairs);
+      renderExchangeTable(exchange.positions || []);
+      renderClosedTable(data.closedPositions || []);
+    }
+
+    function renderPairsTable(pairs) {
+      const tbody = document.getElementById('pairsTableBody');
+      if (!pairs || pairs.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="7" class="empty-state">No active hedged pairs. Waiting for rate movement...</td></tr>';
+        return;
+      }
+
+      tbody.innerHTML = pairs.map(p => {
+        const b = p.buy || {};
+        const s = p.sell || {};
+
+        const bPnlClass = (b.floatingPnlINR || 0) >= 0 ? 'pnl-positive' : 'pnl-negative';
+        const sPnlClass = (s.floatingPnlINR || 0) >= 0 ? 'pnl-positive' : 'pnl-negative';
+        const netPnlClass = p.netPairPnlINR >= 0 ? 'pnl-positive' : 'pnl-negative';
+
+        const bPnlSign = (b.floatingPnlINR || 0) >= 0 ? '+' : '';
+        const sPnlSign = (s.floatingPnlINR || 0) >= 0 ? '+' : '';
+        const netSign = p.netPairPnlINR >= 0 ? '+' : '';
+
+        return `
+          <tr>
+            <td>
+              <strong style="color: #fff; font-size: 0.9rem;">${p.pairId}</strong>
+              <div style="font-size: 0.7rem; color: var(--text-dim);">${p.createdAt ? new Date(p.createdAt).toLocaleTimeString('en-IN', { timeZone: 'Asia/Kolkata' }) : ''}</div>
+            </td>
+            <td>
+              <span class="badge badge-buy">BUY 1.0B</span>
+              <span style="color: #fff; font-weight: 700;">$${b.entryPrice ? b.entryPrice.toFixed(2) : '--'}</span>
+              <span style="color: var(--text-dim);">➔</span>
+              <span style="color: var(--accent-green-bright); font-weight: 700;">$${b.targetPrice ? b.targetPrice.toFixed(2) : '--'}</span>
+            </td>
+            <td class="${bPnlClass}">
+              ${bPnlSign}₹${(b.floatingPnlINR || 0).toFixed(2)}
+              <div style="font-size: 0.72rem; color: var(--text-dim);">${bPnlSign}$${(b.floatingPnlUSD || 0).toFixed(2)}</div>
+            </td>
+            <td>
+              <span class="badge badge-sell">SELL 1.0B</span>
+              <span style="color: #fff; font-weight: 700;">$${s.entryPrice ? s.entryPrice.toFixed(2) : '--'}</span>
+              <span style="color: var(--text-dim);">➔</span>
+              <span style="color: var(--accent-red-bright); font-weight: 700;">$${s.targetPrice ? s.targetPrice.toFixed(2) : '--'}</span>
+            </td>
+            <td class="${sPnlClass}">
+              ${sPnlSign}₹${(s.floatingPnlINR || 0).toFixed(2)}
+              <div style="font-size: 0.72rem; color: var(--text-dim);">${sPnlSign}$${(s.floatingPnlUSD || 0).toFixed(2)}</div>
+            </td>
+            <td class="${netPnlClass}">
+              <strong>${netSign}₹${p.netPairPnlINR.toFixed(2)}</strong>
+              <div style="font-size: 0.72rem; color: var(--text-dim);">${netSign}$${p.netPairPnlUSD.toFixed(2)}</div>
+            </td>
+            <td>
+              <span class="badge badge-open">PAIR OPEN</span>
+              <div style="font-size: 0.68rem; color: var(--text-dim); margin-top: 2px;">
+                ${b.mudrexOrderId ? '● Real Mudrex ID' : 'Transmitting'}
+              </div>
+            </td>
+          </tr>
+        `;
+      }).join('');
+    }
+
+    function renderSplitTables(pairs) {
+      const buyTbody = document.getElementById('splitBuyTableBody');
+      const sellTbody = document.getElementById('splitSellTableBody');
+
+      const buyRows = [];
+      const sellRows = [];
+      let totalBuyINR = 0;
+      let totalSellINR = 0;
+
+      pairs.forEach(p => {
+        if (p.buy && p.buy.status === 'OPEN') {
+          totalBuyINR += p.buy.floatingPnlINR || 0;
+          const pnlClass = (p.buy.floatingPnlINR || 0) >= 0 ? 'pnl-positive' : 'pnl-negative';
+          const pnlSign = (p.buy.floatingPnlINR || 0) >= 0 ? '+' : '';
+          buyRows.push(`
+            <tr>
+              <td><strong>${p.buy.positionId}</strong></td>
+              <td>$${p.buy.entryPrice.toFixed(2)}</td>
+              <td style="color: var(--accent-green-bright); font-weight: 800;">$${p.buy.targetPrice.toFixed(2)}</td>
+              <td>${p.buy.distToTarget >= 0 ? '+' : ''}$${p.buy.distToTarget.toFixed(2)}</td>
+              <td class="${pnlClass}">${pnlSign}₹${p.buy.floatingPnlINR.toFixed(2)}</td>
+            </tr>
+          `);
+        }
+
+        if (p.sell && p.sell.status === 'OPEN') {
+          totalSellINR += p.sell.floatingPnlINR || 0;
+          const pnlClass = (p.sell.floatingPnlINR || 0) >= 0 ? 'pnl-positive' : 'pnl-negative';
+          const pnlSign = (p.sell.floatingPnlINR || 0) >= 0 ? '+' : '';
+          sellRows.push(`
+            <tr>
+              <td><strong>${p.sell.positionId}</strong></td>
+              <td>$${p.sell.entryPrice.toFixed(2)}</td>
+              <td style="color: var(--accent-red-bright); font-weight: 800;">$${p.sell.targetPrice.toFixed(2)}</td>
+              <td>${p.sell.distToTarget >= 0 ? '+' : ''}$${p.sell.distToTarget.toFixed(2)}</td>
+              <td class="${pnlClass}">${pnlSign}₹${p.sell.floatingPnlINR.toFixed(2)}</td>
+            </tr>
+          `);
+        }
+      });
+
+      document.getElementById('splitBuyBadge').innerText = `${buyRows.length} Active`;
+      document.getElementById('splitSellBadge').innerText = `${sellRows.length} Active`;
+
+      const buyTotalSign = totalBuyINR >= 0 ? '+' : '';
+      const sellTotalSign = totalSellINR >= 0 ? '+' : '';
+      document.getElementById('splitBuyTotalPnl').innerText = `P/L: ${buyTotalSign}₹${totalBuyINR.toFixed(2)}`;
+      document.getElementById('splitSellTotalPnl').innerText = `P/L: ${sellTotalSign}₹${totalSellINR.toFixed(2)}`;
+
+      buyTbody.innerHTML = buyRows.length > 0 ? buyRows.join('') : '<tr><td colspan="5" class="empty-state">No active BUY positions</td></tr>';
+      sellTbody.innerHTML = sellRows.length > 0 ? sellRows.join('') : '<tr><td colspan="5" class="empty-state">No active SELL positions</td></tr>';
+    }
+
+    function renderExchangeTable(positions) {
+      const tbody = document.getElementById('exchangeTableBody');
+      if (!positions || positions.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="8" class="empty-state">No open positions on Mudrex exchange.</td></tr>';
+        return;
+      }
+
+      tbody.innerHTML = positions.map(pos => {
+        const side = (pos.order_type || pos.side || 'SHORT').toUpperCase();
+        const badgeClass = side === 'BUY' || side === 'LONG' ? 'badge-buy' : 'badge-sell';
+        return `
+          <tr>
+            <td><strong>${pos.symbol || 'CLUSDT'}</strong></td>
+            <td><span class="badge ${badgeClass}">${side}</span></td>
+            <td><strong>${pos.quantity || 1} Barrels</strong></td>
+            <td>$${pos.entry_price ? Number(pos.entry_price).toFixed(2) : '--'}</td>
+            <td>$${pos.current_price ? Number(pos.current_price).toFixed(2) : '--'}</td>
+            <td>₹${pos.initial_margin ? Number(pos.initial_margin).toLocaleString('en-IN', { minimumFractionDigits: 2 }) : '₹9,513.15'}</td>
+            <td style="font-size: 0.72rem; color: var(--text-muted);">${pos.id || pos.position_id || '--'}</td>
+            <td><span class="badge badge-open">REAL EXCHANGE OPEN</span></td>
+          </tr>
+        `;
+      }).join('');
+    }
+
+    function renderClosedTable(closedPositions) {
+      const tbody = document.getElementById('closedTableBody');
+      if (!closedPositions || closedPositions.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="7" class="empty-state">No closed trades recorded.</td></tr>';
+        return;
+      }
+
+      tbody.innerHTML = closedPositions.slice(-50).reverse().map(cp => {
+        const netINR = cp.netProfitINR !== undefined ? cp.netProfitINR : (cp.netProfitUSD * 102);
+        const netUSD = cp.netProfitUSD !== undefined ? cp.netProfitUSD : (netINR / 102);
+        const pnlClass = netINR >= 0 ? 'pnl-positive' : 'pnl-negative';
+        const sign = netINR >= 0 ? '+' : '';
+        const side = cp.direction || (cp.positionId && cp.positionId.includes('BUY') ? 'BUY' : 'SELL');
+        const badgeClass = side === 'BUY' ? 'badge-buy' : 'badge-sell';
+
+        return `
+          <tr>
+            <td><strong>${cp.positionId || '--'}</strong></td>
+            <td><span class="badge ${badgeClass}">${side}</span></td>
+            <td>$${cp.entryPrice ? Number(cp.entryPrice).toFixed(2) : '--'}</td>
+            <td>$${cp.exitPrice ? Number(cp.exitPrice).toFixed(2) : '--'}</td>
+            <td>${cp.exitTime ? new Date(cp.exitTime).toLocaleTimeString('en-IN', { timeZone: 'Asia/Kolkata' }) : '--'}</td>
+            <td class="${pnlClass}">${sign}₹${netINR.toFixed(2)}</td>
+            <td class="${pnlClass}">${sign}$${netUSD.toFixed(2)}</td>
+          </tr>
+        `;
+      }).join('');
+    }
+
+    // Initialize polling loop (every 1 second)
+    fetchTerminalData();
+    setInterval(fetchTerminalData, 1000);
+  </script>
+</body>
+</html>
