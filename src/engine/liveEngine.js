@@ -146,28 +146,7 @@ class PaperEngine {
         continue;
       }
 
-      // In LIVE mode: Prune phantom pairs that were never filled on Mudrex
-      if (this.settings.tradingMode === 'LIVE' && process.env.IS_TEST !== 'true' && process.env.NODE_ENV !== 'test') {
-        const bFailed = pair.buyPosition && (
-          (pair.buyPosition.apiStatus || '').includes('RATE_LIMIT') ||
-          (pair.buyPosition.apiStatus || '').includes('RETRY') ||
-          (pair.buyPosition.apiStatus || '').includes('INSUFFICIENT_MARGIN')
-        );
-        const sFailed = pair.sellPosition && (
-          (pair.sellPosition.apiStatus || '').includes('RATE_LIMIT') ||
-          (pair.sellPosition.apiStatus || '').includes('RETRY') ||
-          (pair.sellPosition.apiStatus || '').includes('INSUFFICIENT_MARGIN')
-        );
-        const bReal = pair.buyPosition && pair.buyPosition.apiStatus === 'REAL_MUDREX_POSITION';
-        const sReal = pair.sellPosition && pair.sellPosition.apiStatus === 'REAL_MUDREX_POSITION';
-        if (!bReal && !sReal && (bFailed || sFailed)) {
-          if (pair.buyPosition) pair.buyPosition.status = 'CLOSED';
-          if (pair.sellPosition) pair.sellPosition.status = 'CLOSED';
-          pair.status = 'CLOSED';
-          removedCount++;
-          continue;
-        }
-      }
+      // Preserve active pairs in LIVE mode without pruning on temporary API retry/rate limit status
 
       const bPrice = bOpen ? pair.buyPosition.entryPrice : null;
       const sPrice = sOpen ? pair.sellPosition.entryPrice : null;
@@ -801,7 +780,7 @@ class PaperEngine {
 
       // Check BUY position
       const buy = pair.buyPosition;
-      if (buy.status === 'OPEN' && buy.targetExitPrice !== null) {
+      if (buy && buy.status === 'OPEN' && buy.targetExitPrice !== null) {
         if (currentPrice >= buy.targetExitPrice) {
           const isReal = buy.apiStatus === 'REAL_MUDREX_POSITION' || buy.mudrexOrderId || buy.ledger === 'LIVE';
           if (isReal) {
@@ -813,7 +792,9 @@ class PaperEngine {
               mudrexLive.executeRealExit(pair, buy, currentPrice, currentTimestamp, currentUsdInrRate, 'BUY TARGET PROFIT HIT')
                 .then(res => {
                   if (res && res.success) {
-                    if (pair.buyPosition.status === 'CLOSED' && pair.sellPosition.status === 'CLOSED') {
+                    const bDone = !pair.buyPosition || pair.buyPosition.status === 'CLOSED';
+                    const sDone = !pair.sellPosition || pair.sellPosition.status === 'CLOSED';
+                    if (bDone && sDone) {
                       pair.status = 'CLOSED';
                       pair.closedTime = new Date().toISOString();
                       this.logAudit('PAIR_FULLY_CLOSED', { pairId: pair.pairId });
@@ -836,7 +817,7 @@ class PaperEngine {
 
       // Check SELL position
       const sell = pair.sellPosition;
-      if (sell.status === 'OPEN' && sell.targetExitPrice !== null) {
+      if (sell && sell.status === 'OPEN' && sell.targetExitPrice !== null) {
         if (currentPrice <= sell.targetExitPrice) {
           const isReal = sell.apiStatus === 'REAL_MUDREX_POSITION' || sell.mudrexOrderId || sell.ledger === 'LIVE';
           if (isReal) {
@@ -848,7 +829,9 @@ class PaperEngine {
               mudrexLive.executeRealExit(pair, sell, currentPrice, currentTimestamp, currentUsdInrRate, 'SELL TARGET PROFIT HIT')
                 .then(res => {
                   if (res && res.success) {
-                    if (pair.buyPosition.status === 'CLOSED' && pair.sellPosition.status === 'CLOSED') {
+                    const bDone = !pair.buyPosition || pair.buyPosition.status === 'CLOSED';
+                    const sDone = !pair.sellPosition || pair.sellPosition.status === 'CLOSED';
+                    if (bDone && sDone) {
                       pair.status = 'CLOSED';
                       pair.closedTime = new Date().toISOString();
                       this.logAudit('PAIR_FULLY_CLOSED', { pairId: pair.pairId });
@@ -870,7 +853,9 @@ class PaperEngine {
       }
 
       // Check if pair is now fully closed
-      if (pair.buyPosition.status === 'CLOSED' && pair.sellPosition.status === 'CLOSED') {
+      const buyClosed = !pair.buyPosition || pair.buyPosition.status === 'CLOSED';
+      const sellClosed = !pair.sellPosition || pair.sellPosition.status === 'CLOSED';
+      if (buyClosed && sellClosed) {
         if (pair.status !== 'CLOSED') {
           pair.status = 'CLOSED';
           pair.closedTime = new Date(currentTimestamp).toISOString();

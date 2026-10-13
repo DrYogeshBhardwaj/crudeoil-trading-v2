@@ -157,10 +157,29 @@ class DatabaseManager {
         }
       }
 
-      // Safeguard: Ensure active pairs from seedState are preserved in production if current state has none
-      if (!isTestEnv && seedState && Array.isArray(seedState.pairs) && (!Array.isArray(finalState.pairs) || finalState.pairs.length === 0)) {
-        finalState.pairs = seedState.pairs;
+      // Safeguard: Ensure active pairs from seedState are preserved in production if current state has none or fewer
+      if (!isTestEnv && seedState && Array.isArray(seedState.pairs)) {
+        if (!Array.isArray(finalState.pairs) || finalState.pairs.length === 0 || finalState.pairs.length < seedState.pairs.length) {
+          finalState.pairs = seedState.pairs;
+          if (this.db) {
+            try {
+              const insertPair = this.db.prepare('INSERT OR REPLACE INTO active_pairs (pair_id, symbol, created_time, created_timestamp, entry_rate, status, data) VALUES (?, ?, ?, ?, ?, ?, ?)');
+              for (const p of seedState.pairs) {
+                insertPair.run(
+                  p.pairId,
+                  p.symbol || 'CLUSDT',
+                  p.createdTime || new Date().toISOString(),
+                  p.createdTimestamp || Date.now(),
+                  p.entryRate || 0,
+                  p.status || 'ACTIVE',
+                  JSON.stringify(p)
+                );
+              }
+            } catch (e) {}
+          }
+        }
       }
+
 
       // Preserve verified Real Mudrex Closed Trades if present in seed
       if (seedState && Array.isArray(seedState.realMudrexClosedTrades)) {

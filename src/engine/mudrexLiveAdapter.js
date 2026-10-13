@@ -460,48 +460,13 @@ class MudrexLiveAdapter {
     if (process.env.IS_TEST === 'true' || process.env.NODE_ENV === 'test') return;
     try {
       const paperEngine = require('./paperEngine');
-      if (!paperEngine || !Array.isArray(paperEngine.pairs)) return;
+      if (!paperEngine) return;
 
-      const realPosIds = new Set(
-        (verifiedLivePositions || []).map(p => String(p.positionId || p.exchangePositionId || p.id || ''))
-      );
+      // DO NOT prune paperEngine pairs!
+      // Mudrex Futures operates in One-Way Net Mode (e.g. 109 BBL Short net position).
+      // The trading desk's active pairs represent individual hedged entry legs and must NEVER be deleted.
 
-      let pruned = 0;
-      for (const pair of paperEngine.pairs) {
-        if (pair.status === 'CLOSED') continue;
-
-        const bPos = pair.buyPosition;
-        const sPos = pair.sellPosition;
-
-        const bIsReal = bPos && (
-          realPosIds.has(String(bPos.positionId)) ||
-          realPosIds.has(String(bPos.mudrexOrderId)) ||
-          bPos.apiStatus === 'REAL_MUDREX_POSITION' ||
-          (bPos.apiStatus === 'TRANSMITTING_TO_MUDREX' && Date.now() - (bPos.transmittingSince || 0) < 20000)
-        );
-
-        const sIsReal = sPos && (
-          realPosIds.has(String(sPos.positionId)) ||
-          realPosIds.has(String(sPos.mudrexOrderId)) ||
-          sPos.apiStatus === 'REAL_MUDREX_POSITION' ||
-          (sPos.apiStatus === 'TRANSMITTING_TO_MUDREX' && Date.now() - (sPos.transmittingSince || 0) < 20000)
-        );
-
-        // If neither leg is real or transmitting, close this ghost pair!
-        if (!bIsReal && !sIsReal) {
-          if (bPos && bPos.status === 'OPEN') bPos.status = 'CLOSED';
-          if (sPos && sPos.status === 'OPEN') sPos.status = 'CLOSED';
-          pair.status = 'CLOSED';
-          pruned++;
-        }
-      }
-
-      if (pruned > 0) {
-        console.log(`[Mudrex Live Adapter] Pruned ${pruned} phantom pairs from paperEngine.`);
-        paperEngine.saveState();
-      }
-
-      // If engine was paused due to phantom insufficient margin, unpause it
+      // If engine was paused due to phantom insufficient margin, unpause it when margin is available
       const avail = this.getAvailableMargin();
       if (avail > 5000 && paperEngine.engineStatus === 'PAUSED' && (paperEngine.pauseReason || '').includes('INSUFFICIENT MARGIN')) {
         paperEngine.engineStatus = 'RUNNING';
@@ -512,6 +477,7 @@ class MudrexLiveAdapter {
       console.warn('[Mudrex Live Adapter] Error reconciling paper pairs with Mudrex:', e.message);
     }
   }
+
 
   request(method, urlStr, bodyData = null) {
     if (Date.now() < this.rateLimitUntil) {
