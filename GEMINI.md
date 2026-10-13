@@ -17,3 +17,9 @@
 - Leverage is **5x**.
 - Profit Target Move default is **$1.00** (or user-configured setting).
 - Margin check must always use authoritative available margin based only on actually OPEN positions, immediately freeing margin when any leg closes.
+
+## 4. UI Updates & Data Integrity Shield (Admin Password: 340556)
+- **Live Trading Data Must NEVER Be Touched or Cleared**: Closed trade history (+₹2,540.90 / 33 trades), open positions, active pairs, and balance/margin states must NEVER be cleared or modified during UI styling, frontend refactoring, or minor feature changes.
+- **Admin Password Protection (`340556`)**:
+  - All destructive and configuration operations (`Reset Data`, `Settings`, `Mudrex API Keys`, `Account Info`, `Pair Kharidne Ka Option`, `Start/Pause Engine`) are protected behind Admin password `340556`.
+  - No action that can alter engine state or reset data can be performed without verifying password `340556`.

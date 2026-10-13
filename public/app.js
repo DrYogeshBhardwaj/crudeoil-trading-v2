@@ -557,6 +557,27 @@ function renderDashboard(data) {
     }
   }
 
+  // Header Engine Status Indicator Badge
+  const engineIndicatorText = document.getElementById('engineStatusIndicatorText');
+  const engineIndicatorBadge = document.getElementById('engineStatusIndicatorBadge');
+  if (engineIndicatorText && engineIndicatorBadge) {
+    if (isEngineRunning) {
+      engineIndicatorText.innerText = 'ENGINE: RUNNING';
+      engineIndicatorBadge.style.color = '#34d399';
+      engineIndicatorBadge.style.borderColor = 'rgba(16, 185, 129, 0.4)';
+      engineIndicatorBadge.style.background = 'rgba(16, 185, 129, 0.12)';
+    } else {
+      engineIndicatorText.innerText = 'ENGINE: PAUSED';
+      engineIndicatorBadge.style.color = '#f87171';
+      engineIndicatorBadge.style.borderColor = 'rgba(239, 68, 68, 0.4)';
+      engineIndicatorBadge.style.background = 'rgba(239, 68, 68, 0.12)';
+    }
+  }
+
+  if (typeof updateAdminButtonState === 'function') {
+    updateAdminButtonState();
+  }
+
   // Engine Pause Alert Banner (Disabled per user request)
   const alertBanner = document.getElementById('engineAlertBanner');
   if (alertBanner) {
@@ -1110,8 +1131,8 @@ function renderActivePositions(positions, symbol, isDhanPage = false, pricePrefi
             ${formatISTDate(pos.entryTime)}
           </td>
           <td>
-            <div style="font-size:0.85rem; color:var(--text-muted);">$${fmtP(entryPrice)}</div>
-            <div style="font-size:1.05rem; font-weight:800; color:#fff;">➔ $${fmtP(currentPrice)}</div>
+            <div style="font-size:1.25rem; font-weight:900; color:#38bdf8; font-family:monospace;">$${fmtP(entryPrice)}</div>
+            <div style="font-size:0.72rem; color:var(--text-dim); font-weight:800; letter-spacing:0.5px;">${isBuyTable ? 'BUY AT' : 'SELL AT'}</div>
           </td>
           <td>
             ${targetPrice !== null ? `
@@ -1893,15 +1914,132 @@ window.executeManualTrade = async function() {
   }
 };
 
+// --- ADMIN PORTAL SECURITY (Password: 340556) ---
+const ADMIN_PASSWORD = '340556';
+
+function isAdminAuthenticated() {
+  return sessionStorage.getItem('mudrex_admin_authed') === ADMIN_PASSWORD;
+}
+
+function updateAdminButtonState() {
+  const btn = document.getElementById('adminPortalBtn');
+  const label = document.getElementById('adminBtnLabel');
+  if (!btn || !label) return;
+  if (isAdminAuthenticated()) {
+    label.innerText = '🔓 Admin (Active)';
+    btn.style.background = 'linear-gradient(135deg, #10b981, #059669)';
+    btn.style.borderColor = '#34d399';
+    btn.style.boxShadow = '0 0 16px rgba(16, 185, 129, 0.45)';
+    btn.style.color = '#fff';
+  } else {
+    label.innerText = '🔐 Admin';
+    btn.style.background = 'linear-gradient(135deg, #f59e0b, #d97706)';
+    btn.style.borderColor = '#fbbf24';
+    btn.style.boxShadow = '0 0 15px rgba(245, 158, 11, 0.4)';
+    btn.style.color = '#000';
+  }
+}
+
+function openAdminPortal() {
+  if (isAdminAuthenticated()) {
+    openAdminControlCenter();
+  } else {
+    openAdminPasswordModal();
+  }
+}
+
+function openAdminPasswordModal() {
+  const modal = document.getElementById('adminPasswordModal');
+  const input = document.getElementById('adminPasswordInput');
+  const err = document.getElementById('adminPasswordError');
+  if (modal) {
+    modal.style.display = 'flex';
+    if (input) {
+      input.value = '';
+      setTimeout(() => input.focus(), 150);
+    }
+    if (err) err.style.display = 'none';
+  }
+}
+
+function closeAdminPasswordModal() {
+  const modal = document.getElementById('adminPasswordModal');
+  if (modal) modal.style.display = 'none';
+}
+
+function verifyAdminPassword() {
+  const input = document.getElementById('adminPasswordInput');
+  const err = document.getElementById('adminPasswordError');
+  const val = input ? input.value.trim() : '';
+  if (val === ADMIN_PASSWORD) {
+    sessionStorage.setItem('mudrex_admin_authed', ADMIN_PASSWORD);
+    updateAdminButtonState();
+    closeAdminPasswordModal();
+    openAdminControlCenter();
+  } else {
+    if (err) {
+      err.innerText = '❌ Galat Password! Access Denied. Sahi password dalein.';
+      err.style.display = 'block';
+    }
+    if (input) {
+      input.value = '';
+      input.focus();
+    }
+  }
+}
+
+function openAdminControlCenter() {
+  const modal = document.getElementById('adminControlCenterModal');
+  if (modal) {
+    modal.style.display = 'flex';
+  }
+}
+
+function closeAdminControlCenter() {
+  const modal = document.getElementById('adminControlCenterModal');
+  if (modal) {
+    modal.style.display = 'none';
+  }
+}
+
+function lockAdminPortal() {
+  sessionStorage.removeItem('mudrex_admin_authed');
+  updateAdminButtonState();
+  closeAdminControlCenter();
+  alert('🔒 Admin panel lock kar diya gaya hai.');
+}
+
+window.openAdminPortal = openAdminPortal;
+window.openAdminPasswordModal = openAdminPasswordModal;
+window.closeAdminPasswordModal = closeAdminPasswordModal;
+window.verifyAdminPassword = verifyAdminPassword;
+window.openAdminControlCenter = openAdminControlCenter;
+window.closeAdminControlCenter = closeAdminControlCenter;
+window.lockAdminPortal = lockAdminPortal;
+window.isAdminAuthenticated = isAdminAuthenticated;
+window.updateAdminButtonState = updateAdminButtonState;
+
+// Secure Reset Data (Always Protected by Password: 340556)
 window.resetAllDataConfirm = async function() {
-  if (!confirm('⚠️ Are you sure you want to RESET ALL ENGINE DATA?\n\nThis will clear all active pairs, closed trade history, and reset virtual capital to ₹3,50,000.')) {
+  if (!isAdminAuthenticated()) {
+    const entered = prompt('🔐 Admin Password dalein (Required: 340556) to reset engine data:');
+    if (entered !== ADMIN_PASSWORD) {
+      alert('❌ Access Denied: Galat Admin Password! Data Reset Cancelled.');
+      return;
+    }
+    sessionStorage.setItem('mudrex_admin_authed', ADMIN_PASSWORD);
+    updateAdminButtonState();
+  }
+
+  if (!confirm('⚠️ Are you sure you want to RESET SIMULATED ENGINE DATA?\n\nReal Mudrex exchange positions remain 100% safe and intact.')) {
     return;
   }
+
   try {
     const res = await fetch('/api/reset-data', { method: 'POST' });
     const data = await res.json();
     if (data.success) {
-      alert('✅ All engine positions and trading history reset successfully!');
+      alert('✅ Simulated engine state reset successfully! (Real Mudrex data preserved)');
       if (typeof fetchMetricsFallback === 'function') fetchMetricsFallback();
       if (typeof fetchDashboardMetrics === 'function') fetchDashboardMetrics();
     } else {
@@ -1912,3 +2050,8 @@ window.resetAllDataConfirm = async function() {
   }
 };
 window.resetData = window.resetAllDataConfirm;
+
+// Init admin button state on load
+document.addEventListener('DOMContentLoaded', () => {
+  updateAdminButtonState();
+});
