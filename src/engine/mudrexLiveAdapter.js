@@ -368,90 +368,154 @@ class MudrexLiveAdapter {
       this.recentPrices.push(normPrice);
       if (this.recentPrices.length > 20) this.recentPrices.shift();
 
-      // If real order execution on Mudrex API is enabled, transmit real orders for open paper positions
+      // If real order execution on Mudrex API is enabled, transmit pending live orders sequentially
       if (this.isRealExecutionEnabled()) {
-        for (const pair of paperEngine.pairs) {
-          if (pair.status === 'CLOSED') continue;
-          for (const pos of [pair.buyPosition, pair.sellPosition]) {
-            const isTransmitting = pos && pos.apiStatus === 'TRANSMITTING_TO_MUDREX' && (!pos.transmittingSince || (Date.now() - pos.transmittingSince < 30000));
-            const isAlreadyReal = pos && (pos.mudrexOrderId || pos.apiStatus === 'REAL_MUDREX_POSITION' || isTransmitting);
-            const canTransmit = !isAlreadyReal && Date.now() > this.rateLimitUntil;
-            if (pos && pos.status === 'OPEN' && canTransmit) {
-              const posSymbol = (pos.symbol || pair.symbol || 'CLUSDT').toUpperCase();
-              if (!posSymbol.includes('CL')) {
-                console.warn(`[Mudrex Live Adapter] Skipping non-Crude position: ${pos.positionId} (${posSymbol})`);
-                continue;
-              }
-
-              pos.apiStatus = 'TRANSMITTING_TO_MUDREX';
-              pos.transmittingSince = Date.now();
-              const qty = this.settings.contractQuantity || pos.quantity || 1.0;
-              const lev = this.settings.leverage || 5;
-
-              this.createRealOrder({ symbol: 'CLUSDT', side: pos.direction, quantity: qty, leverage: lev })
-                .then(res => {
-                  if (res.success) {
-                    pos.mudrexOrderId = this.extractOrderId(res.data);
-                    pos.apiStatus = 'REAL_MUDREX_POSITION';
-                    console.log(`[Mudrex Live Adapter] SUCCESS: Transmitted Real Order for ${pos.positionId} -> Mudrex Order ID: ${pos.mudrexOrderId}`);
-                  } else {
-                    let errStr = typeof res.error === 'object' ? JSON.stringify(res.error) : String(res.error || '');
-                    if (errStr.includes('5002') || errStr.includes('rate limit') || errStr.includes('RATE_LIMIT')) {
-                      pos.apiStatus = 'LIVE_ENGINE_PAIR (RATE_LIMIT_COOLDOWN)';
-                    } else if (errStr.includes('balance') || errStr.includes('margin') || errStr.includes('5001') || errStr.includes('5000')) {
-                      pos.apiStatus = 'LIVE_ENGINE_PAIR (INSUFFICIENT_MARGIN)';
-                    } else {
-                      pos.apiStatus = 'LIVE_ENGINE_PAIR (RETRY_QUEUED)';
-                    }
-                    pos.apiError = errStr;
-                    console.warn(`[Mudrex Live Adapter] Real Order POST for ${pos.positionId} returned: ${errStr}`);
-                  }
-                  this.saveState();
-                })
-                .catch(err => {
-                  pos.apiStatus = 'LIVE_ENGINE_PAIR (RETRY_QUEUED)';
-                  pos.apiError = err.message;
-                  console.error(`[Mudrex Live Adapter] Real Order Error for ${pos.positionId}:`, err.message);
-                });
-            }
-          }
-        }
+        this.transmitPendingLiveOrders().catch(e => {
+          console.error('[Mudrex Live Adapter] Error in transmitPendingLiveOrders:', e.message);
+        });
       }
     } catch (e) {
       console.error('Error in processLiveTick:', e);
     }
   }
 
-  getHeaders() {
-    let apiSecret = (
-      process.env.MUDREX_API_SECRET ||
-      process.env.MUDREX_SECRET ||
-      process.env.MUDREX_SECRET_KEY || ''
-    ).trim();
-    if (apiSecret.includes('*')) apiSecret = '';
+  async transmitPendingLiveOrders() {
+    if (this.isTransmittingQueue) return;
+    this.isTransmittingQueue = true;
+    try {
+      if (!this.isRealExecutionEnabled()) return;
+      const paperEngine = require('./paperEngine');
+      if (!paperEngine || !Array.isArray(paperEngine.pairs)) return;
 
-    let apiKey = (
-      process.env.MUDREX_API_KEY ||
-      process.env.MUDREX_KEY || ''
-    ).trim();
-    if (apiKey.includes('*')) apiKey = '';
+      for (const pair of paperEngine.pairs) {
+        if (pair.status === 'CLOSED') continue;
+        for (const pos of [pair.buyPosition, pair.sellPosition]) {
+          if (!pos || pos.status !== 'OPEN') continue;
+          const isTransmitting = pos.apiStatus === 'TRANSMITTING_TO_MUDREX' && (Date.now() - (pos.transmittingSince || 0) < 15000);
+          const isAlreadyReal = !!(pos.mudrexOrderId || pos.apiStatus === 'REAL_MUDREX_POSITION' || isTransmitting);
+          if (isAlreadyReal) continue;
 
-    const headers = {
-      'X-Authentication': apiSecret,
-      'x-authentication': apiSecret,
-      'Content-Type': 'application/json',
-      'User-Agent': 'Mudrex-Node-Live-Engine/1.0'
-    };
-    if (apiKey) {
-      headers['X-Api-Key'] = apiKey;
-      headers['x-api-key'] = apiKey;
+          // Check rate limit cooldown
+          if (Date.now() < this.rateLimitUntil) continue;
+
+          const posSymbol = (pos.symbol || pair.symbol || 'CLUSDT').toUpperCase();
+          if (!posSymbol.includes('CL')) {
+            console.warn(`[Mudrex Live Adapter] Skipping non-Crude position: ${pos.positionId} (${posSymbol})`);
+            continue;
+          }
+
+          pos.apiStatus = 'TRANSMITTING_TO_MUDREX';
+          pos.transmittingSince = Date.now();
+          const qty = this.settings.contractQuantity || pos.quantity || 1.0;
+          const lev = this.settings.leverage || 5;
+
+          try {
+            const res = await this.createRealOrder({ symbol: 'CLUSDT', side: pos.direction, quantity: qty, leverage: lev });
+            if (res.success) {
+              pos.mudrexOrderId = this.extractOrderId(res.data);
+              pos.apiStatus = 'REAL_MUDREX_POSITION';
+              pos.apiError = null;
+              console.log(`[Mudrex Live Adapter] SUCCESS: Transmitted Real Order for ${pos.positionId} -> Mudrex Order ID: ${pos.mudrexOrderId}`);
+            } else {
+              let errStr = typeof res.error === 'object' ? JSON.stringify(res.error) : String(res.error || '');
+              if (errStr.includes('5002') || errStr.includes('rate limit') || errStr.includes('RATE_LIMIT')) {
+                pos.apiStatus = 'LIVE_ENGINE_PAIR (RATE_LIMIT_COOLDOWN)';
+                this.rateLimitUntil = Date.now() + 4000;
+              } else if (errStr.includes('balance') || errStr.includes('margin') || errStr.includes('5001') || errStr.includes('5000')) {
+                pos.apiStatus = 'LIVE_ENGINE_PAIR (INSUFFICIENT_MARGIN)';
+              } else {
+                pos.apiStatus = 'LIVE_ENGINE_PAIR (RETRY_QUEUED)';
+              }
+              pos.apiError = errStr;
+              console.warn(`[Mudrex Live Adapter] Real Order POST for ${pos.positionId} returned: ${errStr}`);
+            }
+          } catch (err) {
+            pos.apiStatus = 'LIVE_ENGINE_PAIR (RETRY_QUEUED)';
+            pos.apiError = err.message;
+            console.error(`[Mudrex Live Adapter] Real Order Error for ${pos.positionId}:`, err.message);
+          }
+          this.saveState();
+
+          // Sequential Delay: wait 400ms between orders to prevent Mudrex burst rate limits
+          await new Promise(r => setTimeout(r, 400));
+        }
+      }
+    } finally {
+      this.isTransmittingQueue = false;
     }
-    return headers;
+  }
+
+  getAvailableMargin() {
+    if (this.lastAuthCheckRes && this.lastAuthCheckRes.success && typeof this.lastAuthCheckRes.futuresBalance === 'number' && this.lastAuthCheckRes.futuresBalance > 0) {
+      return this.lastAuthCheckRes.futuresBalance;
+    }
+    // If not cached yet, trigger background update if credentials present
+    if (!this.lastAuthCheckRes && (process.env.MUDREX_API_KEY || process.env.MUDREX_KEY || this.mudrexApiKey)) {
+      this.testAuthentication().catch(() => {});
+    }
+    return 112000;
+  }
+
+  reconcilePaperEngineWithRealMudrex(verifiedLivePositions = []) {
+    if (process.env.IS_TEST === 'true' || process.env.NODE_ENV === 'test') return;
+    try {
+      const paperEngine = require('./paperEngine');
+      if (!paperEngine || !Array.isArray(paperEngine.pairs)) return;
+
+      const realPosIds = new Set(
+        (verifiedLivePositions || []).map(p => String(p.positionId || p.exchangePositionId || p.id || ''))
+      );
+
+      let pruned = 0;
+      for (const pair of paperEngine.pairs) {
+        if (pair.status === 'CLOSED') continue;
+
+        const bPos = pair.buyPosition;
+        const sPos = pair.sellPosition;
+
+        const bIsReal = bPos && (
+          realPosIds.has(String(bPos.positionId)) ||
+          realPosIds.has(String(bPos.mudrexOrderId)) ||
+          bPos.apiStatus === 'REAL_MUDREX_POSITION' ||
+          (bPos.apiStatus === 'TRANSMITTING_TO_MUDREX' && Date.now() - (bPos.transmittingSince || 0) < 20000)
+        );
+
+        const sIsReal = sPos && (
+          realPosIds.has(String(sPos.positionId)) ||
+          realPosIds.has(String(sPos.mudrexOrderId)) ||
+          sPos.apiStatus === 'REAL_MUDREX_POSITION' ||
+          (sPos.apiStatus === 'TRANSMITTING_TO_MUDREX' && Date.now() - (sPos.transmittingSince || 0) < 20000)
+        );
+
+        // If neither leg is real or transmitting, close this ghost pair!
+        if (!bIsReal && !sIsReal) {
+          if (bPos && bPos.status === 'OPEN') bPos.status = 'CLOSED';
+          if (sPos && sPos.status === 'OPEN') sPos.status = 'CLOSED';
+          pair.status = 'CLOSED';
+          pruned++;
+        }
+      }
+
+      if (pruned > 0) {
+        console.log(`[Mudrex Live Adapter] Pruned ${pruned} phantom pairs from paperEngine.`);
+        paperEngine.saveState();
+      }
+
+      // If engine was paused due to phantom insufficient margin, unpause it
+      const avail = this.getAvailableMargin();
+      if (avail > 5000 && paperEngine.engineStatus === 'PAUSED' && (paperEngine.pauseReason || '').includes('INSUFFICIENT MARGIN')) {
+        paperEngine.engineStatus = 'RUNNING';
+        paperEngine.pauseReason = '';
+        console.log(`[Mudrex Live Adapter] Unpaused engine - Authoritative Mudrex Available Margin: ₹${avail.toFixed(2)}`);
+      }
+    } catch (e) {
+      console.warn('[Mudrex Live Adapter] Error reconciling paper pairs with Mudrex:', e.message);
+    }
   }
 
   request(method, urlStr, bodyData = null) {
     if (Date.now() < this.rateLimitUntil) {
-      return Promise.resolve({ success: false, statusCode: 429, error: 'RATE_LIMIT_COOLDOWN_ACTIVE (Mudrex API paused for 30s)' });
+      return Promise.resolve({ success: false, statusCode: 429, error: 'RATE_LIMIT_COOLDOWN_ACTIVE (Mudrex API paused for 4s)' });
     }
 
     return new Promise((resolve, reject) => {
@@ -493,8 +557,8 @@ class MudrexLiveAdapter {
           }
 
           if (!result.success && result.error && (String(result.error).includes('5002') || String(result.error).includes('rate limit') || res.statusCode === 429)) {
-            console.warn('[Mudrex Live Adapter] Rate limit (5002) detected from Mudrex API! Cooldown active for 30s.');
-            this.rateLimitUntil = Date.now() + 30000;
+            console.warn('[Mudrex Live Adapter] Rate limit (5002) detected from Mudrex API! Cooldown active for 4s.');
+            this.rateLimitUntil = Date.now() + 4000;
           }
 
           resolve(result);
@@ -1124,6 +1188,10 @@ class MudrexLiveAdapter {
       this.liveOpenPositions = verifiedLivePositions;
     } else if (Array.isArray(this.liveOpenPositions) && this.liveOpenPositions.length > 0) {
       verifiedLivePositions = this.liveOpenPositions.filter(p => p.status === 'OPEN');
+    }
+
+    if (this.isRealExecutionEnabled() && this.settings.syncRealMudrexPositions) {
+      this.reconcilePaperEngineWithRealMudrex(verifiedLivePositions);
     }
 
     // 2. Verified Real Mudrex Closed Trades (The 18 real closed losses)

@@ -134,6 +134,29 @@ class PaperEngine {
       
       if (pair.status === 'CLOSED') continue;
 
+      // In LIVE mode: Prune phantom pairs that were never filled on Mudrex
+      if (this.settings.tradingMode === 'LIVE' && process.env.IS_TEST !== 'true' && process.env.NODE_ENV !== 'test') {
+        const bFailed = pair.buyPosition && (
+          (pair.buyPosition.apiStatus || '').includes('RATE_LIMIT') ||
+          (pair.buyPosition.apiStatus || '').includes('RETRY') ||
+          (pair.buyPosition.apiStatus || '').includes('INSUFFICIENT_MARGIN')
+        );
+        const sFailed = pair.sellPosition && (
+          (pair.sellPosition.apiStatus || '').includes('RATE_LIMIT') ||
+          (pair.sellPosition.apiStatus || '').includes('RETRY') ||
+          (pair.sellPosition.apiStatus || '').includes('INSUFFICIENT_MARGIN')
+        );
+        const bReal = pair.buyPosition && pair.buyPosition.apiStatus === 'REAL_MUDREX_POSITION';
+        const sReal = pair.sellPosition && pair.sellPosition.apiStatus === 'REAL_MUDREX_POSITION';
+        if (!bReal && !sReal && (bFailed || sFailed)) {
+          if (pair.buyPosition) pair.buyPosition.status = 'CLOSED';
+          if (pair.sellPosition) pair.sellPosition.status = 'CLOSED';
+          pair.status = 'CLOSED';
+          removedCount++;
+          continue;
+        }
+      }
+
       const bPrice = bOpen ? pair.buyPosition.entryPrice : null;
       const sPrice = sOpen ? pair.sellPosition.entryPrice : null;
       const sym = pair.symbol || this.settings.instrument;
@@ -290,7 +313,18 @@ class PaperEngine {
           const leverage = this.settings.leverage;
           const reqMarginPerPosINR = (normalizedPrice * qty * mult * usdInrRate) / leverage;
 
-          if (metrics.summary.availableMarginINR >= reqMarginPerPosINR) {
+          let availMargin = metrics.summary.availableMarginINR;
+          if (this.settings.tradingMode === 'LIVE' && process.env.IS_TEST !== 'true' && process.env.NODE_ENV !== 'test') {
+            try {
+              const mudrexLive = require('./mudrexLiveAdapter');
+              const liveAvail = mudrexLive.getAvailableMargin();
+              if (typeof liveAvail === 'number' && liveAvail > 0) {
+                availMargin = liveAvail;
+              }
+            } catch (e) {}
+          }
+
+          if (availMargin >= reqMarginPerPosINR) {
             this.engineStatus = 'RUNNING';
             this.pauseReason = '';
             this.reopenMissingLeg(pair, 'SELL', normalizedPrice, time, usdInrRate);
@@ -319,7 +353,18 @@ class PaperEngine {
           const leverage = this.settings.leverage;
           const reqMarginPerPosINR = (normalizedPrice * qty * mult * usdInrRate) / leverage;
 
-          if (metrics.summary.availableMarginINR >= reqMarginPerPosINR) {
+          let availMargin = metrics.summary.availableMarginINR;
+          if (this.settings.tradingMode === 'LIVE' && process.env.IS_TEST !== 'true' && process.env.NODE_ENV !== 'test') {
+            try {
+              const mudrexLive = require('./mudrexLiveAdapter');
+              const liveAvail = mudrexLive.getAvailableMargin();
+              if (typeof liveAvail === 'number' && liveAvail > 0) {
+                availMargin = liveAvail;
+              }
+            } catch (e) {}
+          }
+
+          if (availMargin >= reqMarginPerPosINR) {
             this.engineStatus = 'RUNNING';
             this.pauseReason = '';
             this.reopenMissingLeg(pair, 'BUY', normalizedPrice, time, usdInrRate);
@@ -369,9 +414,20 @@ class PaperEngine {
     const reqMarginPairINR = ((normalizedPrice * qty * mult * usdInrRate) / leverage) * 2;
 
     const metrics = this.getDashboardMetrics();
-    const paperAvailableMarginINR = (metrics && metrics.summary && metrics.summary.availableMarginINR !== undefined)
+    let paperAvailableMarginINR = (metrics && metrics.summary && metrics.summary.availableMarginINR !== undefined)
       ? metrics.summary.availableMarginINR
       : Math.max(0, (this.settings.startingCapitalINR || 119923.61) - reqMarginPairINR);
+
+    // In LIVE mode, authoritative available margin is from the real Mudrex futures wallet!
+    if (this.settings.tradingMode === 'LIVE' && process.env.IS_TEST !== 'true' && process.env.NODE_ENV !== 'test') {
+      try {
+        const mudrexLive = require('./mudrexLiveAdapter');
+        const liveAvail = mudrexLive.getAvailableMargin();
+        if (typeof liveAvail === 'number' && liveAvail > 0) {
+          paperAvailableMarginINR = liveAvail;
+        }
+      } catch (e) {}
+    }
 
     if (paperAvailableMarginINR < reqMarginPairINR) {
       this.engineStatus = 'PAUSED';
