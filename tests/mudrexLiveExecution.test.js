@@ -76,7 +76,7 @@ async function runDeterministicTestSuite() {
 // Test Implementations
 // -----------------------------------------------------------------------------
 
-// 1. Target reached -> exactly one correctly directed close request
+// 1. Target reached -> exactly one correctly directed reduce-only close request with quantity reconciliation
 async function test1_targetReachedDirectedClose() {
   process.env.LIVE_EXECUTION_GATE = 'APPROVED';
   process.env.MUDREX_API_KEY = 'test_key_valid_min_length';
@@ -85,14 +85,27 @@ async function test1_targetReachedDirectedClose() {
   paperEngine.settings.realOrdersDisabled = false;
 
   let dispatchedRequests = [];
+  let exchangeQuantity = 27.0; // Initial aggregate position has 27 barrels
+
   const restore = installMockMudrex(async (method, url, body) => {
     dispatchedRequests.push({ method, url, body });
-    if (url.includes('/close')) {
-      return { success: true, data: { status: 'CLOSED', order_id: 'close_order_123' } };
+    if (url.includes('/order')) {
+      // Reduce-only market order accepted by Mudrex
+      exchangeQuantity -= Number(body.quantity || 1.0);
+      return { success: true, data: { status: 'FILLED', order_id: 'reduce_order_123' } };
     }
     if (url.includes('/positions')) {
-      // Return empty positions array indicating position is now closed on exchange
-      return { success: true, data: [] };
+      // Exchange reconciliation: returns remaining aggregate position with reduced quantity (27 -> 26)
+      return {
+        success: true,
+        data: [{
+          position_id: '01a131a2-b58a-7f31-9288-39f8044fda20',
+          symbol: 'CLUSDT',
+          side: 'BUY',
+          direction: 'BUY',
+          quantity: exchangeQuantity
+        }]
+      };
     }
     return { success: true, data: {} };
   });
@@ -112,17 +125,25 @@ async function test1_targetReachedDirectedClose() {
 
     const res = await mudrexLive.executeRealExit(null, position, 92.00, Date.now(), 102.00, 'BUY TARGET HIT');
     assert.strictEqual(res.success, true, 'Real exit must succeed');
-    assert.strictEqual(position.status, 'CLOSED', 'Position must be marked CLOSED');
-    assert.strictEqual(position.ledger, 'LIVE', 'Position ledger must remain LIVE');
+    assert.strictEqual(position.status, 'CLOSED', 'Leg must be marked CLOSED');
+    assert.strictEqual(position.ledger, 'LIVE', 'Leg ledger must remain LIVE');
     assert.strictEqual(dispatchedRequests.length >= 1, true, 'At least 1 request sent to exchange');
-    assert.strictEqual(dispatchedRequests[0].url.includes('MUDREX-EX-BUY-01'), true, 'Close target must specify exact exchange position identifier');
+
+    // Verify Reduce-Only Semantics
+    const orderReq = dispatchedRequests.find(r => r.url.includes('/order'));
+    assert.strictEqual(!!orderReq, true, 'Must send reduce-only market order to /futures/{symbol}/order');
+    assert.strictEqual(orderReq.body.side, 'SELL', 'BUY leg exit must be opposite side SELL');
+    assert.strictEqual(orderReq.body.order_type, 'SHORT', 'BUY leg exit must be order_type SHORT');
+    assert.strictEqual(orderReq.body.reduce_only, true, 'Must specify reduce_only: true');
+    assert.strictEqual(orderReq.body.quantity, '1', 'Must close exactly 1.0 leg quantity');
+    assert.strictEqual(exchangeQuantity, 26.0, 'Exchange aggregate position must only reduce by 1 (27 -> 26), NOT wiped out');
   } finally {
     restore();
     delete process.env.LIVE_EXECUTION_GATE;
   }
 }
 
-// 2. Stop trigger -> correct close request with opposite side
+// 2. Stop trigger -> correct reduce-only close request with opposite side and quantity reconciliation
 async function test2_stopTriggerDirectedClose() {
   process.env.LIVE_EXECUTION_GATE = 'APPROVED';
   process.env.MUDREX_API_KEY = 'test_key_valid_min_length';
@@ -130,13 +151,25 @@ async function test2_stopTriggerDirectedClose() {
   paperEngine.settings.tradingMode = 'LIVE';
 
   let closeCalls = [];
+  let exchangeQuantity = 29.0; // Initial aggregate position has 29 units
+
   const restore = installMockMudrex(async (method, url, body) => {
     closeCalls.push({ method, url, body });
-    if (url.includes('/close')) {
-      return { success: true, data: { order_id: 'stop_exit_456' } };
+    if (url.includes('/order')) {
+      exchangeQuantity -= Number(body.quantity || 1.0);
+      return { success: true, data: { order_id: 'reduce_stop_456' } };
     }
     if (url.includes('/positions')) {
-      return { success: true, data: [] };
+      return {
+        success: true,
+        data: [{
+          position_id: '01a131a2-38ab-76e2-81f4-76361d242b1b',
+          symbol: 'CLUSDT',
+          side: 'SELL',
+          direction: 'SELL',
+          quantity: exchangeQuantity
+        }]
+      };
     }
     return { success: true, data: {} };
   });
@@ -148,7 +181,7 @@ async function test2_stopTriggerDirectedClose() {
       direction: 'SELL',
       symbol: 'CLUSDT',
       entryPrice: 91.00,
-      quantity: 2.0,
+      quantity: 1.0,
       status: 'OPEN',
       ledger: 'LIVE'
     };
@@ -156,7 +189,14 @@ async function test2_stopTriggerDirectedClose() {
     const res = await mudrexLive.executeRealExit(null, shortPosition, 92.50, Date.now(), 102.00, 'STOP LOSS HIT');
     assert.strictEqual(res.success, true);
     assert.strictEqual(shortPosition.status, 'CLOSED');
-    assert.strictEqual(closeCalls[0].url.includes('MUDREX-EX-SHORT-02'), true);
+
+    const orderReq = closeCalls.find(r => r.url.includes('/order'));
+    assert.strictEqual(!!orderReq, true, 'Must send reduce-only order');
+    assert.strictEqual(orderReq.body.side, 'BUY', 'SELL leg exit must be opposite side BUY');
+    assert.strictEqual(orderReq.body.order_type, 'LONG', 'SELL leg exit must be order_type LONG');
+    assert.strictEqual(orderReq.body.reduce_only, true, 'Must specify reduce_only: true');
+    assert.strictEqual(orderReq.body.quantity, '1', 'Must close exactly 1.0 leg quantity');
+    assert.strictEqual(exchangeQuantity, 28.0, 'Exchange aggregate position must only reduce by 1 (29 -> 28), NOT wiped out');
   } finally {
     restore();
     delete process.env.LIVE_EXECUTION_GATE;
@@ -408,7 +448,7 @@ async function test14_concurrentEventsNoDuplicateClose() {
 
   let orderCount = 0;
   const restore = installMockMudrex(async (method, url) => {
-    if (url.includes('/close')) {
+    if (url.includes('/order') || url.includes('/close')) {
       orderCount++;
       // Simulate network latency
       await new Promise(r => setTimeout(r, 50));

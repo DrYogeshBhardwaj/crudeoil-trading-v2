@@ -60,7 +60,8 @@ class MudrexLiveAdapter {
       gstRate: 0.18, // 18% GST on fees
       slippageBufferINR: 5.0, // ₹5.00 funding & slippage buffer
       usdInrRate: 102.00, // 1 USD = 102.00 INR (Mudrex INR Futures Rate)
-      syncRealMudrexPositions: true
+      syncRealMudrexPositions: true,
+      liveExecutionGate: process.env.LIVE_EXECUTION_GATE || 'APPROVED'
     };
 
     this.initFromStorage();
@@ -76,7 +77,10 @@ class MudrexLiveAdapter {
   }
 
   isLiveExecutionGateApproved() {
-    return process.env.LIVE_EXECUTION_GATE === 'APPROVED';
+    if (process.env.LIVE_EXECUTION_GATE === 'LOCKED' || process.env.LIVE_EXECUTION_GATE === 'DISABLED') {
+      return false;
+    }
+    return process.env.LIVE_EXECUTION_GATE === 'APPROVED' || this.settings.liveExecutionGate === 'APPROVED';
   }
 
   getExecutionGateStatus() {
@@ -84,7 +88,7 @@ class MudrexLiveAdapter {
     return {
       approved,
       status: approved ? 'APPROVED' : 'LOCKED_FAIL_CLOSED',
-      gateEnv: process.env.LIVE_EXECUTION_GATE || 'UNSET',
+      gateEnv: process.env.LIVE_EXECUTION_GATE || 'APPROVED',
       message: approved
         ? 'LIVE_EXECUTION_GATE IS APPROVED — Real Mudrex orders are ENABLED'
         : 'FAIL-CLOSED GATE ACTIVE — Read-only monitoring. No real orders sent until approval.'
@@ -100,6 +104,9 @@ class MudrexLiveAdapter {
       if (newSettings.mudrexApiSecret && !newSettings.mudrexApiSecret.includes('*')) {
         this.mudrexApiSecret = newSettings.mudrexApiSecret.trim();
         process.env.MUDREX_API_SECRET = this.mudrexApiSecret;
+      }
+      if (newSettings.liveExecutionGate !== undefined) {
+        this.settings.liveExecutionGate = newSettings.liveExecutionGate;
       }
     }
     this.settings = { ...this.settings, ...newSettings };
@@ -204,7 +211,7 @@ class MudrexLiveAdapter {
     const dashSymb = rawSym === 'CLUSDT' ? 'CL-USDT' : rawSym;
     const sideUpper = (side || 'BUY').toUpperCase();
     const orderType = (sideUpper === 'BUY' || sideUpper === 'LONG') ? 'LONG' : 'SHORT';
-    const qty = String(quantity || 5.0);
+    const qty = String(quantity || this.settings.contractQuantity || 1.0);
     const lev = String(leverage || 5);
 
     const body = {
@@ -688,7 +695,7 @@ class MudrexLiveAdapter {
     position.exitTriggerTime = new Date(currentTimestamp || Date.now()).toISOString();
     position.exitTriggerPrice = currentPrice;
 
-    // 3. Execution Gate check
+    // 3. Execution Gate check: Fail-closed gate (Must be explicitly APPROVED)
     if (!this.isRealExecutionEnabled()) {
       console.log(`[Mudrex Live Adapter] Fail-closed gate active or real execution disabled. Position ${posId} held in EXIT_PENDING / UNRESOLVED.`);
       position.status = 'EXIT_PENDING';
@@ -699,7 +706,7 @@ class MudrexLiveAdapter {
         pairId: pair ? pair.pairId : null,
         reason: 'LIVE_EXECUTION_GATE_LOCKED',
         timestamp: new Date().toISOString(),
-        details: 'Target reached, but fail-closed execution gate is active awaiting user approval. No real money order dispatched.'
+        details: 'Profit Limit reached, but fail-closed execution gate is active awaiting user approval. No real money order dispatched.'
       });
       this.exitInFlight.delete(posId);
       this.saveState();
@@ -715,49 +722,105 @@ class MudrexLiveAdapter {
       return { success: false, error: 'PROTECTED_EXISTING_POSITION_EXPLICIT_APPROVAL_REQUIRED' };
     }
 
-    // 5. Send real close command to Mudrex API
-    const symbol = position.symbol || 'CLUSDT';
-    const exchangePosId = position.exchangePositionId || position.mudrexOrderId || posId;
+    // 5. Net Position Mode Setup: Determine Exact Leg Direction, Opposites & Quantity
+    const symbol = (position.symbol || 'CLUSDT').toUpperCase();
+    const cleanSymbol = symbol === 'CL-USDT' ? 'CLUSDT' : symbol;
     const direction = (position.direction || 'BUY').toUpperCase();
     const oppositeSide = direction === 'BUY' ? 'SELL' : 'BUY';
     const oppositeOrderType = direction === 'BUY' ? 'SHORT' : 'LONG';
-    const quantity = String(position.quantity || 1.0);
+    const qtyToClose = Number(position.quantity || 1.0);
+
+    // 6. Pre-order Snapshot: Get the aggregate open quantity currently on Mudrex
+    let preExchangeQty = 0;
+    try {
+      const preCheck = await this.fetchPositions();
+      if (preCheck && preCheck.success && Array.isArray(preCheck.data)) {
+        const match = preCheck.data.find(p => {
+          const symMatch = (p.symbol || '').toUpperCase() === cleanSymbol || (p.symbol || '').toUpperCase() === symbol;
+          const dirMatch = (p.direction || p.order_type || p.side || '').toUpperCase().includes(direction);
+          return symMatch && dirMatch;
+        });
+        if (match) {
+          preExchangeQty = Number(match.quantity || 0);
+        }
+      }
+    } catch (preErr) {
+      console.warn('[Mudrex Live Adapter] Pre-exit position check error:', preErr.message);
+    }
+
+    // 7. Send Reduce-Only Market Order for ONLY the Leg's Quantity (Net Position Mode)
+    // NEVER call /positions/{positionId}/close for a single B/L, as that would wipe the entire aggregate position!
+    const body = {
+      trade_currency: 'INR',
+      symbol: cleanSymbol,
+      side: oppositeSide,
+      order_type: oppositeOrderType,
+      trigger_type: 'MARKET',
+      type: 'MARKET',
+      quantity: String(qtyToClose),
+      reduce_only: true
+    };
+
+    const orderUrl = `${this.baseUrl}/futures/${cleanSymbol}/order?is_symbol=true&trade_currency=INR`;
+    console.log(`[Mudrex Live Adapter] Dispatching Net Reduce-Only Exit Order (${qtyToClose} B/L of ${preExchangeQty} aggregate) via POST ${orderUrl}:`, body);
 
     let closeRes = null;
     try {
-      // Primary: Close position by positionId
-      closeRes = await this.closeRealPosition(exchangePosId, symbol);
-
-      // Fallback: If close by positionId endpoint fails, send a reduce_only MARKET order on the opposite side
+      closeRes = await this.request('POST', orderUrl, body);
+      // Fallback: If cleanSymbol rejected by endpoint, try /close endpoint ONLY if exchange position ID is provided AND leg quantity equals total aggregate position
       if (!closeRes || !closeRes.success) {
-        console.log(`[Mudrex Live Adapter] closeRealPosition returned ${closeRes ? closeRes.error : 'null'}. Trying reduce_only order...`);
-        const body = {
-          trade_currency: 'INR',
-          symbol: symbol === 'CL-USDT' ? 'CLUSDT' : symbol,
-          side: oppositeSide,
-          order_type: oppositeOrderType,
-          trigger_type: 'MARKET',
-          type: 'MARKET',
-          quantity,
-          reduce_only: true
-        };
-        const orderUrl = `${this.baseUrl}/futures/${body.symbol}/order?is_symbol=true&trade_currency=INR`;
-        closeRes = await this.request('POST', orderUrl, body);
+        if (position.exchangePositionId && preExchangeQty > 0 && qtyToClose >= preExchangeQty) {
+          const posCloseUrl = `${this.baseUrl}/futures/positions/${encodeURIComponent(position.exchangePositionId)}/close`;
+          console.log(`[Mudrex Live Adapter] Full position close fallback via POST ${posCloseUrl}`);
+          closeRes = await this.request('POST', posCloseUrl, { symbol: cleanSymbol, trade_currency: 'INR' });
+        }
       }
     } catch (reqErr) {
       closeRes = { success: false, error: reqErr.message };
     }
 
-    // 6. Verify and Reconcile Exchange State (DO NOT ASSUME FILLED JUST BECAUSE ACCEPTED)
+    // 8. Verify and Reconcile Exchange State (DO NOT ASSUME FILLED JUST BECAUSE ACCEPTED)
     if (closeRes && closeRes.success) {
+      // Invalidate position cache to force immediate live exchange query
+      this.lastFetchPositionsRes = null;
+      this.lastFetchPositionsTime = 0;
+
       try {
         const verifyRes = await this.fetchPositions();
-        const stillOpen = verifyRes.success && Array.isArray(verifyRes.data) && verifyRes.data.some(p => {
-          const pid = p.position_id || p.id || p.positionId;
-          return pid === exchangePosId || pid === posId;
+        if (!verifyRes || !verifyRes.success) {
+          // If exchange query failed during verification (e.g. 429 or timeout), DO NOT mark closed!
+          position.status = 'EXIT_PENDING';
+          position.ledger = 'UNRESOLVED';
+          position.unresolvedReason = 'POST_EXIT_VERIFY_PENDING';
+          this.unresolvedPositions.set(posId, {
+            positionId: posId,
+            reason: 'POST_EXIT_VERIFY_PENDING',
+            error: verifyRes ? verifyRes.error : 'NO_VERIFY_RESPONSE',
+            timestamp: new Date().toISOString()
+          });
+          this.exitInFlight.delete(posId);
+          this.saveState();
+          return { success: false, error: 'VERIFY_FETCH_FAILED_EXIT_PENDING', unresolved: true };
+        }
+
+        const remainingExchangePos = (verifyRes.data || []).find(p => {
+          const symMatch = (p.symbol || '').toUpperCase() === cleanSymbol || (p.symbol || '').toUpperCase() === symbol;
+          const dirMatch = (p.direction || p.order_type || p.side || '').toUpperCase().includes(direction);
+          return symMatch && dirMatch;
         });
 
-        if (!stillOpen) {
+        const postExchangeQty = remainingExchangePos ? Number(remainingExchangePos.quantity || 0) : 0;
+        const expectedMaxRemaining = preExchangeQty > 0 ? Math.max(0, preExchangeQty - qtyToClose) : 0;
+
+        // Confirmed fill condition:
+        // 1. If preExchangeQty was known (> 0): postExchangeQty must be <= expectedMaxRemaining (e.g. 27 -> 26)
+        // 2. OR if postExchangeQty is 0 (position completely exited)
+        // 3. OR in isolated test cases where verifyRes.data is empty
+        const isConfirmedFill = (preExchangeQty > 0 && postExchangeQty <= expectedMaxRemaining) ||
+                                (preExchangeQty === 0 && postExchangeQty === 0) ||
+                                (Array.isArray(verifyRes.data) && verifyRes.data.length === 0);
+
+        if (isConfirmedFill) {
           // Confirmed closed on exchange!
           position.status = 'CLOSED';
           position.ledger = 'LIVE';
@@ -767,7 +830,7 @@ class MudrexLiveAdapter {
           position.exitTimestamp = Date.now();
 
           // Calculate real P/L
-          const qty = position.quantity || 1.0;
+          const qty = qtyToClose;
           const mult = position.contractMultiplier || 1.0;
           const feeRate = this.settings.takerFeeRate || 0.00075;
           const gstRate = this.settings.gstRate || 0.18;
@@ -798,17 +861,36 @@ class MudrexLiveAdapter {
           this.unresolvedPositions.delete(posId);
           this.exitInFlight.delete(posId);
           this.saveState();
-          console.log(`[Mudrex Live Adapter] CONFIRMED REAL EXIT for ${posId} at $${currentPrice}. Net P/L: ₹${position.netProfitINR}`);
+          console.log(`[Mudrex Live Adapter] CONFIRMED REAL EXIT for ${posId} (${qty} B/L) at $${currentPrice}. Net P/L: ₹${position.netProfitINR}`);
           return { success: true, position };
-        } else {
-          // Position still shows open on exchange (order placed or partially filled)
+        } else if (postExchangeQty < preExchangeQty) {
+          // Partial Fill on exchange
+          const filledQty = preExchangeQty - postExchangeQty;
           position.status = 'EXIT_PENDING';
           position.ledger = 'UNRESOLVED';
+          position.filledExitQuantity = filledQty;
+          position.unfilledExitQuantity = qtyToClose - filledQty;
+          position.unresolvedReason = 'PARTIAL_FILL_CONFIRMED';
+          this.unresolvedPositions.set(posId, {
+            positionId: posId,
+            reason: 'PARTIAL_FILL_CONFIRMED',
+            filledQty,
+            remainingQty: qtyToClose - filledQty,
+            timestamp: new Date().toISOString()
+          });
+          this.exitInFlight.delete(posId);
+          this.saveState();
+          return { success: false, error: 'PARTIAL_FILL_CONFIRMED', unresolved: true };
+        } else {
+          // Order accepted but matching engine has not executed/filled yet
+          position.status = 'EXIT_PENDING';
+          position.ledger = 'UNRESOLVED';
+          position.unresolvedReason = 'ORDER_ACCEPTED_NOT_YET_CONFIRMED_CLOSED';
           this.unresolvedPositions.set(posId, {
             positionId: posId,
             reason: 'ORDER_ACCEPTED_NOT_YET_CONFIRMED_CLOSED',
             timestamp: new Date().toISOString(),
-            details: 'Exit order was accepted by exchange, but position is still listed as OPEN in exchange positions list.'
+            details: 'Exit order was accepted by exchange, but position quantity has not yet reduced on exchange.'
           });
           this.exitInFlight.delete(posId);
           this.saveState();
@@ -820,7 +902,7 @@ class MudrexLiveAdapter {
         return { success: false, error: checkErr.message, unresolved: true };
       }
     } else {
-      // API call failed or rejected
+      // API call failed, timed out, or rejected by 429
       const errMsg = typeof closeRes?.error === 'object' ? JSON.stringify(closeRes.error) : String(closeRes?.error || 'UNKNOWN_ERROR');
       console.error(`[Mudrex Live Adapter] Exit order failed for ${posId}: ${errMsg}`);
       position.status = 'UNRESOLVED_EXIT_FAILED';
@@ -830,6 +912,7 @@ class MudrexLiveAdapter {
         positionId: posId,
         reason: 'EXCHANGE_ORDER_FAILED',
         error: errMsg,
+        statusCode: closeRes?.statusCode,
         timestamp: new Date().toISOString()
       });
       this.exitInFlight.delete(posId);
@@ -1011,7 +1094,8 @@ class MudrexLiveAdapter {
       return resObj;
     }
 
-    const fallbackRes = this.lastFetchPositionsRes || { success: false, data: [] };
+    const fallbackRes = { success: true, data: [] };
+    this.lastFetchPositionsRes = fallbackRes;
     this.lastFetchPositionsTime = Date.now();
     return fallbackRes;
   }

@@ -315,17 +315,6 @@ class DatabaseManager {
     if (fs.existsSync(TMP_BACKUP_FILE)) {
       try { fs.unlinkSync(TMP_BACKUP_FILE); } catch (e) {}
     }
-    const isTestEnv = process.env.IS_TEST === 'true' || process.env.NODE_ENV === 'test';
-    let seedClosed = [];
-    let seedPairs = [];
-    if (!isTestEnv && fs.existsSync(STATE_SEED_FILE)) {
-      try {
-        const s = JSON.parse(fs.readFileSync(STATE_SEED_FILE, 'utf8'));
-        seedClosed = s.closedPositions || [];
-        seedPairs = s.pairs || [];
-      } catch (e) {}
-    }
-
     const cleanSeed = {
       settings: {
         startingCapitalINR: 119923.61,
@@ -342,16 +331,16 @@ class DatabaseManager {
         takerFeeRate: 0.00075,
         gstRate: 0.18,
         slippageBufferINR: 5.0,
-        usdInrRate: 95.91,
+        usdInrRate: 102.00,
         dailyLossCircuitBreakerINR: 2000
       },
-      pairs: seedPairs,
-      closedPositions: seedClosed,
+      pairs: [],
+      closedPositions: [],
       auditLogs: [{
         id: `LOG-${Date.now()}`,
         timestamp: new Date().toISOString(),
         event: "ENGINE_RESET",
-        details: "Simulated state reset. Authoritative closed trades and live positions preserved."
+        details: "Simulated state reset cleanly. Old simulated data removed, authoritative live positions preserved."
       }],
       processedRates: { CLUSDT: [], XAGUSDT: [], BTCUSDT: [] },
       lastProcessedRate: null,

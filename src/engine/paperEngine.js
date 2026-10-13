@@ -1195,18 +1195,6 @@ class PaperEngine {
 
       this.pairs = realPairs;
       this.closedPositions = realClosed;
-
-      if (this.closedPositions.length === 0) {
-        try {
-          const seed = require('./state_seed.json');
-          if (seed && Array.isArray(seed.closedPositions) && seed.closedPositions.length > 0) {
-            this.closedPositions = seed.closedPositions;
-          }
-          if (seed && Array.isArray(seed.pairs) && seed.pairs.length > 0 && this.pairs.length === 0) {
-            this.pairs = seed.pairs;
-          }
-        } catch (e) {}
-      }
     }
     this.auditLogs = [];
     this.lastProcessedRate = null;
