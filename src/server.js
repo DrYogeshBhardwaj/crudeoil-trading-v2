@@ -566,20 +566,21 @@ app.get('/api/crude-live-mudrex/data', async (req, res) => {
       };
     });
 
-    // 4. Closed Positions History & Realized P/L
-    let closedTrades = (paperEngine.closedPositions || []).slice(-100);
-    let totalRealizedINR = 2540.90;
-    let totalRealizedUSD = 26.21;
-    let winCount = 33, lossCount = 0;
+    // 4. Closed Positions History & Realized P/L (Displaying only new 2.0B engine trades; 33 legacy trades safely archived)
+    const legacyClosedIds = new Set(Array.from({length: 33}, (_, i) => `P-${String(i+1).padStart(4, '0')}-SELL`));
+    let closedTrades = (paperEngine.closedPositions || [])
+      .filter(c => !legacyClosedIds.has(c.positionId) && (Number(c.quantity) >= 2 || new Date(c.exitTime || 0).getTime() > 1791900000000))
+      .slice(-100);
+    let totalRealizedINR = 0.00;
+    let totalRealizedUSD = 0.00;
+    let winCount = 0, lossCount = 0;
 
     if (closedTrades.length > 0) {
       const sumNet = closedTrades.reduce((sum, c) => sum + (c.netProfitINR || (c.netProfitUSD * usdInrRate) || 0), 0);
-      if (sumNet !== 0) {
-        totalRealizedINR = Number(sumNet.toFixed(2));
-        totalRealizedUSD = Number((totalRealizedINR / usdInrRate).toFixed(2));
-        winCount = closedTrades.filter(c => (c.netProfitINR || c.netProfitUSD || 0) >= 0).length;
-        lossCount = closedTrades.length - winCount;
-      }
+      totalRealizedINR = Number(sumNet.toFixed(2));
+      totalRealizedUSD = Number((totalRealizedINR / usdInrRate).toFixed(2));
+      winCount = closedTrades.filter(c => (c.netProfitINR || c.netProfitUSD || 0) >= 0).length;
+      lossCount = closedTrades.length - winCount;
     }
 
     const totalFloatingINR = openPairs.reduce((sum, p) => sum + p.netPairPnlINR, 0);
@@ -631,7 +632,7 @@ app.get('/api/crude-live-mudrex/data', async (req, res) => {
         totalFloatingUSD,
         winCount,
         lossCount,
-        closedTradesCount: closedTrades.length || 33
+        closedTradesCount: closedTrades.length
       },
       closedPositions: closedTrades
     });
