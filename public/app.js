@@ -539,6 +539,16 @@ function renderDashboard(data) {
   const usdInrEl = document.getElementById('usdInrDisplay');
   if (usdInrEl) usdInrEl.innerText = `₹${usdInrRate.toFixed(2)}`;
 
+  if (rateFeedInfo && typeof rateFeedInfo.price === 'number' && rateFeedInfo.price > 0) {
+    modalLivePrice = rateFeedInfo.price;
+  }
+  if (typeof usdInrRate === 'number' && usdInrRate > 0) {
+    modalUsdInrRate = usdInrRate;
+  }
+  if (typeof updateQuickMarginDisplay === 'function') {
+    updateQuickMarginDisplay();
+  }
+
   // Feed Status Badge
   const feedBadge = document.getElementById('feedStatusBadge');
   const feedText = document.getElementById('feedStatusText');
@@ -962,7 +972,10 @@ function renderDashboard(data) {
   let displayOpenPositions = openPositions;
   let displayClosedPositions = closedPositions;
 
-  if (window.currentLedgerView === 'PAPER' && data.paperLedger) {
+  if (isPairAddContext()) {
+    displayOpenPositions = openPositions || [];
+    displayClosedPositions = closedPositions || [];
+  } else if (window.currentLedgerView === 'PAPER' && data.paperLedger) {
     displayClosedPositions = data.paperLedger.closedPositions || [];
   } else if (window.currentLedgerView === 'UNRESOLVED' && data.unresolvedLedger) {
     displayOpenPositions = data.unresolvedLedger.positions || [];
@@ -2080,6 +2093,35 @@ window.syncSelectedBarrels = function(val) {
   if (inputEl) inputEl.value = q;
   updateModalQtyButtons(q);
   updateModalCalculations();
+  updateQuickMarginDisplay();
+};
+
+window.updateQuickMarginDisplay = function() {
+  const q = modalSelectedBarrels || 10;
+  const p = modalLivePrice || 91.35;
+  const usdInr = modalUsdInrRate || 102.00;
+  const leverage = 5;
+
+  const legUSD = (q * p) / leverage;
+  const legINR = legUSD * usdInr;
+  const pairUSD = legUSD * 2;
+  const pairINR = legINR * 2;
+
+  const quickEl = document.getElementById('quickMarginText');
+  if (quickEl) {
+    quickEl.innerHTML = `₹${Math.round(legINR).toLocaleString('en-IN')} ($${legUSD.toFixed(2)}) Leg &nbsp;|&nbsp; ₹${Math.round(pairINR).toLocaleString('en-IN')} ($${pairUSD.toFixed(2)}) Pair`;
+  }
+
+  const bannerBarrels = document.getElementById('bannerSelectedBarrels');
+  if (bannerBarrels) bannerBarrels.innerText = `${q} Barrel${q > 1 ? 's' : ''}`;
+
+  const bannerFormula = document.getElementById('bannerMarginFormula');
+  if (bannerFormula) bannerFormula.innerText = `Position Size: $${(q * p).toFixed(2)} (~₹${Math.round(q * p * usdInr).toLocaleString('en-IN')}) | Live Crude Rate: $${p.toFixed(2)}`;
+
+  const bannerMargin = document.getElementById('bannerMarginRequired');
+  if (bannerMargin) {
+    bannerMargin.innerHTML = `₹${Math.round(legINR).toLocaleString('en-IN')} ($${legUSD.toFixed(2)}) 1 Leg &nbsp;|&nbsp; ₹${Math.round(pairINR).toLocaleString('en-IN')} ($${pairUSD.toFixed(2)}) Full Pair`;
+  }
 };
 
 window.openPairModalWithMode = async function(mode = 'PAIR') {
@@ -2102,7 +2144,7 @@ window.openPairModalWithMode = async function(mode = 'PAIR') {
     const parsed = parseFloat(liveRateEl.textContent.replace(/[^0-9.]/g, ''));
     if (!isNaN(parsed) && parsed > 0) modalLivePrice = parsed;
   }
-  const usdRateEl = document.getElementById('usdInrRateDisplay');
+  const usdRateEl = document.getElementById('usdInrRateDisplay') || document.getElementById('usdInrDisplay');
   if (usdRateEl) {
     const parsedUSD = parseFloat(usdRateEl.textContent.replace(/[^0-9.]/g, ''));
     if (!isNaN(parsedUSD) && parsedUSD > 0) modalUsdInrRate = parsedUSD;
@@ -2114,6 +2156,7 @@ window.openPairModalWithMode = async function(mode = 'PAIR') {
   if (modalUsdEl) modalUsdEl.textContent = `₹${modalUsdInrRate.toFixed(2)}`;
 
   await switchTradeModalMode(mode);
+  updateQuickMarginDisplay();
 };
 
 window.openTradeModal = function() {
@@ -2190,14 +2233,15 @@ async function scanRateLegStatus(price) {
   if (scanText) scanText.innerHTML = '🔍 Live rate par BUY/SELL position check ki ja rahi hai...';
 
   try {
-    const res = await fetch('/api/rates-inspector?symbol=CLUSDT');
+    const endpoint = isPairAddContext() ? '/api/rates-inspector?symbol=CLUSDT&mode=pair_add' : '/api/rates-inspector?symbol=CLUSDT';
+    const res = await fetch(endpoint);
     const j = await res.json();
     if (!j.success) return;
     const rates = j.data.ratesList || [];
     const liveRate = j.data.currentPrice || price;
     modalLivePrice = liveRate;
 
-    const matched = rates.find(r => Math.abs(r.rate - liveRate) <= 0.02);
+    const matched = rates.find(r => Math.abs(r.rate - liveRate) <= 0.05);
     modalRateScanState = matched;
 
     if (!matched) {
@@ -2226,7 +2270,7 @@ async function scanRateLegStatus(price) {
       }
     } else {
       if (scanBadge) { scanBadge.innerText = 'ALREADY HEDGED'; scanBadge.className = 'badge-status badge-balanced'; }
-      if (scanText) scanText.innerHTML = `✅ <strong>Auto-Detected:</strong> Rate <strong>$${matched.rate.toFixed(2)}</strong> par BUY aur SELL dono already active hain.<br>Click karne par <strong>Additional Hedged Pair</strong> add hoga.`;
+      if (scanText) scanText.innerHTML = `✅ <strong>Auto-Detected:</strong> Rate <strong>$${matched.rate.toFixed(2)}</strong> par BUY aur SELL dono already active hain.<br>Click karne par <strong>Additional Hedged Pair</strong> (${modalSelectedBarrels} Barrels) add hoga.`;
       if (execBtn) {
         execBtn.innerText = `⚡ Execute Smart Pair (Additional Pair: ${modalSelectedBarrels} Barrels)`;
         execBtn.style.background = 'linear-gradient(135deg, #f59e0b, #d97706)';
@@ -2246,6 +2290,7 @@ window.setModalBarrels = function(qty) {
   if (inputEl) inputEl.value = modalSelectedBarrels;
   updateModalQtyButtons(modalSelectedBarrels);
   updateModalCalculations();
+  updateQuickMarginDisplay();
 
   const execBtn = document.getElementById('modalExecuteBtn');
   if (execBtn) {
@@ -2268,6 +2313,7 @@ window.onModalCustomQtyChange = function(val) {
   modalSelectedBarrels = q;
   document.querySelectorAll('.modal-qty-btn').forEach(b => b.classList.remove('active'));
   updateModalCalculations();
+  updateQuickMarginDisplay();
 };
 
 function updateModalQtyButtons(qty) {
@@ -2281,7 +2327,7 @@ function updateModalQtyButtons(qty) {
 
 window.updateModalCalculations = function() {
   const p = modalLivePrice || 91.17;
-  const usdInr = modalUsdInrRate || 95.91;
+  const usdInr = modalUsdInrRate || 102.00;
   const qty = modalSelectedBarrels || 10;
   const leverage = 5;
 
@@ -2299,16 +2345,18 @@ window.updateModalCalculations = function() {
   const marginDisplay = document.getElementById('modalRequiredMarginDisplay');
   if (marginDisplay) {
     if (currentModalTradeMode === 'SMART_PAIR' && modalRateScanState && ((modalRateScanState.hasBuy && !modalRateScanState.hasSell) || (!modalRateScanState.hasBuy && modalRateScanState.hasSell))) {
-      marginDisplay.innerText = `₹${Math.round(legMarginINR).toLocaleString('en-IN')} ($${legMarginUSD.toFixed(2)}) [1 Leg]`;
+      marginDisplay.innerHTML = `₹${Math.round(legMarginINR).toLocaleString('en-IN')} <span style="opacity:0.85">($${legMarginUSD.toFixed(2)})</span> [1 Leg]`;
     } else {
-      marginDisplay.innerText = `₹${Math.round(pairMarginINR).toLocaleString('en-IN')} ($${pairMarginUSD.toFixed(2)}) [Full Pair]`;
+      marginDisplay.innerHTML = `₹${Math.round(pairMarginINR).toLocaleString('en-IN')} <span style="opacity:0.85">($${pairMarginUSD.toFixed(2)})</span> [Full Pair]`;
     }
   }
 
   const profitDisplay = document.getElementById('modalProjectedProfitDisplay');
   if (profitDisplay) {
-    profitDisplay.innerText = `+₹${profitINR.toFixed(2)} (+$${profitUSD.toFixed(2)})`;
+    profitDisplay.innerHTML = `+₹${profitINR.toFixed(2)} <span style="opacity:0.85">(+$${profitUSD.toFixed(2)})</span>`;
   }
+
+  updateQuickMarginDisplay();
 };
 
 window.executePairTradeModal = async function() {
@@ -2349,13 +2397,13 @@ window.executePairTradeModal = async function() {
       data = await res.json();
     }
 
-    if (data.success) {
+    if (data && data.success) {
       alert(`✅ Trade Executed Successfully!\n\n${data.message}`);
       closeTradeModal();
       if (typeof fetchMetricsFallback === 'function') fetchMetricsFallback();
       if (typeof fetchDashboardMetrics === 'function') fetchDashboardMetrics();
     } else {
-      alert(`❌ Trade Failed: ${data.error || 'Unknown error'}`);
+      alert(`❌ Trade Failed: ${data ? (data.error || data.message || 'Unknown error') : 'No response from server'}`);
     }
   } catch (err) {
     alert(`❌ Request Error: ${err.message}`);

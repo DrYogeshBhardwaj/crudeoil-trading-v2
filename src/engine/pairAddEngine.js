@@ -238,7 +238,7 @@ class PairAddEngine {
       return {
         success: true,
         action: 'ADDED_SELL_LEG',
-        message: `Found BUY at $${price.toFixed(2)}. Added missing SELL position with ${quantity} Barrels!`,
+        message: `Rate $${price.toFixed(2)} par BUY active hai. Missing SELL leg (${quantity} Barrels) add kar di gayi!`,
         position: sellPos
       };
     } else if (hasSell && !hasBuy) {
@@ -279,21 +279,59 @@ class PairAddEngine {
       return {
         success: true,
         action: 'ADDED_BUY_LEG',
-        message: `Found SELL at $${price.toFixed(2)}. Added missing BUY position with ${quantity} Barrels!`,
+        message: `Rate $${price.toFixed(2)} par SELL active hai. Missing BUY leg (${quantity} Barrels) add kar di gayi!`,
         position: buyPos
       };
-    } else if (!hasBuy && !hasSell) {
-      // Neither exists at this rate -> Add Full Pair
-      return this.createNewPair(symbol, price, quantity, targetMove);
     } else {
-      // Both already active at this rate
-      return {
-        success: true,
-        action: 'ALREADY_BALANCED',
-        message: `Rate $${price.toFixed(2)} already has both BUY & SELL positions open. Balanced!`,
-        rate: price
-      };
+      // Neither exists OR both already exist -> Create full pair!
+      // If both already exist, create an additional pair so the user is never blocked
+      const isAdditional = (hasBuy && hasSell);
+      const res = this.createNewPair(symbol, price, quantity, targetMove);
+      if (isAdditional) {
+        res.message = `Rate $${price.toFixed(2)} par BUY & SELL dono pehle se the. Additional Pair ${res.pair.pairId} (${quantity} Barrels) add kiya gaya!`;
+      }
+      return res;
     }
+  }
+
+  getActiveRatesInspector(symbol = 'CLUSDT') {
+    const rateInfo = rateFeed.getCurrentRate(symbol);
+    const currentPrice = rateInfo.price || 91.35;
+    const usdInrRate = rateInfo.usdInrRate || this.settings.usdInrRate || 102.00;
+
+    const rateMap = new Map();
+    for (const pair of this.pairs) {
+      if (pair.status === 'CLOSED') continue;
+      const bPos = (pair.buyPosition && pair.buyPosition.status === 'OPEN') ? pair.buyPosition : null;
+      const sPos = (pair.sellPosition && pair.sellPosition.status === 'OPEN') ? pair.sellPosition : null;
+
+      const rate = pair.entryRate || (bPos ? bPos.entryPrice : (sPos ? sPos.entryPrice : null));
+      if (!rate) continue;
+
+      if (!rateMap.has(rate)) {
+        rateMap.set(rate, {
+          rate,
+          pairId: pair.pairId,
+          hasBuy: !!bPos,
+          buyQty: bPos ? bPos.quantity : 0,
+          buyTarget: bPos ? bPos.targetExitPrice : null,
+          hasSell: !!sPos,
+          sellQty: sPos ? sPos.quantity : 0,
+          sellTarget: sPos ? sPos.targetExitPrice : null,
+          status: (bPos && sPos) ? 'BALANCED' : (bPos ? 'ONLY_BUY' : (sPos ? 'ONLY_SELL' : 'INCOMPLETE'))
+        });
+      }
+    }
+
+    const ratesList = Array.from(rateMap.values()).sort((a, b) => b.rate - a.rate);
+    const metrics = this.getMetrics();
+    return {
+      currentPrice,
+      usdInrRate,
+      ratesList,
+      totalActivePairs: this.pairs.filter(p => p.status === 'ACTIVE').length,
+      availableMarginINR: metrics.availableMarginINR || 0
+    };
   }
 
   manualClosePosition(positionId) {

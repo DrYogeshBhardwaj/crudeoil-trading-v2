@@ -325,7 +325,16 @@ app.post('/api/pair-add/manual-close', (req, res) => {
 app.get('/api/rates-inspector', (req, res) => {
   try {
     const symbol = req.query.symbol || 'CLUSDT';
-    const data = paperEngine.getActiveRatesInspector(symbol);
+    const referer = (req.headers.referer || '').toLowerCase();
+    const mode = (req.query.mode || '').toLowerCase();
+    const isPairAdd = mode === 'pair_add' || referer.includes('pair_add') || referer.includes('pair-add');
+
+    let data;
+    if (isPairAdd) {
+      data = pairAddEngine.getActiveRatesInspector(symbol);
+    } else {
+      data = paperEngine.getActiveRatesInspector(symbol);
+    }
     res.json({ success: true, data });
   } catch (err) {
     res.status(500).json({ success: false, error: err.message });
