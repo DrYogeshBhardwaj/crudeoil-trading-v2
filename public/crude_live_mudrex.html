@@ -1206,7 +1206,6 @@
       }
 
       // Badges
-      const pairs = engine.pairs || [];
       document.getElementById('badgePairsCount').innerText = pairs.length;
       document.getElementById('badgeBuySellCount').innerText = `${engine.activeBuyCount || 0} / ${engine.activeSellCount || 0}`;
       document.getElementById('badgeExchangeCount').innerText = (exchange.positions || []).length;
