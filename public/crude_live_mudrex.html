@@ -897,9 +897,6 @@
               <span>🟢 Active BUY Positions (Long)</span>
               <span class="badge badge-buy" id="splitBuyBadge">0 Active</span>
             </div>
-            <div style="font-weight: 800; color: var(--accent-green-bright);" id="splitBuyTotalPnl">
-              P/L: ₹0.00
-            </div>
           </div>
           <div style="overflow-x: auto;">
             <table class="data-table">
@@ -910,11 +907,10 @@
                   <th class="sortable-th" onclick="sortTable('buy', 'entryPrice')">Entry <span class="sort-icon" id="sort-buy-entryPrice">⬍</span></th>
                   <th class="sortable-th" onclick="sortTable('buy', 'targetPrice')">Target Exit 🎯 <span class="sort-icon" id="sort-buy-targetPrice">⬍</span></th>
                   <th class="sortable-th" onclick="sortTable('buy', 'distToTarget')">Dist to Exit <span class="sort-icon" id="sort-buy-distToTarget">⬍</span></th>
-                  <th class="sortable-th" onclick="sortTable('buy', 'floatingPnl')">Floating P/L <span class="sort-icon" id="sort-buy-floatingPnl">⬍</span></th>
                 </tr>
               </thead>
               <tbody id="splitBuyTableBody">
-                <tr><td colspan="6" class="empty-state">No active BUY positions</td></tr>
+                <tr><td colspan="5" class="empty-state">No active BUY positions</td></tr>
               </tbody>
             </table>
           </div>
@@ -927,9 +923,6 @@
               <span>🔴 Active SELL Positions (Short)</span>
               <span class="badge badge-sell" id="splitSellBadge">0 Active</span>
             </div>
-            <div style="font-weight: 800; color: var(--accent-red-bright);" id="splitSellTotalPnl">
-              P/L: ₹0.00
-            </div>
           </div>
           <div style="overflow-x: auto;">
             <table class="data-table">
@@ -940,11 +933,10 @@
                   <th class="sortable-th" onclick="sortTable('sell', 'entryPrice')">Entry <span class="sort-icon" id="sort-sell-entryPrice">⬍</span></th>
                   <th class="sortable-th" onclick="sortTable('sell', 'targetPrice')">Target Exit 🎯 <span class="sort-icon" id="sort-sell-targetPrice">⬍</span></th>
                   <th class="sortable-th" onclick="sortTable('sell', 'distToTarget')">Dist to Exit <span class="sort-icon" id="sort-sell-distToTarget">⬍</span></th>
-                  <th class="sortable-th" onclick="sortTable('sell', 'floatingPnl')">Floating P/L <span class="sort-icon" id="sort-sell-floatingPnl">⬍</span></th>
                 </tr>
               </thead>
               <tbody id="splitSellTableBody">
-                <tr><td colspan="6" class="empty-state">No active SELL positions</td></tr>
+                <tr><td colspan="5" class="empty-state">No active SELL positions</td></tr>
               </tbody>
             </table>
           </div>
@@ -1112,7 +1104,11 @@
         toggleBtn.innerHTML = '<span>⏸ PAUSE ENGINE</span>';
         toggleBtn.className = 'btn btn-amber';
       } else {
-        statusLabel.innerText = engine.pauseReason ? `PAUSED (${engine.pauseReason})` : 'ENGINE PAUSED';
+        let pReason = engine.pauseReason || 'ENGINE PAUSED';
+        if (pReason.includes('INSUFFICIENT MARGIN') && wallet && wallet.spotBalanceINR > 0) {
+          pReason += ` | Transfer Spot (₹${wallet.spotBalanceINR.toLocaleString('en-IN', { minimumFractionDigits: 2 })}) to Futures in Mudrex App to resume`;
+        }
+        statusLabel.innerText = `PAUSED (${pReason})`;
         statusInd.className = 'status-indicator status-paused';
         toggleBtn.innerHTML = '<span>▶️ START ENGINE</span>';
         toggleBtn.className = 'btn btn-green';
@@ -1126,23 +1122,54 @@
       
       const targetMove = engine.profitTargetMove || 0.30;
       const contractQty = engine.contractQuantity || 2.0;
-      const buyTarget = livePrice + targetMove;
-      const sellTarget = livePrice - targetMove;
+      const pairs = engine.pairs || [];
+
+      // Find active BUY and SELL positions to match the tables below
+      const activeBuyList = pairs.filter(p => p.buy && p.buy.status === 'OPEN').map(p => p.buy);
+      const activeSellList = pairs.filter(p => p.sell && p.sell.status === 'OPEN').map(p => p.sell);
+
+      let buyTarget = livePrice + targetMove;
+      let buyDistText = `Distance: +$${targetMove.toFixed(2)} (+₹${(targetMove * usdInr).toFixed(2)})`;
+      let buyLabelText = `🎯 BUY TARGET EXIT (+$${targetMove.toFixed(2)})`;
+
+      if (activeBuyList.length > 0) {
+        // Nearest active BUY position target exit to current market price
+        const nearestBuy = [...activeBuyList].sort((a, b) => Math.abs(a.targetPrice - livePrice) - Math.abs(b.targetPrice - livePrice))[0];
+        buyTarget = nearestBuy.targetPrice;
+        const bDist = Number((buyTarget - livePrice).toFixed(2));
+        const bDistSign = bDist >= 0 ? '+' : '';
+        buyDistText = `Distance: ${bDistSign}$${bDist.toFixed(2)} (${bDistSign}₹${(bDist * usdInr).toFixed(2)})`;
+        buyLabelText = `🎯 ACTIVE BUY TARGET (${nearestBuy.positionId})`;
+      }
+
+      let sellTarget = livePrice - targetMove;
+      let sellDistText = `Distance: -$${targetMove.toFixed(2)} (-₹${(targetMove * usdInr).toFixed(2)})`;
+      let sellLabelText = `🎯 SELL TARGET EXIT (-$${targetMove.toFixed(2)})`;
+
+      if (activeSellList.length > 0) {
+        // Nearest active SELL position target exit to current market price
+        const nearestSell = [...activeSellList].sort((a, b) => Math.abs(a.targetPrice - livePrice) - Math.abs(b.targetPrice - livePrice))[0];
+        sellTarget = nearestSell.targetPrice;
+        const sDist = Number((livePrice - sellTarget).toFixed(2));
+        const sDistSign = sDist >= 0 ? '+' : '';
+        sellDistText = `Distance: ${sDistSign}$${sDist.toFixed(2)} (${sDistSign}₹${(sDist * usdInr).toFixed(2)})`;
+        sellLabelText = `🎯 ACTIVE SELL TARGET (${nearestSell.positionId})`;
+      }
+
       document.getElementById('buyTargetRate').innerText = `$${buyTarget.toFixed(2)}`;
       document.getElementById('sellTargetRate').innerText = `$${sellTarget.toFixed(2)}`;
-      document.getElementById('buyTargetDist').innerText = `Distance: +$${targetMove.toFixed(2)} (+₹${(targetMove * usdInr).toFixed(2)})`;
-      document.getElementById('sellTargetDist').innerText = `Distance: -$${targetMove.toFixed(2)} (-₹${(targetMove * usdInr).toFixed(2)})`;
+      document.getElementById('buyTargetDist').innerText = buyDistText;
+      document.getElementById('sellTargetDist').innerText = sellDistText;
 
       const buyLabel = document.getElementById('buyTargetLabel');
-      if (buyLabel) buyLabel.innerText = `🎯 BUY TARGET EXIT (+$${targetMove.toFixed(2)})`;
+      if (buyLabel) buyLabel.innerText = buyLabelText;
       const sellLabel = document.getElementById('sellTargetLabel');
-      if (sellLabel) sellLabel.innerText = `🎯 SELL TARGET EXIT (-$${targetMove.toFixed(2)})`;
+      if (sellLabel) sellLabel.innerText = sellLabelText;
 
       const liveRateSub = document.getElementById('liveRateSubtext');
       if (liveRateSub) liveRateSub.innerText = `USD/INR: ₹${usdInr.toFixed(2)} | ${contractQty.toFixed(1)} Barrels Lot`;
 
       // Hero Total Active Pairs (Prominent Display)
-      const pairs = engine.pairs || [];
       const heroPairsEl = document.getElementById('heroActivePairsCount');
       if (heroPairsEl) {
         heroPairsEl.innerText = `${pairs.length} PAIRS`;
@@ -1497,14 +1524,11 @@
             <td>$${p.buy.entryPrice.toFixed(2)}</td>
             <td style="color: var(--accent-green-bright); font-weight: 800;">$${p.buy.targetPrice.toFixed(2)}</td>
             <td>${p.buy.distToTarget >= 0 ? '+' : ''}$${p.buy.distToTarget.toFixed(2)}</td>
-            <td class="${pnlClass}">${pnlSign}₹${p.buy.floatingPnlINR.toFixed(2)}</td>
           </tr>
         `);
       });
 
       sortedSellPairs.forEach(p => {
-        const pnlClass = (p.sell.floatingPnlINR || 0) >= 0 ? 'pnl-positive' : 'pnl-negative';
-        const pnlSign = (p.sell.floatingPnlINR || 0) >= 0 ? '+' : '';
         sellRows.push(`
           <tr>
             <td>
@@ -1515,7 +1539,6 @@
             <td>$${p.sell.entryPrice.toFixed(2)}</td>
             <td style="color: var(--accent-red-bright); font-weight: 800;">$${p.sell.targetPrice.toFixed(2)}</td>
             <td>${p.sell.distToTarget >= 0 ? '+' : ''}$${p.sell.distToTarget.toFixed(2)}</td>
-            <td class="${pnlClass}">${pnlSign}₹${p.sell.floatingPnlINR.toFixed(2)}</td>
           </tr>
         `);
       });
@@ -1523,13 +1546,8 @@
       document.getElementById('splitBuyBadge').innerText = `${buyRows.length} Active`;
       document.getElementById('splitSellBadge').innerText = `${sellRows.length} Active`;
 
-      const buyTotalSign = totalBuyINR >= 0 ? '+' : '';
-      const sellTotalSign = totalSellINR >= 0 ? '+' : '';
-      document.getElementById('splitBuyTotalPnl').innerText = `P/L: ${buyTotalSign}₹${totalBuyINR.toFixed(2)}`;
-      document.getElementById('splitSellTotalPnl').innerText = `P/L: ${sellTotalSign}₹${totalSellINR.toFixed(2)}`;
-
-      buyTbody.innerHTML = buyRows.length > 0 ? buyRows.join('') : '<tr><td colspan="6" class="empty-state">No active BUY positions</td></tr>';
-      sellTbody.innerHTML = sellRows.length > 0 ? sellRows.join('') : '<tr><td colspan="6" class="empty-state">No active SELL positions</td></tr>';
+      buyTbody.innerHTML = buyRows.length > 0 ? buyRows.join('') : '<tr><td colspan="5" class="empty-state">No active BUY positions</td></tr>';
+      sellTbody.innerHTML = sellRows.length > 0 ? sellRows.join('') : '<tr><td colspan="5" class="empty-state">No active SELL positions</td></tr>';
     }
 
     function renderExchangeTable(positions) {
