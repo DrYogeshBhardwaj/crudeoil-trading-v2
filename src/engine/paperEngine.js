@@ -388,10 +388,10 @@ class PaperEngine {
     this.createNewPair(symbol, normalizedPrice, time, usdInrRate);
   }
 
-  reopenMissingLeg(pair, direction, entryPrice, timestamp, usdInrRate) {
+  reopenMissingLeg(pair, direction, entryPrice, timestamp, usdInrRate, customQuantity, customTargetMove) {
     const symbol = pair.symbol;
-    const targetMove = this.settings.targetDisabled ? null : this.settings.profitTargetMove;
-    const quantity = this.settings.contractQuantity;
+    const targetMove = customTargetMove !== undefined ? customTargetMove : (this.settings.targetDisabled ? null : this.settings.profitTargetMove);
+    const quantity = customQuantity !== undefined ? customQuantity : this.settings.contractQuantity;
     const multiplier = this.contractMultipliers[symbol] || 1.0;
     const takerFee = this.settings.takerFeeRate;
 
@@ -462,26 +462,28 @@ class PaperEngine {
     return this.pairs.filter(p => p.status === 'ACTIVE').length;
   }
 
-  createNewPair(symbol, entryPrice, timestamp, usdInrRate) {
+  createNewPair(symbol, entryPrice, timestamp, usdInrRate, customQuantity, customTargetMove) {
     const pairSeq = (this.pairs.length + 1).toString().padStart(4, '0');
     const pairId = `PAIR-${pairSeq}`;
     
-    let bMove = (this.settings.profitTargetMode === 'PRICE_MOVE' && this.settings.profitTargetMove !== undefined) ? this.settings.profitTargetMove : (this.settings.buyTargetMove || this.settings.profitTargetMove || 0.20);
-    let sMove = (this.settings.profitTargetMode === 'PRICE_MOVE' && this.settings.profitTargetMove !== undefined) ? this.settings.profitTargetMove : (this.settings.sellTargetMove || this.settings.profitTargetMove || 0.20);
+    let bMove = customTargetMove !== undefined ? customTargetMove : ((this.settings.profitTargetMode === 'PRICE_MOVE' && this.settings.profitTargetMove !== undefined) ? this.settings.profitTargetMove : (this.settings.buyTargetMove || this.settings.profitTargetMove || 0.20));
+    let sMove = customTargetMove !== undefined ? customTargetMove : ((this.settings.profitTargetMode === 'PRICE_MOVE' && this.settings.profitTargetMove !== undefined) ? this.settings.profitTargetMove : (this.settings.sellTargetMove || this.settings.profitTargetMove || 0.20));
 
-    if (this.settings.profitTargetMode === 'STRATEGY' || (this.settings.strategyMode === 'ALTERNATING_STAGGERED' && this.settings.profitTargetMode !== 'PRICE_MOVE')) {
-      const altIdx = this.pairs.length % 4;
-      if (altIdx === 0) { bMove = 0.20; sMove = 0.20; }
-      else if (altIdx === 1) { bMove = 0.20; sMove = 0.30; }
-      else if (altIdx === 2) { bMove = 0.30; sMove = 0.20; }
-      else { bMove = 0.15; sMove = 0.25; }
-    } else if (this.settings.autoAiTargetMode && this.settings.profitTargetMode !== 'PRICE_MOVE') {
-      try {
-        const mudrexLive = require('./mudrexLiveAdapter');
-        const aiInfo = mudrexLive.calculateAiTargets();
-        bMove = aiInfo.buyTargetMove;
-        sMove = aiInfo.sellTargetMove;
-      } catch (e) {}
+    if (customTargetMove === undefined) {
+      if (this.settings.profitTargetMode === 'STRATEGY' || (this.settings.strategyMode === 'ALTERNATING_STAGGERED' && this.settings.profitTargetMode !== 'PRICE_MOVE')) {
+        const altIdx = this.pairs.length % 4;
+        if (altIdx === 0) { bMove = 0.20; sMove = 0.20; }
+        else if (altIdx === 1) { bMove = 0.20; sMove = 0.30; }
+        else if (altIdx === 2) { bMove = 0.30; sMove = 0.20; }
+        else { bMove = 0.15; sMove = 0.25; }
+      } else if (this.settings.autoAiTargetMode && this.settings.profitTargetMode !== 'PRICE_MOVE') {
+        try {
+          const mudrexLive = require('./mudrexLiveAdapter');
+          const aiInfo = mudrexLive.calculateAiTargets();
+          bMove = aiInfo.buyTargetMove;
+          sMove = aiInfo.sellTargetMove;
+        } catch (e) {}
+      }
     }
     
     // BUY Target: Entry + BUY Target Move
@@ -489,7 +491,7 @@ class PaperEngine {
     // SELL Target: Entry - SELL Target Move
     const sellTarget = this.settings.targetDisabled ? null : this.normalizePrice(entryPrice - sMove, symbol);
 
-    const quantity = this.settings.contractQuantity;
+    const quantity = customQuantity !== undefined ? customQuantity : this.settings.contractQuantity;
     const multiplier = this.contractMultipliers[symbol] || 1.0;
     const takerFee = this.settings.takerFeeRate;
 
@@ -562,6 +564,129 @@ class PaperEngine {
     });
 
     this.saveState();
+  }
+
+  smartPairAdd(symbol = 'CLUSDT', targetPrice = null, quantity = 1.0, targetMove = 0.20) {
+    const rateFeed = require('./rateFeed');
+    const rateInfo = rateFeed.getCurrentRate(symbol);
+    const price = targetPrice !== null && targetPrice !== undefined && targetPrice > 0 ? Number(targetPrice) : (rateInfo.price || 91.35);
+    const usdInrRate = rateInfo.usdInrRate || this.settings.usdInrRate || 95.91;
+    const normalizedPrice = this.normalizePrice(price, symbol);
+    const tolerance = this.settings.priceMatchingTolerance || 0.02;
+    const qty = Number(quantity) || this.settings.contractQuantity || 1.0;
+    const tMove = Number(targetMove) || 0.20;
+
+    // Check all active pairs for rate matching within tolerance
+    let matchedPair = null;
+    for (const pair of this.pairs) {
+      if (pair.status === 'CLOSED') continue;
+      const bEntry = (pair.buyPosition && pair.buyPosition.status === 'OPEN') ? pair.buyPosition.entryPrice : null;
+      const sEntry = (pair.sellPosition && pair.sellPosition.status === 'OPEN') ? pair.sellPosition.entryPrice : null;
+      const refPrice = bEntry !== null ? bEntry : sEntry;
+      if (refPrice !== null && Math.abs(refPrice - normalizedPrice) <= tolerance) {
+        matchedPair = pair;
+        break;
+      }
+    }
+
+    if (matchedPair) {
+      const buyOpen = matchedPair.buyPosition && matchedPair.buyPosition.status === 'OPEN';
+      const sellOpen = matchedPair.sellPosition && matchedPair.sellPosition.status === 'OPEN';
+
+      // 1. BUY open hai, SELL missing/end ho gaya -> Sirf missing SELL reopen karo
+      if (buyOpen && !sellOpen) {
+        this.reopenMissingLeg(matchedPair, 'SELL', normalizedPrice, Date.now(), usdInrRate, qty, tMove);
+        return {
+          success: true,
+          actionTaken: 'REOPENED_SELL',
+          rate: normalizedPrice,
+          quantity: qty,
+          targetMove: tMove,
+          pairId: matchedPair.pairId,
+          message: `Rate $${normalizedPrice} par BUY pehle se active tha aur SELL end ho gaya tha. Missing SELL (${qty} Barrels) leg successfully add kar di gayi!`
+        };
+      }
+
+      // 2. SELL open hai, BUY missing/end ho gaya -> Sirf missing BUY reopen karo
+      if (sellOpen && !buyOpen) {
+        this.reopenMissingLeg(matchedPair, 'BUY', normalizedPrice, Date.now(), usdInrRate, qty, tMove);
+        return {
+          success: true,
+          actionTaken: 'REOPENED_BUY',
+          rate: normalizedPrice,
+          quantity: qty,
+          targetMove: tMove,
+          pairId: matchedPair.pairId,
+          message: `Rate $${normalizedPrice} par SELL pehle se active tha aur BUY end ho gaya tha. Missing BUY (${qty} Barrels) leg successfully add kar di gayi!`
+        };
+      }
+
+      // 3. Dono already open hain -> Naya additional pair create kar do
+      if (buyOpen && sellOpen) {
+        const newPair = this.createNewPair(symbol, normalizedPrice, Date.now(), usdInrRate, qty, tMove);
+        return {
+          success: true,
+          actionTaken: 'CREATED_NEW_PAIR',
+          rate: normalizedPrice,
+          quantity: qty,
+          targetMove: tMove,
+          pairId: newPair ? newPair.pairId : 'NEW',
+          message: `Rate $${normalizedPrice} par pehle se pair hedged tha. Additional naya Pair (${qty} Barrels BUY + SELL) add kiya gaya!`
+        };
+      }
+    }
+
+    // 4. Is rate par na BUY hai na SELL -> Fresh Pair (BUY + SELL) create karo
+    const newPair = this.createNewPair(symbol, normalizedPrice, Date.now(), usdInrRate, qty, tMove);
+    return {
+      success: true,
+      actionTaken: 'CREATED_NEW_PAIR',
+      rate: normalizedPrice,
+      quantity: qty,
+      targetMove: tMove,
+      pairId: newPair ? newPair.pairId : 'NEW',
+      message: `Rate $${normalizedPrice} par koi position nahi thi. Naya Pair (${qty} Barrels BUY + SELL) add kiya gaya!`
+    };
+  }
+
+  getActiveRatesInspector(symbol = 'CLUSDT') {
+    const rateFeed = require('./rateFeed');
+    const rateInfo = rateFeed.getCurrentRate(symbol);
+    const currentPrice = rateInfo.price || 91.35;
+    const usdInrRate = rateInfo.usdInrRate || 95.91;
+
+    const rateMap = new Map();
+    for (const pair of this.pairs) {
+      if (pair.status === 'CLOSED') continue;
+      const bPos = (pair.buyPosition && pair.buyPosition.status === 'OPEN') ? pair.buyPosition : null;
+      const sPos = (pair.sellPosition && pair.sellPosition.status === 'OPEN') ? pair.sellPosition : null;
+
+      const rate = pair.entryRate || (bPos ? bPos.entryPrice : (sPos ? sPos.entryPrice : null));
+      if (!rate) continue;
+
+      if (!rateMap.has(rate)) {
+        rateMap.set(rate, {
+          rate,
+          pairId: pair.pairId,
+          hasBuy: !!bPos,
+          buyQty: bPos ? bPos.quantity : 0,
+          buyTarget: bPos ? bPos.targetExitPrice : null,
+          hasSell: !!sPos,
+          sellQty: sPos ? sPos.quantity : 0,
+          sellTarget: sPos ? sPos.targetExitPrice : null,
+          status: (bPos && sPos) ? 'BALANCED' : (bPos ? 'ONLY_BUY' : (sPos ? 'ONLY_SELL' : 'INCOMPLETE'))
+        });
+      }
+    }
+
+    const ratesList = Array.from(rateMap.values()).sort((a, b) => b.rate - a.rate);
+    return {
+      currentPrice,
+      usdInrRate,
+      ratesList,
+      totalActivePairs: this.getActivePairsCount(),
+      availableMarginINR: this.getDashboardMetrics()?.summary?.availableMarginINR || 0
+    };
   }
 
   createSinglePosition(direction, symbol, entryPrice, quantity, targetMove, usdInrRate) {

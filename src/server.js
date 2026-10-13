@@ -63,6 +63,7 @@ app.get(['/paper-calc', '/paper_calc', '/paper_calc.html', '/paper-calc.html'], 
 app.get(['/mudrex-live', '/mudrex_live', '/mudrex_live.html', '/mudrex-live.html'], (req, res) => res.sendFile(path.join(__dirname, '../public/mudrex_live.html')));
 app.get(['/mudrex-crude-live', '/mudrex_crude_live', '/mudrex_crude_live.html', '/mudrex-crude-live.html'], (req, res) => res.sendFile(path.join(__dirname, '../public/mudrex_crude_live.html')));
 app.get(['/mudrex-crude-calc', '/mudrex_crude_calc', '/mudrex_crude_calc.html', '/mudrex-crude-calc.html'], (req, res) => res.sendFile(path.join(__dirname, '../public/mudrex_crude_calc.html')));
+app.get(['/pair-add', '/pair_add', '/pair_add.html', '/pair-add.html'], (req, res) => res.sendFile(path.join(__dirname, '../public/pair_add.html')));
 
 app.get('/api/mudrex-debug', async (req, res) => {
   try {
@@ -232,11 +233,33 @@ app.post('/api/manual-trade', (req, res) => {
       return res.json({ success: true, message: `Placed manual SELL position at $${price}`, data: pos });
     } else {
       // Instant Pair (1 BUY + 1 SELL)
-      const pair = paperEngine.createNewPair(symbol, price, Date.now(), usdInrRate);
+      const pair = paperEngine.createNewPair(symbol, price, Date.now(), usdInrRate, Number(quantity), Number(targetMove));
       return res.json({ success: true, message: `Created instant BUY & SELL Pair at $${price}`, data: pair });
     }
   } catch (err) {
     res.status(400).json({ success: false, error: err.message });
+  }
+});
+
+// 5b. Smart "Pair-Add" Endpoint (Checks B/S at current rate -> adds missing leg or full pair)
+app.post('/api/pair-add', (req, res) => {
+  try {
+    const { symbol = 'CLUSDT', price = null, quantity = 1.0, targetMove = 0.20 } = req.body;
+    const result = paperEngine.smartPairAdd(symbol, price, Number(quantity), Number(targetMove));
+    res.json({ success: true, ...result });
+  } catch (err) {
+    res.status(400).json({ success: false, error: err.message });
+  }
+});
+
+// 5c. Rates Inspector Endpoint (Active Coverage Map of B/S rates)
+app.get('/api/rates-inspector', (req, res) => {
+  try {
+    const symbol = req.query.symbol || 'CLUSDT';
+    const data = paperEngine.getActiveRatesInspector(symbol);
+    res.json({ success: true, data });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
   }
 });
 
