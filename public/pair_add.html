@@ -110,42 +110,66 @@
       </div>
     </div>
 
-    <!-- Header Actions (Protected under Single Admin Button: 340556) -->
-    <div class="header-actions" style="display: flex; align-items: center; gap: 10px;">
-      <!-- Engine Status Live Badge (Visual Indicator) -->
-      <div id="engineStatusIndicatorBadge" style="display: inline-flex; align-items: center; gap: 7px; padding: 8px 14px; background: rgba(16, 185, 129, 0.12); border: 1px solid rgba(16, 185, 129, 0.4); border-radius: 8px; font-weight: 800; font-size: 0.85rem; color: #34d399;">
+    <!-- Header Actions (Start, Reset, Settings, Profit Exit Target, Barrels & Trading) -->
+    <div class="header-actions" style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+      
+      <!-- 1. Engine Start / Pause Toggle Button -->
+      <button id="headerEngineToggleBtn" class="btn" style="background: rgba(16, 185, 129, 0.15); border: 1px solid #10b981; color: #34d399; font-weight: 800; font-size: 0.85rem; padding: 7px 12px; border-radius: 8px; cursor: pointer; display: inline-flex; align-items: center; gap: 6px;" onclick="toggleEngineState()" title="Click to Start or Pause Engine">
         <span class="pulse-dot" style="background: #10b981;"></span>
-        <span id="engineStatusIndicatorText">ENGINE: RUNNING</span>
+        <span id="engineStatusIndicatorText">RUNNING</span>
+      </button>
+
+      <!-- 2. Main Profit Exit Value Selector -->
+      <div style="display: inline-flex; align-items: center; gap: 6px; background: rgba(13, 17, 23, 0.95); border: 1px solid rgba(16, 185, 129, 0.45); padding: 4px 8px; border-radius: 8px;">
+        <span style="font-size: 0.72rem; color: #34d399; font-weight: 800; text-transform: uppercase;">Exit Target:</span>
+        <select id="mainProfitExitSelect" onchange="updateProfitExitTarget(this.value)" style="background: #080c14; border: 1px solid #10b981; color: #34d399; font-weight: 900; font-size: 0.85rem; padding: 5px 8px; border-radius: 6px; outline: none; cursor: pointer;">
+          <option value="0.15">$0.15 Move</option>
+          <option value="0.20" selected>$0.20 (Scalp)</option>
+          <option value="0.25">$0.25 Move</option>
+          <option value="0.30">$0.30 Move</option>
+          <option value="0.50">$0.50 Move</option>
+          <option value="1.00">$1.00 Move</option>
+        </select>
       </div>
 
-      <!-- Quick Barrels Selector & 2 Action Buttons: Pair & Smart Pair -->
-      <div style="display: inline-flex; align-items: center; gap: 8px; background: rgba(13, 17, 23, 0.95); border: 1px solid rgba(56, 189, 248, 0.35); padding: 5px 10px; border-radius: 10px;">
-        <span style="font-size: 0.75rem; color: #94a3b8; font-weight: 800; text-transform: uppercase;">Barrels:</span>
-        <select id="quickBarrelsSelect" onchange="syncSelectedBarrels(this.value)" style="background: #080c14; border: 1px solid rgba(56, 189, 248, 0.5); color: #38bdf8; font-weight: 800; font-size: 0.88rem; padding: 6px 10px; border-radius: 6px; outline: none; cursor: pointer;">
+      <!-- 3. Quick Barrels Selector & 2 Trading Buttons: Pair & Smart Pair -->
+      <div style="display: inline-flex; align-items: center; gap: 6px; background: rgba(13, 17, 23, 0.95); border: 1px solid rgba(56, 189, 248, 0.35); padding: 4px 8px; border-radius: 8px;">
+        <span style="font-size: 0.72rem; color: #94a3b8; font-weight: 800; text-transform: uppercase;">Barrels:</span>
+        <select id="quickBarrelsSelect" onchange="syncSelectedBarrels(this.value)" style="background: #080c14; border: 1px solid rgba(56, 189, 248, 0.5); color: #38bdf8; font-weight: 800; font-size: 0.85rem; padding: 5px 8px; border-radius: 6px; outline: none; cursor: pointer;">
           <option value="1">1 Barrel</option>
           <option value="2">2 Barrels</option>
           <option value="5">5 Barrels</option>
           <option value="10" selected>10 Barrels</option>
         </select>
 
-        <!-- 1. Pair Button -->
-        <button id="btnHeaderPair" class="btn" style="background: linear-gradient(135deg, #0284c7, #0369a1); color: #fff; font-weight: 900; font-size: 0.88rem; padding: 8px 15px; border-radius: 6px; border: 1px solid #38bdf8; cursor: pointer; display: inline-flex; align-items: center; gap: 5px; box-shadow: 0 0 12px rgba(56, 189, 248, 0.35);" onclick="openPairModalWithMode('PAIR')">
+        <!-- Pair Button -->
+        <button id="btnHeaderPair" class="btn" style="background: linear-gradient(135deg, #0284c7, #0369a1); color: #fff; font-weight: 900; font-size: 0.85rem; padding: 6px 12px; border-radius: 6px; border: 1px solid #38bdf8; cursor: pointer; display: inline-flex; align-items: center; gap: 4px; box-shadow: 0 0 10px rgba(56, 189, 248, 0.35);" onclick="openPairModalWithMode('PAIR')">
           <span>➕ Pair</span>
         </button>
 
-        <!-- 2. Smart Pair Button -->
-        <button id="btnHeaderSmartPair" class="btn" style="background: linear-gradient(135deg, #10b981, #047857); color: #fff; font-weight: 900; font-size: 0.88rem; padding: 8px 15px; border-radius: 6px; border: 1px solid #34d399; cursor: pointer; display: inline-flex; align-items: center; gap: 5px; box-shadow: 0 0 15px rgba(16, 185, 129, 0.45);" onclick="openPairModalWithMode('SMART_PAIR')">
+        <!-- Smart Pair Button -->
+        <button id="btnHeaderSmartPair" class="btn" style="background: linear-gradient(135deg, #10b981, #047857); color: #fff; font-weight: 900; font-size: 0.85rem; padding: 6px 12px; border-radius: 6px; border: 1px solid #34d399; cursor: pointer; display: inline-flex; align-items: center; gap: 4px; box-shadow: 0 0 12px rgba(16, 185, 129, 0.4);" onclick="openPairModalWithMode('SMART_PAIR')">
           <span>⚡ Smart Pair</span>
         </button>
       </div>
 
-      <!-- Calculator Page (Public Access) -->
-      <a href="/mudrex_crude_calc" class="btn" style="background: linear-gradient(135deg, #0284c7, #6366f1); color: #fff; font-weight: 800; font-size: 0.88rem; padding: 9px 15px; border-radius: 8px; text-decoration: none; border: 1px solid #38bdf8; display: inline-flex; align-items: center; gap: 6px;">
-        <span>🧮 Calculator Page</span>
+      <!-- 4. Settings Button -->
+      <button class="btn" style="background: #1e293b; border: 1px solid rgba(255,255,255,0.2); color: #cbd5e1; font-weight: 800; font-size: 0.82rem; padding: 7px 11px; border-radius: 8px; cursor: pointer; display: inline-flex; align-items: center; gap: 4px;" onclick="openSettingsModal()">
+        <span>⚙️ Settings</span>
+      </button>
+
+      <!-- 5. Reset Data Button -->
+      <button class="btn" style="background: rgba(239, 68, 68, 0.15); border: 1px solid #ef4444; color: #f87171; font-weight: 800; font-size: 0.82rem; padding: 7px 11px; border-radius: 8px; cursor: pointer; display: inline-flex; align-items: center; gap: 4px;" onclick="resetAllDataConfirm()">
+        <span>🧹 Reset</span>
+      </button>
+
+      <!-- 6. Calculator Page (Public Access) -->
+      <a href="/mudrex_crude_calc" class="btn" style="background: linear-gradient(135deg, #0284c7, #6366f1); color: #fff; font-weight: 800; font-size: 0.82rem; padding: 7px 11px; border-radius: 8px; text-decoration: none; border: 1px solid #38bdf8; display: inline-flex; align-items: center; gap: 4px;">
+        <span>🧮 Calc</span>
       </a>
 
-      <!-- Single Admin Button (Password Protected: 340556) -->
-      <button id="adminPortalBtn" class="btn" style="background: linear-gradient(135deg, #f59e0b, #d97706); color: #000; font-weight: 900; font-size: 0.92rem; padding: 9px 18px; border-radius: 8px; border: 1px solid #fbbf24; box-shadow: 0 0 15px rgba(245, 158, 11, 0.4); cursor: pointer; display: inline-flex; align-items: center; gap: 7px;" onclick="openAdminPortal()">
+      <!-- 7. Single Admin Button (Password Protected: 340556) -->
+      <button id="adminPortalBtn" class="btn" style="background: linear-gradient(135deg, #f59e0b, #d97706); color: #000; font-weight: 900; font-size: 0.85rem; padding: 7px 12px; border-radius: 8px; border: 1px solid #fbbf24; box-shadow: 0 0 12px rgba(245, 158, 11, 0.4); cursor: pointer; display: inline-flex; align-items: center; gap: 5px;" onclick="openAdminPortal()">
         <span id="adminBtnLabel">🔐 Admin</span>
       </button>
     </div>

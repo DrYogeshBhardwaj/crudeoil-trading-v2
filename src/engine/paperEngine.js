@@ -1118,7 +1118,7 @@ class PaperEngine {
   resetAllData() {
     this.settings.startingCapitalINR = 119923.61;
     this.settings.maxActivePairs = 500;
-    this.settings.profitTargetMove = 1.0;
+    this.settings.profitTargetMove = 0.20;
     this.settings.contractQuantity = 1.0;
     this.settings.tradingMode = 'LIVE';
     this.settings.realOrdersDisabled = false;

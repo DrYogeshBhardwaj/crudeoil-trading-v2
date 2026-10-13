@@ -560,17 +560,43 @@ function renderDashboard(data) {
   // Header Engine Status Indicator Badge
   const engineIndicatorText = document.getElementById('engineStatusIndicatorText');
   const engineIndicatorBadge = document.getElementById('engineStatusIndicatorBadge');
-  if (engineIndicatorText && engineIndicatorBadge) {
+  const headerEngineToggleBtn = document.getElementById('headerEngineToggleBtn');
+  if (engineIndicatorText) {
     if (isEngineRunning) {
-      engineIndicatorText.innerText = 'ENGINE: RUNNING';
-      engineIndicatorBadge.style.color = '#34d399';
-      engineIndicatorBadge.style.borderColor = 'rgba(16, 185, 129, 0.4)';
-      engineIndicatorBadge.style.background = 'rgba(16, 185, 129, 0.12)';
+      engineIndicatorText.innerText = 'RUNNING';
+      if (engineIndicatorBadge) {
+        engineIndicatorBadge.style.color = '#34d399';
+        engineIndicatorBadge.style.borderColor = 'rgba(16, 185, 129, 0.4)';
+        engineIndicatorBadge.style.background = 'rgba(16, 185, 129, 0.12)';
+      }
+      if (headerEngineToggleBtn) {
+        headerEngineToggleBtn.style.color = '#34d399';
+        headerEngineToggleBtn.style.borderColor = '#10b981';
+        headerEngineToggleBtn.style.background = 'rgba(16, 185, 129, 0.15)';
+        headerEngineToggleBtn.title = 'Engine is RUNNING. Click to Pause.';
+      }
     } else {
-      engineIndicatorText.innerText = 'ENGINE: PAUSED';
-      engineIndicatorBadge.style.color = '#f87171';
-      engineIndicatorBadge.style.borderColor = 'rgba(239, 68, 68, 0.4)';
-      engineIndicatorBadge.style.background = 'rgba(239, 68, 68, 0.12)';
+      engineIndicatorText.innerText = 'PAUSED';
+      if (engineIndicatorBadge) {
+        engineIndicatorBadge.style.color = '#f87171';
+        engineIndicatorBadge.style.borderColor = 'rgba(239, 68, 68, 0.4)';
+        engineIndicatorBadge.style.background = 'rgba(239, 68, 68, 0.12)';
+      }
+      if (headerEngineToggleBtn) {
+        headerEngineToggleBtn.style.color = '#f87171';
+        headerEngineToggleBtn.style.borderColor = '#ef4444';
+        headerEngineToggleBtn.style.background = 'rgba(239, 68, 68, 0.15)';
+        headerEngineToggleBtn.title = 'Engine is PAUSED. Click to Start.';
+      }
+    }
+  }
+
+  // Sync main profit exit target select with settings
+  const mainProfitExitSelect = document.getElementById('mainProfitExitSelect');
+  if (mainProfitExitSelect && settings && settings.profitTargetMove) {
+    if (document.activeElement !== mainProfitExitSelect) {
+      const tgtVal = parseFloat(settings.profitTargetMove).toFixed(2);
+      mainProfitExitSelect.value = tgtVal;
     }
   }
 
@@ -1625,6 +1651,32 @@ function toggleEngineState() {
 }
 window.toggleEngineState = toggleEngineState;
 
+window.updateProfitExitTarget = async function(val) {
+  const targetMove = parseFloat(val) || 0.20;
+  try {
+    const res = await fetch('/api/settings', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ profitTargetMove: targetMove })
+    });
+    const data = await res.json();
+    if (data.success) {
+      fetch('/api/mudrex/settings', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ profitTargetMove: targetMove })
+      }).catch(() => {});
+
+      const modalTarget = document.getElementById('tradeTargetSelect');
+      if (modalTarget) modalTarget.value = targetMove.toFixed(2);
+      if (typeof updateModalCalculations === 'function') updateModalCalculations();
+      alert(`🎯 Main Profit Exit Target set to $${targetMove.toFixed(2)} move!\n\nEngine ab sabhi naye trades ko $${targetMove.toFixed(2)} target par profit book karke close karega.`);
+    }
+  } catch (err) {
+    alert('Error setting profit exit value: ' + err.message);
+  }
+};
+
 function openSettingsModal() {
   document.getElementById('settingsModal').style.display = 'flex';
 }
@@ -2286,7 +2338,7 @@ window.resetAllDataConfirm = async function() {
     updateAdminButtonState();
   }
 
-  if (!confirm('⚠️ Are you sure you want to RESET SIMULATED ENGINE DATA?\n\nReal Mudrex exchange positions remain 100% safe and intact.')) {
+  if (!confirm('⚠️ Kya aap Engine Data Reset karke sabhi purane trades aur positions clear karna chahte hain?\n\n(Naya clean dashboard fresh settings ke sath shuru hoga)')) {
     return;
   }
 
@@ -2294,7 +2346,7 @@ window.resetAllDataConfirm = async function() {
     const res = await fetch('/api/reset-data', { method: 'POST' });
     const data = await res.json();
     if (data.success) {
-      alert('✅ Simulated engine state reset successfully! (Real Mudrex data preserved)');
+      alert('✅ Engine Data Reset Successful!\n\nSabhi purane trades aur positions clear kar diye gaye hain. Dashboard ab bilkul fresh shuru ho gaya hai.');
       if (typeof fetchMetricsFallback === 'function') fetchMetricsFallback();
       if (typeof fetchDashboardMetrics === 'function') fetchDashboardMetrics();
     } else {

@@ -299,7 +299,7 @@ class DatabaseManager {
         startingCapitalINR: 119923.61,
         contractQuantity: 1.0,
         leverage: 5,
-        profitTargetMove: 1.0,
+        profitTargetMove: 0.20,
         profitTargetMode: "PRICE_MOVE",
         strategyMode: "ALTERNATING_STAGGERED",
         priceMatchingTolerance: 0.0001,
@@ -310,7 +310,7 @@ class DatabaseManager {
         takerFeeRate: 0.00075,
         gstRate: 0.18,
         slippageBufferINR: 5.0,
-        usdInrRate: 102.00,
+        usdInrRate: 95.91,
         dailyLossCircuitBreakerINR: 2000
       },
       pairs: [],
@@ -319,7 +319,7 @@ class DatabaseManager {
         id: `LOG-${Date.now()}`,
         timestamp: new Date().toISOString(),
         event: "ENGINE_RESET",
-        details: "All engine positions, processed rates, and history reset to ₹82,978 capital. LIVE Mudrex API trading mode activated."
+        details: "All engine positions, processed rates, and history reset cleanly to fresh capital."
       }],
       processedRates: { CLUSDT: [], XAGUSDT: [], BTCUSDT: [] },
       lastProcessedRate: null,
@@ -332,6 +332,7 @@ class DatabaseManager {
     };
     try {
       fs.writeFileSync(STATE_JSON_FILE, JSON.stringify(cleanSeed, null, 2), 'utf8');
+      fs.writeFileSync(STATE_SEED_FILE, JSON.stringify(cleanSeed, null, 2), 'utf8');
     } catch (e) {}
   }
 }
