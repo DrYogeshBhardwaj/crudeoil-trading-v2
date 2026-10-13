@@ -1870,14 +1870,60 @@ window.manualClose = async function(positionId) {
   }
 };
 
-window.openTradeModal = function() {
+// --- PAIR & SMART PAIR TRADING CONTROLS ---
+let currentModalTradeMode = 'PAIR';
+let modalSelectedBarrels = 10;
+let modalLivePrice = 91.17;
+let modalUsdInrRate = 95.91;
+let modalRateScanState = null;
+
+window.syncSelectedBarrels = function(val) {
+  const q = parseFloat(val) || 10;
+  modalSelectedBarrels = q;
+  const headerSelect = document.getElementById('quickBarrelsSelect');
+  if (headerSelect) headerSelect.value = q;
+  const inputEl = document.getElementById('tradeQtyInput');
+  if (inputEl) inputEl.value = q;
+  updateModalQtyButtons(q);
+  updateModalCalculations();
+};
+
+window.openPairModalWithMode = async function(mode = 'PAIR') {
+  currentModalTradeMode = mode;
   const modal = document.getElementById('tradeModal');
   if (modal) modal.style.display = 'flex';
-  const liveRateEl = document.getElementById('mainCrudeLiveRate') || document.getElementById('liveTickerPrice');
-  const modalRateEl = document.getElementById('modalTradeLiveRate');
-  if (liveRateEl && modalRateEl) {
-    modalRateEl.textContent = liveRateEl.textContent;
+
+  // Read header barrels
+  const headerSelect = document.getElementById('quickBarrelsSelect');
+  if (headerSelect) {
+    modalSelectedBarrels = parseFloat(headerSelect.value) || 10;
   }
+  const inputEl = document.getElementById('tradeQtyInput');
+  if (inputEl) inputEl.value = modalSelectedBarrels;
+  updateModalQtyButtons(modalSelectedBarrels);
+
+  // Read live rate & USD rate
+  const liveRateEl = document.getElementById('mainCrudeLiveRate') || document.getElementById('liveTickerPrice');
+  if (liveRateEl) {
+    const parsed = parseFloat(liveRateEl.textContent.replace(/[^0-9.]/g, ''));
+    if (!isNaN(parsed) && parsed > 0) modalLivePrice = parsed;
+  }
+  const usdRateEl = document.getElementById('usdInrRateDisplay');
+  if (usdRateEl) {
+    const parsedUSD = parseFloat(usdRateEl.textContent.replace(/[^0-9.]/g, ''));
+    if (!isNaN(parsedUSD) && parsedUSD > 0) modalUsdInrRate = parsedUSD;
+  }
+
+  const modalRateEl = document.getElementById('modalTradeLiveRate');
+  if (modalRateEl) modalRateEl.textContent = `$${modalLivePrice.toFixed(2)}`;
+  const modalUsdEl = document.getElementById('modalTradeUsdInr');
+  if (modalUsdEl) modalUsdEl.textContent = `₹${modalUsdInrRate.toFixed(2)}`;
+
+  await switchTradeModalMode(mode);
+};
+
+window.openTradeModal = function() {
+  openPairModalWithMode('PAIR');
 };
 
 window.closeTradeModal = function() {
@@ -1885,32 +1931,241 @@ window.closeTradeModal = function() {
   if (modal) modal.style.display = 'none';
 };
 
-window.executeManualTrade = async function() {
-  const typeSelect = document.getElementById('tradeTypeSelect');
-  const qtySelect = document.getElementById('tradeQtySelect');
-  const targetSelect = document.getElementById('tradeTargetSelect');
+window.switchTradeModalMode = async function(mode) {
+  currentModalTradeMode = mode;
+  const tabPair = document.getElementById('tabModePair');
+  const tabSmart = document.getElementById('tabModeSmartPair');
+  const titleEl = document.getElementById('modalTradeTitle');
+  const subtitleEl = document.getElementById('modalTradeSubtitle');
+  const iconEl = document.getElementById('modalTitleIcon');
+  const scanBox = document.getElementById('smartPairScanBox');
+  const execBtn = document.getElementById('modalExecuteBtn');
 
-  const action = typeSelect ? typeSelect.value : 'PAIR';
-  const quantity = qtySelect ? parseFloat(qtySelect.value) : 2.0;
-  const targetMove = targetSelect ? parseFloat(targetSelect.value) : 0.20;
+  if (mode === 'SMART_PAIR') {
+    if (tabSmart) {
+      tabSmart.style.background = '#10b981';
+      tabSmart.style.color = '#fff';
+      tabSmart.style.borderColor = '#34d399';
+      tabSmart.style.boxShadow = '0 0 12px rgba(16, 185, 129, 0.4)';
+    }
+    if (tabPair) {
+      tabPair.style.background = '#1e293b';
+      tabPair.style.color = '#94a3b8';
+      tabPair.style.borderColor = 'rgba(255,255,255,0.15)';
+      tabPair.style.boxShadow = 'none';
+    }
+    if (titleEl) titleEl.innerText = '⚡ Smart Pair Trading Window';
+    if (subtitleEl) subtitleEl.innerText = 'Auto B/S Detection: Rate par check karke missing leg ya full pair lega';
+    if (iconEl) iconEl.innerText = '⚡';
+    if (scanBox) scanBox.style.display = 'block';
+
+    // Scan position state at live rate
+    await scanRateLegStatus(modalLivePrice);
+  } else {
+    if (tabPair) {
+      tabPair.style.background = '#0284c7';
+      tabPair.style.color = '#fff';
+      tabPair.style.borderColor = '#38bdf8';
+      tabPair.style.boxShadow = '0 0 12px rgba(56, 189, 248, 0.4)';
+    }
+    if (tabSmart) {
+      tabSmart.style.background = '#1e293b';
+      tabSmart.style.color = '#94a3b8';
+      tabSmart.style.borderColor = 'rgba(255,255,255,0.15)';
+      tabSmart.style.boxShadow = 'none';
+    }
+    if (titleEl) titleEl.innerText = '➕ Pair Trading Window';
+    if (subtitleEl) subtitleEl.innerText = 'Mudrex Crude Oil: 1 BUY + 1 SELL instant Hedged Pair';
+    if (iconEl) iconEl.innerText = '➕';
+    if (scanBox) scanBox.style.display = 'none';
+    if (execBtn) {
+      execBtn.innerText = `🚀 Instant Pair Kharidein (${modalSelectedBarrels} Barrels)`;
+      execBtn.style.background = 'linear-gradient(135deg, #0284c7, #0369a1)';
+      execBtn.style.borderColor = '#38bdf8';
+    }
+  }
+
+  updateModalCalculations();
+};
+
+async function scanRateLegStatus(price) {
+  const scanBadge = document.getElementById('smartScanBadge');
+  const scanText = document.getElementById('smartScanDecisionText');
+  const execBtn = document.getElementById('modalExecuteBtn');
+  if (scanBadge) { scanBadge.innerText = 'SCANNING...'; scanBadge.className = 'badge-status'; scanBadge.style.color = '#94a3b8'; }
+  if (scanText) scanText.innerHTML = '🔍 Live rate par BUY/SELL position check ki ja rahi hai...';
 
   try {
-    const res = await fetch('/api/manual-trade', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ action, quantity, targetMove, symbol: 'CLUSDT' })
-    });
-    const data = await res.json();
+    const res = await fetch('/api/rates-inspector?symbol=CLUSDT');
+    const j = await res.json();
+    if (!j.success) return;
+    const rates = j.data.ratesList || [];
+    const liveRate = j.data.currentPrice || price;
+    modalLivePrice = liveRate;
+
+    const matched = rates.find(r => Math.abs(r.rate - liveRate) <= 0.02);
+    modalRateScanState = matched;
+
+    if (!matched) {
+      if (scanBadge) { scanBadge.innerText = 'NO ACTIVE LEG'; scanBadge.className = 'badge-status badge-balanced'; }
+      if (scanText) scanText.innerHTML = `💡 <strong>Auto-Detected:</strong> Rate <strong>$${liveRate.toFixed(2)}</strong> par abhi koi position open nahi hai.<br>Click karne par <strong>Poora Naya BUY + SELL Pair</strong> (${modalSelectedBarrels} Barrels) khareeda jayega.`;
+      if (execBtn) {
+        execBtn.innerText = `⚡ Execute Smart Pair (BUY + SELL: ${modalSelectedBarrels} Barrels)`;
+        execBtn.style.background = 'linear-gradient(135deg, #10b981, #059669)';
+        execBtn.style.borderColor = '#34d399';
+      }
+    } else if (matched.hasBuy && !matched.hasSell) {
+      if (scanBadge) { scanBadge.innerText = 'ONLY BUY OPEN'; scanBadge.className = 'badge-status badge-onlybuy'; }
+      if (scanText) scanText.innerHTML = `⚡ <strong>Auto-Detected:</strong> Rate <strong>$${matched.rate.toFixed(2)}</strong> par BUY active hai (${matched.buyQty}B) aur SELL end ho gaya hai.<br>Click karne par <strong>Sirf Missing SELL leg</strong> (${modalSelectedBarrels} Barrels) add hogi taaki pair wapas balance ho sake!`;
+      if (execBtn) {
+        execBtn.innerText = `⚡ Execute Smart Pair (Add Missing SELL Leg: ${modalSelectedBarrels} Barrels)`;
+        execBtn.style.background = 'linear-gradient(135deg, #ef4444, #b91c1c)';
+        execBtn.style.borderColor = '#f87171';
+      }
+    } else if (!matched.hasBuy && matched.hasSell) {
+      if (scanBadge) { scanBadge.innerText = 'ONLY SELL OPEN'; scanBadge.className = 'badge-status badge-onlysell'; }
+      if (scanText) scanText.innerHTML = `⚡ <strong>Auto-Detected:</strong> Rate <strong>$${matched.rate.toFixed(2)}</strong> par SELL active hai (${matched.sellQty}B) aur BUY end ho gaya hai.<br>Click karne par <strong>Sirf Missing BUY leg</strong> (${modalSelectedBarrels} Barrels) add hogi taaki pair wapas balance ho sake!`;
+      if (execBtn) {
+        execBtn.innerText = `⚡ Execute Smart Pair (Add Missing BUY Leg: ${modalSelectedBarrels} Barrels)`;
+        execBtn.style.background = 'linear-gradient(135deg, #10b981, #047857)';
+        execBtn.style.borderColor = '#34d399';
+      }
+    } else {
+      if (scanBadge) { scanBadge.innerText = 'ALREADY HEDGED'; scanBadge.className = 'badge-status badge-balanced'; }
+      if (scanText) scanText.innerHTML = `✅ <strong>Auto-Detected:</strong> Rate <strong>$${matched.rate.toFixed(2)}</strong> par BUY aur SELL dono already active hain.<br>Click karne par <strong>Additional Hedged Pair</strong> add hoga.`;
+      if (execBtn) {
+        execBtn.innerText = `⚡ Execute Smart Pair (Additional Pair: ${modalSelectedBarrels} Barrels)`;
+        execBtn.style.background = 'linear-gradient(135deg, #f59e0b, #d97706)';
+        execBtn.style.borderColor = '#fbbf24';
+      }
+    }
+  } catch (e) {
+    console.error('Error scanning rate leg status:', e);
+  }
+}
+
+window.setModalBarrels = function(qty) {
+  modalSelectedBarrels = parseFloat(qty) || 1;
+  const headerSelect = document.getElementById('quickBarrelsSelect');
+  if (headerSelect) headerSelect.value = modalSelectedBarrels;
+  const inputEl = document.getElementById('tradeQtyInput');
+  if (inputEl) inputEl.value = modalSelectedBarrels;
+  updateModalQtyButtons(modalSelectedBarrels);
+  updateModalCalculations();
+
+  const execBtn = document.getElementById('modalExecuteBtn');
+  if (execBtn) {
+    if (currentModalTradeMode === 'SMART_PAIR') {
+      if (modalRateScanState && modalRateScanState.hasBuy && !modalRateScanState.hasSell) {
+        execBtn.innerText = `⚡ Execute Smart Pair (Add Missing SELL Leg: ${modalSelectedBarrels} Barrels)`;
+      } else if (modalRateScanState && !modalRateScanState.hasBuy && modalRateScanState.hasSell) {
+        execBtn.innerText = `⚡ Execute Smart Pair (Add Missing BUY Leg: ${modalSelectedBarrels} Barrels)`;
+      } else {
+        execBtn.innerText = `⚡ Execute Smart Pair (${modalSelectedBarrels} Barrels)`;
+      }
+    } else {
+      execBtn.innerText = `🚀 Instant Pair Kharidein (${modalSelectedBarrels} Barrels)`;
+    }
+  }
+};
+
+window.onModalCustomQtyChange = function(val) {
+  const q = parseFloat(val) || 1;
+  modalSelectedBarrels = q;
+  document.querySelectorAll('.modal-qty-btn').forEach(b => b.classList.remove('active'));
+  updateModalCalculations();
+};
+
+function updateModalQtyButtons(qty) {
+  document.querySelectorAll('.modal-qty-btn').forEach(b => {
+    b.classList.remove('active');
+    if (b.innerText.trim() === `${qty} B` || b.innerText.trim() === `${qty} Barrels`) {
+      b.classList.add('active');
+    }
+  });
+}
+
+window.updateModalCalculations = function() {
+  const p = modalLivePrice || 91.17;
+  const usdInr = modalUsdInrRate || 95.91;
+  const qty = modalSelectedBarrels || 10;
+  const leverage = 5;
+
+  const legMarginUSD = (p * qty) / leverage;
+  const legMarginINR = legMarginUSD * usdInr;
+  const pairMarginUSD = legMarginUSD * 2;
+  const pairMarginINR = legMarginINR * 2;
+
+  const targetSelect = document.getElementById('tradeTargetSelect');
+  const targetMove = targetSelect ? parseFloat(targetSelect.value) || 0.20 : 0.20;
+
+  const profitUSD = targetMove * qty;
+  const profitINR = profitUSD * usdInr;
+
+  const marginDisplay = document.getElementById('modalRequiredMarginDisplay');
+  if (marginDisplay) {
+    if (currentModalTradeMode === 'SMART_PAIR' && modalRateScanState && ((modalRateScanState.hasBuy && !modalRateScanState.hasSell) || (!modalRateScanState.hasBuy && modalRateScanState.hasSell))) {
+      marginDisplay.innerText = `₹${Math.round(legMarginINR).toLocaleString('en-IN')} ($${legMarginUSD.toFixed(2)}) [1 Leg]`;
+    } else {
+      marginDisplay.innerText = `₹${Math.round(pairMarginINR).toLocaleString('en-IN')} ($${pairMarginUSD.toFixed(2)}) [Full Pair]`;
+    }
+  }
+
+  const profitDisplay = document.getElementById('modalProjectedProfitDisplay');
+  if (profitDisplay) {
+    profitDisplay.innerText = `+₹${profitINR.toFixed(2)} (+$${profitUSD.toFixed(2)})`;
+  }
+};
+
+window.executePairTradeModal = async function() {
+  const targetSelect = document.getElementById('tradeTargetSelect');
+  const targetMove = targetSelect ? parseFloat(targetSelect.value) || 0.20 : 0.20;
+  const quantity = modalSelectedBarrels || 10;
+  const price = modalLivePrice;
+
+  const execBtn = document.getElementById('modalExecuteBtn');
+  if (execBtn) {
+    execBtn.disabled = true;
+    execBtn.innerText = `⏳ Order Processing (${quantity} Barrels)...`;
+  }
+
+  try {
+    let res, data;
+    if (currentModalTradeMode === 'SMART_PAIR') {
+      res = await fetch('/api/pair-add', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ symbol: 'CLUSDT', price, quantity, targetMove })
+      });
+      data = await res.json();
+    } else {
+      res = await fetch('/api/manual-trade', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'PAIR', symbol: 'CLUSDT', quantity, targetMove })
+      });
+      data = await res.json();
+    }
+
     if (data.success) {
-      alert(`✅ ${data.message}`);
+      alert(`✅ Trade Executed Successfully!\n\n${data.message}`);
       closeTradeModal();
       if (typeof fetchMetricsFallback === 'function') fetchMetricsFallback();
       if (typeof fetchDashboardMetrics === 'function') fetchDashboardMetrics();
     } else {
-      alert(`❌ Failed: ${data.error || 'Unknown error'}`);
+      alert(`❌ Trade Failed: ${data.error || 'Unknown error'}`);
     }
   } catch (err) {
-    alert(`❌ Error executing trade: ${err.message}`);
+    alert(`❌ Request Error: ${err.message}`);
+  } finally {
+    if (execBtn) {
+      execBtn.disabled = false;
+      if (currentModalTradeMode === 'SMART_PAIR') {
+        execBtn.innerText = `⚡ Execute Smart Pair (${quantity} Barrels)`;
+      } else {
+        execBtn.innerText = `🚀 Instant Pair Kharidein (${quantity} Barrels)`;
+      }
+    }
   }
 };
 

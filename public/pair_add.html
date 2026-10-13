@@ -3,69 +3,52 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>⚡ Mudrex Pair-Add Manager — Live Rate & Barrels Sizer</title>
-  <link rel="stylesheet" href="style.css">
+  <title>Mudrex Crude Oil Live Engine — mudrex_crude_live</title>
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><circle cx='50' cy='50' r='48' fill='%23047857' stroke='%2334d399' stroke-width='4'/><text x='50' y='66' font-size='58' text-anchor='middle'>⚡</text></svg>">
+  <link rel="stylesheet" href="style.css?v=20261011_v3">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;600;700;800&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
   <style>
-    body {
-      background: #080c14;
-      color: #f8fafc;
-      font-family: 'Inter', sans-serif;
-      margin: 0;
-      padding: 0;
+    .mudrex-brand-badge {
+      background: linear-gradient(135deg, #10b981, #059669);
+      color: #fff;
+      padding: 4px 10px;
+      border-radius: 6px;
+      font-size: 0.75rem;
+      font-weight: 800;
+      letter-spacing: 0.5px;
+      text-transform: uppercase;
+      box-shadow: 0 0 10px rgba(16, 185, 129, 0.4);
     }
-    .header-bar {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      padding: 14px 24px;
-      background: #0d1117;
-      border-bottom: 1px solid rgba(56, 189, 248, 0.2);
-      flex-wrap: wrap;
-      gap: 14px;
+    .crude-brand-badge {
+      background: linear-gradient(135deg, #f59e0b, #d97706);
+      color: #fff;
+      padding: 4px 10px;
+      border-radius: 6px;
+      font-size: 0.75rem;
+      font-weight: 800;
+      letter-spacing: 0.5px;
+      text-transform: uppercase;
+      box-shadow: 0 0 10px rgba(245, 158, 11, 0.4);
+      margin-left: 6px;
     }
-    .card-box {
-      background: linear-gradient(135deg, rgba(13, 17, 23, 0.95), rgba(15, 23, 42, 0.95));
-      border: 1px solid rgba(56, 189, 248, 0.25);
-      border-radius: 14px;
-      padding: 22px;
-      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
-      margin-bottom: 20px;
-    }
-    .grid-2 {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
-      gap: 20px;
-    }
-    .grid-4 {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-      gap: 14px;
-    }
-    .stat-pill {
-      background: #080c14;
-      border: 1px solid rgba(255, 255, 255, 0.08);
-      border-radius: 10px;
-      padding: 14px 16px;
-    }
-    .btn-qty {
+    .modal-qty-btn {
       background: #080c14;
       border: 1px solid rgba(56, 189, 248, 0.35);
       color: #38bdf8;
       font-weight: 800;
-      padding: 10px 16px;
-      border-radius: 8px;
+      padding: 8px 14px;
+      border-radius: 6px;
       cursor: pointer;
-      font-size: 0.95rem;
+      font-size: 0.88rem;
       transition: all 0.2s ease;
     }
-    .btn-qty:hover, .btn-qty.active {
+    .modal-qty-btn.active, .modal-qty-btn:hover {
       background: #0284c7;
       color: #fff;
       border-color: #38bdf8;
-      box-shadow: 0 0 12px rgba(56, 189, 248, 0.4);
+      box-shadow: 0 0 10px rgba(56, 189, 248, 0.4);
     }
     .badge-status {
       display: inline-block;
@@ -82,442 +65,741 @@
 </head>
 <body>
 
-  <!-- Top Navigation Header -->
-  <header class="header-bar">
-    <div style="display: flex; align-items: center; gap: 12px;">
-      <span style="font-size: 1.8rem;">⚡</span>
-      <div>
-        <h2 style="margin: 0; color: #38bdf8; font-size: 1.25rem; font-weight: 900; letter-spacing: 0.5px;">Pair-Add Manager</h2>
-        <span style="font-size: 0.75rem; color: #94a3b8; font-weight: 700;">Mudrex Live Rate Auto-Hedging & Lot Sizer Tool</span>
+  <!-- Safety Banner -->
+  <div class="safety-banner" style="background: linear-gradient(90deg, #065f46, #047857, #065f46); border-bottom: 1px solid #10b981; padding: 4px 10px; font-size: 0.78rem;">
+    <span>⚡ MUDREX CRUDE OIL LIVE REAL TRADING TERMINAL — mudrex_crude_live</span>
+  </div>
+
+  <!-- Header Bar -->
+  <header class="app-header">
+    <div class="brand-section">
+      <div class="brand-logo" style="background: linear-gradient(135deg, #10b981, #059669); box-shadow: 0 0 16px rgba(16, 185, 129, 0.5); font-size: 1.5rem;">⚡</div>
+      <div class="brand-title">
+        <h1 style="display: flex; align-items: center; gap: 8px;">
+          Mudrex Crude Live
+          <span class="mudrex-brand-badge" style="background: linear-gradient(135deg, #10b981, #047857);">🔴 LIVE TERMINAL</span>
+          <span class="crude-brand-badge" style="background: linear-gradient(135deg, #f59e0b, #d97706);">🛢️ CRUDE OIL</span>
+        </h1>
       </div>
     </div>
 
-    <!-- Ticker Indicators -->
-    <div style="display: flex; align-items: center; gap: 16px; flex-wrap: wrap;">
-      <div style="display: flex; flex-direction: column;">
-        <span style="font-size: 0.7rem; color: #94a3b8; font-weight: 800; text-transform: uppercase;">CLUSDT LIVE RATE</span>
-        <span id="livePriceHeader" style="font-size: 1.6rem; font-weight: 900; color: #38bdf8; font-family: monospace;">$--.--</span>
+    <!-- Ticker Stream Display -->
+    <div class="live-ticker-bar">
+      <div class="ticker-item">
+        <span class="ticker-label" id="currentSymbolLabel">CLUSDT — Crude Oil</span>
+        <span class="ticker-value" id="liveTickerPrice">--.--</span>
       </div>
-      <div style="display: flex; flex-direction: column;">
-        <span style="font-size: 0.7rem; color: #94a3b8; font-weight: 800; text-transform: uppercase;">USD / INR</span>
-        <span id="usdInrHeader" style="font-size: 1.25rem; font-weight: 800; color: #f59e0b; font-family: monospace;">₹95.91</span>
+      <div class="ticker-item">
+        <span class="ticker-label">Last Tick Time / Age</span>
+        <span class="ticker-value" id="tickTimeAgeDisplay" style="color:var(--text-main); font-size: 0.95rem;">--:--:-- (0ms)</span>
       </div>
-      <div style="display: flex; flex-direction: column;">
-        <span style="font-size: 0.7rem; color: #94a3b8; font-weight: 800; text-transform: uppercase;">AVAILABLE MARGIN</span>
-        <span id="availMarginHeader" style="font-size: 1.25rem; font-weight: 800; color: #34d399; font-family: monospace;">₹0.00</span>
+      <div class="ticker-item">
+        <span class="ticker-label">Last Processed Rate</span>
+        <span class="ticker-value" id="lastProcessedRateDisplay" style="color:var(--accent-cyan);">--.--</span>
+      </div>
+      <div class="ticker-item">
+        <span class="ticker-label">USD / INR Rate</span>
+        <span class="ticker-value" id="usdInrDisplay">₹86.50</span>
+      </div>
+      <div class="ticker-item">
+        <span class="ticker-label">Feed Status</span>
+        <span id="feedStatusBadge" class="status-badge stale">
+          <span class="pulse-dot"></span>
+          <span id="feedStatusText">CONNECTING</span>
+        </span>
       </div>
     </div>
 
-    <!-- Action Buttons -->
-    <div style="display: flex; align-items: center; gap: 10px;">
-      <a href="/mudrex_crude_live" class="btn" style="background: #1e293b; color: #fff; font-weight: 800; font-size: 0.88rem; padding: 9px 16px; border-radius: 8px; text-decoration: none; border: 1px solid rgba(255,255,255,0.15);">
-        🔙 Live Trading Dashboard
+    <!-- Header Actions (Protected under Single Admin Button: 340556) -->
+    <div class="header-actions" style="display: flex; align-items: center; gap: 10px;">
+      <!-- Engine Status Live Badge (Visual Indicator) -->
+      <div id="engineStatusIndicatorBadge" style="display: inline-flex; align-items: center; gap: 7px; padding: 8px 14px; background: rgba(16, 185, 129, 0.12); border: 1px solid rgba(16, 185, 129, 0.4); border-radius: 8px; font-weight: 800; font-size: 0.85rem; color: #34d399;">
+        <span class="pulse-dot" style="background: #10b981;"></span>
+        <span id="engineStatusIndicatorText">ENGINE: RUNNING</span>
+      </div>
+
+      <!-- Quick Barrels Selector & 2 Action Buttons: Pair & Smart Pair -->
+      <div style="display: inline-flex; align-items: center; gap: 8px; background: rgba(13, 17, 23, 0.95); border: 1px solid rgba(56, 189, 248, 0.35); padding: 5px 10px; border-radius: 10px;">
+        <span style="font-size: 0.75rem; color: #94a3b8; font-weight: 800; text-transform: uppercase;">Barrels:</span>
+        <select id="quickBarrelsSelect" onchange="syncSelectedBarrels(this.value)" style="background: #080c14; border: 1px solid rgba(56, 189, 248, 0.5); color: #38bdf8; font-weight: 800; font-size: 0.88rem; padding: 6px 10px; border-radius: 6px; outline: none; cursor: pointer;">
+          <option value="1">1 Barrel</option>
+          <option value="2">2 Barrels</option>
+          <option value="5">5 Barrels</option>
+          <option value="10" selected>10 Barrels</option>
+        </select>
+
+        <!-- 1. Pair Button -->
+        <button id="btnHeaderPair" class="btn" style="background: linear-gradient(135deg, #0284c7, #0369a1); color: #fff; font-weight: 900; font-size: 0.88rem; padding: 8px 15px; border-radius: 6px; border: 1px solid #38bdf8; cursor: pointer; display: inline-flex; align-items: center; gap: 5px; box-shadow: 0 0 12px rgba(56, 189, 248, 0.35);" onclick="openPairModalWithMode('PAIR')">
+          <span>➕ Pair</span>
+        </button>
+
+        <!-- 2. Smart Pair Button -->
+        <button id="btnHeaderSmartPair" class="btn" style="background: linear-gradient(135deg, #10b981, #047857); color: #fff; font-weight: 900; font-size: 0.88rem; padding: 8px 15px; border-radius: 6px; border: 1px solid #34d399; cursor: pointer; display: inline-flex; align-items: center; gap: 5px; box-shadow: 0 0 15px rgba(16, 185, 129, 0.45);" onclick="openPairModalWithMode('SMART_PAIR')">
+          <span>⚡ Smart Pair</span>
+        </button>
+      </div>
+
+      <!-- Calculator Page (Public Access) -->
+      <a href="/mudrex_crude_calc" class="btn" style="background: linear-gradient(135deg, #0284c7, #6366f1); color: #fff; font-weight: 800; font-size: 0.88rem; padding: 9px 15px; border-radius: 8px; text-decoration: none; border: 1px solid #38bdf8; display: inline-flex; align-items: center; gap: 6px;">
+        <span>🧮 Calculator Page</span>
       </a>
-      <a href="/mudrex_crude_calc" class="btn" style="background: linear-gradient(135deg, #0284c7, #6366f1); color: #fff; font-weight: 800; font-size: 0.88rem; padding: 9px 16px; border-radius: 8px; text-decoration: none; border: 1px solid #38bdf8;">
-        🧮 Calculator Page
-      </a>
+
+      <!-- Single Admin Button (Password Protected: 340556) -->
+      <button id="adminPortalBtn" class="btn" style="background: linear-gradient(135deg, #f59e0b, #d97706); color: #000; font-weight: 900; font-size: 0.92rem; padding: 9px 18px; border-radius: 8px; border: 1px solid #fbbf24; box-shadow: 0 0 15px rgba(245, 158, 11, 0.4); cursor: pointer; display: inline-flex; align-items: center; gap: 7px;" onclick="openAdminPortal()">
+        <span id="adminBtnLabel">🔐 Admin</span>
+      </button>
     </div>
   </header>
 
-  <!-- Main Content Area -->
-  <main style="max-width: 1300px; margin: 24px auto; padding: 0 18px;">
+  <!-- Main Container -->
+  <main class="dashboard-container">
 
-    <!-- Top Grid: Section 1 (Barrels Sizer) & Section 2 (Smart Pair-Add Executor) -->
-    <div class="grid-2">
-      
-      <!-- Card 1: Barrels Sizer & Margin Calculations -->
-      <div class="card-box">
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; border-bottom: 1px solid rgba(56,189,248,0.2); padding-bottom: 10px;">
-          <h3 style="margin: 0; color: #38bdf8; font-size: 1.15rem; font-weight: 900;">🛢️ Barrels Sizer & Margin Calculator</h3>
-          <span style="font-size: 0.75rem; color: #f59e0b; font-weight: 800; background: rgba(245, 158, 11, 0.15); padding: 4px 8px; border-radius: 6px; border: 1px solid #f59e0b;">5x Leverage Mode</span>
-        </div>
-
-        <div style="margin-bottom: 16px;">
-          <label style="font-size: 0.82rem; color: #94a3b8; font-weight: 800; display: block; margin-bottom: 8px;">SELECT BARRELS QUANTITY:</label>
-          <div style="display: flex; gap: 8px; flex-wrap: wrap;">
-            <button class="btn-qty" onclick="setBarrelsQty(1)">1 Barrel</button>
-            <button class="btn-qty" onclick="setBarrelsQty(2)">2 Barrels</button>
-            <button class="btn-qty" onclick="setBarrelsQty(5)">5 Barrels</button>
-            <button class="btn-qty active" onclick="setBarrelsQty(10)">10 Barrels</button>
-            <input type="number" id="customBarrelsInput" value="10" min="1" max="100" step="1" oninput="onCustomQtyChange(this.value)" style="width: 80px; background: #080c14; border: 1px solid #38bdf8; border-radius: 8px; color: #fff; font-weight: 800; text-align: center; font-size: 1rem; outline: none; padding: 8px;" />
-          </div>
-        </div>
-
-        <!-- Margin & Profit Display Grid -->
-        <div class="grid-2" style="margin-bottom: 16px;">
-          <div class="stat-pill">
-            <div style="font-size: 0.75rem; color: #94a3b8; font-weight: 800; text-transform: uppercase;">Margin Per Single Leg (BUY or SELL)</div>
-            <div id="legMarginDisplay" style="font-size: 1.45rem; font-weight: 900; color: #38bdf8; font-family: monospace; margin: 4px 0;">₹17,522 ($182.70)</div>
-            <div style="font-size: 0.72rem; color: #64748b;">(Price × Qty × USD Rate) / 5</div>
-          </div>
-          <div class="stat-pill" style="border-color: rgba(245, 158, 11, 0.4);">
-            <div style="font-size: 0.75rem; color: #f59e0b; font-weight: 800; text-transform: uppercase;">Margin for Full Pair (1 BUY + 1 SELL)</div>
-            <div id="pairMarginDisplay" style="font-size: 1.45rem; font-weight: 900; color: #f59e0b; font-family: monospace; margin: 4px 0;">₹35,045 ($365.40)</div>
-            <div style="font-size: 0.72rem; color: #64748b;">Dono legs ka milakar required margin</div>
-          </div>
-        </div>
-
-        <!-- Profit Projections Table -->
-        <div style="background: #080c14; border-radius: 10px; border: 1px solid rgba(255, 255, 255, 0.08); padding: 12px; margin-bottom: 16px;">
-          <div style="font-size: 0.75rem; color: #94a3b8; font-weight: 800; margin-bottom: 8px; text-transform: uppercase;">Projected Profit per Move (<span id="calcQtyLabel">10</span> Barrels):</div>
-          <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; text-align: center;">
-            <div style="background: rgba(16, 185, 129, 0.08); padding: 8px; border-radius: 6px; border: 1px solid rgba(16,185,129,0.3);">
-              <span style="font-size: 0.72rem; color: #94a3b8; font-weight: 700;">$0.20 MOVE</span>
-              <div id="pnl020" style="font-size: 1.05rem; font-weight: 900; color: #34d399; font-family: monospace;">+₹191.82 (+$2.00)</div>
-            </div>
-            <div style="background: rgba(16, 185, 129, 0.12); padding: 8px; border-radius: 6px; border: 1px solid rgba(16,185,129,0.4);">
-              <span style="font-size: 0.72rem; color: #94a3b8; font-weight: 700;">$0.30 MOVE</span>
-              <div id="pnl030" style="font-size: 1.05rem; font-weight: 900; color: #34d399; font-family: monospace;">+₹287.73 (+$3.00)</div>
-            </div>
-            <div style="background: rgba(16, 185, 129, 0.2); padding: 8px; border-radius: 6px; border: 1px solid rgba(16,185,129,0.6);">
-              <span style="font-size: 0.72rem; color: #94a3b8; font-weight: 700;">$1.00 MOVE</span>
-              <div id="pnl100" style="font-size: 1.05rem; font-weight: 900; color: #34d399; font-family: monospace;">+₹959.10 (+$10.00)</div>
-            </div>
-          </div>
-        </div>
-
-        <!-- 10 Barrels Capital Recommendation Box -->
-        <div style="background: rgba(245, 158, 11, 0.08); border: 1px solid rgba(245, 158, 11, 0.35); border-radius: 10px; padding: 14px;">
-          <div style="font-size: 0.85rem; font-weight: 900; color: #f59e0b; margin-bottom: 4px;">💡 10 Barrels Ke Liye Account Mein Kitna Balance Chahiye?</div>
-          <p style="margin: 0; font-size: 0.8rem; color: #cbd5e1; line-height: 1.4;">
-            • <strong>1 Naya Pair (10 Barrels BUY + 10 Barrels SELL):</strong> Minimum <strong>₹35,045</strong> locked margin.<br>
-            • <strong>Comfortable Buffer:</strong> Agar aap 10 Barrels par trading kar rahe hain, toh account mein minimum <strong>₹50,000 se ₹75,000+</strong> hona chahiye taaki market swing hone par margin kabhi shortage na ho.
-          </p>
-        </div>
-      </div>
-
-      <!-- Card 2: Smart "Pair-Add" Execution Engine -->
-      <div class="card-box" style="border-color: rgba(16, 185, 129, 0.4);">
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; border-bottom: 1px solid rgba(16,185,129,0.25); padding-bottom: 10px;">
-          <h3 style="margin: 0; color: #34d399; font-size: 1.15rem; font-weight: 900;">⚡ Smart "Pair-Add" Execution Engine</h3>
-          <span style="font-size: 0.75rem; color: #34d399; font-weight: 800; background: rgba(16, 185, 129, 0.15); padding: 4px 8px; border-radius: 6px; border: 1px solid #10b981;">Auto-Detect B/S</span>
-        </div>
-
-        <!-- Live Detection Scanner Box -->
-        <div style="background: #080c14; border: 1px solid rgba(56, 189, 248, 0.3); border-radius: 12px; padding: 16px; margin-bottom: 18px;">
-          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
-            <span style="font-size: 0.78rem; color: #94a3b8; font-weight: 800; text-transform: uppercase;">Live Market Rate Scanner:</span>
-            <span id="scanRateDisplay" style="font-size: 1.25rem; font-weight: 900; color: #38bdf8; font-family: monospace;">$91.35</span>
-          </div>
-
-          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 12px;">
-            <div id="scanBuyBox" style="background: rgba(16,185,129,0.1); border: 1px solid rgba(16,185,129,0.3); padding: 10px; border-radius: 8px; text-align: center;">
-              <span style="font-size: 0.7rem; color: #94a3b8; font-weight: 700; text-transform: uppercase;">BUY Leg Status</span>
-              <div id="scanBuyText" style="font-size: 0.95rem; font-weight: 900; color: #34d399; margin-top: 2px;">Checking...</div>
-            </div>
-            <div id="scanSellBox" style="background: rgba(239,68,68,0.1); border: 1px solid rgba(239,68,68,0.3); padding: 10px; border-radius: 8px; text-align: center;">
-              <span style="font-size: 0.7rem; color: #94a3b8; font-weight: 700; text-transform: uppercase;">SELL Leg Status</span>
-              <div id="scanSellText" style="font-size: 0.95rem; font-weight: 900; color: #f87171; margin-top: 2px;">Checking...</div>
-            </div>
-          </div>
-
-          <!-- Smart Decision Preview Banner -->
-          <div id="smartDecisionBanner" style="background: rgba(56, 189, 248, 0.1); border: 1px solid rgba(56, 189, 248, 0.4); border-radius: 8px; padding: 10px 14px; font-size: 0.85rem; color: #38bdf8; font-weight: 700; line-height: 1.35;">
-            🔍 Analyzing position state at live rate...
-          </div>
-        </div>
-
-        <!-- Execution Configuration Controls -->
-        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 18px;">
-          <div>
-            <label style="font-size: 0.8rem; color: #94a3b8; font-weight: 800; display: block; margin-bottom: 6px;">Barrels To Execute:</label>
-            <select id="execQtySelect" style="width: 100%; background: #080c14; border: 1px solid rgba(56, 189, 248, 0.4); border-radius: 8px; color: #fff; font-weight: 800; padding: 10px; font-size: 0.95rem; outline: none;">
-              <option value="1">1 Barrel</option>
-              <option value="2">2 Barrels</option>
-              <option value="5">5 Barrels</option>
-              <option value="10" selected>10 Barrels</option>
-            </select>
-          </div>
-          <div>
-            <label style="font-size: 0.8rem; color: #94a3b8; font-weight: 800; display: block; margin-bottom: 6px;">Target Move ($):</label>
-            <select id="execTargetSelect" style="width: 100%; background: #080c14; border: 1px solid rgba(56, 189, 248, 0.4); border-radius: 8px; color: #fff; font-weight: 800; padding: 10px; font-size: 0.95rem; outline: none;">
-              <option value="0.15">$0.15 Target</option>
-              <option value="0.20" selected>$0.20 Target (Fast Scalp)</option>
-              <option value="0.25">$0.25 Target</option>
-              <option value="0.30">$0.30 Target</option>
-              <option value="0.50">$0.50 Target</option>
-              <option value="1.00">$1.00 Target Move</option>
-            </select>
-          </div>
-        </div>
-
-        <!-- Instant Pair-Add Button -->
-        <button id="btnExecutePairAdd" class="btn" style="width: 100%; background: linear-gradient(135deg, #10b981, #047857); color: #fff; font-weight: 900; font-size: 1.1rem; padding: 14px; border-radius: 10px; border: 1px solid #34d399; box-shadow: 0 0 20px rgba(16, 185, 129, 0.5); cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 10px;" onclick="executeSmartPairAdd()">
-          <span>⚡ Execute Smart "Pair-Add" at Live Rate</span>
-        </button>
-
-        <div id="execResultFeedback" style="margin-top: 12px; font-size: 0.85rem; font-weight: 700; text-align: center; display: none;"></div>
-      </div>
-
+    <!-- Engine Alert / Pause Banner (If paused) -->
+    <div id="engineAlertBanner" class="engine-alert-banner" style="display: none;">
+      <span id="engineAlertText">⚠️ ENGINE PAUSED</span>
+      <button class="btn btn-secondary" style="padding: 4px 10px; font-size: 0.75rem;" onclick="openSettingsModal()">Adjust Settings</button>
+      <button class="btn btn-secondary" style="padding: 4px 10px; font-size: 0.75rem; border: 1px solid #ef4444; color: #f87171;" onclick="resetAllDataConfirm()">🧹 Reset Engine Data</button>
     </div>
 
-    <!-- Bottom Section: Active Portfolio Rates Coverage Inspector Table -->
-    <div class="card-box">
-      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 10px; flex-wrap: wrap; gap: 10px;">
-        <div>
-          <h3 style="margin: 0; color: #f8fafc; font-size: 1.15rem; font-weight: 900;">📋 Active Portfolio Rates Inspector</h3>
-          <span style="font-size: 0.75rem; color: #94a3b8;">Har rate par BUY aur SELL ki live position status dekhein</span>
+    <!-- Single Top Summary Section (4 Prominent Cards Only) -->
+    <section class="top-summary-card" style="background: linear-gradient(135deg, rgba(16, 185, 129, 0.08), rgba(15, 23, 42, 0.95)); border: 1px solid rgba(16, 185, 129, 0.35); border-radius: 16px; padding: 22px; margin-bottom: 16px; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);">
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 18px;">
+        
+        <!-- 1. Realized Net P/L (Closed Trades Only) -->
+        <div style="background: #0d1117; border: 1px solid var(--border-color); border-radius: 12px; padding: 18px 20px;">
+          <div style="font-size: 0.82rem; color: #94a3b8; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px;">REALIZED NET P/L (CLOSED)</div>
+          <div style="font-size: 1.85rem; font-weight: 900; font-family: monospace; margin: 6px 0; line-height: 1.15;" id="kpiRealizedNet">+₹0.00 (+$0.00) PROFIT</div>
+          <div style="font-size: 0.8rem; color: var(--text-dim);" id="kpiRealizedGrossSubtext">Gross: +₹0.00 | Charges: -₹0.00</div>
         </div>
-        <button class="btn btn-secondary" style="font-size: 0.8rem; font-weight: 800; padding: 6px 12px; border-radius: 6px; cursor: pointer;" onclick="loadRatesInspector()">
-          🔄 Refresh Rates Map
-        </button>
+
+        <!-- 2. Floating Net P/L (Open Trades Only) -->
+        <div style="background: #0d1117; border: 1px solid var(--border-color); border-radius: 12px; padding: 18px 20px;">
+          <div style="font-size: 0.82rem; color: #94a3b8; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px;">FLOATING NET P/L (OPEN)</div>
+          <div style="font-size: 1.85rem; font-weight: 900; font-family: monospace; margin: 6px 0; line-height: 1.15;" id="kpiFloatingNet">+₹0.00 (+$0.00) PROFIT</div>
+          <div style="font-size: 0.8rem; color: var(--text-dim);" id="kpiFloatingSubtext">Gross: +₹0.00 | Charges: -₹0.00</div>
+        </div>
+
+        <!-- 3. Estimated Total P/L (Realized + Floating) -->
+        <div style="background: #0d1117; border: 1px solid var(--border-color); border-radius: 12px; padding: 18px 20px;">
+          <div style="font-size: 0.82rem; color: #94a3b8; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px;">ESTIMATED TOTAL P/L (TOTAL)</div>
+          <div style="font-size: 1.85rem; font-weight: 900; font-family: monospace; margin: 6px 0; line-height: 1.15;" id="kpiEstTotalNet">+₹0.00 (+$0.00) PROFIT</div>
+          <div style="font-size: 0.8rem; color: var(--text-dim);" id="kpiEstTotalSubtext">Realized + Floating Combined</div>
+        </div>
+
+        <!-- 4. Active Pairs / Pair Limit -->
+        <div style="background: #0d1117; border: 1px solid var(--border-color); border-radius: 12px; padding: 18px 20px;">
+          <div style="font-size: 0.82rem; color: #94a3b8; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px;">ACTIVE PAIRS / PAIR LIMIT 📊</div>
+          <div style="font-size: 1.95rem; font-weight: 900; font-family: monospace; color: #f59e0b; margin: 6px 0; line-height: 1.1;" id="kpiActivePairs">0 / 500 Pairs</div>
+          <div style="font-size: 0.8rem; color: var(--text-dim);" id="kpiUniqueRatesCount">0 Barrels Open</div>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- Simulated Account & Margin Callout Bar -->
+    <div style="background: rgba(13, 17, 23, 0.95); border: 1px solid rgba(56, 189, 248, 0.3); border-radius: 12px; padding: 14px 20px; margin-bottom: 24px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 16px;">
+      <div style="display: flex; align-items: center; gap: 12px;">
+        <span style="font-size: 1.2rem;">🛡️</span>
+        <div>
+          <span style="font-size: 0.75rem; color: #38bdf8; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px;">SIMULATED PAPER TRADING ACCOUNT (VIRTUAL CAPITAL)</span>
+          <div style="font-size: 0.8rem; color: var(--text-muted);">Amounts converted to USD ($) at reference rate. Paper trading metrics — not actual exchange wallet funds.</div>
+        </div>
       </div>
 
-      <div style="overflow-x: auto;">
-        <table class="data-table" style="width: 100%; border-collapse: collapse;">
+      <div style="display: flex; align-items: center; gap: 24px; flex-wrap: wrap;">
+        <div>
+          <span style="font-size: 0.72rem; color: var(--text-muted); font-weight: 700; text-transform: uppercase;">Available Simulated Margin</span>
+          <div style="font-size: 1.65rem; font-weight: 900; font-family: monospace; color: #38bdf8;" id="kpiAvailableMargin">₹0.00 ($0.00)</div>
+        </div>
+        <div>
+          <span style="font-size: 0.72rem; color: var(--text-muted); font-weight: 700; text-transform: uppercase;">Simulated Equity</span>
+          <div style="font-size: 1.25rem; font-weight: 800; font-family: monospace; color: #f8fafc;" id="kpiSimulatedEquity">₹0.00 ($0.00)</div>
+        </div>
+        <div>
+          <span style="font-size: 0.72rem; color: var(--text-muted); font-weight: 700; text-transform: uppercase;">Locked Margin</span>
+          <div style="font-size: 1.25rem; font-weight: 800; font-family: monospace; color: #fbbf24;" id="kpiMarginUsed">₹0.00 ($0.00) (5x)</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Mobile Bottom Secondary Controls & Technical Info Panel (Moved down below chart/tables on mobile) -->
+    <div class="mobile-bottom-panel" style="display: none;">
+      <div style="font-size: 0.72rem; color: var(--text-muted); font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px;">⚙️ Secondary Controls & System Info</div>
+      <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px;">
+        <button class="btn btn-secondary" style="border: 1px solid var(--accent-cyan); color: var(--accent-cyan); font-size: 0.78rem; padding: 8px 4px; font-weight: 700;" onclick="openMudrexLiveModal()">🔑 API Keys</button>
+        <button class="btn btn-secondary" style="border: 1px solid #38bdf8; color: #38bdf8; font-size: 0.78rem; padding: 8px 4px; font-weight: 700;" onclick="openAccountDetailsModal()">💰 Account Info</button>
+        <button class="btn btn-secondary" style="font-size: 0.78rem; padding: 8px 4px; font-weight: 700;" onclick="openSettingsModal()">⚙️ Settings</button>
+      </div>
+      <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; background: #080c14; border: 1px solid rgba(255,255,255,0.06); border-radius: 8px; padding: 10px 12px; font-size: 0.72rem; margin-top: 4px;">
+        <div><span style="color:var(--text-muted);">Last Processed:</span> <strong id="lastProcessedRateDisplayMobile" style="color:var(--accent-cyan);">--.--</strong></div>
+        <div><span style="color:var(--text-muted);">USD / INR:</span> <strong id="usdInrDisplayMobile">₹86.50</strong></div>
+        <div><span style="color:var(--text-muted);">Tick Age:</span> <strong id="tickTimeAgeDisplayMobile" style="color:var(--text-main);">--</strong></div>
+        <div><span style="color:var(--text-muted);">Feed Status:</span> <strong id="feedStatusTextMobile" style="color:#10b981;">LIVE</strong></div>
+      </div>
+    </div>
+
+    <!-- Main Content Area: Tabs -->
+    <section class="main-content-card">
+      <div class="tabs-header">
+        <button class="tab-btn active" onclick="switchTab('tabActive')">⚡ Active Positions (<span id="tabActiveCount">0</span>)</button>
+        <button class="tab-btn" onclick="switchTab('tabClosed')">📜 Closed Positions History (<span id="tabClosedCount">0</span>)</button>
+        <button class="tab-btn" onclick="switchTab('tabBacktest')">📊 Historical Day Backtester</button>
+        <button class="tab-btn" onclick="switchTab('tabTestRunner')">🧪 Test Suite Runner</button>
+        <button class="tab-btn" onclick="switchTab('tabLogs')">📋 System Audit Logs</button>
+      </div>
+
+      <!-- Tab 1: Active Positions -->
+      <div id="tabActive" class="tab-content active">
+        <!-- Live Price Tick Chart & Unified Info Bar -->
+        <div class="live-chart-hero-card" style="background: linear-gradient(135deg, rgba(13, 17, 23, 0.95), rgba(15, 23, 42, 0.95)); border: 1px solid rgba(56, 189, 248, 0.35); border-radius: 14px; padding: 18px; margin-bottom: 20px; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);">
+          
+          <!-- Unified 3-Callout Banner (Live Rate, Green BUY Target, Red SELL Target in equal 2.4rem size) -->
+          <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 20px; background: rgba(15, 23, 42, 0.85); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 12px; padding: 16px 24px; margin-bottom: 16px;">
+            
+            <!-- 1. Main CLUSDT Live Rate Callout (Cyan #38bdf8) -->
+            <div style="display: flex; flex-direction: column;">
+              <span style="font-size: 0.75rem; font-weight: 800; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.5px;" id="unifiedSymbolLabel">🛢️ CLUSDT LIVE RATE</span>
+              <span id="mainCrudeLiveRate" style="font-size: 2.4rem; font-weight: 900; color: #38bdf8; font-family: monospace; line-height: 1.1; text-shadow: 0 0 20px rgba(56, 189, 248, 0.6);">$0.00</span>
+            </div>
+
+            <!-- 2. Next BUY Target Exit (Green #10b981) - SAME SIZE 2.4rem -->
+            <div style="display: flex; flex-direction: column;">
+              <span style="font-size: 0.75rem; font-weight: 800; color: #34d399; text-transform: uppercase; letter-spacing: 0.5px;">🎯 BUY TARGET EXIT (UP)</span>
+              <span id="mainBuyTargetRate" style="font-size: 2.4rem; font-weight: 900; color: #10b981; font-family: monospace; line-height: 1.1; text-shadow: 0 0 20px rgba(16, 185, 129, 0.6);">$0.00</span>
+              <span id="mainBuyTargetDist" style="font-size: 0.72rem; color: #34d399; font-weight: 700;">--</span>
+            </div>
+
+            <!-- 3. Next SELL Target Exit (Red #ef4444) - SAME SIZE 2.4rem -->
+            <div style="display: flex; flex-direction: column;">
+              <span style="font-size: 0.75rem; font-weight: 800; color: #f87171; text-transform: uppercase; letter-spacing: 0.5px;">🎯 SELL TARGET EXIT (DOWN)</span>
+              <span id="mainSellTargetRate" style="font-size: 2.4rem; font-weight: 900; color: #ef4444; font-family: monospace; line-height: 1.1; text-shadow: 0 0 20px rgba(239, 68, 68, 0.6);">$0.00</span>
+              <span id="mainSellTargetDist" style="font-size: 0.72rem; color: #f87171; font-weight: 700;">--</span>
+            </div>
+
+            <!-- Key Summary Badges (Floating P/L & Active Pairs) -->
+            <div style="display: flex; align-items: center; gap: 20px; border-left: 1px solid rgba(255,255,255,0.1); padding-left: 20px;">
+              <div style="display: flex; flex-direction: column;">
+                <span style="font-size: 0.7rem; color: #94a3b8; font-weight: 700; text-transform: uppercase;">Floating Net P/L</span>
+                <span id="unifiedFloatingNet" style="font-size: 1.25rem; font-weight: 800; font-family: monospace;">₹0.00</span>
+              </div>
+
+              <div style="display: flex; flex-direction: column;">
+                <span style="font-size: 0.7rem; color: #94a3b8; font-weight: 700; text-transform: uppercase;">Active Pairs / Cap</span>
+                <span id="unifiedActivePairs" style="font-size: 1.2rem; font-weight: 800; color: #f59e0b; font-family: monospace;">0 / 25</span>
+              </div>
+            </div>
+
+          </div>
+
+          <!-- Interactive Live Price Canvas Chart -->
+          <div style="position: relative; width: 100%; height: 210px; background: #080c14; border-radius: 10px; border: 1px solid rgba(255, 255, 255, 0.06); overflow: hidden;">
+            <canvas id="livePriceCanvas" style="width: 100%; height: 100%; display: block;"></canvas>
+          </div>
+        </div>
+
+        <!-- Sort Bar & 2 Side-by-Side Tables Container for BUY & SELL Positions -->
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; padding: 10px 16px; background: rgba(13, 17, 23, 0.85); border: 1px solid rgba(56, 189, 248, 0.25); border-radius: 10px; flex-wrap: wrap; gap: 12px;">
+          <div style="display: flex; align-items: center; gap: 8px;">
+            <span style="font-size: 0.95rem; font-weight: 800; color: #f8fafc;">⚡ Active Positions Monitor</span>
+            <span style="font-size: 0.75rem; color: #94a3b8; font-weight: 700;">(Indian Time IST & Sortable Columns)</span>
+          </div>
+          <div style="display: flex; align-items: center; gap: 8px;">
+            <label style="font-size: 0.8rem; font-weight: 800; color: #38bdf8;">🔄 Sort Active Positions:</label>
+            <select id="activeSortSelect" onchange="onActiveSortDropdownChanged(this.value)" style="background: #080c14; border: 1px solid rgba(56, 189, 248, 0.4); color: #38bdf8; padding: 6px 12px; border-radius: 6px; font-size: 0.82rem; font-weight: 800; cursor: pointer;">
+              <option value="distToExit_asc">🎯 Target Exit Distance (Closest First)</option>
+              <option value="entryTime_desc">⏰ Entry Time IST (Newest First)</option>
+              <option value="entryTime_asc">⏰ Entry Time IST (Oldest First)</option>
+              <option value="floatingNetINR_desc">💰 Net Floating P/L (Highest Profit First)</option>
+              <option value="floatingNetINR_asc">🔻 Net Floating P/L (Lowest / Drawdown First)</option>
+              <option value="entryPrice_asc">📈 Entry Price (Low to High)</option>
+              <option value="entryPrice_desc">📉 Entry Price (High to Low)</option>
+              <option value="positionId_asc">🆔 Position ID (Ascending)</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="active-tables-container">
+          <!-- BUY Positions Table -->
+          <div class="active-table-card buy-card">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; padding-bottom: 8px; border-bottom: 1px solid rgba(16, 185, 129, 0.25);">
+              <h4 style="margin: 0; color: #10b981; font-size: 1.05rem; font-weight: 900; display: flex; align-items: center; gap: 8px;">
+                <span>🟢 BUY Positions (Long)</span>
+                <span id="buyPositionsBadge" class="badge-direction buy" style="font-size: 0.75rem;">0 Active</span>
+              </h4>
+              <span id="buyPositionsNetPL" style="font-size: 1.35rem; font-weight: 900; color: #10b981; font-family: monospace;">BUY FLOATING P/L: +$0.00 PROFIT</span>
+            </div>
+            <table class="data-table" id="buyPositionsTable">
+              <thead>
+                <tr>
+                  <th class="sortable" data-key="positionId" onclick="sortTable('buy', 'positionId')">Pair / Position ID</th>
+                  <th class="sortable" data-key="entryTime" onclick="sortTable('buy', 'entryTime')">Entry Time (IST) ⏰</th>
+                  <th class="sortable" data-key="entryPrice" onclick="sortTable('buy', 'entryPrice')">Rate ($) 📌</th>
+                  <th class="sortable" data-key="targetExitPrice" onclick="sortTable('buy', 'targetExitPrice')">Target Exit 🎯 ($)</th>
+                  <th class="sortable" data-key="floatingNetINR" onclick="sortTable('buy', 'floatingNetINR')" style="text-align: right;">Net Floating P/L ($)</th>
+                  <th style="text-align: center;">Action</th>
+                </tr>
+              </thead>
+              <tbody id="buyPositionsTbody">
+                <tr>
+                  <td colspan="6" style="text-align: center; color: var(--text-dim); padding: 18px;">No active BUY positions.</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <!-- SELL Positions Table -->
+          <div class="active-table-card sell-card">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; padding-bottom: 8px; border-bottom: 1px solid rgba(239, 68, 68, 0.25);">
+              <h4 style="margin: 0; color: #ef4444; font-size: 1.05rem; font-weight: 900; display: flex; align-items: center; gap: 8px;">
+                <span>🔴 SELL Positions (Short)</span>
+                <span id="sellPositionsBadge" class="badge-direction sell" style="font-size: 0.75rem;">0 Active</span>
+              </h4>
+              <span id="sellPositionsNetPL" style="font-size: 1.35rem; font-weight: 900; color: #ef4444; font-family: monospace;">SELL FLOATING P/L: +$0.00 PROFIT</span>
+            </div>
+            <table class="data-table" id="sellPositionsTable">
+              <thead>
+                <tr>
+                  <th class="sortable" data-key="positionId" onclick="sortTable('sell', 'positionId')">Pair / Position ID</th>
+                  <th class="sortable" data-key="entryTime" onclick="sortTable('sell', 'entryTime')">Entry Time (IST) ⏰</th>
+                  <th class="sortable" data-key="entryPrice" onclick="sortTable('sell', 'entryPrice')">Rate ($) 📌</th>
+                  <th class="sortable" data-key="targetExitPrice" onclick="sortTable('sell', 'targetExitPrice')">Target Exit 🎯 ($)</th>
+                  <th class="sortable" data-key="floatingNetINR" onclick="sortTable('sell', 'floatingNetINR')" style="text-align: right;">Net Floating P/L ($)</th>
+                  <th style="text-align: center;">Action</th>
+                </tr>
+              </thead>
+              <tbody id="sellPositionsTbody">
+                <tr>
+                  <td colspan="6" style="text-align: center; color: var(--text-dim); padding: 18px;">No active SELL positions.</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- Tab 2: Closed Positions History -->
+      <div id="tabClosed" class="tab-content">
+        <!-- Top Closed Positions History Performance Summary -->
+        <div class="closed-history-summary" id="closedTabSummaryBar">
+          <div class="summary-box">
+            <div class="summary-label">Closed Trades / Win Rate</div>
+            <div class="summary-value" id="closedSummaryCount">0</div>
+            <div class="summary-subtext" id="closedSummaryWinLoss">Wins: 0 | Losses: 0 | Win Rate: 0%</div>
+          </div>
+          <div class="summary-box">
+            <div class="summary-label">Total Realized Gross P/L ($)</div>
+            <div class="summary-value" id="closedSummaryGrossINR">+$0.00</div>
+            <div class="summary-subtext" id="closedSummaryGrossUSD">Gross P/L</div>
+          </div>
+          <div class="summary-box">
+            <div class="summary-label">Total Charges Paid ($)</div>
+            <div class="summary-value text-amber" id="closedSummaryChargesINR">-$0.00</div>
+            <div class="summary-subtext" id="closedSummaryChargesUSD">Taker Fees + GST + Buffer</div>
+          </div>
+          <div class="summary-box">
+            <div class="summary-label">Total Realized Net P/L ($)</div>
+            <div class="summary-value" id="closedSummaryNetINR">+$0.00 PROFIT</div>
+            <div class="summary-subtext" id="closedSummaryNetUSD">Realized Net</div>
+          </div>
+        </div>
+
+        <table class="data-table" id="closedPositionsTable">
           <thead>
-            <tr style="background: #080c14; border-bottom: 1px solid rgba(255, 255, 255, 0.1);">
-              <th style="padding: 10px; text-align: left;">Rate ($)</th>
-              <th style="padding: 10px; text-align: left;">Pair ID</th>
-              <th style="padding: 10px; text-align: center;">🟢 BUY Position</th>
-              <th style="padding: 10px; text-align: center;">🔴 SELL Position</th>
-              <th style="padding: 10px; text-align: center;">Hedge Status</th>
-              <th style="padding: 10px; text-align: center;">Action</th>
+            <tr>
+              <th class="sortable" data-key="pairId" onclick="sortTable('closed', 'pairId')">Pair ID</th>
+              <th class="sortable" data-key="positionId" onclick="sortTable('closed', 'positionId')">Position ID</th>
+              <th class="sortable" data-key="direction" onclick="sortTable('closed', 'direction')">Type</th>
+              <th class="sortable" data-key="entryTime" onclick="sortTable('closed', 'entryTime')">Entry Time (IST) ⏰</th>
+              <th class="sortable" data-key="exitTime" onclick="sortTable('closed', 'exitTime')">Exit Time (IST) ⏰</th>
+              <th class="sortable" data-key="entryPrice" onclick="sortTable('closed', 'entryPrice')">Entry Price ($)</th>
+              <th class="sortable" data-key="exitPrice" onclick="sortTable('closed', 'exitPrice')">Exit Price ($)</th>
+              <th class="sortable" data-key="targetExitPrice" onclick="sortTable('closed', 'targetExitPrice')">Target Exit ($) 🎯</th>
+              <th class="sortable" data-key="grossProfitUSD" onclick="sortTable('closed', 'grossProfitUSD')">Gross P/L ($)</th>
+              <th class="sortable" data-key="totalChargesUSD" onclick="sortTable('closed', 'totalChargesUSD')">Charges Paid ($)</th>
+              <th class="sortable" data-key="netProfitUSD" onclick="sortTable('closed', 'netProfitUSD')">Net P/L ($)</th>
+              <th class="sortable" data-key="usdInrRate" onclick="sortTable('closed', 'usdInrRate')">Rate (₹/$)</th>
+              <th class="sortable" data-key="exitReason" onclick="sortTable('closed', 'exitReason')">Exit Reason</th>
             </tr>
           </thead>
-          <tbody id="ratesInspectorTbody">
+          <tbody id="closedPositionsTbody">
             <tr>
-              <td colspan="6" style="text-align: center; color: var(--text-dim); padding: 20px;">Rates map load ho raha hai...</td>
+              <td colspan="13" style="text-align: center; color: var(--text-dim); padding: 24px;">No closed positions recorded yet.</td>
             </tr>
           </tbody>
         </table>
       </div>
-    </div>
 
+      <!-- Tab 3: Historical Backtester -->
+      <div id="tabBacktest" class="tab-content">
+        <h3 style="color: #fff; margin-bottom: 12px;">Historical Day Backtest Simulation</h3>
+        <p style="color: var(--text-muted); font-size: 0.85rem; margin-bottom: 18px;">Simulate unique rate pair strategy against 1-second historical kline data.</p>
+      </div>
+
+      <!-- Tab 4: Test Suite Runner -->
+      <div id="tabTestRunner" class="tab-content">
+        <div style="margin-bottom: 16px; display: flex; justify-content: space-between; align-items: center;">
+          <div>
+            <h3 style="color: #fff; margin-bottom: 4px;">Acceptance Test Suite</h3>
+            <p style="color: var(--text-muted); font-size: 0.8rem;">Runs automated verification tests.</p>
+          </div>
+          <button class="btn btn-primary" onclick="runAcceptanceTests()">🧪 Run Acceptance Tests</button>
+        </div>
+        <div id="testOutputContainer" class="audit-log-container" style="min-height: 250px;"></div>
+      </div>
+
+      <!-- Tab 5: Audit Logs -->
+      <div id="tabLogs" class="tab-content">
+        <h4 style="color: #fff; margin-bottom: 10px;">Engine Event Audit Log</h4>
+        <div id="auditLogList" class="audit-log-container"></div>
+      </div>
+    </section>
   </main>
 
-  <script>
-    let currentLivePrice = 91.35;
-    let currentUsdInr = 95.91;
-    let selectedBarrels = 10;
-    let lastRatesData = [];
+  <!-- Mudrex Live API Modal -->
+  <div id="mudrexLiveModal" class="modal-overlay" onclick="if(event.target === this) closeMudrexLiveModal()">
+    <div class="modal-card" style="max-width: 580px; position: relative;">
+      <div class="modal-header">
+        <h3>🔑 Mudrex Live API Key & Secret Connection</h3>
+        <button class="close-btn" onclick="closeMudrexLiveModal()" style="font-size: 1.5rem; padding: 4px 10px; cursor: pointer; color: #fff;">✕</button>
+      </div>
+      <div style="display: flex; flex-direction: column; gap: 14px;">
+        <div style="background: rgba(16, 185, 129, 0.1); border: 1px solid rgba(16, 185, 129, 0.3); padding: 12px; border-radius: 8px; font-size: 0.82rem; color: #a7f3d0;">
+          <strong>Mudrex Futures API REST Endpoint:</strong> <code>https://trade.mudrex.com/fapi/v1</code> & <code>v2</code>
+        </div>
 
-    function updateCalculations() {
-      const p = currentLivePrice;
-      const usdInr = currentUsdInr;
-      const qty = selectedBarrels;
-      const leverage = 5;
+        <div class="form-group">
+          <label style="color:#fff; font-weight:700;">Mudrex API Key</label>
+          <input type="text" id="inputMudrexApiKey" class="form-control" placeholder="Paste your Mudrex API Key here..." style="font-family:monospace;">
+        </div>
 
-      const legMarginUSD = (p * qty) / leverage;
-      const legMarginINR = legMarginUSD * usdInr;
-      const pairMarginUSD = legMarginUSD * 2;
-      const pairMarginINR = legMarginINR * 2;
+        <div class="form-group">
+          <label style="color:#fff; font-weight:700;">Mudrex API Secret Key</label>
+          <input type="text" id="inputMudrexApiSecret" class="form-control" placeholder="Paste your Mudrex API Secret Key here..." autocomplete="off" style="font-family:monospace;">
+        </div>
 
-      document.getElementById('calcQtyLabel').innerText = qty;
-      document.getElementById('legMarginDisplay').innerText = `₹${Math.round(legMarginINR).toLocaleString('en-IN')} ($${legMarginUSD.toFixed(2)})`;
-      document.getElementById('pairMarginDisplay').innerText = `₹${Math.round(pairMarginINR).toLocaleString('en-IN')} ($${pairMarginUSD.toFixed(2)})`;
+        <button class="btn btn-primary" style="padding: 10px; font-weight: 800;" onclick="saveAndConnectMudrexKeys()">💾 Save & Connect Mudrex API</button>
+        <button class="btn btn-secondary" style="border: 1px solid var(--accent-cyan); color: var(--accent-cyan);" onclick="checkMudrexAuthStatus()">🔑 Check Mudrex Live API Status</button>
 
-      const p020USD = 0.20 * qty;
-      const p030USD = 0.30 * qty;
-      const p100USD = 1.00 * qty;
+        <div id="mudrexAuthStatusContainer" style="background: #0d1117; border: 1px solid var(--border-color); padding: 12px; border-radius: 8px; font-size: 0.8rem; color: #f3f4f6;">
+          <span style="color: var(--text-muted);">Click "Check Mudrex Live API Status" to test API Key & Secret connection.</span>
+        </div>
 
-      document.getElementById('pnl020').innerText = `+₹${(p020USD * usdInr).toFixed(2)} (+$${p020USD.toFixed(2)})`;
-      document.getElementById('pnl030').innerText = `+₹${(p030USD * usdInr).toFixed(2)} (+$${p030USD.toFixed(2)})`;
-      document.getElementById('pnl100').innerText = `+₹${(p100USD * usdInr).toFixed(2)} (+$${p100USD.toFixed(2)})`;
-    }
+        <div style="border-top: 1px solid var(--border-color); padding-top: 12px; margin-top: 4px;">
+          <h4 style="color: #fff; margin-bottom: 6px; font-size: 0.9rem;">Alternative: Railway Cloud Environment Variables</h4>
+          <code style="display: block; background: #0b0e14; padding: 10px; border-radius: 6px; font-size: 0.78rem; color: #38bdf8; margin-bottom: 8px; font-family: monospace;">
+            MUDREX_API_KEY="your_mudrex_api_key"<br>
+            MUDREX_API_SECRET="your_mudrex_api_secret"
+          </code>
+        </div>
 
-    function setBarrelsQty(qty) {
-      selectedBarrels = qty;
-      document.getElementById('customBarrelsInput').value = qty;
-      document.getElementById('execQtySelect').value = qty;
-      document.querySelectorAll('.btn-qty').forEach(b => b.classList.remove('active'));
-      const found = Array.from(document.querySelectorAll('.btn-qty')).find(b => b.innerText.includes(qty + ' '));
-      if (found) found.classList.add('active');
-      updateCalculations();
-    }
+        <button class="btn btn-secondary" style="width: 100%; margin-top: 6px; background: #374151; color: #fff; font-weight: 700; border: none; padding: 10px; cursor: pointer;" onclick="closeMudrexLiveModal()">✖ Close Modal & Return to Live Dashboard</button>
+      </div>
+    </div>
+  </div>
 
-    function onCustomQtyChange(val) {
-      const q = parseFloat(val) || 1;
-      selectedBarrels = q;
-      document.querySelectorAll('.btn-qty').forEach(b => b.classList.remove('active'));
-      updateCalculations();
-    }
+  <!-- Settings Modal -->
+  <div id="settingsModal" class="modal-overlay">
+    <div class="modal-card" style="max-width: 520px;">
+      <div class="modal-header">
+        <h3>⚙️ Engine & Strategy Settings</h3>
+        <button class="close-btn" onclick="closeSettingsModal()">✕</button>
+      </div>
+      <div style="display: flex; flex-direction: column; gap: 14px;">
+        <div class="form-group">
+          <label style="color:#fff; font-weight:700;">Trading Instrument</label>
+          <select id="settingInstrument" class="form-control" onchange="onInstrumentSelectChanged()">
+            <option value="CLUSDT">CLUSDT — Crude Oil (1.0 Barrel)</option>
+            <option value="XAGUSDT">XAGUSDT — Silver (1.0 oz)</option>
+            <option value="BTCUSDT">BTCUSDT — Bitcoin (1.0 BTC)</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label style="color:#fff; font-weight:700;">Profit Target Strategy Mode</label>
+          <select id="settingStrategyMode" class="form-control" onchange="applySettingChange()" style="font-weight: 800; color: #38bdf8;">
+            <option value="ALTERNATING_STAGGERED" selected>🔄 ALTERNATING SMALL TARGETS (Staggered $0.15 / $0.20 / $0.25 / $0.30 per Pair)</option>
+            <option value="AI_DYNAMIC">🤖 AUTO AI DYNAMIC MODE (Adapts Targets Based on Real-Time Trend Tick-by-Tick)</option>
+            <option value="MANUAL_FIXED">⚙️ CUSTOM FIXED TARGETS (Specify Independent BUY & SELL Targets)</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label style="color:#fff; font-weight:700;">Fixed Profit Target Move ($)</label>
+          <select id="settingTargetMove" class="form-control" onchange="applySettingChange()">
+            <option value="0.15">$0.15 Target Move</option>
+            <option value="0.20" selected>$0.20 Target Move (Default Small Target)</option>
+            <option value="0.25">$0.25 Target Move</option>
+            <option value="0.30">$0.30 Target Move</option>
+            <option value="0.50">$0.50 Target Move</option>
+            <option value="1.00">$1.00 Target Move (Crude Standard)</option>
+            <option value="DISABLED">Disabled (No Auto Target)</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label style="color:#fff; font-weight:700;">Max Active Pairs Cap</label>
+          <input type="number" id="settingMaxPairs" class="form-control" value="50" min="1" max="500" onchange="applySettingChange()">
+        </div>
+        <div class="form-group">
+          <label style="color:#fff; font-weight:700;">USD-INR Rate (₹)</label>
+          <input type="number" id="settingUsdInr" class="form-control" value="86.50" step="0.01" onchange="applySettingChange()">
+        </div>
+        <div class="form-group">
+          <label style="color:#fff; font-weight:700;">Starting Capital (₹)</label>
+          <input type="number" id="modalStartingCapital" class="form-control" value="350000">
+        </div>
+        <div class="form-group">
+          <label style="color:#fff; font-weight:700;">Contract Quantity per Pair (Barrels)</label>
+          <select id="modalContractQuantity" class="form-control" style="font-weight: 800; color: #38bdf8;">
+            <option value="5" selected>5 Barrels (Default Standard)</option>
+            <option value="1">1 Barrel</option>
+            <option value="2">2 Barrels</option>
+            <option value="3">3 Barrels</option>
+            <option value="4">4 Barrels</option>
+            <option value="10">10 Barrels</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label style="color:#fff; font-weight:700;">Leverage (x)</label>
+          <input type="number" id="modalLeverage" class="form-control" value="5" min="1" max="100">
+        </div>
+        <button class="btn btn-primary" style="margin-top: 10px; font-weight: 800;" onclick="saveModalSettings()">💾 Save & Apply Settings</button>
+      </div>
+    </div>
+  </div>
 
-    async function loadRatesInspector() {
-      try {
-        const res = await fetch('/api/rates-inspector?symbol=CLUSDT');
-        const j = await res.json();
-        if (!j.success) return;
-        const data = j.data;
-        if (data.currentPrice) {
-          currentLivePrice = data.currentPrice;
-          document.getElementById('livePriceHeader').innerText = `$${data.currentPrice.toFixed(2)}`;
-          document.getElementById('scanRateDisplay').innerText = `$${data.currentPrice.toFixed(2)}`;
-        }
-        if (data.usdInrRate) {
-          currentUsdInr = data.usdInrRate;
-          document.getElementById('usdInrHeader').innerText = `₹${data.usdInrRate.toFixed(2)}`;
-        }
-        if (data.availableMarginINR !== undefined) {
-          document.getElementById('availMarginHeader').innerText = `₹${Math.round(data.availableMarginINR).toLocaleString('en-IN')}`;
-        }
-        updateCalculations();
+  <!-- Account & Capital Info Modal -->
+  <div id="accountDetailsModal" class="modal-overlay" onclick="if(event.target === this) closeAccountDetailsModal()">
+    <div class="modal-card" style="max-width: 520px; position: relative;">
+      <div class="modal-header">
+        <h3>💰 Mudrex Capital & Account Details</h3>
+        <button class="close-btn" onclick="closeAccountDetailsModal()" style="font-size: 1.5rem; padding: 4px 10px; cursor: pointer; color: #fff;">✕</button>
+      </div>
+      <div style="display: flex; flex-direction: column; gap: 14px;">
+        <div style="background: #0d1117; border: 1px solid var(--border-color); border-radius: 10px; padding: 14px 18px;">
+          <div style="font-size: 0.72rem; color: var(--text-muted); font-weight: 700; text-transform: uppercase;">Mudrex Live Wallet Balance</div>
+          <div style="font-size: 1.6rem; font-weight: 800; font-family: monospace; color: #a7f3d0;" id="modalWalletBal">₹0.00</div>
+          <div style="font-size: 0.75rem; color: var(--text-dim);" id="modalWalletSub">Live Exchange Capital</div>
+        </div>
 
-        lastRatesData = data.ratesList || [];
-        renderRatesTable(lastRatesData);
-        updateLiveScanDetection(currentLivePrice, lastRatesData);
-      } catch (e) {
-        console.error('Error fetching rates inspector:', e);
-      }
-    }
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+          <div style="background: #0d1117; border: 1px solid var(--border-color); border-radius: 8px; padding: 12px 14px;">
+            <div style="font-size: 0.72rem; color: var(--text-muted); font-weight: 700; text-transform: uppercase;">TOTAL EQUITY</div>
+            <div style="font-size: 1.25rem; font-weight: 800; font-family: monospace; color: #38bdf8;" id="modalTotalEquity">₹0.00</div>
+            <div style="font-size: 0.7rem; color: var(--text-dim);" id="modalEquitySub">Capital + Net P/L</div>
+          </div>
 
-    function updateLiveScanDetection(liveRate, ratesList) {
-      const tolerance = 0.02;
-      const matched = (ratesList || []).find(r => Math.abs(r.rate - liveRate) <= tolerance);
+          <div style="background: #0d1117; border: 1px solid var(--border-color); border-radius: 8px; padding: 12px 14px;">
+            <div style="font-size: 0.72rem; color: var(--text-muted); font-weight: 700; text-transform: uppercase;">REALIZED BALANCE</div>
+            <div style="font-size: 1.25rem; font-weight: 800; font-family: monospace;" id="modalRealizedBalance">₹0.00</div>
+            <div style="font-size: 0.7rem; color: var(--text-dim);">Capital + Realized P/L</div>
+          </div>
+        </div>
 
-      const buyText = document.getElementById('scanBuyText');
-      const sellText = document.getElementById('scanSellText');
-      const banner = document.getElementById('smartDecisionBanner');
+        <div style="background: #0d1117; border: 1px solid var(--border-color); border-radius: 8px; padding: 12px 14px;">
+          <div style="display: flex; justify-content: space-between; align-items: center;">
+            <span style="font-size: 0.78rem; color: var(--text-muted); font-weight: 700; text-transform: uppercase;">CLOSED TRADES / WIN RATE</span>
+            <span style="font-size: 1.15rem; font-weight: 800; color: #10b981;" id="modalWinRate">0%</span>
+          </div>
+          <div style="font-size: 0.75rem; color: var(--text-dim); margin-top: 4px;" id="modalTradesCount">Total: 0 | Wins: 0 | Losses: 0</div>
+        </div>
 
-      if (!matched) {
-        buyText.innerText = '⚪ MISSING';
-        buyText.style.color = '#94a3b8';
-        sellText.innerText = '⚪ MISSING';
-        sellText.style.color = '#94a3b8';
-        banner.innerHTML = `💡 <strong>Smart Decision:</strong> Rate $${liveRate.toFixed(2)} par koi position nahi hai. Click karne par <strong>Pura Naya BUY + SELL Pair</strong> add hoga.`;
-        banner.style.color = '#38bdf8';
-        banner.style.borderColor = 'rgba(56, 189, 248, 0.4)';
-        return;
-      }
+        <button class="btn btn-secondary" style="width: 100%; margin-top: 4px; background: #374151; color: #fff; font-weight: 700; border: none; padding: 10px; cursor: pointer;" onclick="closeAccountDetailsModal()">✖ Close Window</button>
+      </div>
+    </div>
+  </div>
 
-      if (matched.hasBuy && !matched.hasSell) {
-        buyText.innerText = `🟢 ACTIVE (${matched.buyQty}B)`;
-        buyText.style.color = '#34d399';
-        sellText.innerText = '🔴 END / MISSING';
-        sellText.style.color = '#f87171';
-        banner.innerHTML = `⚡ <strong>Smart Decision:</strong> Rate $${matched.rate.toFixed(2)} par BUY pehle se bacha hai, SELL end ho chuka hai. Click karne par <strong>Sirf missing SELL leg</strong> add hokar pair complete karega!`;
-        banner.style.color = '#f87171';
-        banner.style.borderColor = 'rgba(239, 68, 68, 0.5)';
-      } else if (!matched.hasBuy && matched.hasSell) {
-        buyText.innerText = '🟢 END / MISSING';
-        buyText.style.color = '#f87171';
-        sellText.innerText = `🔴 ACTIVE (${matched.sellQty}B)`;
-        sellText.style.color = '#34d399';
-        banner.innerHTML = `⚡ <strong>Smart Decision:</strong> Rate $${matched.rate.toFixed(2)} par SELL pehle se bacha hai, BUY end ho chuka hai. Click karne par <strong>Sirf missing BUY leg</strong> add hokar pair complete karega!`;
-        banner.style.color = '#34d399';
-        banner.style.borderColor = 'rgba(16, 185, 129, 0.5)';
-      } else {
-        buyText.innerText = `🟢 ACTIVE (${matched.buyQty}B)`;
-        buyText.style.color = '#34d399';
-        sellText.innerText = `🔴 ACTIVE (${matched.sellQty}B)`;
-        sellText.style.color = '#34d399';
-        banner.innerHTML = `✅ <strong>Smart Decision:</strong> Rate $${matched.rate.toFixed(2)} par BUY aur SELL dono already active hain (Fully Balanced). Click karne par <strong>Additional Pair</strong> create ho sakta hai.`;
-        banner.style.color = '#f59e0b';
-        banner.style.borderColor = 'rgba(245, 158, 11, 0.5)';
-      }
-    }
+  <!-- Pair & Smart Pair Trading Modal Window -->
+  <div id="tradeModal" class="modal-overlay" style="display: none;" onclick="if(event.target === this) closeTradeModal()">
+    <div class="modal-card" style="max-width: 540px; position: relative; background: #0d1117; border: 1px solid rgba(56, 189, 248, 0.4); border-radius: 16px; box-shadow: 0 20px 60px rgba(0,0,0,0.85); padding: 22px;">
+      <div class="modal-header" style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 12px; margin-bottom: 14px;">
+        <div style="display: flex; align-items: center; gap: 10px;">
+          <span style="font-size: 1.6rem;" id="modalTitleIcon">⚡</span>
+          <div>
+            <h3 id="modalTradeTitle" style="margin: 0; font-size: 1.25rem; font-weight: 900; color: #38bdf8;">Pair Trading Window</h3>
+            <span id="modalTradeSubtitle" style="font-size: 0.75rem; color: #94a3b8; font-weight: 700;">Mudrex Crude Oil Live Scalping</span>
+          </div>
+        </div>
+        <button class="close-btn" onclick="closeTradeModal()" style="font-size: 1.5rem; background: none; border: none; padding: 4px 10px; cursor: pointer; color: #94a3b8;">✕</button>
+      </div>
 
-    function renderRatesTable(list) {
-      const tbody = document.getElementById('ratesInspectorTbody');
-      if (!tbody) return;
-      if (!list || list.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="6" style="text-align:center; padding: 20px; color:#94a3b8;">No active rates in portfolio.</td></tr>`;
-        return;
-      }
+      <!-- Mode Selector Tabs (Pair vs Smart Pair) -->
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 14px;">
+        <button id="tabModePair" type="button" class="btn" style="background: #0284c7; color: #fff; font-weight: 900; font-size: 0.88rem; padding: 10px; border-radius: 8px; border: 1px solid #38bdf8; cursor: pointer;" onclick="switchTradeModalMode('PAIR')">
+          ➕ Standard Pair (B + S)
+        </button>
+        <button id="tabModeSmartPair" type="button" class="btn" style="background: #1e293b; color: #94a3b8; font-weight: 900; font-size: 0.88rem; padding: 10px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.15); cursor: pointer;" onclick="switchTradeModalMode('SMART_PAIR')">
+          ⚡ Smart Pair (Auto B/S)
+        </button>
+      </div>
 
-      let html = '';
-      for (const r of list) {
-        let statusBadge = '';
-        if (r.status === 'BALANCED') statusBadge = `<span class="badge-status badge-balanced">HEDGED (B + S)</span>`;
-        else if (r.status === 'ONLY_BUY') statusBadge = `<span class="badge-status badge-onlybuy">ONLY BUY OPEN</span>`;
-        else if (r.status === 'ONLY_SELL') statusBadge = `<span class="badge-status badge-onlysell">ONLY SELL OPEN</span>`;
+      <div style="display: flex; flex-direction: column; gap: 14px;">
+        
+        <!-- Live Rate Ticker & USD/INR -->
+        <div style="display: flex; justify-content: space-between; align-items: center; background: rgba(56, 189, 248, 0.08); border: 1px solid rgba(56, 189, 248, 0.3); padding: 10px 16px; border-radius: 10px;">
+          <div>
+            <div style="font-size: 0.72rem; color: #94a3b8; font-weight: 800; text-transform: uppercase;">LIVE CRUDE RATE:</div>
+            <div id="modalTradeLiveRate" style="font-size: 1.5rem; font-weight: 900; font-family: monospace; color: #38bdf8;">$--.--</div>
+          </div>
+          <div style="text-align: right;">
+            <div style="font-size: 0.72rem; color: #94a3b8; font-weight: 800; text-transform: uppercase;">USD / INR:</div>
+            <div id="modalTradeUsdInr" style="font-size: 1.15rem; font-weight: 800; font-family: monospace; color: #f59e0b;">₹95.91</div>
+          </div>
+        </div>
 
-        let actionBtnText = '+ Pair-Add';
-        let actionBtnBg = '#0284c7';
-        if (r.status === 'ONLY_BUY') { actionBtnText = '+ Add SELL Leg'; actionBtnBg = '#ef4444'; }
-        if (r.status === 'ONLY_SELL') { actionBtnText = '+ Add BUY Leg'; actionBtnBg = '#10b981'; }
+        <!-- Smart Pair Live Detection Box (Visible only when in SMART_PAIR mode) -->
+        <div id="smartPairScanBox" style="display: none; background: #080c14; border: 1px solid rgba(16, 185, 129, 0.4); border-radius: 10px; padding: 14px;">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+            <span style="font-size: 0.75rem; color: #94a3b8; font-weight: 800; text-transform: uppercase;">Current Rate Leg Status:</span>
+            <span id="smartScanBadge" class="badge-status badge-balanced" style="font-size: 0.72rem; padding: 3px 8px;">Scanning...</span>
+          </div>
+          <div id="smartScanDecisionText" style="font-size: 0.85rem; font-weight: 700; color: #34d399; line-height: 1.4;">
+            🔍 Analyzing position state at live rate...
+          </div>
+        </div>
 
-        html += `
-          <tr style="border-bottom: 1px solid rgba(255,255,255,0.06);">
-            <td style="padding: 12px; font-weight: 900; font-family: monospace; font-size: 1.1rem; color: #38bdf8;">$${r.rate.toFixed(2)}</td>
-            <td style="padding: 12px; font-weight: 700; color: #94a3b8;">${r.pairId || 'PAIR'}</td>
-            <td style="padding: 12px; text-align: center;">
-              ${r.hasBuy ? `<span style="color:#34d399; font-weight:800;">🟢 ACTIVE (${r.buyQty}B)</span><div style="font-size:0.75rem; color:#64748b;">Target: $${r.buyTarget || '--'}</div>` : `<span style="color:#64748b; font-weight:700;">⚪ CLOSED</span>`}
-            </td>
-            <td style="padding: 12px; text-align: center;">
-              ${r.hasSell ? `<span style="color:#f87171; font-weight:800;">🔴 ACTIVE (${r.sellQty}B)</span><div style="font-size:0.75rem; color:#64748b;">Target: $${r.sellTarget || '--'}</div>` : `<span style="color:#64748b; font-weight:700;">⚪ CLOSED</span>`}
-            </td>
-            <td style="padding: 12px; text-align: center;">${statusBadge}</td>
-            <td style="padding: 12px; text-align: center;">
-              <button class="btn" style="background: ${actionBtnBg}; color:#fff; font-weight:800; font-size:0.75rem; padding: 6px 12px; border-radius: 6px; cursor: pointer; border: none;" onclick="quickPairAddAtRate(${r.rate})">
-                ${actionBtnText}
-              </button>
-            </td>
-          </tr>
-        `;
-      }
-      tbody.innerHTML = html;
-    }
+        <!-- Barrels Quantity Selector -->
+        <div>
+          <label style="font-size: 0.8rem; color: #94a3b8; font-weight: 800; display: block; margin-bottom: 6px; text-transform: uppercase;">Quantity (Barrels):</label>
+          <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+            <button type="button" class="btn modal-qty-btn" onclick="setModalBarrels(1)">1 B</button>
+            <button type="button" class="btn modal-qty-btn" onclick="setModalBarrels(2)">2 B</button>
+            <button type="button" class="btn modal-qty-btn" onclick="setModalBarrels(5)">5 B</button>
+            <button type="button" class="btn modal-qty-btn active" onclick="setModalBarrels(10)">10 Barrels</button>
+            <input type="number" id="tradeQtyInput" value="10" min="1" max="100" step="1" oninput="onModalCustomQtyChange(this.value)" style="width: 70px; background: #080c14; border: 1px solid #38bdf8; border-radius: 6px; color: #fff; font-weight: 800; text-align: center; font-size: 0.95rem; outline: none; padding: 6px;" />
+          </div>
+        </div>
 
-    async function executeSmartPairAdd(specificPrice = null) {
-      const qty = parseFloat(document.getElementById('execQtySelect').value) || selectedBarrels || 10;
-      const targetMove = parseFloat(document.getElementById('execTargetSelect').value) || 0.20;
-      const price = specificPrice !== null ? specificPrice : currentLivePrice;
+        <!-- Target Exit Move -->
+        <div>
+          <label style="font-size: 0.8rem; color: #94a3b8; font-weight: 800; display: block; margin-bottom: 6px; text-transform: uppercase;">Target Exit Move ($):</label>
+          <select id="tradeTargetSelect" onchange="updateModalCalculations()" class="form-control" style="width: 100%; background: #080c14; border: 1px solid rgba(56, 189, 248, 0.4); border-radius: 8px; color: #fff; font-weight: 800; padding: 9px; font-size: 0.9rem; outline: none;">
+            <option value="0.15">$0.15 Target Move</option>
+            <option value="0.20" selected>$0.20 Target Move ($0.20 UP / $0.20 DOWN)</option>
+            <option value="0.25">$0.25 Target Move</option>
+            <option value="0.30">$0.30 Target Move</option>
+            <option value="0.50">$0.50 Target Move</option>
+            <option value="1.00">$1.00 Target Move</option>
+          </select>
+        </div>
 
-      const fb = document.getElementById('execResultFeedback');
-      fb.style.display = 'block';
-      fb.style.color = '#38bdf8';
-      fb.innerText = `⏳ Pair-Add request processing for ${qty} Barrels at $${price}...`;
+        <!-- Margin & Profit Display Callout Box -->
+        <div style="background: rgba(15, 23, 42, 0.8); border: 1px solid rgba(245, 158, 11, 0.35); border-radius: 10px; padding: 12px 14px;">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+            <span style="font-size: 0.75rem; color: #94a3b8; font-weight: 800;">REQUIRED MARGIN (5x LEVERAGE):</span>
+            <span id="modalRequiredMarginDisplay" style="font-size: 1.15rem; font-weight: 900; color: #f59e0b; font-family: monospace;">₹35,045 ($365.40)</span>
+          </div>
+          <div style="display: flex; justify-content: space-between; align-items: center;">
+            <span style="font-size: 0.75rem; color: #94a3b8; font-weight: 800;">PROJECTED PROFIT ON TARGET:</span>
+            <span id="modalProjectedProfitDisplay" style="font-size: 1.05rem; font-weight: 900; color: #34d399; font-family: monospace;">+₹191.82 (+$2.00)</span>
+          </div>
+        </div>
 
-      try {
-        const res = await fetch('/api/pair-add', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ symbol: 'CLUSDT', price, quantity: qty, targetMove })
-        });
-        const data = await res.json();
-        if (data.success) {
-          fb.style.color = '#34d399';
-          fb.innerText = `✅ SUCCESS: ${data.message}`;
-          alert(`✅ Pair-Add Executed!\n\n${data.message}`);
-          loadRatesInspector();
-        } else {
-          fb.style.color = '#ef4444';
-          fb.innerText = `❌ Error: ${data.error || 'Failed to execute'}`;
-        }
-      } catch (err) {
-        fb.style.color = '#ef4444';
-        fb.innerText = `❌ Request Error: ${err.message}`;
-      }
-    }
+        <!-- Action Button -->
+        <button id="modalExecuteBtn" class="btn" style="padding: 13px; font-weight: 900; font-size: 1.05rem; background: linear-gradient(135deg, #10b981, #059669); color: #fff; border-radius: 8px; border: 1px solid #34d399; box-shadow: 0 0 16px rgba(16, 185, 129, 0.4); cursor: pointer;" onclick="executePairTradeModal()">
+          🚀 Instant Pair Kharidein (10 Barrels)
+        </button>
 
-    function quickPairAddAtRate(rate) {
-      const qty = parseFloat(document.getElementById('execQtySelect').value) || selectedBarrels || 10;
-      if (confirm(`Rate $${rate} par ${qty} Barrels ka Pair-Add execute karna chahte hain?`)) {
-        executeSmartPairAdd(rate);
-      }
-    }
+        <button type="button" class="btn btn-secondary" style="width: 100%; background: #1e293b; color: #94a3b8; font-weight: 700; border: 1px solid rgba(255,255,255,0.1); padding: 8px; cursor: pointer; border-radius: 8px;" onclick="closeTradeModal()">✖ Close Window</button>
+      </div>
+    </div>
+  </div>
 
-    // Connect SSE Stream for real-time live price updates
-    function initStream() {
-      const evtSource = new EventSource('/api/stream?mode=mudrex_live');
-      evtSource.onmessage = (event) => {
-        try {
-          const d = JSON.parse(event.data);
-          if (d.rateFeedInfo && d.rateFeedInfo.price) {
-            currentLivePrice = d.rateFeedInfo.price;
-            document.getElementById('livePriceHeader').innerText = `$${d.rateFeedInfo.price.toFixed(2)}`;
-            document.getElementById('scanRateDisplay').innerText = `$${d.rateFeedInfo.price.toFixed(2)}`;
-          }
-          if (d.rateFeedInfo && d.rateFeedInfo.usdInrRate) {
-            currentUsdInr = d.rateFeedInfo.usdInrRate;
-            document.getElementById('usdInrHeader').innerText = `₹${d.rateFeedInfo.usdInrRate.toFixed(2)}`;
-          }
-          if (d.summary && d.summary.availableMarginINR !== undefined) {
-            document.getElementById('availMarginHeader').innerText = `₹${Math.round(d.summary.availableMarginINR).toLocaleString('en-IN')}`;
-          }
-          updateCalculations();
-          updateLiveScanDetection(currentLivePrice, lastRatesData);
-        } catch (e) {}
-      };
-    }
+  <!-- Admin Password Verification Modal (Password: 340556) -->
+  <div id="adminPasswordModal" class="modal" style="display: none; position: fixed; inset: 0; background: rgba(0, 0, 0, 0.85); z-index: 99999; align-items: center; justify-content: center; backdrop-filter: blur(8px);">
+    <div style="background: #0d1117; border: 1px solid #f59e0b; border-radius: 16px; padding: 28px; width: 90%; max-width: 420px; box-shadow: 0 15px 45px rgba(0, 0, 0, 0.8), 0 0 25px rgba(245, 158, 11, 0.25); text-align: center;">
+      <div style="font-size: 2.5rem; margin-bottom: 8px;">🔐</div>
+      <h3 style="margin: 0 0 8px 0; color: #f59e0b; font-size: 1.35rem; font-weight: 900;">Admin Verification</h3>
+      <p style="margin: 0 0 18px 0; color: #94a3b8; font-size: 0.85rem; line-height: 1.4;">
+        Live trading controls, Engine settings, aur Reset Data ko access karne ke liye Admin Password dalein:
+      </p>
+      
+      <div style="margin-bottom: 18px;">
+        <input type="password" id="adminPasswordInput" placeholder="Password dalein..." maxlength="12" style="width: 100%; box-sizing: border-box; background: #080c14; border: 2px solid rgba(245, 158, 11, 0.5); border-radius: 10px; padding: 12px 16px; font-size: 1.4rem; color: #fff; text-align: center; font-weight: 800; letter-spacing: 4px; outline: none;" onkeydown="if(event.key==='Enter') verifyAdminPassword()" />
+        <div id="adminPasswordError" style="color: #ef4444; font-size: 0.82rem; font-weight: 800; margin-top: 8px; display: none;"></div>
+      </div>
 
-    document.addEventListener('DOMContentLoaded', () => {
-      updateCalculations();
-      loadRatesInspector();
-      initStream();
-      setInterval(loadRatesInspector, 5000);
-    });
-  </script>
+      <div style="display: flex; gap: 10px;">
+        <button class="btn" style="flex: 1; background: linear-gradient(135deg, #f59e0b, #d97706); color: #000; font-weight: 900; padding: 12px; border-radius: 8px; border: 1px solid #fbbf24; cursor: pointer; font-size: 0.95rem;" onclick="verifyAdminPassword()">
+          🔓 Unlock Admin
+        </button>
+        <button class="btn btn-secondary" style="flex: 1; background: #1e293b; color: #cbd5e1; font-weight: 700; padding: 12px; border-radius: 8px; border: 1px solid #475569; cursor: pointer;" onclick="closeAdminPasswordModal()">
+          Cancel
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Admin Control Center Modal (Unlocked Controls) -->
+  <div id="adminControlCenterModal" class="modal" style="display: none; position: fixed; inset: 0; background: rgba(0, 0, 0, 0.85); z-index: 99998; align-items: center; justify-content: center; backdrop-filter: blur(8px);">
+    <div style="background: #0d1117; border: 1px solid rgba(245, 158, 11, 0.6); border-radius: 16px; padding: 24px; width: 92%; max-width: 580px; box-shadow: 0 20px 50px rgba(0, 0, 0, 0.9), 0 0 30px rgba(245, 158, 11, 0.25);">
+      
+      <!-- Modal Header -->
+      <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid rgba(255, 255, 255, 0.1); padding-bottom: 14px; margin-bottom: 20px;">
+        <div style="display: flex; align-items: center; gap: 10px;">
+          <span style="font-size: 1.5rem;">🛡️</span>
+          <div>
+            <h3 style="margin: 0; color: #f59e0b; font-size: 1.25rem; font-weight: 900;">Admin Control Center</h3>
+            <span style="font-size: 0.72rem; color: #10b981; font-weight: 800;">● Authenticated (PIN: 340556)</span>
+          </div>
+        </div>
+        <div style="display: flex; align-items: center; gap: 8px;">
+          <button class="btn" style="background: #1e293b; border: 1px solid #f87171; color: #f87171; font-size: 0.78rem; font-weight: 800; padding: 6px 12px; border-radius: 6px; cursor: pointer;" onclick="lockAdminPortal()">
+            🔒 Lock Admin
+          </button>
+          <button style="background: none; border: none; font-size: 1.5rem; color: #94a3b8; cursor: pointer; padding: 0 6px;" onclick="closeAdminControlCenter()">✕</button>
+        </div>
+      </div>
+
+      <!-- Modal Body -->
+      <div style="display: flex; flex-direction: column; gap: 16px;">
+        
+        <!-- Section 1: Engine Execution Controls -->
+        <div style="background: #080c14; border: 1px solid rgba(56, 189, 248, 0.25); border-radius: 12px; padding: 16px;">
+          <div style="font-size: 0.78rem; font-weight: 800; color: #38bdf8; text-transform: uppercase; margin-bottom: 10px; letter-spacing: 0.5px;">⚡ Engine Live Operations</div>
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 10px;">
+            <button id="mudrexStartEngineMainBtn" class="btn" style="background: linear-gradient(135deg, #10b981, #047857); color: #fff; font-weight: 900; font-size: 0.9rem; padding: 12px; border-radius: 8px; border: 1px solid #34d399; box-shadow: 0 0 14px rgba(16, 185, 129, 0.4); cursor: pointer;" onclick="toggleEngineState()">
+              <span>🚀 START ENGINE</span>
+            </button>
+            <button class="btn" style="background: linear-gradient(135deg, #0284c7, #0369a1); color: #fff; font-weight: 900; font-size: 0.9rem; padding: 12px; border-radius: 8px; border: 1px solid #38bdf8; box-shadow: 0 0 14px rgba(56, 189, 248, 0.4); cursor: pointer;" onclick="closeAdminControlCenter(); openPairModalWithMode('PAIR');">
+              <span>➕ Pair Kharidne Ka Option</span>
+            </button>
+          </div>
+          <button class="btn" style="width: 100%; background: linear-gradient(135deg, #059669, #10b981); color: #fff; font-weight: 900; font-size: 0.88rem; padding: 10px; border-radius: 8px; border: 1px solid #34d399; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 6px;" onclick="closeAdminControlCenter(); openPairModalWithMode('SMART_PAIR');">
+            <span>⚡ Smart Pair (Auto B/S Balancer)</span>
+          </button>
+        </div>
+
+        <!-- Section 2: Engine Configuration & Mudrex Credentials -->
+        <div style="background: #080c14; border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 12px; padding: 16px;">
+          <div style="font-size: 0.78rem; font-weight: 800; color: #94a3b8; text-transform: uppercase; margin-bottom: 10px; letter-spacing: 0.5px;">⚙️ Engine Settings & Credentials</div>
+          <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px;">
+            <button class="btn btn-secondary" style="padding: 10px 8px; font-weight: 800; font-size: 0.82rem; border: 1px solid rgba(255,255,255,0.15); border-radius: 8px; cursor: pointer;" onclick="closeAdminControlCenter(); openSettingsModal();">
+              ⚙️ Settings
+            </button>
+            <button class="btn btn-secondary" style="border: 1px solid var(--accent-cyan); color: var(--accent-cyan); padding: 10px 8px; font-weight: 800; font-size: 0.82rem; border-radius: 8px; cursor: pointer;" onclick="closeAdminControlCenter(); openMudrexLiveModal();">
+              🔑 API Keys
+            </button>
+            <button class="btn btn-secondary" style="border: 1px solid #38bdf8; color: #38bdf8; padding: 10px 8px; font-weight: 800; font-size: 0.82rem; border-radius: 8px; cursor: pointer;" onclick="closeAdminControlCenter(); openAccountDetailsModal();">
+              💰 Account Info
+            </button>
+          </div>
+        </div>
+
+        <!-- Section 3: Protected Danger Zone -->
+        <div style="background: rgba(239, 68, 68, 0.06); border: 1px solid rgba(239, 68, 68, 0.35); border-radius: 12px; padding: 16px;">
+          <div style="display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap;">
+            <div>
+              <div style="font-size: 0.82rem; font-weight: 900; color: #f87171; text-transform: uppercase;">⚠️ Danger Zone</div>
+              <div style="font-size: 0.72rem; color: #94a3b8; margin-top: 2px;">Reset simulated engine state (Real Mudrex exchange positions remain 100% safe).</div>
+            </div>
+            <button class="btn btn-secondary" style="border: 1px solid #ef4444; background: rgba(239, 68, 68, 0.2); color: #f87171; font-weight: 800; font-size: 0.82rem; padding: 9px 16px; border-radius: 8px; cursor: pointer;" onclick="closeAdminControlCenter(); resetAllDataConfirm();">
+              🧹 Reset Data
+            </button>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <script src="app.js?v=20261013_v3"></script>
 </body>
 </html>
