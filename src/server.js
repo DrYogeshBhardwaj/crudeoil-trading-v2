@@ -576,6 +576,8 @@ app.get('/api/crude-live-mudrex/data', async (req, res) => {
         isEngineRunning: paperEngine.isEngineRunning,
         pauseReason: paperEngine.pauseReason || '',
         pairsCount: openPairs.length,
+        contractQuantity: paperEngine.settings.contractQuantity || 2.0,
+        profitTargetMove: paperEngine.settings.profitTargetMove || 0.30,
         activeBuyCount: openPairs.filter(p => p.buy && p.buy.status === 'OPEN').length,
         activeSellCount: openPairs.filter(p => p.sell && p.sell.status === 'OPEN').length,
         pairs: openPairs

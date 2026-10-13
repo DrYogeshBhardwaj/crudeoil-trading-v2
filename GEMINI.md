@@ -13,9 +13,9 @@
   - Available Margin, Equity, and Locked Margin must display in both ₹ (INR) and $ (USD).
 
 ## 3. Position Sizing & Margin Policy
-- Default contract size is **1.0 Barrel** per pair.
+- Default contract size is **2.0 Barrels** per pair (user-configured).
 - Leverage is **5x**.
-- Profit Target Move default is **$1.00** (or user-configured setting).
+- Profit Target Move default is **$0.30** (user-configured setting).
 - Margin check must always use authoritative available margin based only on actually OPEN positions, immediately freeing margin when any leg closes.
 
 ## 4. UI Updates & Data Integrity Shield (Admin Password: 340556)

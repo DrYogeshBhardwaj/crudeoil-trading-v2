@@ -906,6 +906,7 @@
               <thead>
                 <tr>
                   <th class="sortable-th" onclick="sortTable('buy', 'positionId')">Position <span class="sort-icon" id="sort-buy-positionId">⬍</span></th>
+                  <th class="sortable-th" onclick="sortTable('buy', 'quantity')">Barrels <span class="sort-icon" id="sort-buy-quantity">⬍</span></th>
                   <th class="sortable-th" onclick="sortTable('buy', 'entryPrice')">Entry <span class="sort-icon" id="sort-buy-entryPrice">⬍</span></th>
                   <th class="sortable-th" onclick="sortTable('buy', 'targetPrice')">Target Exit 🎯 <span class="sort-icon" id="sort-buy-targetPrice">⬍</span></th>
                   <th class="sortable-th" onclick="sortTable('buy', 'distToTarget')">Dist to Exit <span class="sort-icon" id="sort-buy-distToTarget">⬍</span></th>
@@ -913,7 +914,7 @@
                 </tr>
               </thead>
               <tbody id="splitBuyTableBody">
-                <tr><td colspan="5" class="empty-state">No active BUY positions</td></tr>
+                <tr><td colspan="6" class="empty-state">No active BUY positions</td></tr>
               </tbody>
             </table>
           </div>
@@ -935,6 +936,7 @@
               <thead>
                 <tr>
                   <th class="sortable-th" onclick="sortTable('sell', 'positionId')">Position <span class="sort-icon" id="sort-sell-positionId">⬍</span></th>
+                  <th class="sortable-th" onclick="sortTable('sell', 'quantity')">Barrels <span class="sort-icon" id="sort-sell-quantity">⬍</span></th>
                   <th class="sortable-th" onclick="sortTable('sell', 'entryPrice')">Entry <span class="sort-icon" id="sort-sell-entryPrice">⬍</span></th>
                   <th class="sortable-th" onclick="sortTable('sell', 'targetPrice')">Target Exit 🎯 <span class="sort-icon" id="sort-sell-targetPrice">⬍</span></th>
                   <th class="sortable-th" onclick="sortTable('sell', 'distToTarget')">Dist to Exit <span class="sort-icon" id="sort-sell-distToTarget">⬍</span></th>
@@ -942,7 +944,7 @@
                 </tr>
               </thead>
               <tbody id="splitSellTableBody">
-                <tr><td colspan="5" class="empty-state">No active SELL positions</td></tr>
+                <tr><td colspan="6" class="empty-state">No active SELL positions</td></tr>
               </tbody>
             </table>
           </div>
@@ -1312,6 +1314,7 @@
     function getBuySortValue(p, col) {
       const b = p.buy || {};
       if (col === 'positionId') return b.positionId || '';
+      if (col === 'quantity') return b.quantity || 1.0;
       if (col === 'entryPrice') return b.entryPrice || 0;
       if (col === 'targetPrice') return b.targetPrice || 0;
       if (col === 'distToTarget') return b.distToTarget || 0;
@@ -1322,6 +1325,7 @@
     function getSellSortValue(p, col) {
       const s = p.sell || {};
       if (col === 'positionId') return s.positionId || '';
+      if (col === 'quantity') return s.quantity || 1.0;
       if (col === 'entryPrice') return s.entryPrice || 0;
       if (col === 'targetPrice') return s.targetPrice || 0;
       if (col === 'distToTarget') return s.distToTarget || 0;
@@ -1448,6 +1452,7 @@
         buyRows.push(`
           <tr>
             <td><strong>${p.buy.positionId}</strong></td>
+            <td><strong style="color: var(--accent-gold); font-size: 0.85rem;">${(p.buy.quantity || 1.0).toFixed(1)} BBL</strong></td>
             <td>$${p.buy.entryPrice.toFixed(2)}</td>
             <td style="color: var(--accent-green-bright); font-weight: 800;">$${p.buy.targetPrice.toFixed(2)}</td>
             <td>${p.buy.distToTarget >= 0 ? '+' : ''}$${p.buy.distToTarget.toFixed(2)}</td>
@@ -1462,6 +1467,7 @@
         sellRows.push(`
           <tr>
             <td><strong>${p.sell.positionId}</strong></td>
+            <td><strong style="color: var(--accent-gold); font-size: 0.85rem;">${(p.sell.quantity || 1.0).toFixed(1)} BBL</strong></td>
             <td>$${p.sell.entryPrice.toFixed(2)}</td>
             <td style="color: var(--accent-red-bright); font-weight: 800;">$${p.sell.targetPrice.toFixed(2)}</td>
             <td>${p.sell.distToTarget >= 0 ? '+' : ''}$${p.sell.distToTarget.toFixed(2)}</td>
@@ -1478,8 +1484,8 @@
       document.getElementById('splitBuyTotalPnl').innerText = `P/L: ${buyTotalSign}₹${totalBuyINR.toFixed(2)}`;
       document.getElementById('splitSellTotalPnl').innerText = `P/L: ${sellTotalSign}₹${totalSellINR.toFixed(2)}`;
 
-      buyTbody.innerHTML = buyRows.length > 0 ? buyRows.join('') : '<tr><td colspan="5" class="empty-state">No active BUY positions</td></tr>';
-      sellTbody.innerHTML = sellRows.length > 0 ? sellRows.join('') : '<tr><td colspan="5" class="empty-state">No active SELL positions</td></tr>';
+      buyTbody.innerHTML = buyRows.length > 0 ? buyRows.join('') : '<tr><td colspan="6" class="empty-state">No active BUY positions</td></tr>';
+      sellTbody.innerHTML = sellRows.length > 0 ? sellRows.join('') : '<tr><td colspan="6" class="empty-state">No active SELL positions</td></tr>';
     }
 
     function renderExchangeTable(positions) {

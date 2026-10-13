@@ -5,13 +5,13 @@ class PaperEngine {
   constructor() {
     this.settings = {
       startingCapitalINR: 119923.61,
-      contractQuantity: 1.0,
+      contractQuantity: 2.0,
       leverage: 5,
       instrument: 'CLUSDT',
       profitTargetMode: 'PRICE_MOVE',
-      profitTargetMove: 1.0,
-      buyTargetMove: 1.0,
-      sellTargetMove: 1.0,
+      profitTargetMove: 0.30,
+      buyTargetMove: 0.30,
+      sellTargetMove: 0.30,
       autoAiTargetMode: false,
       targetDisabled: false,
       maxActivePairs: 500,
@@ -85,10 +85,10 @@ class PaperEngine {
       }
       this.settings.startingCapitalINR = 119923.61; // ₹1,19,923.61 INR capital (Live Mudrex balance)
       this.settings.maxActivePairs = 500; // 500 Active Pairs Cap
-      this.settings.contractQuantity = 1.0; // 1.0 Barrel per pair
-      this.settings.profitTargetMove = 1.0; // $1.00 Target Move
-      this.settings.buyTargetMove = 1.0;
-      this.settings.sellTargetMove = 1.0;
+      this.settings.contractQuantity = 2.0; // 2.0 Barrels per pair
+      this.settings.profitTargetMove = 0.30; // $0.30 Target Move
+      this.settings.buyTargetMove = 0.30;
+      this.settings.sellTargetMove = 0.30;
       this.settings.profitTargetMode = 'PRICE_MOVE';
       this.settings.tradingMode = 'LIVE';
       this.settings.realOrdersDisabled = false;
