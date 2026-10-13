@@ -451,7 +451,9 @@ function drawLiveCanvasChart(canvasId, livePrice, nearestBuyTarget, nearestSellT
 }
 
 function renderDashboard(data) {
-  const { rateFeedInfo, summary, settings, engineStatus, pauseReason, isEngineRunning, lastProcessedRate, processedRatesCount, openPositions, closedPositions, auditLogs } = data;
+  let { rateFeedInfo, summary, settings, engineStatus, pauseReason, isEngineRunning, lastProcessedRate, processedRatesCount, openPositions, closedPositions, auditLogs } = data;
+  if (!summary) summary = {};
+  if (!settings) settings = {};
 
   const isDhanPage = window.location.pathname.includes('dhan');
   const isMudrexPage = window.location.pathname.includes('mudrex') || !isDhanPage;
@@ -689,7 +691,25 @@ function renderDashboard(data) {
   } else if (window.currentLedgerView === 'UNRESOLVED' && data.unresolvedLedger) {
     activeLedger = data.unresolvedLedger;
   } else if (data.liveLedger && data.liveLedger.summary) {
-    summary = data.liveLedger.summary;
+    summary = { ...summary, ...data.liveLedger.summary };
+  }
+
+  // Determine active open & closed positions based on active ledger
+  let displayOpenPositions = openPositions || [];
+  let displayClosedPositions = closedPositions || [];
+
+  if (isPairAddContext()) {
+    displayOpenPositions = openPositions || [];
+    displayClosedPositions = closedPositions || [];
+  } else if (window.currentLedgerView === 'PAPER' && data.paperLedger) {
+    displayOpenPositions = data.paperLedger.openPositions || [];
+    displayClosedPositions = data.paperLedger.closedPositions || [];
+  } else if (window.currentLedgerView === 'UNRESOLVED' && data.unresolvedLedger) {
+    displayOpenPositions = data.unresolvedLedger.positions || [];
+    displayClosedPositions = [];
+  } else if (data.liveLedger) {
+    displayOpenPositions = (data.liveLedger.openPositions && data.liveLedger.openPositions.length > 0) ? data.liveLedger.openPositions : (openPositions || []);
+    displayClosedPositions = (data.liveLedger.closedPositions && data.liveLedger.closedPositions.length > 0) ? data.liveLedger.closedPositions : (closedPositions || []);
   }
 
   const ledgerSourceEl = document.getElementById('ledgerSourceTimestamp');
@@ -705,27 +725,32 @@ function renderDashboard(data) {
     alertBanner.style.display = 'none';
   }
 
+  const startingCapINR = summary.startingCapitalINR || 119923.61;
+  const lockedMarginValINR = summary.marginUsedINR || 0;
+  const totalEquityValINR = summary.totalEquityINR || startingCapINR;
+  const realizedBalValINR = summary.realizedBalanceINR || startingCapINR;
+
   const heroBal = document.getElementById('heroWalletBal');
   if (heroBal) {
-    heroBal.innerText = `₹${summary.startingCapitalINR.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+    heroBal.innerText = `₹${startingCapINR.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
   }
   const heroSub = document.getElementById('heroWalletSubtext');
   if (heroSub) {
-    heroSub.innerText = `Locked Margin: ₹${summary.marginUsedINR.toFixed(2)} (Held by Exchange)`;
+    heroSub.innerText = `Locked Margin: ₹${lockedMarginValINR.toFixed(2)} (Held by Exchange)`;
   }
 
   // Account Details Modal
   const mWalBal = document.getElementById('modalWalletBal');
-  if (mWalBal) mWalBal.innerText = `₹${summary.startingCapitalINR.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  if (mWalBal) mWalBal.innerText = `₹${startingCapINR.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
   
   const mTotEq = document.getElementById('modalTotalEquity');
-  if (mTotEq) mTotEq.innerText = `₹${summary.totalEquityINR.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  if (mTotEq) mTotEq.innerText = `₹${totalEquityValINR.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
   
   const mRealBal = document.getElementById('modalRealizedBalance');
-  if (mRealBal) mRealBal.innerText = `₹${summary.realizedBalanceINR.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  if (mRealBal) mRealBal.innerText = `₹${realizedBalValINR.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
   
   const mWinRate = document.getElementById('modalWinRate');
-  if (mWinRate) mWinRate.innerText = `${summary.winRate}%`;
+  if (mWinRate) mWinRate.innerText = `${summary.winRate || 0}%`;
   
   // Use existing usdInrRate declared at top of updateDashboardUI
   const realizedNetINR = summary.realizedNetINR || 0;
@@ -753,11 +778,11 @@ function renderDashboard(data) {
     document.getElementById('kpiTotalEquity').innerHTML = `₹${totalEquityINR.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} <span style="font-size: 1.0rem; opacity: 0.85; font-weight: 700;">($${totalEquityUSD.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })})</span>`;
   }
   if (document.getElementById('kpiEquitySubtext')) {
-    document.getElementById('kpiEquitySubtext').innerText = `Virtual Capital: ₹${summary.startingCapitalINR.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ($${(summary.startingCapitalINR / usdInrRate).toFixed(2)})`;
+    document.getElementById('kpiEquitySubtext').innerText = `Virtual Capital: ₹${startingCapINR.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ($${(startingCapINR / usdInrRate).toFixed(2)})`;
   }
 
   if (document.getElementById('kpiRealizedBalance')) {
-    document.getElementById('kpiRealizedBalance').innerHTML = `₹${summary.realizedBalanceINR.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} <span style="font-size: 1.0rem; opacity: 0.85; font-weight: 700;">($${(summary.realizedBalanceINR / usdInrRate).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })})</span>`;
+    document.getElementById('kpiRealizedBalance').innerHTML = `₹${realizedBalValINR.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} <span style="font-size: 1.0rem; opacity: 0.85; font-weight: 700;">($${(realizedBalValINR / usdInrRate).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })})</span>`;
   }
 
   // 1. Realized Net P/L Card
@@ -808,10 +833,12 @@ function renderDashboard(data) {
 
   // 4. Active Pairs / Cap Card
   if (document.getElementById('kpiActivePairs')) {
-    document.getElementById('kpiActivePairs').innerText = `${summary.activePairsCount} / ${summary.maxActivePairs} Pairs`;
+    const actPairsVal = summary.activePairsCount !== undefined ? summary.activePairsCount : (displayOpenPositions ? Math.floor(displayOpenPositions.length / 2) : 0);
+    const maxPairsVal = summary.maxActivePairs || (settings && settings.maxActivePairs) || 500;
+    document.getElementById('kpiActivePairs').innerText = `${actPairsVal} / ${maxPairsVal} Pairs`;
   }
   if (document.getElementById('kpiUniqueRatesCount')) {
-    const totalBarrels = openPositions ? openPositions.reduce((sum, p) => sum + (p.quantity || 1.0), 0) : 0;
+    const totalBarrels = displayOpenPositions ? displayOpenPositions.reduce((sum, p) => sum + (p.quantity || 1.0), 0) : 0;
     document.getElementById('kpiUniqueRatesCount').innerText = `${totalBarrels} Barrels Open (${summary.activeBuyCount || 0} BUY / ${summary.activeSellCount || 0} SELL)`;
   }
 
@@ -826,16 +853,16 @@ function renderDashboard(data) {
     document.getElementById('kpiMarginUsed').innerText = `Locked Margin: ₹${marginUsedINR.toFixed(2)} ($${marginUsedUSD.toFixed(2)}) (${settings.leverage || 5}x)`;
   }
 
-  if (document.getElementById('kpiWinRate')) document.getElementById('kpiWinRate').innerText = `${summary.winRate}%`;
-  if (document.getElementById('kpiTradesCount')) document.getElementById('kpiTradesCount').innerText = `Total: ${summary.closedPositionsCount} | Wins: ${summary.winCount} | Losses: ${summary.lossCount}`;
+  if (document.getElementById('kpiWinRate')) document.getElementById('kpiWinRate').innerText = `${summary.winRate || 0}%`;
+  if (document.getElementById('kpiTradesCount')) document.getElementById('kpiTradesCount').innerText = `Total: ${summary.closedPositionsCount || 0} | Wins: ${summary.winCount || 0} | Losses: ${summary.lossCount || 0}`;
 
   // Controls sync
   const instEl = document.getElementById('settingInstrument');
-  if (instEl) instEl.value = settings.instrument;
-  const targetValStr = settings.targetDisabled ? 'DISABLED' : settings.profitTargetMove.toString();
-  updateTargetDropdownOptions(settings.instrument, targetValStr);
+  if (instEl && settings.instrument) instEl.value = settings.instrument;
+  const targetValStr = settings.targetDisabled ? 'DISABLED' : (settings.profitTargetMove !== undefined && settings.profitTargetMove !== null ? settings.profitTargetMove.toString() : '1.0');
+  updateTargetDropdownOptions(settings.instrument || 'CLUSDT', targetValStr);
   const maxP = document.getElementById('settingMaxPairs');
-  if (maxP) maxP.value = settings.maxActivePairs;
+  if (maxP && settings.maxActivePairs !== undefined) maxP.value = settings.maxActivePairs;
   const usdInrInput = document.getElementById('settingUsdInr');
   if (usdInrInput) usdInrInput.value = settings.usdInrRate || usdInrRate;
   const qtyEl = document.getElementById('modalContractQuantity');
@@ -843,9 +870,9 @@ function renderDashboard(data) {
 
   // Tabs count badges
   const actTab = document.getElementById('tabActiveCount');
-  if (actTab) actTab.innerText = openPositions.length;
+  if (actTab) actTab.innerText = displayOpenPositions.length;
   const clsTab = document.getElementById('tabClosedCount');
-  if (clsTab) clsTab.innerText = closedPositions.length;
+  if (clsTab) clsTab.innerText = displayClosedPositions.length;
 
   // Calculate Next Exit Targets
   const rawLivePrice = rateFeedInfo.price;
@@ -856,8 +883,8 @@ function renderDashboard(data) {
   let distBuy = null;
   let distSell = null;
 
-  if (rawLivePrice && openPositions && openPositions.length > 0) {
-    openPositions.forEach(pos => {
+  if (rawLivePrice && displayOpenPositions && displayOpenPositions.length > 0) {
+    displayOpenPositions.forEach(pos => {
       if (!pos.targetExitPrice) return;
       if (pos.direction === 'BUY') {
         if (pos.targetExitPrice > rawLivePrice) {
@@ -888,8 +915,8 @@ function renderDashboard(data) {
   const liveRateStr = livePrice ? `${pricePrefix}${priceDecimals === 0 ? Math.round(livePrice).toLocaleString('en-IN') : livePrice.toFixed(priceDecimals)}` : 'FETCHING...';
   const buyTargetStr = dispBuyTarget !== null ? `${pricePrefix}${priceDecimals === 0 ? Math.round(dispBuyTarget).toLocaleString('en-IN') : dispBuyTarget.toFixed(priceDecimals)}` : 'No Target';
   const sellTargetStr = dispSellTarget !== null ? `${pricePrefix}${priceDecimals === 0 ? Math.round(dispSellTarget).toLocaleString('en-IN') : dispSellTarget.toFixed(priceDecimals)}` : 'No Target';
-  const floatNetStr = `₹${summary.floatingNetINR.toFixed(2)}`;
-  const floatNetClass = summary.floatingNetINR >= 0 ? 'text-green' : 'text-red';
+  const floatNetStr = `₹${floatingNetINR.toFixed(2)}`;
+  const floatNetClass = floatingNetINR >= 0 ? 'text-green' : 'text-red';
 
   // Update Dhan MCX Specific Chart Header Callouts
   const chartTitleEl = document.getElementById('chartSymbolTitle');
@@ -944,7 +971,9 @@ function renderDashboard(data) {
     uFloatIndexEl.className = floatNetClass;
   }
 
-  const actPairsText = `${summary.activePairsCount} / ${summary.maxActivePairs}`;
+  const actPairsCount = summary.activePairsCount !== undefined ? summary.activePairsCount : Math.floor(displayOpenPositions.length / 2);
+  const maxPairsCount = summary.maxActivePairs || (settings && settings.maxActivePairs) || 500;
+  const actPairsText = `${actPairsCount} / ${maxPairsCount} Pairs`;
   if (document.getElementById('unifiedActivePairs')) document.getElementById('unifiedActivePairs').innerText = actPairsText;
   if (document.getElementById('unifiedActivePairsIndex')) document.getElementById('unifiedActivePairsIndex').innerText = actPairsText;
 
@@ -954,36 +983,19 @@ function renderDashboard(data) {
   drawLiveCanvasChart('liveChartCanvas', livePrice, dispBuyTarget, dispSellTarget);
 
   // Closed Positions History Top Summary Bar
-  if (document.getElementById('closedSummaryCount')) document.getElementById('closedSummaryCount').innerText = `${summary.closedPositionsCount}`;
-  if (document.getElementById('closedSummaryWinLoss')) document.getElementById('closedSummaryWinLoss').innerText = `Wins: ${summary.winCount} | Losses: ${summary.lossCount} | Win Rate: ${summary.winRate}%`;
-  if (document.getElementById('closedSummaryGrossINR')) document.getElementById('closedSummaryGrossINR').innerText = `₹${summary.realizedGrossINR.toLocaleString('en-IN', { minimumFractionDigits: 2 })}`;
-  if (document.getElementById('closedSummaryGrossUSD')) document.getElementById('closedSummaryGrossUSD').innerText = `$${summary.realizedGrossUSD.toFixed(4)} Gross`;
-  if (document.getElementById('closedSummaryChargesINR')) document.getElementById('closedSummaryChargesINR').innerText = `₹${summary.realizedChargesINR.toLocaleString('en-IN', { minimumFractionDigits: 2 })}`;
-  if (document.getElementById('closedSummaryChargesUSD')) document.getElementById('closedSummaryChargesUSD').innerText = `$${summary.realizedChargesUSD.toFixed(4)} Charges`;
+  if (document.getElementById('closedSummaryCount')) document.getElementById('closedSummaryCount').innerText = `${summary.closedPositionsCount !== undefined ? summary.closedPositionsCount : displayClosedPositions.length}`;
+  if (document.getElementById('closedSummaryWinLoss')) document.getElementById('closedSummaryWinLoss').innerText = `Wins: ${summary.winCount || 0} | Losses: ${summary.lossCount || 0} | Win Rate: ${summary.winRate || 0}%`;
+  if (document.getElementById('closedSummaryGrossINR')) document.getElementById('closedSummaryGrossINR').innerText = `₹${(summary.realizedGrossINR || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}`;
+  if (document.getElementById('closedSummaryGrossUSD')) document.getElementById('closedSummaryGrossUSD').innerText = `$${(summary.realizedGrossUSD || 0).toFixed(4)} Gross`;
+  if (document.getElementById('closedSummaryChargesINR')) document.getElementById('closedSummaryChargesINR').innerText = `₹${(summary.realizedChargesINR || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}`;
+  if (document.getElementById('closedSummaryChargesUSD')) document.getElementById('closedSummaryChargesUSD').innerText = `$${(summary.realizedChargesUSD || 0).toFixed(4)} Charges`;
   
   const cNetEl = document.getElementById('closedSummaryNetINR');
   if (cNetEl) {
-    cNetEl.innerText = `₹${summary.realizedNetINR.toLocaleString('en-IN', { minimumFractionDigits: 2 })}`;
-    cNetEl.className = `summary-value ${summary.realizedNetINR >= 0 ? 'text-green' : 'text-red'}`;
+    cNetEl.innerText = `₹${(summary.realizedNetINR || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}`;
+    cNetEl.className = `summary-value ${(summary.realizedNetINR || 0) >= 0 ? 'text-green' : 'text-red'}`;
   }
-  if (document.getElementById('closedSummaryNetUSD')) document.getElementById('closedSummaryNetUSD').innerText = `$${summary.realizedNetUSD.toFixed(4)} Net`;
-
-  // Render Tables according to active ledger
-  let displayOpenPositions = openPositions;
-  let displayClosedPositions = closedPositions;
-
-  if (isPairAddContext()) {
-    displayOpenPositions = openPositions || [];
-    displayClosedPositions = closedPositions || [];
-  } else if (window.currentLedgerView === 'PAPER' && data.paperLedger) {
-    displayClosedPositions = data.paperLedger.closedPositions || [];
-  } else if (window.currentLedgerView === 'UNRESOLVED' && data.unresolvedLedger) {
-    displayOpenPositions = data.unresolvedLedger.positions || [];
-    displayClosedPositions = [];
-  } else if (data.liveLedger) {
-    displayOpenPositions = data.liveLedger.openPositions || openPositions;
-    displayClosedPositions = data.liveLedger.closedPositions || closedPositions;
-  }
+  if (document.getElementById('closedSummaryNetUSD')) document.getElementById('closedSummaryNetUSD').innerText = `$${(summary.realizedNetUSD || 0).toFixed(4)} Net`;
 
   renderActivePositions(displayOpenPositions, settings.instrument, isDhanPage, pricePrefix, priceMultiplier, priceDecimals);
   renderClosedPositions(displayClosedPositions, settings.instrument, isDhanPage, pricePrefix, priceMultiplier, priceDecimals);
@@ -992,7 +1004,14 @@ function renderDashboard(data) {
   if (logsTab && logsTab.classList.contains('active')) {
     renderAuditLogs(auditLogs);
   }
+
+  // Save latest received data for tab / sort re-renders
+  window.lastReceivedData = data;
 }
+
+const updateDashboardUI = renderDashboard;
+window.updateDashboardUI = renderDashboard;
+window.renderDashboard = renderDashboard;
 
 window.switchLedgerView = function(view) {
   window.currentLedgerView = view;
