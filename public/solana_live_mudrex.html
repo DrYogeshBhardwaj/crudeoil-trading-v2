@@ -1264,7 +1264,7 @@
             Solana-Live-Mudrex
             <span class="page-tag" style="background: linear-gradient(135deg, rgba(0, 255, 163, 0.2), rgba(3, 225, 255, 0.2)); border: 1px solid #00ffa3; color: #00ffa3; font-weight: 800;">SOLANA SIMULATOR</span>
           </h1>
-          <p>Solana Futures Simulation Engine — SOLUSDT Hedged Pair Strategy & Mudrex Rate Sync (₹3.5 Lakh Capital)</p>
+          <p>Solana Futures Simulation Engine — SOLUSDT Hedged Pair Strategy & Mudrex Rate Sync (₹3.0 Lakh Capital)</p>
         </div>
       </div>
 
@@ -2433,8 +2433,8 @@
       const lotInfoEl = document.getElementById('activeLotInfo');
       if (lotInfoEl) {
         const pairMargin = ((livePrice * curContractLot * usdInr) / 5) * 2;
-        const maxPairs = Math.floor(350000 / (pairMargin || 1));
-        lotInfoEl.innerHTML = `Current: <strong style="color: #00ffa3;">${curContractLot.toFixed(1)} SOL</strong> · Margin: ~₹${(pairMargin/1000).toFixed(1)}k/pair (max ~${maxPairs} pairs on ₹3.5L)`;
+        const maxPairs = Math.floor(300000 / (pairMargin || 1));
+        lotInfoEl.innerHTML = `Current: <strong style="color: #00ffa3;">${curContractLot.toFixed(1)} SOL</strong> · Margin: ~₹${(pairMargin/1000).toFixed(1)}k/pair (max ~${maxPairs} pairs on ₹3.0L)`;
       }
 
       // 2. Ticker Hero

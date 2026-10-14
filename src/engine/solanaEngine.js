@@ -5,7 +5,7 @@ const rateFeed = require('./rateFeed');
 class SolanaEngine {
   constructor() {
     this.settings = {
-      startingCapitalINR: 350000.00, // ₹3.5 Lakh starting capital requested by user
+      startingCapitalINR: 300000.00, // ₹3.0 Lakh starting capital requested by user
       contractQuantity: 3.0, // 3.0 SOL default lot size requested by user
       leverage: 5,
       instrument: 'SOLUSDT',
@@ -521,7 +521,7 @@ class SolanaEngine {
     const floating = this.calculateFloatingSummary(livePrice);
 
     // Margins and Capital
-    const startingCapitalINR = this.settings.startingCapitalINR || 350000.00;
+    const startingCapitalINR = this.settings.startingCapitalINR || 300000.00;
     const lockedMarginINR = floating.dynamicMarginUsedINR;
     const availableMarginINR = Math.max(0, Number((startingCapitalINR + realizedNetINR - lockedMarginINR).toFixed(2)));
     const equityINR = Number((availableMarginINR + lockedMarginINR + floating.floatingNetINR).toFixed(2));
@@ -532,7 +532,7 @@ class SolanaEngine {
       let bPnlUSD = 0, bPnlINR = 0;
       let sPnlUSD = 0, sPnlINR = 0;
 
-      const defQty = this.settings.contractQuantity || 5.0;
+      const defQty = this.settings.contractQuantity || 3.0;
       const feeMultiplier = this.settings.conservativeFeeMultiplier || 1.40;
       if (b && b.status === 'OPEN') {
         const bQty = b.quantity || defQty;
@@ -686,8 +686,8 @@ class SolanaEngine {
     };
   }
 
-  resetData(newQty = null) {
-    this.settings.startingCapitalINR = 350000.00;
+  resetData(newQty = null, newCapital = 300000.00) {
+    this.settings.startingCapitalINR = (newCapital && !isNaN(newCapital) && Number(newCapital) > 0) ? Number(newCapital) : 300000.00;
     if (newQty && !isNaN(newQty) && Number(newQty) > 0) {
       this.settings.contractQuantity = Number(newQty);
     } else {
@@ -715,8 +715,13 @@ class SolanaEngine {
     }
 
     this.saveState();
-    console.log(`[Solana Engine] Reset data: Capital set to ₹3,50,000 INR with ${this.settings.contractQuantity} SOL contract size.`);
-    return { success: true, message: `Solana simulator data reset to ₹3,50,000 capital and ${this.settings.contractQuantity} SOL lot size.`, contractQuantity: this.settings.contractQuantity };
+    console.log(`[Solana Engine] Reset data: Capital set to ₹${this.settings.startingCapitalINR.toLocaleString('en-IN')} INR with ${this.settings.contractQuantity} SOL contract size.`);
+    return { 
+      success: true, 
+      message: `Solana simulator data reset to ₹${this.settings.startingCapitalINR.toLocaleString('en-IN')} capital and ${this.settings.contractQuantity} SOL lot size.`, 
+      contractQuantity: this.settings.contractQuantity,
+      startingCapitalINR: this.settings.startingCapitalINR 
+    };
   }
 }
 
