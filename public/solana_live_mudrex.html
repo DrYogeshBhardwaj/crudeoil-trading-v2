@@ -2334,14 +2334,21 @@
           }
 
           const lotEl = document.getElementById('sessionLotSize');
-          if (lotEl) lotEl.innerText = `${active.currentContractQuantity || active.contractQuantity || 2.0} Barrels`;
+          if (lotEl) lotEl.innerText = `${active.currentContractQuantity || active.contractQuantity || 2.0} SOL`;
 
           const targetEl = document.getElementById('sessionTargetMove');
-          if (targetEl) targetEl.innerText = `$${Number(active.currentProfitTargetMove || active.profitTargetMove || 0.25).toFixed(2)}`;
+          if (targetEl) targetEl.innerText = `$${Number(active.currentProfitTargetMove || active.profitTargetMove || 0.50).toFixed(2)}`;
 
           const basketEl = document.getElementById('sessionBasketTarget');
-          if (basketEl) basketEl.innerText = `₹${active.currentBasketProfitTargetINR || active.basketProfitTargetINR || 100}`;
+          if (basketEl) basketEl.innerText = `₹${active.currentBasketProfitTargetINR || active.basketProfitTargetINR || 250}`;
         }
+      } else {
+        const lotEl = document.getElementById('sessionLotSize');
+        if (lotEl) lotEl.innerText = `${(engine.contractQuantity || 2.0).toFixed(1)} SOL`;
+        const targetEl = document.getElementById('sessionTargetMove');
+        if (targetEl) targetEl.innerText = `$${Number(engine.profitTargetMove || 0.50).toFixed(2)}`;
+        const basketEl = document.getElementById('sessionBasketTarget');
+        if (basketEl) basketEl.innerText = `₹${engine.basketProfitTargetINR || 250}`;
       }
 
       // 2. Ticker Hero
