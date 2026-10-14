@@ -13,9 +13,9 @@ class PaperEngine {
       buyTargetMove: 0.25,
       sellTargetMove: 0.25,
       basketProfitTargetINR: 250, // ₹250 Punarjanm Basket Profit Threshold (Promoted from ₹100 testing)
-      autoPunarjanmEnabled: true,
+      autoPunarjanmEnabled: false, // Stopped per user request
       autoAiTargetMode: false,
-      autoAddNewPairs: true, // Auto add new pairs on rate changes
+      autoAddNewPairs: false, // Stopped per user request
       targetDisabled: false,
       maxActivePairs: 500,
       dailyLossCircuitBreakerINR: 2000,
@@ -24,7 +24,7 @@ class PaperEngine {
       slippageBufferINR: 5.0, // ₹5.00 slippage & funding fee buffer per trade
       usdInrRate: 102.00, // 1 USD = 102.00 INR (Mudrex INR Futures Rate)
       tradingMode: 'LIVE', // 'PAPER' (Simulated) or 'LIVE' (Real Orders)
-      realOrdersDisabled: false,
+      realOrdersDisabled: true, // Disabled per user request
       sessionScheduler: {
         enabled: true,
         sessions: [
@@ -81,9 +81,9 @@ class PaperEngine {
       realizedNetProfitINR: 0
     };
 
-    this.isEngineRunning = true;
-    this.engineStatus = 'RUNNING';
-    this.pauseReason = '';
+    this.isEngineRunning = false;
+    this.engineStatus = 'PAUSED';
+    this.pauseReason = 'Crude Live Engine stopped per user instruction. Real orders disabled.';
 
     // Load persisted state if exists
     this.initFromStorage();
@@ -219,10 +219,11 @@ class PaperEngine {
       this.settings.buyTargetMove = 0.25;
       this.settings.sellTargetMove = 0.25;
       this.settings.basketProfitTargetINR = 250; // ₹250 Punarjanm Basket Profit Threshold (Promoted from ₹100 testing)
-      this.settings.autoPunarjanmEnabled = true;
+      this.settings.autoPunarjanmEnabled = false; // Stopped per user request
+      this.settings.autoAddNewPairs = false; // Stopped per user request
       this.settings.profitTargetMode = 'PRICE_MOVE';
       this.settings.tradingMode = 'LIVE';
-      this.settings.realOrdersDisabled = false;
+      this.settings.realOrdersDisabled = true; // Disabled per user request
       if (saved.punarjanmCount !== undefined) this.punarjanmCount = saved.punarjanmCount;
       if (saved.lastPunarjanmSummary) this.lastPunarjanmSummary = saved.lastPunarjanmSummary;
       if (saved.pairs) this.pairs = saved.pairs;
@@ -238,9 +239,9 @@ class PaperEngine {
 
       if (saved.auditLogs) this.auditLogs = saved.auditLogs.slice(-500);
       if (saved.dailyTracker) this.dailyTracker = saved.dailyTracker;
-      this.isEngineRunning = true;
-      this.engineStatus = 'RUNNING';
-      this.pauseReason = '';
+      this.isEngineRunning = false;
+      this.engineStatus = 'PAUSED';
+      this.pauseReason = 'Crude Live Engine stopped per user instruction. Real orders disabled.';
       if (saved.lastProcessedRate !== undefined) this.lastProcessedRate = saved.lastProcessedRate;
 
       if (saved.processedRates) {
