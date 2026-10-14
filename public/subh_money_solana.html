@@ -591,14 +591,34 @@
       }
     @media (max-width: 768px) {
       .dual-positions-wrapper {
-        grid-template-columns: 1fr;
-        gap: 10px;
+        display: grid !important;
+        grid-template-columns: 1fr 1fr !important;
+        gap: 6px !important;
       }
       .side-switcher-bar {
-        display: flex;
+        display: none !important;
       }
       .scroll-table-box {
-        max-height: 270px;
+        max-height: 400px;
+      }
+      .dual-col-header {
+        padding: 6px 8px;
+      }
+      .dual-header-title {
+        font-size: 0.65rem;
+        letter-spacing: 0.2px;
+      }
+      .dual-count-pill {
+        font-size: 0.58rem;
+        padding: 1px 4px;
+      }
+      table.data-table th {
+        padding: 6px 3px;
+        font-size: 0.62rem;
+      }
+      table.data-table td {
+        padding: 6px 3px;
+        font-size: 0.72rem;
       }
     }
 
@@ -755,20 +775,13 @@
 
     <!-- Tab Panel 1: Active BUY/Sell Positions (Dual Side-by-Side Inside Dedicated Scrollboxes) -->
     <div class="tab-panel active" id="panelActive">
-      <!-- Mobile Quick Filter Chips -->
-      <div class="side-switcher-bar" id="mobileSideSwitcher">
-        <button type="button" class="side-chip active" id="chipBoth" onclick="filterSideView('both')">⚡ BOTH BUY & SELL</button>
-        <button type="button" class="side-chip" id="chipBuy" onclick="filterSideView('buy')">🟢 BUY ONLY</button>
-        <button type="button" class="side-chip" id="chipSell" onclick="filterSideView('sell')">🔴 SELL ONLY</button>
-      </div>
-
       <div class="dual-positions-wrapper">
         <!-- Left: Active BUY Positions -->
         <div class="dual-positions-col buy-col" id="colBuyWrap">
           <div class="dual-col-header buy-header">
             <div class="dual-header-left">
               <span class="indicator-dot dot-buy"></span>
-              <span class="dual-header-title">ACTIVE BUY POSITIONS</span>
+              <span class="dual-header-title">ACTIVE BUY</span>
             </div>
             <span class="dual-count-pill pill-buy" id="badgeBuyCount">0 BUYS</span>
           </div>
@@ -777,16 +790,14 @@
               <thead>
                 <tr>
                   <th>#</th>
-                  <th>ID</th>
                   <th>Entry</th>
-                  <th class="th-target-buy">🎯 Exit Target</th>
-                  <th>Dist</th>
+                  <th class="th-target-buy">🎯 Exit</th>
                   <th>PnL (₹)</th>
                 </tr>
               </thead>
               <tbody id="tbodyActiveBuys">
                 <tr>
-                  <td colspan="6" style="text-align: center; color: var(--text-dim); padding: 24px;">Waiting for BUY positions...</td>
+                  <td colspan="4" style="text-align: center; color: var(--text-dim); padding: 20px;">Waiting for BUY positions...</td>
                 </tr>
               </tbody>
             </table>
@@ -798,7 +809,7 @@
           <div class="dual-col-header sell-header">
             <div class="dual-header-left">
               <span class="indicator-dot dot-sell"></span>
-              <span class="dual-header-title">ACTIVE SELL POSITIONS</span>
+              <span class="dual-header-title">ACTIVE SELL</span>
             </div>
             <span class="dual-count-pill pill-sell" id="badgeSellCount">0 SELLS</span>
           </div>
@@ -807,16 +818,14 @@
               <thead>
                 <tr>
                   <th>#</th>
-                  <th>ID</th>
                   <th>Entry</th>
-                  <th class="th-target-sell">🎯 Exit Target</th>
-                  <th>Dist</th>
+                  <th class="th-target-sell">🎯 Exit</th>
                   <th>PnL (₹)</th>
                 </tr>
               </thead>
               <tbody id="tbodyActiveSells">
                 <tr>
-                  <td colspan="6" style="text-align: center; color: var(--text-dim); padding: 24px;">Waiting for SELL positions...</td>
+                  <td colspan="4" style="text-align: center; color: var(--text-dim); padding: 20px;">Waiting for SELL positions...</td>
                 </tr>
               </tbody>
             </table>
@@ -978,10 +987,10 @@
       document.getElementById('badgeBuyCount').innerText = `${activeBuys.length} BUYS`;
       document.getElementById('badgeSellCount').innerText = `${activeSells.length} SELLS`;
 
-      // Render Active BUYs Table
+      // Render Active BUYs Table (4 Compact Columns for Side-by-Side Mobile Fit)
       const tbodyBuys = document.getElementById('tbodyActiveBuys');
       if (activeBuys.length === 0) {
-        tbodyBuys.innerHTML = `<tr><td colspan="6" style="text-align: center; color: var(--text-dim); padding: 24px;">Waiting for BUY positions...</td></tr>`;
+        tbodyBuys.innerHTML = `<tr><td colspan="4" style="text-align: center; color: var(--text-dim); padding: 20px;">Waiting for BUY positions...</td></tr>`;
       } else {
         tbodyBuys.innerHTML = activeBuys.map((pos, idx) => {
           const dist = pos.targetPrice - livePrice;
@@ -989,25 +998,25 @@
           const pnlINR = Number(pos.floatingPnlINR || 0);
           const pnlColor = pnlINR >= 0 ? 'var(--green-primary)' : 'var(--red-primary)';
           const pnlSign = pnlINR >= 0 ? '+' : '';
-          const shortId = pos.positionId ? pos.positionId.replace('P-PAIR-SOL-', '').replace('-BUY', '').replace('P-', '') : `${idx + 1}`;
 
           return `
             <tr>
               <td style="color: var(--text-dim); font-weight: 700;">#${idx + 1}</td>
-              <td style="color: var(--text-main); font-weight: 800;">${shortId}</td>
-              <td style="color: #cbd5e1;">$${Number(pos.entryPrice).toFixed(2)}</td>
-              <td style="color: var(--green-primary); font-weight: 900; font-size: 0.95rem; text-shadow: 0 0 10px rgba(0, 255, 163, 0.35);">$${Number(pos.targetPrice).toFixed(2)}</td>
-              <td style="color: #94a3b8; font-size: 0.76rem;">${distSign}$${dist.toFixed(2)}</td>
+              <td style="color: #cbd5e1; font-weight: 600;">$${Number(pos.entryPrice).toFixed(2)}</td>
+              <td>
+                <div style="color: var(--green-primary); font-weight: 900; font-size: 0.88rem; text-shadow: 0 0 10px rgba(0, 255, 163, 0.35); line-height: 1.15;">$${Number(pos.targetPrice).toFixed(2)}</div>
+                <div style="font-size: 0.64rem; color: #94a3b8; font-weight: 700; margin-top: 1px;">${distSign}$${dist.toFixed(2)}</div>
+              </td>
               <td style="color: ${pnlColor}; font-weight: 800;">${pnlSign}₹${pnlINR.toFixed(2)}</td>
             </tr>
           `;
         }).join('');
       }
 
-      // Render Active SELLs Table
+      // Render Active SELLs Table (4 Compact Columns for Side-by-Side Mobile Fit)
       const tbodySells = document.getElementById('tbodyActiveSells');
       if (activeSells.length === 0) {
-        tbodySells.innerHTML = `<tr><td colspan="6" style="text-align: center; color: var(--text-dim); padding: 24px;">Waiting for SELL positions...</td></tr>`;
+        tbodySells.innerHTML = `<tr><td colspan="4" style="text-align: center; color: var(--text-dim); padding: 20px;">Waiting for SELL positions...</td></tr>`;
       } else {
         tbodySells.innerHTML = activeSells.map((pos, idx) => {
           const dist = livePrice - pos.targetPrice;
@@ -1015,15 +1024,15 @@
           const pnlINR = Number(pos.floatingPnlINR || 0);
           const pnlColor = pnlINR >= 0 ? 'var(--green-primary)' : 'var(--red-primary)';
           const pnlSign = pnlINR >= 0 ? '+' : '';
-          const shortId = pos.positionId ? pos.positionId.replace('P-PAIR-SOL-', '').replace('-SELL', '').replace('P-', '') : `${idx + 1}`;
 
           return `
             <tr>
               <td style="color: var(--text-dim); font-weight: 700;">#${idx + 1}</td>
-              <td style="color: var(--text-main); font-weight: 800;">${shortId}</td>
-              <td style="color: #cbd5e1;">$${Number(pos.entryPrice).toFixed(2)}</td>
-              <td style="color: var(--red-primary); font-weight: 900; font-size: 0.95rem; text-shadow: 0 0 10px rgba(244, 63, 94, 0.35);">$${Number(pos.targetPrice).toFixed(2)}</td>
-              <td style="color: #94a3b8; font-size: 0.76rem;">${distSign}$${dist.toFixed(2)}</td>
+              <td style="color: #cbd5e1; font-weight: 600;">$${Number(pos.entryPrice).toFixed(2)}</td>
+              <td>
+                <div style="color: var(--red-primary); font-weight: 900; font-size: 0.88rem; text-shadow: 0 0 10px rgba(244, 63, 94, 0.35); line-height: 1.15;">$${Number(pos.targetPrice).toFixed(2)}</div>
+                <div style="font-size: 0.64rem; color: #94a3b8; font-weight: 700; margin-top: 1px;">${distSign}$${dist.toFixed(2)}</div>
+              </td>
               <td style="color: ${pnlColor}; font-weight: 800;">${pnlSign}₹${pnlINR.toFixed(2)}</td>
             </tr>
           `;
@@ -1056,32 +1065,6 @@
             </tr>
           `;
         }).join('');
-      }
-    }
-
-    function filterSideView(side) {
-      const colBuy = document.getElementById('colBuyWrap');
-      const colSell = document.getElementById('colSellWrap');
-      const chipBoth = document.getElementById('chipBoth');
-      const chipBuy = document.getElementById('chipBuy');
-      const chipSell = document.getElementById('chipSell');
-
-      chipBoth.classList.remove('active');
-      chipBuy.classList.remove('active');
-      chipSell.classList.remove('active');
-
-      if (side === 'buy') {
-        colBuy.style.display = 'flex';
-        colSell.style.display = 'none';
-        chipBuy.classList.add('active');
-      } else if (side === 'sell') {
-        colBuy.style.display = 'none';
-        colSell.style.display = 'flex';
-        chipSell.classList.add('active');
-      } else {
-        colBuy.style.display = 'flex';
-        colSell.style.display = 'flex';
-        chipBoth.classList.add('active');
       }
     }
 
