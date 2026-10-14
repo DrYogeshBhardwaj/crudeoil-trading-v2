@@ -686,12 +686,17 @@ class SolanaEngine {
     };
   }
 
-  resetData(newQty = null, newCapital = 300000.00) {
+  resetData(newQty = null, newCapital = 300000.00, newTargetMove = null) {
     this.settings.startingCapitalINR = (newCapital && !isNaN(newCapital) && Number(newCapital) > 0) ? Number(newCapital) : 300000.00;
     if (newQty && !isNaN(newQty) && Number(newQty) > 0) {
       this.settings.contractQuantity = Number(newQty);
     } else {
       this.settings.contractQuantity = 3.0;
+    }
+    if (newTargetMove && !isNaN(newTargetMove) && Number(newTargetMove) > 0) {
+      this.settings.profitTargetMove = Number(newTargetMove);
+      this.settings.buyTargetMove = Number(newTargetMove);
+      this.settings.sellTargetMove = Number(newTargetMove);
     }
     this.settings.autoPunarjanmEnabled = false; // Harvest disabled per user request
     this.pairs = [];
@@ -715,12 +720,13 @@ class SolanaEngine {
     }
 
     this.saveState();
-    console.log(`[Solana Engine] Reset data: Capital set to ₹${this.settings.startingCapitalINR.toLocaleString('en-IN')} INR with ${this.settings.contractQuantity} SOL contract size.`);
+    console.log(`[Solana Engine] Reset data: Capital set to ₹${this.settings.startingCapitalINR.toLocaleString('en-IN')} INR with ${this.settings.contractQuantity} SOL contract size and $${this.settings.profitTargetMove.toFixed(2)} target move.`);
     return { 
       success: true, 
-      message: `Solana simulator data reset to ₹${this.settings.startingCapitalINR.toLocaleString('en-IN')} capital and ${this.settings.contractQuantity} SOL lot size.`, 
+      message: `Solana simulator data reset to ₹${this.settings.startingCapitalINR.toLocaleString('en-IN')} capital, ${this.settings.contractQuantity} SOL lot size, and $${this.settings.profitTargetMove.toFixed(2)} target move.`, 
       contractQuantity: this.settings.contractQuantity,
-      startingCapitalINR: this.settings.startingCapitalINR 
+      startingCapitalINR: this.settings.startingCapitalINR,
+      profitTargetMove: this.settings.profitTargetMove
     };
   }
 }

@@ -1482,9 +1482,24 @@
           </div>
         </div>
 
+        <!-- Input 3: Exit Target Move ($ USD) -->
+        <div style="display: flex; flex-direction: column; gap: 4px;">
+          <label for="manualSimTargetMove" style="font-size: 0.72rem; text-transform: uppercase; font-weight: 800; color: #f59e0b; letter-spacing: 0.6px; display: flex; align-items: center; gap: 4px;">
+            <span>🎯 EXIT TARGET ($ MOVE)</span>
+          </label>
+          <div style="position: relative; display: flex; align-items: center;">
+            <span style="position: absolute; left: 10px; color: #f59e0b; font-weight: 800; font-size: 0.95rem;">$</span>
+            <input type="number" id="manualSimTargetMove" value="0.50" step="0.05" min="0.05" max="10.0"
+              style="background: rgba(0, 0, 0, 0.65); border: 1.5px solid rgba(245, 158, 11, 0.45); border-radius: 8px; color: #ffffff; font-size: 0.95rem; font-weight: 800; font-family: var(--font-mono); padding: 8px 12px 8px 24px; width: 110px; outline: none; transition: all 0.2s;"
+              onfocus="this.style.borderColor='#f59e0b'; this.style.boxShadow='0 0 12px rgba(245, 158, 11, 0.4)';" 
+              onblur="this.style.borderColor='rgba(245, 158, 11, 0.45)'; this.style.boxShadow='none';"
+              oninput="manualSimInputsModified = true; updateManualSimPreview();" />
+          </div>
+        </div>
+
         <!-- Live Calculation Preview Card -->
-        <div style="display: flex; flex-direction: column; gap: 3px; background: rgba(0, 0, 0, 0.45); border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; padding: 7px 14px; min-width: 180px;">
-          <div style="font-size: 0.68rem; color: #94a3b8; text-transform: uppercase; font-weight: 700; letter-spacing: 0.4px;">Margin &amp; Capacity (5x)</div>
+        <div style="display: flex; flex-direction: column; gap: 3px; background: rgba(0, 0, 0, 0.45); border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; padding: 7px 14px; min-width: 210px;">
+          <div style="font-size: 0.68rem; color: #94a3b8; text-transform: uppercase; font-weight: 700; letter-spacing: 0.4px;">Margin · Capacity · Net Profit</div>
           <div style="font-size: 0.8rem; color: #f1f5f9; font-family: var(--font-mono);" id="manualSimPreviewText">
             Margin: ~₹12.8k/pair · <strong style="color: #00ffa3;">~23 Pairs Max</strong>
           </div>
@@ -2281,8 +2296,10 @@
     async function executeManualSimReset() {
       const amountEl = document.getElementById('manualSimAmount');
       const solQtyEl = document.getElementById('manualSimSolQty');
+      const targetMoveEl = document.getElementById('manualSimTargetMove');
       const amount = amountEl ? parseFloat(amountEl.value) : 300000;
       const solQty = solQtyEl ? parseFloat(solQtyEl.value) : 3.0;
+      const targetMove = targetMoveEl ? parseFloat(targetMoveEl.value) : 0.50;
 
       if (isNaN(amount) || amount <= 0) {
         alert('Please enter a valid Total Amount (e.g. ₹300,000)');
@@ -2292,8 +2309,12 @@
         alert('Please enter a valid No. of SOL (e.g. 1, 2, 3, 5)');
         return;
       }
+      if (isNaN(targetMove) || targetMove <= 0) {
+        alert('Please enter a valid Exit Target Move (e.g. $0.50 or $0.25)');
+        return;
+      }
 
-      const pin = prompt(`⚠️ RESET SOLANA SIMULATOR WITH LIVE DATA\n\n💰 Total Amount: ₹${amount.toLocaleString('en-IN')} INR\n⚡ No. of SOL: ${solQty} SOL/Leg\n\nEnter Admin PIN (340556) to confirm:`);
+      const pin = prompt(`⚠️ RESET SOLANA SIMULATOR WITH LIVE DATA\n\n💰 Total Amount: ₹${amount.toLocaleString('en-IN')} INR\n⚡ No. of SOL: ${solQty} SOL/Leg\n🎯 Exit Target Move: $${targetMove.toFixed(2)}\n\nEnter Admin PIN (340556) to confirm:`);
       if (!pin) return;
 
       const btn = document.getElementById('btnManualResetSim');
@@ -2311,12 +2332,13 @@
             action: 'resetSimulator',
             capitalINR: amount,
             quantity: solQty,
+            targetMove: targetMove,
             password: pin
           })
         });
         const json = await res.json();
         if (json.success) {
-          alert(`✅ SOLANA SIMULATOR RESET COMPLETE!\n\n${json.message || `Capital set to ₹${amount.toLocaleString('en-IN')} with ${solQty} SOL.`}\n\nLive pairs started with current market price.`);
+          alert(`✅ SOLANA SIMULATOR RESET COMPLETE!\n\n${json.message || `Capital set to ₹${amount.toLocaleString('en-IN')} with ${solQty} SOL and $${targetMove.toFixed(2)} target move.`}\n\nLive pairs started with current market price.`);
           await fetchTerminalData();
         } else {
           alert('Reset Failed: ' + (json.error || 'Incorrect PIN or server error'));
@@ -2334,19 +2356,32 @@
     function updateManualSimPreview() {
       const amountEl = document.getElementById('manualSimAmount');
       const solQtyEl = document.getElementById('manualSimSolQty');
+      const targetMoveEl = document.getElementById('manualSimTargetMove');
       const previewEl = document.getElementById('manualSimPreviewText');
       if (!previewEl) return;
 
       const amount = amountEl ? parseFloat(amountEl.value) || 0 : 300000;
       const solQty = solQtyEl ? parseFloat(solQtyEl.value) || 0 : 3.0;
+      const targetMove = targetMoveEl ? parseFloat(targetMoveEl.value) || 0 : 0.50;
       
       const livePrice = (cachedData && cachedData.rate && cachedData.rate.price) || 104.70;
       const usdInr = (cachedData && cachedData.rate && cachedData.rate.usdInrRate) || 102.00;
       
       const pairMargin = ((livePrice * solQty * usdInr) / 5) * 2;
       const maxPairs = pairMargin > 0 ? Math.floor(amount / pairMargin) : 0;
+
+      // Net profit per hit calculation with 1.4x conservative charges
+      const grossUSD = solQty * targetMove;
+      const entryFeeUSD = livePrice * solQty * 0.00075;
+      const exitFeeUSD = (livePrice + targetMove) * solQty * 0.00075;
+      const gstUSD = (entryFeeUSD + exitFeeUSD) * 0.18;
+      const chargesUSD = (entryFeeUSD + exitFeeUSD + gstUSD) * 1.40;
+      const netUSD = grossUSD - chargesUSD;
+      const netINR = netUSD * usdInr;
+      const netSign = netINR >= 0 ? '+' : '';
+      const netColor = netINR >= 0 ? '#00ffa3' : '#f87171';
       
-      previewEl.innerHTML = `Margin: ~₹${(pairMargin/1000).toFixed(1)}k/pair · <strong style="color: #00ffa3;">~${maxPairs} Pairs Max</strong>`;
+      previewEl.innerHTML = `Margin: ~₹${(pairMargin/1000).toFixed(1)}k/pair · <strong style="color: #00ffa3;">~${maxPairs} Pairs Max</strong> · Net/Hit: <strong style="color: ${netColor};">${netSign}₹${netINR.toFixed(1)}</strong>`;
     }
 
     async function quickSetBasketTarget(targetINR) {
@@ -2595,6 +2630,10 @@
         }
         if (qtyEl && !qtyEl.matches(':focus') && (!qtyEl.value || qtyEl.value === '3' || qtyEl.value === '3.0')) {
           qtyEl.value = (engine && engine.contractQuantity) || 3.0;
+        }
+        const moveEl = document.getElementById('manualSimTargetMove');
+        if (moveEl && !moveEl.matches(':focus') && (!moveEl.value || moveEl.value === '0.50' || moveEl.value === '0.5')) {
+          moveEl.value = (engine && engine.profitTargetMove) ? Number(engine.profitTargetMove).toFixed(2) : '0.50';
         }
       }
       updateManualSimPreview();

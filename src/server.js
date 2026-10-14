@@ -986,12 +986,14 @@ app.post(['/api/solana-live-mudrex/action', '/api/crude-live-mudrex-solana/actio
     } else if (action === 'resetData' || action === 'resetSimulator') {
       const customQty = req.body.quantity ? Number(req.body.quantity) : null;
       const customCapital = req.body.capitalINR ? Number(req.body.capitalINR) : 300000.00;
-      const result = solanaEngine.resetData(customQty, customCapital);
+      const customTargetMove = (req.body.targetMove || req.body.profitTargetMove) ? Number(req.body.targetMove || req.body.profitTargetMove) : null;
+      const result = solanaEngine.resetData(customQty, customCapital, customTargetMove);
       return res.json({ 
         success: true, 
         message: result.message, 
         contractQuantity: result.contractQuantity,
-        startingCapitalINR: result.startingCapitalINR 
+        startingCapitalINR: result.startingCapitalINR,
+        profitTargetMove: result.profitTargetMove 
       });
     } else {
       return res.status(400).json({ success: false, error: 'Unknown action: ' + action });
