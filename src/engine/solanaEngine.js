@@ -5,15 +5,15 @@ const rateFeed = require('./rateFeed');
 class SolanaEngine {
   constructor() {
     this.settings = {
-      startingCapitalINR: 150000.00, // ₹1.5 Lakh starting capital requested by user
-      contractQuantity: 2.0, // 2.0 SOL default lot size
+      startingCapitalINR: 350000.00, // ₹3.5 Lakh starting capital requested by user
+      contractQuantity: 5.0, // 5.0 SOL default lot size
       leverage: 5,
       instrument: 'SOLUSDT',
       profitTargetMove: 0.50, // $0.50 Target Move for Solana
       buyTargetMove: 0.50,
       sellTargetMove: 0.50,
       basketProfitTargetINR: 250, // ₹250 Punarjanm Basket Profit Threshold
-      autoPunarjanmEnabled: true,
+      autoPunarjanmEnabled: false, // Auto-harvest disabled per user request
       autoAddNewPairs: true,
       maxActivePairs: 50,
       takerFeeRate: 0.00075, // 0.075% Mudrex taker fee
@@ -425,7 +425,7 @@ class SolanaEngine {
     const floating = this.calculateFloatingSummary(livePrice);
 
     // Margins and Capital
-    const startingCapitalINR = this.settings.startingCapitalINR || 150000.00;
+    const startingCapitalINR = this.settings.startingCapitalINR || 350000.00;
     const lockedMarginINR = floating.dynamicMarginUsedINR;
     const availableMarginINR = Math.max(0, Number((startingCapitalINR + realizedNetINR - lockedMarginINR).toFixed(2)));
     const equityINR = Number((availableMarginINR + lockedMarginINR + floating.floatingNetINR).toFixed(2));
@@ -534,7 +534,7 @@ class SolanaEngine {
         positions: [],
         count: openPairs.length,
         netSummary,
-        note: 'SOLANA SIMULATOR (₹1.5 Lakh Capital, 5x Leverage, Mudrex 102.00 INR/USD rate)'
+        note: 'SOLANA SIMULATOR (₹3.5 Lakh Capital, 5x Leverage, Mudrex 102.00 INR/USD rate)'
       },
       engine: {
         status: this.engineStatus,
@@ -587,6 +587,9 @@ class SolanaEngine {
   }
 
   resetData() {
+    this.settings.startingCapitalINR = 350000.00;
+    this.settings.contractQuantity = 5.0;
+    this.settings.autoPunarjanmEnabled = false; // Harvest disabled per user request
     this.pairs = [];
     this.closedPositions = [];
     this.punarjanmCount = 0;
@@ -596,9 +599,20 @@ class SolanaEngine {
     this.pairCounter = 1;
     this.isEngineRunning = true;
     this.engineStatus = 'RUNNING';
+
+    // Auto-create initial fresh 5.0 SOL pair if live rate is present
+    try {
+      const cur = rateFeed.getCurrentRate('SOLUSDT');
+      if (cur && cur.price > 0) {
+        this.createNewPair('SOLUSDT', cur.price, Date.now(), cur.usdInrRate || 102.00);
+      }
+    } catch (e) {
+      console.warn('[Solana Engine] Error creating initial pair after reset:', e.message);
+    }
+
     this.saveState();
-    console.log('[Solana Engine] Reset data: Capital restored to ₹1,50,000 INR.');
-    return { success: true, message: 'Solana simulator data reset to ₹1,50,000 capital.' };
+    console.log('[Solana Engine] Reset data: Capital set to ₹3,50,000 INR with 5.0 SOL contract size.');
+    return { success: true, message: 'Solana simulator data reset to ₹3,50,000 capital and 5.0 SOL lot size.' };
   }
 }
 

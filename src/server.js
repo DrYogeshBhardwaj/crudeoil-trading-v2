@@ -66,11 +66,6 @@ app.get(['/mudrex-crude-live', '/mudrex_crude_live', '/mudrex_crude_live.html', 
 app.get(['/crude-live-mudrex', '/crude_live_mudrex', '/Crude-Live-Mudrex', '/crude-live-mudrex.html', '/crude_live_mudrex.html'], (req, res) => res.redirect(301, '/Crude-Live-Mudrex-Pro'));
 app.get(['/crude-live-mudrex-pro', '/crude_live_mudrex_pro', '/Crude-Live-Mudrex-Pro', '/crude-live-mudrex-pro.html', '/crude_live_mudrex_pro.html'], (req, res) => res.sendFile(path.join(__dirname, '../public/crude_live_mudrex_pro.html')));
 app.get([
-  '/crude-live-mudrex-solana',
-  '/Crude-Live-Mudrex-Solana',
-  '/crude_live_mudrex_solana',
-  '/crude-live-solana',
-  '/Crude-Live-Solana',
   '/solana-live-mudrex',
   '/Solana-Live-Mudrex',
   '/solana-live-mudrex-pro',
@@ -79,6 +74,13 @@ app.get([
   '/solana',
   '/Solana'
 ], (req, res) => res.sendFile(path.join(__dirname, '../public/solana_live_mudrex.html')));
+app.get([
+  '/crude-live-mudrex-solana',
+  '/Crude-Live-Mudrex-Solana',
+  '/crude_live_mudrex_solana',
+  '/crude-live-solana',
+  '/Crude-Live-Solana'
+], (req, res) => res.redirect(301, '/Solana-Live-Mudrex'));
 app.get(['/mudrex-crude-calc', '/mudrex_crude_calc', '/mudrex_crude_calc.html', '/mudrex-crude-calc.html'], (req, res) => res.sendFile(path.join(__dirname, '../public/mudrex_crude_calc.html')));
 app.get(['/pair-add', '/pair_add', '/pair_add.html', '/pair-add.html'], (req, res) => res.sendFile(path.join(__dirname, '../public/pair_add.html')));
 
@@ -906,7 +908,7 @@ app.post(['/api/crude-live-mudrex/action', '/api/crude-live-mudrex-pro/action'],
   }
 });
 
-// Dedicated Clean Endpoint for Crude-Live-Mudrex-Solana / Solana-Live-Mudrex-Pro (Simulator ₹1.5 Lakh)
+// Dedicated Clean Endpoint for Solana-Live-Mudrex (Simulator ₹3.5 Lakh, 5x Leverage, 5.0 SOL)
 app.get(['/api/solana-live-mudrex/data', '/api/crude-live-mudrex-solana/data', '/api/solana/data'], async (req, res) => {
   try {
     const solanaEngine = require('./engine/solanaEngine');
