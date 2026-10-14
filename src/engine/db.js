@@ -179,17 +179,13 @@ class DatabaseManager {
       }
 
 
-      // Filter out legacy 1.0B benchmark pairs from active pairs (saved safely in backups/legacy_seed_backup_20261014.json)
-      const legacyPairIds = new Set(['PAIR-0003', 'PAIR-0004', 'PAIR-0005', 'PAIR-0006', 'PAIR-0007', 'PAIR-0008', 'PAIR-0009', 'PAIR-0010', 'PAIR-0044', 'PAIR-0046', 'PAIR-0047', 'PAIR-0048']);
+      // Filter out legacy 1.0B benchmark pairs from active pairs (only 2.0B pairs with entry >= 93.60 are current)
       if (Array.isArray(finalState.pairs)) {
-        finalState.pairs = finalState.pairs.filter(p => !legacyPairIds.has(p.pairId));
-        if (this.db) {
-          try {
-            const placeholders = Array.from(legacyPairIds).map(() => '?').join(',');
-            const deleteLegacy = this.db.prepare(`DELETE FROM active_pairs WHERE pair_id IN (${placeholders})`);
-            deleteLegacy.run(...Array.from(legacyPairIds));
-          } catch (e) {}
-        }
+        finalState.pairs = finalState.pairs.filter(p => {
+          const qty = p.buyPosition?.quantity || p.sellPosition?.quantity || 1.0;
+          const rate = p.entryRate || p.buyPosition?.entryPrice || p.sellPosition?.entryPrice || 0;
+          return qty >= 2.0 && rate >= 93.60;
+        });
       }
 
       // Preserve verified Real Mudrex Closed Trades if present in seed

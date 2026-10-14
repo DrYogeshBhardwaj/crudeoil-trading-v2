@@ -2087,6 +2087,29 @@
           closeBtn.disabled = false;
         }
       } else {
+        const heroSideBadge = document.getElementById('heroMudrexSideBadge');
+        if (heroSideBadge) {
+          heroSideBadge.innerText = 'FLAT (0 BBL)';
+          heroSideBadge.style.color = 'var(--text-muted)';
+          heroSideBadge.style.borderColor = 'rgba(255,255,255,0.2)';
+          heroSideBadge.style.background = 'rgba(255,255,255,0.06)';
+        }
+        const heroSub = document.getElementById('heroMudrexSubtext');
+        if (heroSub) {
+          heroSub.innerText = 'Exchange Flat · Hedged in Engine';
+        }
+        const heroPnlVal = document.getElementById('heroMudrexPnlVal');
+        if (heroPnlVal) {
+          heroPnlVal.innerText = '₹0.00';
+          heroPnlVal.style.color = 'var(--text-muted)';
+          heroPnlVal.style.textShadow = 'none';
+        }
+        const heroInd = document.getElementById('heroMudrexIndicator');
+        if (heroInd) {
+          heroInd.style.background = '#64748b';
+          heroInd.style.boxShadow = 'none';
+        }
+
         const navBadge = document.getElementById('navMudrexBadge');
         if (navBadge) navBadge.innerText = '0 BBL';
         const modalSideBadge = document.getElementById('modalMudrexSideBadge');

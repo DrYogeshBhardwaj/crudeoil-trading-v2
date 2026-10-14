@@ -506,10 +506,8 @@ app.get('/api/crude-live-mudrex/data', async (req, res) => {
     }
 
     // 3. Engine Active Pairs (Tracking BOTH BUY and SELL legs for each pair - New 2.0B Engine Only)
-    const legacyPairIds = new Set(['PAIR-0003', 'PAIR-0004', 'PAIR-0005', 'PAIR-0006', 'PAIR-0007', 'PAIR-0008', 'PAIR-0009', 'PAIR-0010', 'PAIR-0044', 'PAIR-0046', 'PAIR-0047', 'PAIR-0048']);
     const openPairs = (paperEngine.pairs || []).filter(p => {
       if (p.status === 'CLOSED') return false;
-      if (legacyPairIds.has(p.pairId)) return false;
       const bPrice = p.buyPosition?.entryPrice;
       const sPrice = p.sellPosition?.entryPrice;
       const rateLevel = p.entryRate || bPrice || sPrice || 0;
