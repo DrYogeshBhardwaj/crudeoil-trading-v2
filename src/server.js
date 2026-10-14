@@ -992,6 +992,11 @@ app.post(['/api/solana-live-mudrex/action', '/api/crude-live-mudrex-solana/actio
       solanaEngine.settings.basketProfitTargetINR = newTarget;
       solanaEngine.saveState();
       return res.json({ success: true, message: `Solana Punarjanm target updated to ₹${newTarget.toFixed(2)} INR.`, targetINR: newTarget });
+    } else if (action === 'toggleAutoPunarjanm' || action === 'updateAutoPunarjanm') {
+      const enabled = req.body.enabled !== undefined ? !!req.body.enabled : !solanaEngine.settings.autoPunarjanmEnabled;
+      solanaEngine.settings.autoPunarjanmEnabled = enabled;
+      solanaEngine.saveState();
+      return res.json({ success: true, message: `Solana Auto-Punarjanm set to ${enabled ? 'ENABLED' : 'DISABLED'}.`, autoPunarjanmEnabled: enabled });
     } else if (action === 'updateContractQuantity' || action === 'updateLotSize') {
       const newQty = Number(req.body.quantity || req.body.contractQuantity);
       if (isNaN(newQty) || newQty <= 0) {

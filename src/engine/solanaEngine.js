@@ -13,8 +13,8 @@ class SolanaEngine {
       buyTargetMove: 0.45,
       sellTargetMove: 0.45,
       gridSpacing: 0.005, // 0.005 tolerance: every distinct cent movement creates a new pair
-      basketProfitTargetINR: 250, // ₹250 Punarjanm Basket Profit Threshold
-      autoPunarjanmEnabled: false, // Auto-harvest disabled per user request
+      basketProfitTargetINR: 500, // ₹500 Punarjanm Basket Profit Threshold
+      autoPunarjanmEnabled: true, // Auto-harvest enabled at ₹500 target!
       autoAddNewPairs: true, // Automatic pair creation on rate change enabled!
       maxActivePairs: 50, // Safe active pairs limit for available margin (₹2.15L+)
       takerFeeRate: 0.00075, // 0.075% Mudrex taker fee
@@ -85,6 +85,8 @@ class SolanaEngine {
           this.settings.autoAddNewPairs = true;
           this.settings.gridSpacing = 0.005;
           this.settings.maxActivePairs = 50;
+          this.settings.basketProfitTargetINR = 500;
+          this.settings.autoPunarjanmEnabled = true;
           if (Array.isArray(data.processedRates)) this.processedRates = new Set(data.processedRates);
           console.log(`[Solana Engine] Restored state from storage: ${this.pairs.length} pairs, ${this.closedPositions.length} closed trades.`);
         }

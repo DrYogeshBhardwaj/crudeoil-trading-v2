@@ -1,4 +1,4 @@
-﻿{
+{
     "timestamp":  "2026-10-14T23:13:13.908Z",
     "settings":  {
                      "startingCapitalINR":  300000,
@@ -9,8 +9,8 @@
                      "buyTargetMove":  0.45,
                      "sellTargetMove":  0.45,
                      "gridSpacing":  0.005,
-                     "basketProfitTargetINR":  250,
-                     "autoPunarjanmEnabled":  false,
+                     "basketProfitTargetINR":  500,
+                     "autoPunarjanmEnabled":  true,
                      "autoAddNewPairs":  true,
                      "maxActivePairs":  50,
                      "takerFeeRate":  0.00075,
