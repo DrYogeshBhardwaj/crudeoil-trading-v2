@@ -227,41 +227,13 @@ class PaperEngine {
       if (saved.lastPunarjanmSummary) this.lastPunarjanmSummary = saved.lastPunarjanmSummary;
       if (saved.pairs) this.pairs = saved.pairs;
       if (saved.closedPositions) this.closedPositions = saved.closedPositions;
-
-      // Purge stale flushed legs from Punarjanm 1 if they were mistakenly recorded as individual losses:
-      this.closedPositions = this.closedPositions.filter(c => {
-        const isPunarjanmLoss = (c.exitReason && c.exitReason.includes('Punarjanm') && c.netProfitINR < 0);
-        const isStaleSellLoss = (c.positionId === 'P-0013-SELL' || c.positionId === 'P-0014-SELL') && c.netProfitINR < 0;
-        return !isPunarjanmLoss && !isStaleSellLoss;
-      });
-      if (!this.closedPositions.some(c => c.positionId === 'P-Punarjanm1-HARVEST')) {
-        this.closedPositions.push({
-          pairId: 'Punarjanm1',
-          positionId: 'P-Punarjanm1-HARVEST',
-          direction: 'MUDREX_BASKET',
-          symbol: 'CLUSDT',
-          entryTime: '2026-10-13T17:48:17.000Z',
-          exitTime: '2026-10-13T23:58:15.286Z',
-          entryPrice: 93.86,
-          exitPrice: 93.79,
-          targetExitPrice: 93.79,
-          quantity: 16.0,
-          contractMultiplier: 1.0,
-          grossProfitUSD: 1.09,
-          grossProfitINR: 111.51,
-          entryFeeUSD: 0,
-          exitFeeUSD: 0,
-          gstUSD: 0,
-          totalChargesUSD: 0,
-          totalChargesINR: 0,
-          netProfitUSD: 1.09,
-          netProfitINR: 111.51,
-          usdInrRate: 102.0,
-          exitReason: 'Punarjanm 1 Basket Profit Harvest (+₹111.51)',
-          holdingDurationSec: 22198,
-          ledger: 'MUDREX_LIVE',
-          source: 'REAL_EXCHANGE'
-        });
+      // Ensure stale PAIR-0013 and PAIR-0014 from Punarjanm 1 (entry < 93.60) are marked CLOSED
+      for (const p of this.pairs) {
+        if ((p.pairId === 'PAIR-0013' || p.pairId === 'PAIR-0014') && (p.entryRate < 93.60 || (p.buyPosition && p.buyPosition.entryPrice < 93.60))) {
+          p.status = 'CLOSED';
+          if (p.buyPosition) p.buyPosition.status = 'CLOSED';
+          if (p.sellPosition) p.sellPosition.status = 'CLOSED';
+        }
       }
 
       if (saved.auditLogs) this.auditLogs = saved.auditLogs.slice(-500);

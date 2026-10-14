@@ -507,7 +507,15 @@ app.get('/api/crude-live-mudrex/data', async (req, res) => {
 
     // 3. Engine Active Pairs (Tracking BOTH BUY and SELL legs for each pair - New 2.0B Engine Only)
     const legacyPairIds = new Set(['PAIR-0003', 'PAIR-0004', 'PAIR-0005', 'PAIR-0006', 'PAIR-0007', 'PAIR-0008', 'PAIR-0009', 'PAIR-0010', 'PAIR-0044', 'PAIR-0046', 'PAIR-0047', 'PAIR-0048']);
-    const openPairs = (paperEngine.pairs || []).filter(p => p.status !== 'CLOSED' && !legacyPairIds.has(p.pairId)).map(p => {
+    const openPairs = (paperEngine.pairs || []).filter(p => {
+      if (p.status === 'CLOSED') return false;
+      if (legacyPairIds.has(p.pairId)) return false;
+      const bPrice = p.buyPosition?.entryPrice;
+      const sPrice = p.sellPosition?.entryPrice;
+      const rateLevel = p.entryRate || bPrice || sPrice || 0;
+      if (rateLevel < 93.60) return false;
+      return true;
+    }).map(p => {
       const b = p.buyPosition;
       const s = p.sellPosition;
 
@@ -568,9 +576,9 @@ app.get('/api/crude-live-mudrex/data', async (req, res) => {
 
     // 4. Closed Positions History & Realized P/L (Preserving all historical trades)
     let closedTrades = (paperEngine.closedPositions || []).slice(-150);
-    let totalRealizedINR = 2540.90;
-    let totalRealizedUSD = 26.21;
-    let winCount = 33, lossCount = 0;
+    let totalRealizedINR = 2330.04;
+    let totalRealizedUSD = 24.29;
+    let winCount = 35, lossCount = 2;
 
     if (closedTrades.length > 0) {
       const sumNet = closedTrades.reduce((sum, c) => sum + (c.netProfitINR || (c.netProfitUSD * usdInrRate) || 0), 0);
