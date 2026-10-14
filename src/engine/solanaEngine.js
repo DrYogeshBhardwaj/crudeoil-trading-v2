@@ -42,7 +42,9 @@ class SolanaEngine {
     this.engineStatus = 'RUNNING';
     this.pauseReason = '';
 
-    this.storagePath = path.join(__dirname, '../../data/solana_engine_state.json');
+    const dataDir = process.env.RAILWAY_VOLUME_MOUNT_PATH || process.env.DATA_DIR || path.join(__dirname, '../../data');
+    this.storagePath = path.join(dataDir, 'solana_engine_state.json');
+    this.backupPath = path.join('/tmp', 'solana_engine_state_backup.json');
 
     this.initFromStorage();
 
@@ -59,8 +61,14 @@ class SolanaEngine {
 
   initFromStorage() {
     try {
+      let raw = null;
       if (fs.existsSync(this.storagePath)) {
-        const raw = fs.readFileSync(this.storagePath, 'utf8');
+        raw = fs.readFileSync(this.storagePath, 'utf8');
+      } else if (fs.existsSync(this.backupPath)) {
+        raw = fs.readFileSync(this.backupPath, 'utf8');
+      }
+
+      if (raw) {
         const data = JSON.parse(raw);
         if (data) {
           if (Array.isArray(data.pairs)) this.pairs = data.pairs;
@@ -72,7 +80,7 @@ class SolanaEngine {
           this.settings.tradingMode = 'LIVE';
           this.settings.realOrdersDisabled = false;
           this.settings.autoAddNewPairs = true;
-          this.settings.gridSpacing = this.settings.gridSpacing || 0.10;
+          this.settings.gridSpacing = this.settings.gridSpacing || 0.02;
           if (Array.isArray(data.processedRates)) this.processedRates = new Set(data.processedRates);
           console.log(`[Solana Engine] Restored state from storage: ${this.pairs.length} pairs, ${this.closedPositions.length} closed trades.`);
         }
@@ -96,7 +104,11 @@ class SolanaEngine {
         pairCounter: this.pairCounter,
         processedRates: Array.from(this.processedRates)
       };
-      fs.writeFileSync(this.storagePath, JSON.stringify(payload, null, 2), 'utf8');
+      const jsonStr = JSON.stringify(payload, null, 2);
+      fs.writeFileSync(this.storagePath, jsonStr, 'utf8');
+      try {
+        fs.writeFileSync(this.backupPath, jsonStr, 'utf8');
+      } catch (err) {}
     } catch (e) {
       console.warn('[Solana Engine] Error saving state:', e.message);
     }
