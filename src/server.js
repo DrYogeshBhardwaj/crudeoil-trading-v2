@@ -966,6 +966,22 @@ app.post(['/api/solana-live-mudrex/action', '/api/crude-live-mudrex-solana/actio
       solanaEngine.settings.basketProfitTargetINR = newTarget;
       solanaEngine.saveState();
       return res.json({ success: true, message: `Solana Punarjanm target updated to ₹${newTarget.toFixed(2)} INR.`, targetINR: newTarget });
+    } else if (action === 'updateContractQuantity' || action === 'updateLotSize') {
+      const newQty = Number(req.body.quantity || req.body.contractQuantity);
+      if (isNaN(newQty) || newQty <= 0) {
+        return res.status(400).json({ success: false, error: 'Contract quantity must be a positive number.' });
+      }
+      solanaEngine.settings.contractQuantity = newQty;
+      solanaEngine.saveState();
+      return res.json({ success: true, message: `Solana Lot Size updated to ${newQty} SOL.`, contractQuantity: newQty });
+    } else if (action === 'updateTargetMove') {
+      const newMove = Number(req.body.targetMove || req.body.profitTargetMove);
+      if (isNaN(newMove) || newMove <= 0) {
+        return res.status(400).json({ success: false, error: 'Target move must be a positive number.' });
+      }
+      solanaEngine.settings.profitTargetMove = newMove;
+      solanaEngine.saveState();
+      return res.json({ success: true, message: `Solana Profit Target Move updated to $${newMove.toFixed(2)}.`, profitTargetMove: newMove });
     } else if (action === 'resetData') {
       const result = solanaEngine.resetData();
       return res.json({ success: true, message: result.message });
