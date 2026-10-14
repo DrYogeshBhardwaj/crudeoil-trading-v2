@@ -112,34 +112,125 @@ class SolanaEngine {
   }
 
   evaluateRateForNewPair(price) {
-    const minStep = 0.20; // At least $0.20 price difference for new Solana pair
-    if (this.lastProcessedRate !== null && Math.abs(price - this.lastProcessedRate) < minStep) {
-      this.lastSkippedRate = price;
-      return;
-    }
-
     const roundedPrice = Number(price.toFixed(2));
-    if (this.processedRates.has(roundedPrice)) {
-      this.lastSkippedRate = price;
+    if (!roundedPrice || isNaN(roundedPrice) || roundedPrice <= 0) return;
+
+    // 1. Skip consecutive identical tick
+    if (this.lastProcessedRate === roundedPrice) {
+      this.lastSkippedRate = roundedPrice;
       return;
     }
 
-    if (this.pairs.length >= (this.settings.maxActivePairs || 50)) {
+    const usdInrRate = Number(this.settings.usdInrRate || 102.00);
+    const qty = Number(this.settings.contractQuantity || 5.0);
+    const leverage = Number(this.settings.leverage || 5);
+
+    // 2. Check for missing legs on existing active pairs
+    for (const pair of this.pairs) {
+      if (pair.status === 'CLOSED') continue;
+      const bOpen = pair.buyPosition && pair.buyPosition.status === 'OPEN';
+      const sOpen = pair.sellPosition && pair.sellPosition.status === 'OPEN';
+
+      if (bOpen && sOpen) continue; // Both legs already open
+
+      const tolerance = 0.005;
+
+      // Case 1: BUY is OPEN, SELL was closed, price came back to pair entry price
+      if (bOpen && !sOpen && Math.abs(roundedPrice - pair.entryPrice) <= tolerance) {
+        this.reopenMissingLeg(pair, 'SELL', roundedPrice, Date.now(), usdInrRate);
+        this.lastProcessedRate = roundedPrice;
+        return;
+      }
+
+      // Case 2: SELL is OPEN, BUY was closed, price came back to pair entry price
+      if (sOpen && !bOpen && Math.abs(roundedPrice - pair.entryPrice) <= tolerance) {
+        this.reopenMissingLeg(pair, 'BUY', roundedPrice, Date.now(), usdInrRate);
+        this.lastProcessedRate = roundedPrice;
+        return;
+      }
+    }
+
+    // 3. Check if a full active pair (both legs OPEN) already exists at this exact rate
+    const existingBothOpenPairAtRate = this.pairs.find(p => {
+      if (p.status !== 'OPEN') return false;
+      const bOpen = p.buyPosition && p.buyPosition.status === 'OPEN';
+      const sOpen = p.sellPosition && p.sellPosition.status === 'OPEN';
+      return bOpen && sOpen && Math.abs(p.entryPrice - roundedPrice) < 0.005;
+    });
+
+    if (existingBothOpenPairAtRate) {
+      this.lastSkippedRate = roundedPrice;
       return;
     }
 
-    // Check available margin
+    // 4. Check active pairs cap
+    const activePairsCount = this.pairs.filter(p => p.status === 'OPEN').length;
+    if (activePairsCount >= (this.settings.maxActivePairs || 50)) {
+      return;
+    }
+
+    // 5. Margin check for 1 pair (BUY + SELL at 5x leverage)
+    const reqMarginPairINR = ((roundedPrice * qty * usdInrRate) / leverage) * 2;
     const metrics = this.getDashboardMetrics();
-    const marginReq = (price * this.settings.contractQuantity * this.settings.usdInrRate) / this.settings.leverage;
-    if (metrics.availableMarginINR < marginReq * 2) {
-      return; // Insufficient margin for both legs
+    if (metrics.wallet.availableMarginINR < reqMarginPairINR) {
+      console.warn(`[Solana Engine] Margin exhausted. Needed: ₹${reqMarginPairINR.toFixed(2)}, Available: ₹${metrics.wallet.availableMarginINR}`);
+      return;
     }
 
-    this.createNewPair('SOLUSDT', roundedPrice, Date.now(), this.settings.usdInrRate);
+    // 6. Create brand new pair at this rate!
+    this.createNewPair('SOLUSDT', roundedPrice, Date.now(), usdInrRate);
+    this.lastProcessedRate = roundedPrice;
+    console.log(`[Solana Engine] New rate $${roundedPrice.toFixed(2)} accepted! Created pair ${this.pairCounter - 1}. Active pairs: ${activePairsCount + 1}`);
+  }
+
+  reopenMissingLeg(pair, direction, entryPrice, timestamp = Date.now(), usdInrRate = 102.00) {
+    const qty = pair.quantity || this.settings.contractQuantity || 5.0;
+    const targetMove = pair.targetMove || this.settings.profitTargetMove || 0.50;
+    const seq = pair.pairId.replace('PAIR-SOL-', '');
+    const legId = `P-PAIR-SOL-${seq}-${direction}-${Date.now().toString().slice(-4)}`;
+
+    if (direction === 'BUY') {
+      const buyTarget = Number((entryPrice + targetMove).toFixed(2));
+      pair.buyPosition = {
+        pairId: pair.pairId,
+        positionId: legId,
+        direction: 'BUY',
+        symbol: 'SOLUSDT',
+        entryTime: new Date(timestamp).toISOString(),
+        entryTimestamp: timestamp,
+        entryPrice,
+        targetExitPrice: buyTarget,
+        quantity: qty,
+        status: 'OPEN',
+        ledger: 'PAPER',
+        source: 'SOLANA_SIMULATOR'
+      };
+      console.log(`[Solana Engine] Reopened missing BUY leg for ${pair.pairId} at $${entryPrice.toFixed(2)}`);
+    } else {
+      const sellTarget = Number((entryPrice - targetMove).toFixed(2));
+      pair.sellPosition = {
+        pairId: pair.pairId,
+        positionId: legId,
+        direction: 'SELL',
+        symbol: 'SOLUSDT',
+        entryTime: new Date(timestamp).toISOString(),
+        entryTimestamp: timestamp,
+        entryPrice,
+        targetExitPrice: sellTarget,
+        quantity: qty,
+        status: 'OPEN',
+        ledger: 'PAPER',
+        source: 'SOLANA_SIMULATOR'
+      };
+      console.log(`[Solana Engine] Reopened missing SELL leg for ${pair.pairId} at $${entryPrice.toFixed(2)}`);
+    }
+
+    pair.status = 'OPEN';
+    this.saveState();
   }
 
   createNewPair(symbol, price, timestamp = Date.now(), usdInrRate = 102.00, customQty = null, customTarget = null) {
-    const qty = customQty !== null ? Number(customQty) : Number(this.settings.contractQuantity || 2.0);
+    const qty = customQty !== null ? Number(customQty) : Number(this.settings.contractQuantity || 5.0);
     const targetMove = customTarget !== null ? Number(customTarget) : Number(this.settings.profitTargetMove || 0.50);
     const pairId = `PAIR-SOL-${this.pairCounter.toString().padStart(4, '0')}`;
     this.pairCounter++;
@@ -240,7 +331,7 @@ class SolanaEngine {
     pos.exitTimestamp = exitTime;
     pos.exitReason = exitReason;
 
-    const qty = pos.quantity || 2.0;
+    const qty = pos.quantity || this.settings.contractQuantity || 5.0;
     const isBuy = pos.direction === 'BUY';
     const grossUSD = isBuy ? (pos.exitPrice - pos.entryPrice) * qty : (pos.entryPrice - pos.exitPrice) * qty;
     const grossINR = grossUSD * usdInr;
@@ -341,7 +432,7 @@ class SolanaEngine {
 
     for (const pair of this.pairs) {
       if (pair.status === 'CLOSED') continue;
-      const qty = pair.quantity || this.settings.contractQuantity || 2.0;
+      const qty = pair.quantity || this.settings.contractQuantity || 5.0;
 
       // Buy
       if (pair.buyPosition && pair.buyPosition.status === 'OPEN') {
@@ -436,15 +527,18 @@ class SolanaEngine {
       let bPnlUSD = 0, bPnlINR = 0;
       let sPnlUSD = 0, sPnlINR = 0;
 
+      const defQty = this.settings.contractQuantity || 5.0;
       if (b && b.status === 'OPEN') {
-        const g = (livePrice - b.entryPrice) * (b.quantity || 2.0);
-        const c = (b.entryPrice * 0.00075 + livePrice * 0.00075) * 1.18 * (b.quantity || 2.0);
+        const bQty = b.quantity || defQty;
+        const g = (livePrice - b.entryPrice) * bQty;
+        const c = (b.entryPrice * 0.00075 + livePrice * 0.00075) * 1.18 * bQty;
         bPnlUSD = g - c;
         bPnlINR = bPnlUSD * usdInr;
       }
       if (s && s.status === 'OPEN') {
-        const g = (s.entryPrice - livePrice) * (s.quantity || 2.0);
-        const c = (s.entryPrice * 0.00075 + livePrice * 0.00075) * 1.18 * (s.quantity || 2.0);
+        const sQty = s.quantity || defQty;
+        const g = (s.entryPrice - livePrice) * sQty;
+        const c = (s.entryPrice * 0.00075 + livePrice * 0.00075) * 1.18 * sQty;
         sPnlUSD = g - c;
         sPnlINR = sPnlUSD * usdInr;
       }
@@ -455,7 +549,7 @@ class SolanaEngine {
         createdAt: p.createdAt,
         buyTarget: p.buyTarget,
         sellTarget: p.sellTarget,
-        quantity: p.quantity || 2.0,
+        quantity: p.quantity || defQty,
         status: p.status,
         netPairPnlINR: Number((bPnlINR + sPnlINR).toFixed(2)),
         buy: b ? {
@@ -466,7 +560,7 @@ class SolanaEngine {
           entryTime: b.entryTime,
           currentPrice: livePrice,
           targetPrice: b.targetExitPrice,
-          quantity: b.quantity || 2.0,
+          quantity: b.quantity || defQty,
           distToTarget: Number((b.targetExitPrice - livePrice).toFixed(2)),
           floatingPnlUSD: Number(bPnlUSD.toFixed(2)),
           floatingPnlINR: Number(bPnlINR.toFixed(2))
@@ -479,7 +573,7 @@ class SolanaEngine {
           entryTime: s.entryTime,
           currentPrice: livePrice,
           targetPrice: s.targetExitPrice,
-          quantity: s.quantity || 2.0,
+          quantity: s.quantity || defQty,
           distToTarget: Number((livePrice - s.targetExitPrice).toFixed(2)),
           floatingPnlUSD: Number(sPnlUSD.toFixed(2)),
           floatingPnlINR: Number(sPnlINR.toFixed(2))
@@ -489,7 +583,7 @@ class SolanaEngine {
 
     // Net Summary for Hero Banner
     let netSummary = null;
-    const netQty = Math.abs(floating.openBuyCount - floating.openSellCount) * (this.settings.contractQuantity || 2.0);
+    const netQty = Math.abs(floating.openBuyCount - floating.openSellCount) * (this.settings.contractQuantity || 5.0);
     const sideDisplay = floating.openBuyCount >= floating.openSellCount ? 'LONG' : 'SHORT';
     if (floating.openBuyCount > 0 || floating.openSellCount > 0) {
       netSummary = {
