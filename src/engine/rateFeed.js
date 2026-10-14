@@ -191,19 +191,9 @@ class RateFeedManager {
   }
 
   fetchUsdInrRate() {
-    const url = 'https://api.exchangerate-api.com/v4/latest/USD';
-    http.get(url, (res) => {
-      let body = '';
-      res.on('data', chunk => body += chunk);
-      res.on('end', () => {
-        try {
-          const data = JSON.parse(body);
-          if (data.rates && data.rates.INR) {
-            this.setUSDINRRate(data.rates.INR);
-          }
-        } catch (e) {}
-      });
-    }).on('error', () => {});
+    // Mudrex Futures operates on authoritative fixed hedge rate of 102.00 INR per USD (entry_hedge_rate)
+    // We preserve the 102.00 rate to match Mudrex exchange PnL & margin calculations 1:1.
+    this.setUSDINRRate(102.00);
   }
 
   updateRate(symbol, price, time, source) {

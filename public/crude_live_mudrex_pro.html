@@ -2443,16 +2443,17 @@
         const isShort = side.includes('SHORT') || side === 'SELL';
         const sideColor = isShort ? 'var(--accent-red-bright)' : 'var(--accent-green-bright)';
         const marginINR = netSum ? netSum.initialMarginINR : Number(exPos.initialMarginINR || exPos.initial_margin || wallet.lockedMarginINR || 0);
-        const marginUSD = netSum ? netSum.initialMarginUSD : Number((marginINR / usdInr).toFixed(2));
+        const hedgeRate = Number((netSum && netSum.entryHedgeRate) || (exPos && (exPos.entryHedgeRate || (exPos.raw && exPos.raw.entry_hedge_rate))) || 102.00);
+        const marginUSD = netSum ? netSum.initialMarginUSD : Number((marginINR / hedgeRate).toFixed(2));
         
         let pnlINR = (netSum && netSum.unrealisedPnlINR !== undefined && netSum.unrealisedPnlINR !== null && !isNaN(netSum.unrealisedPnlINR))
           ? netSum.unrealisedPnlINR
           : ((exPos && exPos.unrealisedPnlINR !== undefined && exPos.unrealisedPnlINR !== null && !isNaN(exPos.unrealisedPnlINR))
               ? exPos.unrealisedPnlINR
-              : (isShort ? (posEntry - livePrice) * posQty * usdInr : (livePrice - posEntry) * posQty * usdInr));
+              : (isShort ? (posEntry - livePrice) * posQty * hedgeRate : (livePrice - posEntry) * posQty * hedgeRate));
         let pnlUSD = (netSum && netSum.unrealisedPnlUSD !== undefined && netSum.unrealisedPnlUSD !== null && !isNaN(netSum.unrealisedPnlUSD))
           ? netSum.unrealisedPnlUSD
-          : (pnlINR / usdInr);
+          : (pnlINR / hedgeRate);
         let pnlPercent = (netSum && netSum.unrealisedPnlPercent !== undefined && netSum.unrealisedPnlPercent !== null && !isNaN(netSum.unrealisedPnlPercent))
           ? netSum.unrealisedPnlPercent
           : (marginINR > 0 ? (pnlINR / marginINR) * 100 : 0);

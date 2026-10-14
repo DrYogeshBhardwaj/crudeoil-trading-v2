@@ -1180,8 +1180,17 @@ class MudrexLiveAdapter {
         const isProtected = EXISTING_PROTECTED_POSITION_IDS.has(String(posId)) || EXISTING_PROTECTED_POSITION_IDS.has(String(item.position_id)) || EXISTING_PROTECTED_POSITION_IDS.has(String(item.id));
         const hasExchangeSideProtection = Boolean(item.takeprofit_price || item.is_takeprofit || item.stoploss_price || item.is_stoploss);
 
-        const currentPrice = Number(item.current_price || item.mark_price || item.markPrice || item.last_price || item.price || entryPrice);
-        const markPrice = Number(item.mark_price || item.markPrice || item.current_price || item.last_price || currentPrice);
+        const entryHedgeRate = Number(item.entry_hedge_rate || this.settings.usdInrRate || 102.00);
+
+        let liveMarketRate = null;
+        try {
+          const rf = require('./rateFeed');
+          const cr = rf.getCurrentRate(sym);
+          if (cr && cr.price) liveMarketRate = cr.price;
+        } catch (e) {}
+
+        const currentPrice = Number(item.current_price || item.mark_price || item.markPrice || item.last_price || (liveMarketRate ? liveMarketRate : (item.price || entryPrice)));
+        const markPrice = Number(item.mark_price || item.markPrice || (liveMarketRate ? liveMarketRate : currentPrice));
         const liquidationPrice = Number(item.liquidation_price || item.liq_price || item.liquidationPrice || 0);
         const initialMarginINR = item.initial_margin ? Number(item.initial_margin) : (item.initialMargin ? Number(item.initialMargin) : null);
         const maintMarginINR = item.maintenance_margin ? Number(item.maintenance_margin) : (item.maint_margin ? Number(item.maint_margin) : null);
@@ -1198,6 +1207,10 @@ class MudrexLiveAdapter {
           unrealisedPnlINR = Number(item.unrealized_pnl);
         } else if (item.pnl !== undefined && item.pnl !== null) {
           unrealisedPnlINR = Number(item.pnl);
+        } else if (currentPrice && entryPrice) {
+          const isShort = (direction === 'SELL' || direction === 'SHORT');
+          const pnlUSD = isShort ? (entryPrice - currentPrice) * qty : (currentPrice - entryPrice) * qty;
+          unrealisedPnlINR = Number((pnlUSD * entryHedgeRate).toFixed(2));
         }
 
         let unrealisedPnlPercent = null;
@@ -1217,7 +1230,7 @@ class MudrexLiveAdapter {
         } else if (item.unrealized_pnl_usd !== undefined && item.unrealized_pnl_usd !== null) {
           unrealisedPnlUSD = Number(item.unrealized_pnl_usd);
         } else if (unrealisedPnlINR !== null) {
-          unrealisedPnlUSD = Number((unrealisedPnlINR / (this.settings.usdInrRate || 102.00)).toFixed(2));
+          unrealisedPnlUSD = Number((unrealisedPnlINR / entryHedgeRate).toFixed(2));
         }
 
         return {
@@ -1243,6 +1256,8 @@ class MudrexLiveAdapter {
           initialMarginINR,
           maintMarginINR,
           leverage,
+          entryHedgeRate,
+          entry_hedge_rate: entryHedgeRate,
           unrealisedPnlINR,
           unrealised_pnl: unrealisedPnlINR,
           unrealized_pnl: unrealisedPnlINR,

@@ -616,8 +616,9 @@ app.get(['/api/crude-live-mudrex/data', '/api/crude-live-mudrex-pro/data'], asyn
       const posQty = Number(mainPos.quantity || 0);
       const posEntry = Number(mainPos.entryPrice || 0);
       const isShort = (mainPos.direction === 'SELL' || mainPos.direction === 'SHORT');
+      const hedgeRate = Number(mainPos.entryHedgeRate || (mainPos.raw && mainPos.raw.entry_hedge_rate) || usdInrRate || 102.00);
       
-      const curPrice = Number(mainPos.currentPrice || mainPos.markPrice || livePrice);
+      const curPrice = Number(livePrice || mainPos.currentPrice || mainPos.markPrice);
       const liqPrice = Number(mainPos.liquidationPrice || (isShort ? posEntry * 1.18 : posEntry * 0.82));
       const initialMarginINR = Number(mainPos.initialMarginINR || lockedINR || 7716.66);
       
@@ -636,15 +637,15 @@ app.get(['/api/crude-live-mudrex/data', '/api/crude-live-mudrex-pro/data'], asyn
       }
 
       if (pnlINR === null) {
-        // Fallback only if exchange did not provide PnL
+        // Authoritative Mudrex Exchange calculation (Entry vs Current * Qty * HedgeRate)
         pnlUSD = isShort ? (posEntry - curPrice) * posQty : (curPrice - posEntry) * posQty;
-        pnlINR = pnlUSD * usdInrRate;
+        pnlINR = Number((pnlUSD * hedgeRate).toFixed(2));
       } else {
-        pnlUSD = Number((pnlINR / usdInrRate).toFixed(2));
+        pnlUSD = Number((pnlINR / hedgeRate).toFixed(2));
       }
 
       if (pnlPercent === null) {
-        pnlPercent = initialMarginINR > 0 ? (pnlINR / initialMarginINR) * 100 : 0;
+        pnlPercent = initialMarginINR > 0 ? Number(((pnlINR / initialMarginINR) * 100).toFixed(2)) : 0;
       }
 
       mudrexNetSummary = {
@@ -656,7 +657,7 @@ app.get(['/api/crude-live-mudrex/data', '/api/crude-live-mudrex-pro/data'], asyn
         entryPrice: Number(posEntry.toFixed(4)),
         currentPrice: Number(curPrice.toFixed(2)),
         initialMarginINR: Number(initialMarginINR.toFixed(2)),
-        initialMarginUSD: Number((initialMarginINR / usdInrRate).toFixed(2)),
+        initialMarginUSD: Number((initialMarginINR / hedgeRate).toFixed(2)),
         unrealisedPnlUSD: Number(pnlUSD.toFixed(2)),
         unrealisedPnlINR: Number(pnlINR.toFixed(2)),
         unrealisedPnlPercent: Number(pnlPercent.toFixed(2)),
