@@ -1,0 +1,3609 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Crude-Live-Mudrex-Pro — Live Pair Trading Desk & Performance Analytics</title>
+  
+  <!-- Modern Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Outfit:wght@500;600;700;800;900&family=JetBrains+Mono:wght@500;700;800&display=swap" rel="stylesheet">
+  
+  <!-- High-Res Dynamic SVG Favicon -->
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ccircle cx='50' cy='50' r='48' fill='%23090d16' stroke='%2338bdf8' stroke-width='4'/%3E%3Cpath d='M30 35 C30 25, 70 25, 70 35 L70 65 C70 75, 30 75, 30 65 Z' fill='%230284c7' stroke='%2338bdf8' stroke-width='3'/%3E%3Cellipse cx='50' cy='35' rx='20' ry='7' fill='%2338bdf8'/%3E%3Ctext x='50' y='60' font-size='22' font-family='sans-serif' font-weight='900' fill='%23ffffff' text-anchor='middle'%3ECL%3C/text%3E%3Ccircle cx='76' cy='24' r='8' fill='%2310b981'/%3E%3C/svg%3E">
+  
+  <style>
+    :root {
+      --bg-dark: #070a12;
+      --bg-surface: rgba(15, 23, 42, 0.75);
+      --card-border: rgba(56, 189, 248, 0.18);
+      --card-border-green: rgba(16, 185, 129, 0.3);
+      --card-border-red: rgba(239, 68, 68, 0.3);
+      
+      --accent-cyan: #38bdf8;
+      --accent-green: #10b981;
+      --accent-green-bright: #34d399;
+      --accent-red: #ef4444;
+      --accent-red-bright: #f87171;
+      --accent-gold: #f59e0b;
+      --accent-purple: #a855f7;
+      
+      --text-main: #f8fafc;
+      --text-muted: #94a3b8;
+      --text-dim: #64748b;
+      
+      --font-main: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      --font-display: 'Outfit', sans-serif;
+      --font-mono: 'JetBrains Mono', monospace;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      background-color: var(--bg-dark);
+      background-image: 
+        radial-gradient(at 0% 0%, rgba(56, 189, 248, 0.08) 0px, transparent 50%),
+        radial-gradient(at 100% 0%, rgba(16, 185, 129, 0.08) 0px, transparent 50%),
+        radial-gradient(at 50% 100%, rgba(168, 85, 247, 0.05) 0px, transparent 60%);
+      color: var(--text-main);
+      font-family: var(--font-main);
+      min-height: 100vh;
+      padding: 12px 18px 40px;
+    }
+
+    .container {
+      max-width: 98.5%;
+      width: 98.5%;
+      margin: 0 auto;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    /* Top Navigation Header */
+    .top-navbar {
+      background: var(--bg-surface);
+      backdrop-filter: blur(16px);
+      border: 1px solid var(--card-border);
+      border-radius: 16px;
+      padding: 14px 22px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 14px;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.45);
+    }
+
+    .brand-section {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+
+    .brand-logo-badge {
+      width: 44px;
+      height: 44px;
+      border-radius: 12px;
+      background: linear-gradient(135deg, #0284c7, #10b981);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.5rem;
+      box-shadow: 0 4px 16px rgba(16, 185, 129, 0.35);
+    }
+
+    .brand-text h1 {
+      font-family: var(--font-display);
+      font-size: 1.45rem;
+      font-weight: 900;
+      letter-spacing: -0.5px;
+      background: linear-gradient(135deg, #ffffff 40%, #94a3b8);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .brand-text .page-tag {
+      font-size: 0.72rem;
+      font-weight: 800;
+      padding: 2px 8px;
+      border-radius: 6px;
+      background: rgba(56, 189, 248, 0.15);
+      border: 1px solid rgba(56, 189, 248, 0.4);
+      color: var(--accent-cyan);
+      -webkit-text-fill-color: var(--accent-cyan);
+      letter-spacing: 0.4px;
+    }
+
+    .brand-text p {
+      font-size: 0.76rem;
+      color: var(--text-muted);
+      font-weight: 600;
+      margin-top: 2px;
+    }
+
+    .nav-center-pill {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      background: rgba(0, 0, 0, 0.35);
+      padding: 6px 14px;
+      border-radius: 12px;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+    }
+
+    .status-indicator {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 0.8rem;
+      font-weight: 800;
+      padding: 5px 12px;
+      border-radius: 20px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .status-running {
+      background: rgba(16, 185, 129, 0.16);
+      border: 1px solid rgba(16, 185, 129, 0.5);
+      color: var(--accent-green-bright);
+    }
+
+    .status-paused {
+      background: rgba(245, 158, 11, 0.16);
+      border: 1px solid rgba(245, 158, 11, 0.5);
+      color: var(--accent-gold);
+    }
+
+    .pulse-dot {
+      width: 9px;
+      height: 9px;
+      border-radius: 50%;
+      background: currentColor;
+      box-shadow: 0 0 10px currentColor;
+      animation: pulseAnim 1.4s infinite;
+    }
+
+    @keyframes pulseAnim {
+      0%, 100% { opacity: 0.35; transform: scale(0.9); }
+      50% { opacity: 1; transform: scale(1.15); }
+    }
+
+    .nav-actions {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .btn {
+      font-family: var(--font-main);
+      font-weight: 700;
+      font-size: 0.82rem;
+      padding: 9px 16px;
+      border-radius: 10px;
+      border: none;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    .btn-green {
+      background: linear-gradient(135deg, #10b981, #059669);
+      color: #fff;
+      box-shadow: 0 4px 14px rgba(16, 185, 129, 0.35);
+    }
+    .btn-green:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 6px 18px rgba(16, 185, 129, 0.55);
+    }
+
+    .btn-amber {
+      background: linear-gradient(135deg, #f59e0b, #d97706);
+      color: #fff;
+      box-shadow: 0 4px 14px rgba(245, 158, 11, 0.35);
+    }
+    .btn-amber:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 6px 18px rgba(245, 158, 11, 0.55);
+    }
+
+    .btn-cyan {
+      background: linear-gradient(135deg, #0284c7, #0369a1);
+      color: #fff;
+      box-shadow: 0 4px 14px rgba(2, 132, 199, 0.35);
+    }
+    .btn-cyan:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 6px 18px rgba(2, 132, 199, 0.55);
+    }
+
+    .btn-blue {
+      background: linear-gradient(135deg, #1d4ed8, #2563eb);
+      color: #fff;
+      box-shadow: 0 4px 14px rgba(37, 99, 235, 0.4);
+      border: 1px solid rgba(96, 165, 250, 0.4);
+    }
+    .btn-blue:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 6px 20px rgba(37, 99, 235, 0.65);
+    }
+
+
+    .btn-outline {
+      background: rgba(255, 255, 255, 0.06);
+      color: var(--text-main);
+      border: 1px solid rgba(255, 255, 255, 0.14);
+    }
+    .btn-outline:hover {
+      background: rgba(255, 255, 255, 0.12);
+    }
+
+    /* Live Rate Ticker Hero Banner */
+    .hero-ticker-banner {
+      background: linear-gradient(135deg, rgba(15, 23, 42, 0.9), rgba(10, 15, 30, 0.95));
+      border: 1px solid var(--card-border);
+      border-radius: 16px;
+      padding: 16px 22px;
+      display: grid;
+      grid-template-columns: 1.6fr 1fr 0.9fr 0.9fr 0.8fr;
+      gap: 16px;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
+      align-items: center;
+    }
+
+    @media (max-width: 1400px) {
+      .hero-ticker-banner {
+        grid-template-columns: 1fr 1.5fr 1fr;
+      }
+    }
+    @media (max-width: 900px) {
+      .hero-ticker-banner {
+        grid-template-columns: 1fr 1fr;
+      }
+    }
+    @media (max-width: 640px) {
+      .hero-ticker-banner {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .target-chip {
+      background: rgba(255, 255, 255, 0.08);
+      border: 1px solid rgba(255, 255, 255, 0.18);
+      color: #cbd5e1;
+      font-family: var(--font-mono);
+      font-size: 0.70rem;
+      font-weight: 800;
+      padding: 2px 7px;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+    .target-chip:hover {
+      background: rgba(56, 189, 248, 0.25);
+      border-color: var(--accent-cyan);
+      color: #fff;
+    }
+    .target-chip.active {
+      background: linear-gradient(135deg, #10b981, #059669);
+      border-color: #34d399;
+      color: #fff;
+      box-shadow: 0 0 8px rgba(16, 185, 129, 0.45);
+    }
+
+    .ticker-block {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .ticker-block.border-left {
+      border-left: 1px solid rgba(255, 255, 255, 0.08);
+      padding-left: 18px;
+    }
+
+    .ticker-label {
+      font-size: 0.72rem;
+      font-weight: 800;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.6px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .ticker-rate-value {
+      font-family: var(--font-display);
+      font-size: 2.5rem;
+      font-weight: 900;
+      line-height: 1.1;
+      letter-spacing: -0.5px;
+      transition: color 0.3s;
+    }
+
+    .ticker-rate-value.rate-cyan {
+      color: var(--accent-cyan);
+      text-shadow: 0 0 20px rgba(56, 189, 248, 0.35);
+    }
+
+    .ticker-rate-value.rate-green {
+      color: var(--accent-green-bright);
+      text-shadow: 0 0 20px rgba(16, 185, 129, 0.35);
+    }
+
+    .ticker-rate-value.rate-red {
+      color: var(--accent-red-bright);
+      text-shadow: 0 0 20px rgba(239, 68, 68, 0.35);
+    }
+
+    .ticker-rate-value.rate-gold {
+      color: var(--accent-gold);
+      text-shadow: 0 0 20px rgba(245, 158, 11, 0.35);
+    }
+
+    .ticker-sub {
+      font-size: 0.76rem;
+      color: var(--text-dim);
+      font-weight: 600;
+      font-family: var(--font-mono);
+    }
+
+    /* KPI Summary Row */
+    .kpi-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+      gap: 14px;
+    }
+
+    .kpi-card {
+      background: var(--bg-surface);
+      backdrop-filter: blur(14px);
+      border: 1px solid var(--card-border);
+      border-radius: 14px;
+      padding: 16px 20px;
+      box-shadow: 0 6px 24px rgba(0, 0, 0, 0.3);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .kpi-card::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 3px;
+      background: transparent;
+    }
+    .kpi-card.kpi-green::before { background: var(--accent-green); }
+    .kpi-card.kpi-cyan::before { background: var(--accent-cyan); }
+    .kpi-card.kpi-gold::before { background: var(--accent-gold); }
+    .kpi-card.kpi-purple::before { background: var(--accent-purple); }
+
+    .kpi-header {
+      font-size: 0.72rem;
+      font-weight: 800;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.6px;
+      margin-bottom: 6px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .kpi-val-primary {
+      font-family: var(--font-display);
+      font-size: 1.65rem;
+      font-weight: 900;
+      color: #fff;
+      line-height: 1.2;
+    }
+
+    .kpi-val-secondary {
+      font-family: var(--font-mono);
+      font-size: 0.84rem;
+      font-weight: 700;
+      margin-top: 4px;
+      color: var(--text-muted);
+    }
+
+    /* Mudrex Real Exchange Position Summary Card */
+    .mudrex-position-card {
+      background: linear-gradient(135deg, rgba(15, 23, 42, 0.95), rgba(24, 18, 43, 0.9));
+      backdrop-filter: blur(16px);
+      border: 1px solid rgba(239, 68, 68, 0.35);
+      border-radius: 16px;
+      padding: 16px 22px;
+      box-shadow: 0 10px 32px rgba(239, 68, 68, 0.12), 0 4px 20px rgba(0, 0, 0, 0.4);
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .mudrex-position-card::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 3px;
+      background: linear-gradient(90deg, #ef4444, #f59e0b, #38bdf8);
+    }
+
+    .mudrex-card-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 12px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+      padding-bottom: 12px;
+    }
+
+    .mudrex-card-title-group {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .mudrex-live-indicator {
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      background: #ef4444;
+      box-shadow: 0 0 12px #ef4444;
+      animation: pulse-dot 1.8s infinite;
+    }
+
+    @keyframes pulse-dot {
+      0% { transform: scale(0.95); opacity: 0.85; }
+      50% { transform: scale(1.25); opacity: 1; box-shadow: 0 0 18px #ef4444; }
+      100% { transform: scale(0.95); opacity: 0.85; }
+    }
+
+    .mudrex-title {
+      font-family: var(--font-display);
+      font-size: 1.05rem;
+      font-weight: 800;
+      color: #fff;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .badge-one-way {
+      font-size: 0.70rem;
+      padding: 3px 8px;
+      background: rgba(245, 158, 11, 0.2);
+      border: 1px solid rgba(245, 158, 11, 0.5);
+      border-radius: 6px;
+      color: var(--accent-gold);
+      font-weight: 800;
+      letter-spacing: 0.5px;
+    }
+
+    .badge-mudrex-side {
+      font-size: 0.76rem;
+      padding: 3px 10px;
+      border-radius: 6px;
+      font-weight: 900;
+      font-family: var(--font-mono);
+      background: rgba(239, 68, 68, 0.25);
+      border: 1px solid rgba(239, 68, 68, 0.6);
+      color: var(--accent-red-bright);
+    }
+
+    .mudrex-sub {
+      font-size: 0.78rem;
+      color: var(--text-muted);
+      margin-top: 3px;
+    }
+
+    .mudrex-pnl-pill-container {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-end;
+      gap: 4px;
+    }
+
+    .mudrex-pnl-label {
+      font-size: 0.70rem;
+      font-weight: 800;
+      color: var(--text-dim);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .mudrex-pnl-badge {
+      font-family: var(--font-mono);
+      font-size: 1.15rem;
+      font-weight: 900;
+      padding: 6px 16px;
+      border-radius: 10px;
+      letter-spacing: 0.5px;
+    }
+
+    .pnl-badge-positive {
+      background: rgba(16, 185, 129, 0.2);
+      border: 1px solid rgba(16, 185, 129, 0.5);
+      color: var(--accent-green-bright);
+      box-shadow: 0 0 16px rgba(16, 185, 129, 0.25);
+    }
+
+    .pnl-badge-negative {
+      background: rgba(239, 68, 68, 0.2);
+      border: 1px solid rgba(239, 68, 68, 0.5);
+      color: var(--accent-red-bright);
+      box-shadow: 0 0 16px rgba(239, 68, 68, 0.25);
+    }
+
+    .mudrex-card-body {
+      display: grid;
+      grid-template-columns: repeat(6, 1fr);
+      gap: 12px;
+      align-items: center;
+    }
+
+    @media (max-width: 1200px) {
+      .mudrex-card-body {
+        grid-template-columns: repeat(3, 1fr);
+      }
+    }
+    @media (max-width: 768px) {
+      .mudrex-card-body {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .mudrex-stat-box {
+      background: rgba(0, 0, 0, 0.25);
+      border: 1px solid rgba(255, 255, 255, 0.06);
+      border-radius: 10px;
+      padding: 10px 14px;
+      display: flex;
+      flex-direction: column;
+      gap: 3px;
+    }
+
+    .mudrex-stat-box.action-box {
+      background: transparent;
+      border: none;
+      padding: 0;
+      gap: 6px;
+    }
+
+    .mudrex-stat-label {
+      font-size: 0.70rem;
+      font-weight: 700;
+      color: var(--text-dim);
+      text-transform: uppercase;
+      letter-spacing: 0.4px;
+    }
+
+    .mudrex-stat-val {
+      font-family: var(--font-mono);
+      font-size: 1.05rem;
+      font-weight: 800;
+      color: #fff;
+    }
+
+    .mudrex-stat-sub {
+      font-size: 0.72rem;
+      color: var(--text-muted);
+      font-family: var(--font-mono);
+    }
+
+    .btn-close-mudrex {
+      background: linear-gradient(135deg, #dc2626, #b91c1c);
+      color: #fff;
+      font-family: var(--font-main);
+      font-weight: 800;
+      font-size: 0.84rem;
+      padding: 12px 14px;
+      border: 1px solid rgba(248, 113, 113, 0.6);
+      border-radius: 10px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      box-shadow: 0 4px 16px rgba(220, 38, 38, 0.35);
+      transition: all 0.2s ease;
+      width: 100%;
+    }
+
+    .btn-close-mudrex:hover {
+      background: linear-gradient(135deg, #ef4444, #dc2626);
+      transform: translateY(-1px);
+      box-shadow: 0 6px 22px rgba(239, 68, 68, 0.5);
+    }
+
+    /* Top Active Bids Hero Grid */
+    .top-bids-hero-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+      margin-bottom: 14px;
+    }
+
+    @media (max-width: 900px) {
+      .top-bids-hero-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .top-bid-card {
+      background: var(--bg-surface);
+      backdrop-filter: blur(14px);
+      border-radius: 14px;
+      padding: 16px 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .top-bid-card.buy-card {
+      border: 1px solid rgba(16, 185, 129, 0.35);
+      border-left: 4px solid var(--accent-green);
+    }
+
+    .top-bid-card.sell-card {
+      border: 1px solid rgba(239, 68, 68, 0.35);
+      border-left: 4px solid var(--accent-red);
+    }
+
+    .top-bid-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+      padding-bottom: 8px;
+    }
+
+    .top-bid-title-group {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .bid-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+    }
+    .green-dot {
+      background: var(--accent-green-bright);
+      box-shadow: 0 0 10px var(--accent-green-bright);
+    }
+    .red-dot {
+      background: var(--accent-red-bright);
+      box-shadow: 0 0 10px var(--accent-red-bright);
+    }
+
+    .top-bid-heading {
+      font-family: var(--font-display);
+      font-size: 0.95rem;
+      font-weight: 800;
+      color: #fff;
+    }
+
+    .top-bid-badge {
+      font-family: var(--font-mono);
+      font-size: 0.76rem;
+      font-weight: 800;
+      padding: 3px 8px;
+      border-radius: 6px;
+    }
+
+    .top-bid-main {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 12px;
+    }
+
+    .bid-metric {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+
+    .bid-metric .lbl {
+      font-size: 0.68rem;
+      color: var(--text-dim);
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.4px;
+    }
+
+    .bid-metric .val {
+      font-family: var(--font-mono);
+      font-size: 1.05rem;
+      font-weight: 800;
+      color: #fff;
+    }
+
+    .highlight-green {
+      color: var(--accent-green-bright) !important;
+      font-weight: 900 !important;
+    }
+
+    .highlight-red {
+      color: var(--accent-red-bright) !important;
+      font-weight: 900 !important;
+    }
+
+    .top-bid-footer {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 0.72rem;
+      color: var(--text-muted);
+      font-family: var(--font-mono);
+      padding-top: 6px;
+      border-top: 1px solid rgba(255, 255, 255, 0.05);
+    }
+
+    /* Accordion Toggle Bar */
+    .table-accordion-bar {
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px dashed rgba(255, 255, 255, 0.15);
+      border-radius: 10px;
+      padding: 10px 18px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      cursor: pointer;
+      font-size: 0.82rem;
+      font-weight: 700;
+      color: var(--text-muted);
+      margin-bottom: 14px;
+      transition: all 0.2s ease;
+      user-select: none;
+    }
+
+    .table-accordion-bar:hover {
+      background: rgba(56, 189, 248, 0.08);
+      border-color: rgba(56, 189, 248, 0.35);
+      color: var(--accent-cyan);
+    }
+
+    /* Tabs & Content Sections */
+    .tabs-bar {
+      display: flex;
+      gap: 8px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+      padding-bottom: 8px;
+      flex-wrap: wrap;
+    }
+
+    .tab-btn {
+      font-family: var(--font-main);
+      font-weight: 800;
+      font-size: 0.85rem;
+      padding: 10px 18px;
+      border-radius: 10px;
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      color: var(--text-muted);
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      transition: all 0.2s;
+    }
+
+    .tab-btn:hover {
+      background: rgba(255, 255, 255, 0.1);
+      color: #fff;
+    }
+
+    .tab-btn.active {
+      background: rgba(56, 189, 248, 0.18);
+      border-color: rgba(56, 189, 248, 0.5);
+      color: var(--accent-cyan);
+    }
+
+    .tab-badge {
+      background: rgba(255, 255, 255, 0.12);
+      padding: 2px 7px;
+      border-radius: 12px;
+      font-size: 0.72rem;
+      font-family: var(--font-mono);
+    }
+
+    .tab-btn.active .tab-badge {
+      background: var(--accent-cyan);
+      color: #000;
+      font-weight: 900;
+    }
+
+    /* Content Area */
+    .tab-content {
+      display: none;
+    }
+    .tab-content.active {
+      display: block;
+    }
+
+    /* Summary Period Selector Pills */
+    .summary-period-pill {
+      font-family: var(--font-main);
+      font-weight: 700;
+      font-size: 0.76rem;
+      padding: 5px 12px;
+      border-radius: 8px;
+      background: transparent;
+      border: 1px solid transparent;
+      color: var(--text-muted);
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .summary-period-pill:hover {
+      background: rgba(255, 255, 255, 0.08);
+      color: #fff;
+    }
+    .summary-period-pill.active {
+      background: linear-gradient(135deg, #0284c7, #0284c7);
+      border-color: #38bdf8;
+      color: #fff;
+      font-weight: 800;
+      box-shadow: 0 0 12px rgba(56, 189, 248, 0.4);
+    }
+
+    /* Summary Cards Grid */
+    .summary-cards-grid {
+      display: grid;
+      grid-template-columns: repeat(6, 1fr);
+      gap: 12px;
+    }
+    @media (max-width: 1400px) {
+      .summary-cards-grid {
+        grid-template-columns: repeat(3, 1fr);
+      }
+    }
+    @media (max-width: 768px) {
+      .summary-cards-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .summary-stat-card {
+      background: rgba(0, 0, 0, 0.35);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 12px;
+      padding: 14px 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 3px;
+      position: relative;
+      overflow: hidden;
+      transition: transform 0.2s, border-color 0.2s;
+    }
+    .summary-stat-card:hover {
+      transform: translateY(-2px);
+      border-color: rgba(255, 255, 255, 0.18);
+    }
+
+    .summary-stat-card.highlight-card {
+      background: linear-gradient(135deg, rgba(16, 185, 129, 0.12), rgba(15, 23, 42, 0.4));
+      border: 1px solid rgba(16, 185, 129, 0.4);
+      box-shadow: 0 0 20px rgba(16, 185, 129, 0.15);
+    }
+
+    .summary-stat-card .card-label {
+      font-size: 0.68rem;
+      font-weight: 800;
+      color: var(--text-dim);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .summary-stat-card .card-big-val {
+      font-family: var(--font-display);
+      font-size: 1.45rem;
+      font-weight: 900;
+      color: var(--accent-green-bright);
+      line-height: 1.2;
+    }
+
+    .summary-stat-card .card-sub-val {
+      font-family: var(--font-mono);
+      font-size: 0.82rem;
+      font-weight: 700;
+      color: #e2e8f0;
+      margin-top: 1px;
+    }
+
+    .summary-stat-card .card-footnote {
+      font-size: 0.68rem;
+      color: var(--text-muted);
+      margin-top: 3px;
+    }
+
+    .matrix-row-today {
+      background: rgba(16, 185, 129, 0.08) !important;
+      font-weight: 700;
+    }
+    .matrix-row-selected {
+      border-left: 3px solid var(--accent-cyan) !important;
+      background: rgba(56, 189, 248, 0.09) !important;
+    }
+
+    /* Data Tables */
+    .table-container {
+      background: var(--bg-surface);
+      backdrop-filter: blur(14px);
+      border: 1px solid var(--card-border);
+      border-radius: 14px;
+      overflow: hidden;
+      box-shadow: 0 8px 30px rgba(0, 0, 0, 0.35);
+    }
+
+    .table-toolbar {
+      padding: 14px 20px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+
+    .table-title {
+      font-family: var(--font-display);
+      font-size: 1.05rem;
+      font-weight: 800;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .data-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.84rem;
+    }
+
+    .data-table th {
+      text-align: left;
+      padding: 11px 16px;
+      color: var(--text-muted);
+      font-size: 0.72rem;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+      background: rgba(0, 0, 0, 0.2);
+    }
+
+    .data-table td {
+      padding: 13px 16px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+      vertical-align: middle;
+      font-family: var(--font-mono);
+    }
+
+    .data-table tr:hover td {
+      background: rgba(255, 255, 255, 0.025);
+    }
+
+    .sortable-th {
+      cursor: pointer;
+      user-select: none;
+      transition: background 0.15s ease, color 0.15s ease;
+      white-space: nowrap;
+    }
+
+    .sortable-th:hover {
+      background: rgba(56, 189, 248, 0.18) !important;
+      color: #fff !important;
+    }
+
+    .sort-icon {
+      display: inline-block;
+      margin-left: 5px;
+      font-size: 0.72rem;
+      opacity: 0.55;
+      color: var(--text-muted);
+    }
+
+    .sort-active {
+      color: var(--accent-cyan) !important;
+      background: rgba(56, 189, 248, 0.1) !important;
+    }
+
+    .sort-active .sort-icon {
+      opacity: 1;
+      color: var(--accent-gold);
+    }
+
+    .pnl-big {
+      font-size: 1.05rem !important;
+      font-weight: 900 !important;
+      letter-spacing: 0.5px;
+    }
+
+    .exit-price-big {
+      font-size: 1.05rem !important;
+      font-weight: 800 !important;
+      color: #38bdf8 !important;
+      letter-spacing: 0.5px;
+    }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      padding: 3px 8px;
+      border-radius: 6px;
+      font-size: 0.72rem;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0.4px;
+    }
+
+    .badge-buy {
+      background: rgba(16, 185, 129, 0.18);
+      border: 1px solid rgba(16, 185, 129, 0.4);
+      color: var(--accent-green-bright);
+    }
+
+    .badge-sell {
+      background: rgba(239, 68, 68, 0.18);
+      border: 1px solid rgba(239, 68, 68, 0.4);
+      color: var(--accent-red-bright);
+    }
+
+    .badge-harvest {
+      background: linear-gradient(135deg, #7c3aed, #db2777);
+      border: 1px solid #f472b6;
+      color: #fff;
+      box-shadow: 0 0 14px rgba(219, 39, 119, 0.6);
+      font-weight: 900;
+      padding: 4px 10px;
+      letter-spacing: 0.5px;
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    /* Punarjanm Basket Harvest Highlight Row */
+    tr.harvest-row {
+      background: linear-gradient(90deg, rgba(124, 58, 237, 0.32) 0%, rgba(245, 158, 11, 0.22) 50%, rgba(16, 185, 129, 0.20) 100%) !important;
+      border-top: 1.5px solid rgba(245, 158, 11, 0.75) !important;
+      border-bottom: 1.5px solid rgba(245, 158, 11, 0.75) !important;
+      box-shadow: inset 0 0 20px rgba(245, 158, 11, 0.22), 0 0 16px rgba(124, 58, 237, 0.2) !important;
+    }
+    tr.harvest-row td {
+      border-color: rgba(245, 158, 11, 0.35) !important;
+      background: transparent !important;
+    }
+    tr.harvest-row td:first-child {
+      border-left: 5px solid #f59e0b !important;
+    }
+    tr.harvest-row:hover td {
+      background: rgba(245, 158, 11, 0.12) !important;
+    }
+
+    /* Trade Filter Buttons */
+    .trade-filter-btn {
+      background: transparent;
+      border: none;
+      color: var(--text-muted);
+      font-size: 0.74rem;
+      font-weight: 700;
+      padding: 4px 10px;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: all 0.15s ease;
+      font-family: var(--font-main);
+    }
+    .trade-filter-btn:hover {
+      color: #fff;
+      background: rgba(255, 255, 255, 0.08);
+    }
+    .trade-filter-btn.active {
+      background: rgba(56, 189, 248, 0.22);
+      color: #38bdf8;
+      border: 1px solid rgba(56, 189, 248, 0.4);
+    }
+    .trade-filter-btn#filterHarvest.active {
+      background: linear-gradient(135deg, rgba(124, 58, 237, 0.4), rgba(219, 39, 119, 0.4));
+      color: #fef08a;
+      border: 1px solid #f59e0b;
+      box-shadow: 0 0 10px rgba(245, 158, 11, 0.35);
+    }
+
+    .badge-open {
+      background: rgba(56, 189, 248, 0.15);
+      border: 1px solid rgba(56, 189, 248, 0.35);
+      color: var(--accent-cyan);
+    }
+
+    .pnl-positive {
+      color: var(--accent-green-bright);
+      font-weight: 800;
+    }
+
+    .pnl-negative {
+      color: var(--accent-red-bright);
+      font-weight: 800;
+    }
+
+    .pnl-neutral {
+      color: var(--text-muted);
+      font-weight: 700;
+    }
+
+    .empty-state {
+      text-align: center;
+      padding: 40px 20px;
+      color: var(--text-dim);
+      font-size: 0.9rem;
+      font-family: var(--font-main);
+    }
+
+    /* Split Grid for BUY vs SELL columns */
+    .split-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+    }
+
+    @media (max-width: 1024px) {
+      .split-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    /* Modal for PIN 340556 */
+    .modal-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0, 0, 0, 0.8);
+      backdrop-filter: blur(8px);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 1000;
+    }
+
+    .modal-card {
+      background: #0f172a;
+      border: 1px solid var(--accent-cyan);
+      border-radius: 16px;
+      padding: 26px;
+      max-width: 420px;
+      width: 90%;
+      box-shadow: 0 20px 50px rgba(0, 0, 0, 0.7);
+    }
+
+    .modal-title {
+      font-family: var(--font-display);
+      font-size: 1.25rem;
+      font-weight: 800;
+      color: #fff;
+      margin-bottom: 6px;
+    }
+
+    .modal-subtitle {
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      margin-bottom: 20px;
+    }
+
+    .modal-input {
+      width: 100%;
+      padding: 12px 14px;
+      border-radius: 10px;
+      background: rgba(0, 0, 0, 0.4);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      color: #fff;
+      font-size: 1.1rem;
+      font-family: var(--font-mono);
+      text-align: center;
+      letter-spacing: 4px;
+      margin-bottom: 20px;
+    }
+    .modal-input:focus {
+      outline: none;
+      border-color: var(--accent-cyan);
+      box-shadow: 0 0 14px rgba(56, 189, 248, 0.4);
+    }
+
+    .modal-buttons {
+      display: flex;
+      gap: 10px;
+      justify-content: flex-end;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="container">
+    
+    <!-- Top Navigation Header -->
+    <header class="top-navbar">
+      <div class="brand-section">
+        <div class="brand-logo-badge">🛢️</div>
+        <div class="brand-text">
+          <h1>
+            Crude-Live-Mudrex-Pro
+            <span class="page-tag">PRO DESK</span>
+          </h1>
+          <p>Mudrex Futures Engine — CLUSDT Hedged Pair Strategy & Exchange Sync</p>
+        </div>
+      </div>
+
+      <div class="nav-center-pill">
+        <div class="status-indicator status-running" id="engineStatusIndicator">
+          <span class="pulse-dot"></span>
+          <span id="engineStatusLabel">ENGINE RUNNING</span>
+        </div>
+        <div style="font-size: 0.75rem; color: var(--text-dim); font-family: var(--font-mono);" id="lastUpdateTime">
+          Sync: --
+        </div>
+      </div>
+
+      <div class="nav-actions">
+        <button class="btn btn-amber" id="toggleEngineBtn" onclick="promptAction('toggleEngine')">
+          <span>⏸ PAUSE ENGINE</span>
+        </button>
+        <button class="btn btn-green" onclick="promptAction('addNewPair')">
+          <span>➕ ADD NEW PAIR</span>
+        </button>
+        <button class="btn btn-purple" id="punarjanmBtn" onclick="promptAction('punarjanm')" style="background: linear-gradient(135deg, #7c3aed, #db2777); border: 1px solid #f472b6; box-shadow: 0 0 16px rgba(219, 39, 119, 0.45); font-weight: 800; color: #fff;">
+          <span id="punarjanmNavBtnLabel">✨ PUNARJANM (₹250)</span>
+          <span class="badge" id="navPunarjanmBadge" style="background: rgba(0,0,0,0.5); font-size: 0.72rem; padding: 2px 6px; border-radius: 4px; margin-left: 4px;">Punarjanm 1</span>
+        </button>
+        <button class="btn btn-blue" id="mudrexDataBtn" onclick="openMudrexDataModal()">
+          <span>⚡ MUDREX DATA</span>
+          <span class="badge" id="navMudrexBadge" style="background: rgba(0,0,0,0.4); font-size: 0.72rem; padding: 2px 6px; border-radius: 4px; margin-left: 4px;">109 BBL</span>
+        </button>
+        <button class="btn btn-outline" onclick="fetchTerminalData()">
+          <span>🔄 REFRESH</span>
+        </button>
+      </div>
+    </header>
+
+    <!-- Live Rate Ticker Hero Banner -->
+    <section class="hero-ticker-banner">
+      <!-- 1. Live Mudrex Unrealised PnL (R/G) & Punarjanm Basket Controls (FIRST) -->
+      <div class="ticker-block ticker-block-mudrex" style="display: flex; flex-direction: column; justify-content: center; gap: 4px;">
+        <div class="ticker-label" style="display: flex; justify-content: space-between; align-items: center;">
+          <span style="display: inline-flex; align-items: center; gap: 6px;">
+            <span class="mudrex-live-indicator" id="heroMudrexIndicator" style="width: 8px; height: 8px; border-radius: 50%; background: #ef4444; display: inline-block;"></span>
+            <span>MUDREX LIVE UNREALISED P&amp;L</span>
+          </span>
+          <span class="badge" id="heroMudrexSideBadge" style="background: rgba(239, 68, 68, 0.25); border: 1px solid #ef4444; color: #f87171; font-weight: 800; font-size: 0.72rem; padding: 2px 7px; border-radius: 5px;">SHORT 16 BBL</span>
+        </div>
+        <div class="ticker-rate-value" id="heroMudrexPnlVal" style="font-size: 2.1rem; line-height: 1.1; font-family: var(--font-display); font-weight: 900; color: #ef4444;">₹0.00</div>
+        
+        <div style="display: flex; justify-content: space-between; align-items: center; gap: 6px; flex-wrap: wrap; margin-top: 3px;">
+          <div class="ticker-sub" id="heroMudrexSubtext" style="font-size: 0.75rem; font-family: var(--font-mono); color: var(--text-dim);">Entry: $93.74 | Liq: $110.61</div>
+          
+          <div style="display: inline-flex; align-items: center; gap: 5px; flex-wrap: wrap;">
+            <!-- Target Chips -->
+            <div class="target-chip-group" style="display: inline-flex; align-items: center; gap: 3px; background: rgba(0,0,0,0.4); padding: 2px 5px; border-radius: 7px; border: 1px solid rgba(255,255,255,0.12);">
+              <span style="font-size: 0.66rem; color: var(--text-muted); font-weight: 800;">TARGET:</span>
+              <button type="button" class="target-chip" id="chipTarget100" onclick="quickSetBasketTarget(100)">₹100</button>
+              <button type="button" class="target-chip active" id="chipTarget250" onclick="quickSetBasketTarget(250)">₹250</button>
+              <button type="button" class="target-chip" id="chipTarget500" onclick="quickSetBasketTarget(500)">₹500</button>
+              <button type="button" class="target-chip" id="chipTarget1000" onclick="quickSetBasketTarget(1000)">₹1k</button>
+              <button type="button" class="target-chip" onclick="promptCustomBasketTarget()" title="Custom Target">✏️</button>
+            </div>
+
+            <!-- Instant Harvest Button -->
+            <button type="button" class="btn" onclick="promptAction('punarjanm')" id="heroHarvestBtn" style="padding: 4px 10px; font-size: 0.74rem; border-radius: 7px; background: linear-gradient(135deg, #7c3aed, #db2777); color: #fff; font-weight: 800; border: 1px solid #f472b6; cursor: pointer; display: inline-flex; align-items: center; gap: 4px; box-shadow: 0 0 10px rgba(219, 39, 119, 0.4);">
+              ⚡ HARVEST NOW
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- 2. Live Price Callout (SECOND) -->
+      <div class="ticker-block border-left">
+        <div class="ticker-label">
+          <span>🛢️ CLUSDT CRUDE OIL LIVE RATE</span>
+        </div>
+        <div class="ticker-rate-value rate-cyan" id="liveCrudePrice">$0.00</div>
+        <div class="ticker-sub" id="liveRateSubtext">USD/INR: ₹102.00 | 2.0 Barrels Lot</div>
+      </div>
+
+      <!-- BUY Target Exit Callout -->
+      <div class="ticker-block border-left">
+        <div class="ticker-label">
+          <span id="buyTargetLabel">🎯 BUY TARGET EXIT (+$0.25)</span>
+        </div>
+        <div class="ticker-rate-value rate-green" id="buyTargetRate">$0.00</div>
+        <div class="ticker-sub" id="buyTargetDist" style="color: var(--accent-green-bright);">Distance: --</div>
+      </div>
+
+      <!-- SELL Target Exit Callout -->
+      <div class="ticker-block border-left">
+        <div class="ticker-label">
+          <span id="sellTargetLabel">🎯 SELL TARGET EXIT (-$0.25)</span>
+        </div>
+        <div class="ticker-rate-value rate-red" id="sellTargetRate">$0.00</div>
+        <div class="ticker-sub" id="sellTargetDist" style="color: var(--accent-red-bright);">Distance: --</div>
+      </div>
+
+      <!-- Total Active Pairs & Engine Configuration -->
+      <div class="ticker-block border-left">
+        <div class="ticker-label">
+          <span>⚡ TOTAL ACTIVE PAIRS</span>
+        </div>
+        <div class="ticker-rate-value rate-gold" id="heroActivePairsCount">0 PAIRS</div>
+        <div class="ticker-sub" id="heroConfigSubtext">2.0 B/Leg | 5x Lev | Auto-Add: ACTIVE</div>
+      </div>
+    </section>
+
+    <!-- Financial Metrics KPI Cards (Both ₹ and $ per rule) -->
+    <section class="kpi-grid">
+      <!-- Available Free Margin -->
+      <div class="kpi-card kpi-green">
+        <div class="kpi-header">
+          <span>Mudrex Available Margin</span>
+          <span>💼 WALLET</span>
+        </div>
+        <div class="kpi-val-primary" id="kpiAvailableMarginINR">₹0.00</div>
+        <div class="kpi-val-secondary" id="kpiAvailableMarginUSD">$0.00 Available</div>
+      </div>
+
+      <!-- Locked Margin (Exchange Held) -->
+      <div class="kpi-card kpi-purple">
+        <div class="kpi-header">
+          <span>Locked Margin (5x)</span>
+          <span>🔒 HELD</span>
+        </div>
+        <div class="kpi-val-primary" id="kpiLockedMarginINR">₹0.00</div>
+        <div class="kpi-val-secondary" id="kpiLockedMarginUSD">$0.00 Locked</div>
+      </div>
+
+      <!-- Total Equity -->
+      <div class="kpi-card kpi-cyan">
+        <div class="kpi-header">
+          <span>Total Account Equity</span>
+          <span>📈 BALANCE</span>
+        </div>
+        <div class="kpi-val-primary" id="kpiEquityINR">₹0.00</div>
+        <div class="kpi-val-secondary" id="kpiEquityUSD">$0.00 Total</div>
+      </div>
+
+      <!-- Total Realized Net Profit (33 Trades) -->
+      <div class="kpi-card kpi-green">
+        <div class="kpi-header">
+          <span>Realized Net Profit</span>
+          <span>🏆 CLOSED</span>
+        </div>
+        <div class="kpi-val-primary" style="color: var(--accent-green-bright);" id="kpiRealizedNetINR">+₹2,540.90</div>
+        <div class="kpi-val-secondary" id="kpiRealizedNetUSD">+ $26.21 Net (33 Trades)</div>
+      </div>
+
+      <!-- Live Floating Net P/L -->
+      <div class="kpi-card kpi-gold">
+        <div class="kpi-header">
+          <span>Floating Net P/L</span>
+          <span>⚡ LIVE P/L</span>
+        </div>
+        <div class="kpi-val-primary" id="kpiFloatingNetINR">₹0.00</div>
+        <div class="kpi-val-secondary" id="kpiFloatingNetUSD">$0.00 Unrealized</div>
+      </div>
+    </section>
+
+    <!-- Market Session Auto-Scheduler Control Strip -->
+    <section class="session-scheduler-banner" id="sessionSchedulerBanner" style="margin-bottom: 20px; background: linear-gradient(135deg, rgba(15, 23, 42, 0.95), rgba(30, 41, 59, 0.85)); border: 1px solid rgba(147, 51, 234, 0.45); border-radius: 14px; padding: 14px 20px; display: flex; justify-content: space-between; align-items: center; gap: 16px; flex-wrap: wrap; box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);">
+      <!-- Left: Active Session Info & Clock -->
+      <div style="display: flex; align-items: center; gap: 12px; flex-wrap: wrap;">
+        <span style="font-size: 1.45rem;">⏰</span>
+        <div>
+          <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+            <span style="font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.6px; color: var(--text-dim); font-weight: 700;">Market Session Auto-Scheduler</span>
+            <span class="badge" id="sessionActiveBadge" style="background: linear-gradient(135deg, rgba(124, 58, 237, 0.35), rgba(219, 39, 119, 0.35)); border: 1px solid #f472b6; color: #fbcfe8; font-weight: 800; font-size: 0.76rem; padding: 3px 9px; border-radius: 5px;">🌙 Asian &amp; Night Session (Low Vol)</span>
+            <span class="badge" id="sessionSchedulerStatusBadge" style="background: rgba(16, 185, 129, 0.2); border: 1px solid #10b981; color: #34d399; font-weight: 800; font-size: 0.72rem; padding: 3px 8px; border-radius: 5px;">AUTO ACTIVE</span>
+          </div>
+          <div style="font-size: 0.78rem; color: var(--text-muted); margin-top: 3px; font-family: var(--font-mono);" id="sessionTimeWindow">
+            Session Window: 11:30 PM – 1:00 PM IST | Live Clock: --:--:-- IST
+          </div>
+        </div>
+      </div>
+
+      <!-- Middle: Dynamic Parameters for Current Session -->
+      <div style="display: flex; align-items: center; gap: 18px; flex-wrap: wrap;">
+        <div style="text-align: center; border-left: 1px solid rgba(255,255,255,0.1); padding-left: 14px;">
+          <div style="font-size: 0.7rem; color: var(--text-dim); text-transform: uppercase;">Session Lot Size</div>
+          <div style="font-size: 1.05rem; font-weight: 800; color: var(--accent-cyan);" id="sessionLotSize">2.0 Barrels</div>
+        </div>
+        <div style="text-align: center; border-left: 1px solid rgba(255,255,255,0.1); padding-left: 14px;">
+          <div style="font-size: 0.7rem; color: var(--text-dim); text-transform: uppercase;">Target Move</div>
+          <div style="font-size: 1.05rem; font-weight: 800; color: var(--accent-green-bright);" id="sessionTargetMove">$0.25</div>
+        </div>
+        <div style="text-align: center; border-left: 1px solid rgba(255,255,255,0.1); padding-left: 14px;">
+          <div style="font-size: 0.7rem; color: var(--text-dim); text-transform: uppercase;">Punarjanm Target</div>
+          <div style="font-size: 1.05rem; font-weight: 800; color: #f472b6;" id="sessionBasketTarget">₹250</div>
+        </div>
+      </div>
+
+      <!-- Right: Action Button to Open Config Modal -->
+      <div>
+        <button class="btn btn-outline" onclick="openSessionModal()" style="border-color: rgba(147, 51, 234, 0.6); color: #c084fc; font-weight: 700; font-size: 0.8rem; padding: 6px 14px; display: inline-flex; align-items: center; gap: 6px;">
+          <span>⚙️ Configure Sessions</span>
+        </button>
+      </div>
+    </section>
+
+    <!-- Tabs Navigation Bar -->
+    <nav class="tabs-bar">
+      <button class="tab-btn active" onclick="switchTab('tabSplit')">
+        <span>Active BUY/Sell Positions</span>
+        <span class="tab-badge" id="badgeBuySellCount">0 / 0</span>
+      </button>
+      <button class="tab-btn" onclick="switchTab('tabClosed')">
+        <span>Closed Trades History</span>
+        <span class="tab-badge" id="badgeClosedCount">0</span>
+      </button>
+      <button class="tab-btn" onclick="switchTab('tabHarvest')">
+        <span>1 Mudrex Harvest</span>
+        <span class="tab-badge" id="badgeHarvestCount" style="background: rgba(245, 158, 11, 0.25); color: #fde047; border: 1px solid #f59e0b;">0</span>
+      </button>
+      <button class="tab-btn" onclick="switchTab('tabCalc')">
+        <span>2 Closed Trades Calc</span>
+        <span class="tab-badge" id="badgeCalcNet" style="background: rgba(16, 185, 129, 0.2); color: var(--accent-green-bright); border: 1px solid rgba(16, 185, 129, 0.4);">Range: +₹0.00</span>
+      </button>
+    </nav>
+
+    <!-- TAB 1: Split Columns (BUY vs SELL) [DEFAULT VIEW] -->
+    <section id="tabSplit" class="tab-content active">
+      <div class="split-grid">
+        <!-- BUY Column -->
+        <div class="table-container" style="border-top: 3px solid var(--accent-green);">
+          <div class="table-toolbar">
+            <div class="table-title" style="color: var(--accent-green-bright);">
+              <span>🟢 Active BUY Positions (Long)</span>
+              <span class="badge badge-buy" id="splitBuyBadge">0 Active</span>
+            </div>
+          </div>
+          <div style="overflow-x: auto;">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th class="sortable-th" onclick="sortTable('buy', 'slNo')" style="width: 48px;"># <span class="sort-icon" id="sort-buy-slNo">⬍</span></th>
+                  <th class="sortable-th" onclick="sortTable('buy', 'entryTime')">Date/Time (dd/mm/yy) <span class="sort-icon" id="sort-buy-entryTime">⬍</span></th>
+                  <th class="sortable-th" onclick="sortTable('buy', 'quantity')">Barrels <span class="sort-icon" id="sort-buy-quantity">⬍</span></th>
+                  <th class="sortable-th" onclick="sortTable('buy', 'entryPrice')">Entry <span class="sort-icon" id="sort-buy-entryPrice">⬍</span></th>
+                  <th class="sortable-th" onclick="sortTable('buy', 'targetPrice')">Target Exit 🎯 <span class="sort-icon" id="sort-buy-targetPrice">⬍</span></th>
+                  <th class="sortable-th" onclick="sortTable('buy', 'distToTarget')">Dist to Exit <span class="sort-icon" id="sort-buy-distToTarget">⬍</span></th>
+                </tr>
+              </thead>
+              <tbody id="splitBuyTableBody">
+                <tr><td colspan="6" class="empty-state">No active BUY positions</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- SELL Column -->
+        <div class="table-container" style="border-top: 3px solid var(--accent-red);">
+          <div class="table-toolbar">
+            <div class="table-title" style="color: var(--accent-red-bright);">
+              <span>🔴 Active SELL Positions (Short)</span>
+              <span class="badge badge-sell" id="splitSellBadge">0 Active</span>
+            </div>
+          </div>
+          <div style="overflow-x: auto;">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th class="sortable-th" onclick="sortTable('sell', 'slNo')" style="width: 48px;"># <span class="sort-icon" id="sort-sell-slNo">⬍</span></th>
+                  <th class="sortable-th" onclick="sortTable('sell', 'entryTime')">Date/Time (dd/mm/yy) <span class="sort-icon" id="sort-sell-entryTime">⬍</span></th>
+                  <th class="sortable-th" onclick="sortTable('sell', 'quantity')">Barrels <span class="sort-icon" id="sort-sell-quantity">⬍</span></th>
+                  <th class="sortable-th" onclick="sortTable('sell', 'entryPrice')">Entry <span class="sort-icon" id="sort-sell-entryPrice">⬍</span></th>
+                  <th class="sortable-th" onclick="sortTable('sell', 'targetPrice')">Target Exit 🎯 <span class="sort-icon" id="sort-sell-targetPrice">⬍</span></th>
+                  <th class="sortable-th" onclick="sortTable('sell', 'distToTarget')">Dist to Exit <span class="sort-icon" id="sort-sell-distToTarget">⬍</span></th>
+                </tr>
+              </thead>
+              <tbody id="splitSellTableBody">
+                <tr><td colspan="6" class="empty-state">No active SELL positions</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </section>
+
+
+    <!-- TAB 4: Closed Trades History (Exit Time, Big Net INR, USD, Side, Entry, Exit, Position ID Last) -->
+    <section id="tabClosed" class="tab-content">
+      <div class="table-container">
+        <div class="table-toolbar">
+          <div class="table-title">
+            <span>📜 Realized Closed Trades History</span>
+            <span style="font-size: 0.76rem; color: var(--text-dim);" id="closedTradesSummarySub">Total: 33 Trades | Win Rate: 100%</span>
+          </div>
+          <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
+            <div style="display: inline-flex; background: rgba(0,0,0,0.35); padding: 3px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.1); gap: 3px;">
+              <button type="button" class="trade-filter-btn active" id="filterAll" onclick="setClosedFilter('ALL')">All Trades</button>
+              <button type="button" class="trade-filter-btn" id="filterHarvest" onclick="setClosedFilter('HARVEST')" style="color: #fde047; font-weight: 800;">👑 Harvests (<span id="harvestFilterCount">0</span>)</button>
+              <button type="button" class="trade-filter-btn" id="filterBuy" onclick="setClosedFilter('BUY')">🟢 BUYs</button>
+              <button type="button" class="trade-filter-btn" id="filterSell" onclick="setClosedFilter('SELL')">🔴 SELLs</button>
+            </div>
+            <div style="display: inline-flex; background: rgba(0,0,0,0.35); padding: 3px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.1); gap: 3px;">
+              <button type="button" class="trade-filter-btn active" id="timeFilterAll" onclick="setClosedTimeFilter('ALL')">All Time</button>
+              <button type="button" class="trade-filter-btn" id="timeFilterToday" onclick="setClosedTimeFilter('TODAY')">📅 Today</button>
+              <button type="button" class="trade-filter-btn" id="timeFilter1h" onclick="setClosedTimeFilter('1H')">⚡ 1 Hr</button>
+              <button type="button" class="trade-filter-btn" id="timeFilter4h" onclick="setClosedTimeFilter('4H')">⏱️ 4 Hrs</button>
+              <button type="button" class="trade-filter-btn" id="timeFilter24h" onclick="setClosedTimeFilter('24H')">24 Hrs</button>
+              <button type="button" class="trade-filter-btn" id="timeFilter7d" onclick="setClosedTimeFilter('7D')">7 Days</button>
+              <button type="button" class="trade-filter-btn" id="timeFilterMonth" onclick="setClosedTimeFilter('MONTH')">This Month</button>
+            </div>
+            <div style="font-size: 0.88rem; font-weight: 800; color: var(--accent-green-bright);" id="closedTradesTotalNet">
+              Net: +₹2,540.90 (+ $26.21)
+            </div>
+          </div>
+        </div>
+        <div style="overflow-x: auto;">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th class="sortable-th" onclick="sortTable('closed', 'slNo')" style="width: 55px;"># <span class="sort-icon" id="sort-closed-slNo">⬍</span></th>
+                <th class="sortable-th" onclick="sortTable('closed', 'exitTime')">Exit Time (IST) <span class="sort-icon" id="sort-closed-exitTime">▼</span></th>
+                <th class="sortable-th" onclick="sortTable('closed', 'netINR')">Net Profit (₹ INR) <span class="sort-icon" id="sort-closed-netINR">⬍</span></th>
+                <th class="sortable-th" onclick="sortTable('closed', 'exitPrice')">Exit Price <span class="sort-icon" id="sort-closed-exitPrice">⬍</span></th>
+                <th class="sortable-th" onclick="sortTable('closed', 'netUSD')">Net Profit ($ USD) <span class="sort-icon" id="sort-closed-netUSD">⬍</span></th>
+                <th class="sortable-th" onclick="sortTable('closed', 'side')">Side <span class="sort-icon" id="sort-closed-side">⬍</span></th>
+                <th class="sortable-th" onclick="sortTable('closed', 'entryPrice')">Entry Price <span class="sort-icon" id="sort-closed-entryPrice">⬍</span></th>
+                <th class="sortable-th" onclick="sortTable('closed', 'positionId')">Position ID <span class="sort-icon" id="sort-closed-positionId">⬍</span></th>
+              </tr>
+            </thead>
+            <tbody id="closedTableBody">
+              <tr><td colspan="8" class="empty-state">Loading closed trades...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- TAB 3: 1 Mudrex Harvest -->
+    <section id="tabHarvest" class="tab-content">
+      <div class="summary-wrapper" style="display: flex; flex-direction: column; gap: 16px;">
+        
+        <!-- Mudrex Harvest Header Strip -->
+        <div class="table-container" style="padding: 16px 20px; border-top: 3px solid #f59e0b;">
+          <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; margin-bottom: 14px;">
+            <div>
+              <div style="font-family: var(--font-display); font-size: 1.15rem; font-weight: 800; color: #fff; display: flex; align-items: center; gap: 8px;">
+                <span>🌾 Mudrex Harvest Settlements</span>
+                <span class="badge" style="background: rgba(245, 158, 11, 0.25); color: #fde047; border: 1px solid #f59e0b; font-size: 0.72rem;">OFFICIAL GODAM DEPOSITS</span>
+              </div>
+              <div style="font-size: 0.76rem; color: var(--text-muted); margin-top: 2px;">
+                Official Punarjanm basket settlements executed on Mudrex exchange with net profit credited to Futures Wallet.
+              </div>
+            </div>
+
+            <!-- Instant Trigger Button -->
+            <div style="display: flex; gap: 10px; align-items: center;">
+              <button class="btn" onclick="promptAction('punarjanm')" style="background: linear-gradient(135deg, #7c3aed, #db2777); border: 1px solid #f472b6; color: #fff; font-weight: 800; padding: 8px 16px; border-radius: 8px; cursor: pointer; display: inline-flex; align-items: center; gap: 6px;">
+                <span>⚡ HARVEST NOW (PIN 340556)</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- 4 KPI Cards for Harvest -->
+          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px;">
+            <div class="summary-stat-card highlight-card">
+              <div class="card-label">Total Harvested Net Profit</div>
+              <div class="card-big-val" style="color: #fde047;" id="harvestKpiNetINR">+₹0.00</div>
+              <div class="card-sub-val" id="harvestKpiNetUSD">+ $0.00 Net</div>
+              <div class="card-footnote">Credited to Mudrex Wallet</div>
+            </div>
+
+            <div class="summary-stat-card">
+              <div class="card-label">Completed Cycles</div>
+              <div class="card-big-val" style="color: #c084fc;" id="harvestKpiCycles">0 Cycles</div>
+              <div class="card-sub-val" id="harvestKpiLastCycle">Last: None</div>
+              <div class="card-footnote">Rebirth &amp; Basket Flushes</div>
+            </div>
+
+            <div class="summary-stat-card">
+              <div class="card-label">Total Volume Harvested</div>
+              <div class="card-big-val" style="color: var(--accent-cyan);" id="harvestKpiBarrels">0 BBL</div>
+              <div class="card-sub-val">Settled on Exchange</div>
+              <div class="card-footnote">Closed Position Lots</div>
+            </div>
+
+            <div class="summary-stat-card">
+              <div class="card-label">Active Basket Target</div>
+              <div class="card-big-val" style="color: var(--accent-green-bright);" id="harvestKpiTarget">₹250</div>
+              <div class="card-sub-val" id="harvestKpiCurrentMudrex">Current: ₹0.00</div>
+              <div class="card-footnote">Auto-Triggers at Target</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Harvest History Table -->
+        <div class="table-container">
+          <div class="table-toolbar">
+            <div class="table-title">
+              <span>📜 Mudrex Official Harvest Receipts</span>
+              <span style="font-size: 0.74rem; color: var(--text-dim);">Historical Punarjanm basket closes executed on exchange</span>
+            </div>
+          </div>
+          <div style="overflow-x: auto;">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>Cycle Name</th>
+                  <th>Date &amp; Time (IST)</th>
+                  <th>Quantity Settled</th>
+                  <th>Exit Price</th>
+                  <th>Gross Profit</th>
+                  <th>Mudrex Charges</th>
+                  <th>Net Credited to Wallet</th>
+                  <th>Trigger Reason</th>
+                  <th>Exchange Status</th>
+                </tr>
+              </thead>
+              <tbody id="mudrexHarvestTableBody">
+                <tr><td colspan="9" class="empty-state">Loading harvest records...</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- TAB 4: 2 Closed Trades Calc -->
+    <section id="tabCalc" class="tab-content">
+      <div class="summary-wrapper" style="display: flex; flex-direction: column; gap: 16px;">
+        
+        <!-- Calculator Top Control Bar with Custom From/To & Quick Presets -->
+        <div class="table-container" style="padding: 16px 20px; border-top: 3px solid var(--accent-cyan);">
+          <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; margin-bottom: 12px;">
+            <div>
+              <div style="font-family: var(--font-display); font-size: 1.15rem; font-weight: 800; color: #fff; display: flex; align-items: center; gap: 8px;">
+                <span>🧮 Closed Trades Calculator (Hrs / Date Range Net P/L)</span>
+                <span class="badge badge-buy" style="font-size: 0.72rem;">CUSTOM RANGE &amp; HRS</span>
+              </div>
+              <div style="font-size: 0.76rem; color: var(--text-muted); margin-top: 2px;">
+                From-To time window ya quick hours choose karke exact Net P/L, fees, aur volume calculate karein.
+              </div>
+            </div>
+
+            <!-- Quick Hours Buttons -->
+            <div style="display: inline-flex; background: rgba(0,0,0,0.4); padding: 4px; border-radius: 10px; border: 1px solid rgba(255,255,255,0.1); gap: 4px; flex-wrap: wrap;">
+              <button type="button" class="summary-period-pill" id="sumPill-1h" onclick="selectSummaryPeriod('1h')">⚡ 1 Hr</button>
+              <button type="button" class="summary-period-pill" id="sumPill-2h" onclick="selectSummaryPeriod('2h')">⏱️ 2 Hrs</button>
+              <button type="button" class="summary-period-pill" id="sumPill-4h" onclick="selectSummaryPeriod('4h')">⏱️ 4 Hrs</button>
+              <button type="button" class="summary-period-pill" id="sumPill-8h" onclick="selectSummaryPeriod('8h')">⏱️ 8 Hrs</button>
+              <button type="button" class="summary-period-pill" id="sumPill-12h" onclick="selectSummaryPeriod('12h')">🕛 12 Hrs</button>
+              <button type="button" class="summary-period-pill active" id="sumPill-today" onclick="selectSummaryPeriod('today')">📅 Today (IST)</button>
+              <button type="button" class="summary-period-pill" id="sumPill-yesterday" onclick="selectSummaryPeriod('yesterday')">⏪ Yesterday</button>
+              <button type="button" class="summary-period-pill" id="sumPill-7d" onclick="selectSummaryPeriod('7d')">🗓️ 7 Days</button>
+              <button type="button" class="summary-period-pill" id="sumPill-thisMonth" onclick="selectSummaryPeriod('thisMonth')">📆 Month</button>
+              <button type="button" class="summary-period-pill" id="sumPill-all" onclick="selectSummaryPeriod('all')">🌐 All-Time</button>
+            </div>
+          </div>
+
+          <!-- Custom From / To DateTime Strip -->
+          <div style="background: rgba(0,0,0,0.35); border: 1px solid rgba(255,255,255,0.08); border-radius: 10px; padding: 10px 14px; margin-bottom: 14px; display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap;">
+            <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
+              <span style="font-size: 0.72rem; font-weight: 800; color: var(--text-dim); text-transform: uppercase;">Custom Window:</span>
+              <div style="display: inline-flex; align-items: center; gap: 6px;">
+                <label style="font-size: 0.72rem; color: var(--text-muted); font-weight: 700;">FROM:</label>
+                <input type="datetime-local" id="calcFromTime" style="background: rgba(0,0,0,0.6); border: 1px solid rgba(255,255,255,0.2); color: #fff; padding: 4px 8px; border-radius: 6px; font-family: var(--font-mono); font-size: 0.76rem;">
+              </div>
+              <div style="display: inline-flex; align-items: center; gap: 6px;">
+                <label style="font-size: 0.72rem; color: var(--text-muted); font-weight: 700;">TO:</label>
+                <input type="datetime-local" id="calcToTime" style="background: rgba(0,0,0,0.6); border: 1px solid rgba(255,255,255,0.2); color: #fff; padding: 4px 8px; border-radius: 6px; font-family: var(--font-mono); font-size: 0.76rem;">
+              </div>
+              <button type="button" class="btn btn-blue" onclick="runCustomTimeCalc()" style="padding: 5px 12px; font-size: 0.76rem;">
+                <span>⚡ Calculate Net P/L</span>
+              </button>
+              <button type="button" class="btn btn-outline" onclick="selectSummaryPeriod('today')" style="padding: 5px 10px; font-size: 0.74rem;">
+                <span>🔄 Today</span>
+              </button>
+            </div>
+            <div style="font-size: 0.74rem; color: var(--text-dim); font-family: var(--font-mono);" id="calcActiveWindowText">
+              Active: Today (Since 12:00 AM IST)
+            </div>
+          </div>
+
+          <!-- Hero Metric 6 Cards for Selected Timeframe -->
+          <div class="summary-cards-grid">
+            <!-- 1. Realized Net Profit (Huge, Bold, ₹ and $) -->
+            <div class="summary-stat-card highlight-card">
+              <div class="card-label">Realized Net Profit (<span id="sumCardPeriodLabel">Today</span>)</div>
+              <div class="card-big-val" id="sumCardNetINR">+₹0.00</div>
+              <div class="card-sub-val" id="sumCardNetUSD">+ $0.00 Net</div>
+              <div class="card-footnote">After Mudrex Taker Fees &amp; GST</div>
+            </div>
+
+            <!-- 2. Win Rate & Trade Count -->
+            <div class="summary-stat-card">
+              <div class="card-label">Win Rate &amp; Closed Count</div>
+              <div class="card-big-val" style="color: var(--accent-cyan);" id="sumCardWinRate">100.0%</div>
+              <div class="card-sub-val" id="sumCardRecord">0 Wins / 0 Losses</div>
+              <div class="card-footnote" id="sumCardTotalTrades">0 Total Closed Trades</div>
+            </div>
+
+            <!-- 3. Traded Volume & Barrels -->
+            <div class="summary-stat-card">
+              <div class="card-label">Trading Volume (Barrels)</div>
+              <div class="card-big-val" style="color: var(--accent-gold);" id="sumCardBarrels">0.0 BBL</div>
+              <div class="card-sub-val" id="sumCardLegs">0 BUY Legs · 0 SELL Legs</div>
+              <div class="card-footnote">Closed Position Volume</div>
+            </div>
+
+            <!-- 4. Gross Profit vs Charges -->
+            <div class="summary-stat-card">
+              <div class="card-label">Gross P&amp;L vs Charges</div>
+              <div class="card-big-val" style="font-size: 1.15rem; color: #fff;" id="sumCardGross">Gross: ₹0.00</div>
+              <div class="card-sub-val" style="color: var(--accent-red-bright);" id="sumCardCharges">Fees + GST: ₹0.00</div>
+              <div class="card-footnote" id="sumCardChargesUSD">$0.00 Total Mudrex Charges</div>
+            </div>
+
+            <!-- 5. Punarjanm Cycles Harvested -->
+            <div class="summary-stat-card">
+              <div class="card-label">Punarjanm Harvests</div>
+              <div class="card-big-val" style="color: #fde047;" id="sumCardHarvests">0 Cycles</div>
+              <div class="card-sub-val" style="color: #fde047;">👑 Basket Profit Locks</div>
+              <div class="card-footnote">Rebirth &amp; Flush Triggers (₹250+)</div>
+            </div>
+
+            <!-- 6. Average & Peak Trades -->
+            <div class="summary-stat-card">
+              <div class="card-label">Average &amp; Peak Trade</div>
+              <div class="card-big-val" style="font-size: 1.15rem; color: var(--accent-cyan);" id="sumCardAvg">Avg: +₹0.00</div>
+              <div class="card-sub-val" id="sumCardBest">Best: +₹0.00</div>
+              <div class="card-footnote" id="sumCardWorst">Worst: ₹0.00</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Comprehensive Multi-Period Comparison Matrix Table -->
+        <div class="table-container">
+          <div class="table-toolbar">
+            <div class="table-title">
+              <span>📅 Multi-Period Performance Matrix</span>
+              <span style="font-size: 0.74rem; color: var(--text-dim);">Side-by-side comparison across all trading timeframes</span>
+            </div>
+          </div>
+          <div style="overflow-x: auto;">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>Timeframe / Period</th>
+                  <th>Realized Net Profit (₹ INR)</th>
+                  <th>Realized Net Profit ($ USD)</th>
+                  <th>Trades</th>
+                  <th>Win Rate %</th>
+                  <th>Win / Loss</th>
+                  <th>Gross Profit (₹)</th>
+                  <th>Fees &amp; GST (₹)</th>
+                  <th>Barrels</th>
+                  <th>Punarjanm</th>
+                  <th>Avg / Trade</th>
+                </tr>
+              </thead>
+              <tbody id="periodMatrixTableBody">
+                <tr><td colspan="11" class="empty-state">Computing period matrix...</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Historical Daily Breakdown Table (Recent Days) -->
+        <div class="table-container">
+          <div class="table-toolbar">
+            <div class="table-title">
+              <span>🗓️ Daily Historical Breakdown (Last 14 Days)</span>
+              <span style="font-size: 0.74rem; color: var(--text-dim);">Daily realized closed trades log grouped by date (IST)</span>
+            </div>
+          </div>
+          <div style="overflow-x: auto;">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>Date (IST)</th>
+                  <th>Closed Trades</th>
+                  <th>Win Rate %</th>
+                  <th>Win / Loss</th>
+                  <th>Realized Net Profit (₹ INR)</th>
+                  <th>Realized Net Profit ($ USD)</th>
+                  <th>Gross Profit (₹)</th>
+                  <th>Mudrex Fees &amp; GST (₹)</th>
+                  <th>Volume (Barrels)</th>
+                  <th>Punarjanm</th>
+                </tr>
+              </thead>
+              <tbody id="dailyBreakdownTableBody">
+                <tr><td colspan="10" class="empty-state">Loading daily history...</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+  </div>
+
+  <!-- Mudrex Live Exchange Data Modal (Opens via '⚡ MUDREX DATA' button) -->
+  <div class="modal-overlay" id="mudrexDataModal" onclick="if(event.target === this) closeMudrexDataModal()">
+    <div class="modal-card" style="max-width: 880px; width: 95%; padding: 26px; border: 1px solid rgba(59, 130, 246, 0.5); box-shadow: 0 25px 70px rgba(0, 0, 0, 0.85); background: linear-gradient(145deg, #0b1329, #080d1e);">
+      <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 14px; margin-bottom: 20px;">
+        <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
+          <span style="display: inline-block; width: 10px; height: 10px; border-radius: 50%; background: #38bdf8; box-shadow: 0 0 10px #38bdf8;"></span>
+          <h3 class="modal-title" style="margin: 0; font-size: 1.25rem; color: #fff;">⚡ MUDREX REAL EXCHANGE DATA</h3>
+          <span class="badge-one-way" style="background: rgba(56, 189, 248, 0.15); color: #38bdf8; font-size: 0.72rem; padding: 2px 8px; border-radius: 4px; border: 1px solid rgba(56, 189, 248, 0.3);">1-WAY NET MODE</span>
+          <span id="modalMudrexSideBadge" style="background: rgba(239, 68, 68, 0.15); color: #ef4444; font-size: 0.75rem; padding: 3px 10px; border-radius: 4px; font-weight: 700; border: 1px solid rgba(239, 68, 68, 0.3);">SHORT 109 BBL</span>
+        </div>
+        <div style="display: flex; align-items: center; gap: 12px;">
+          <div class="mudrex-pnl-badge pnl-badge-positive" id="modalMudrexLivePnlBadge" style="font-size: 0.9rem; padding: 4px 14px; border-radius: 20px; font-weight: 800;">+₹0.00 (+0.00%)</div>
+          <button onclick="closeMudrexDataModal()" style="background: none; border: none; color: var(--text-muted); font-size: 1.5rem; cursor: pointer; padding: 0 6px; line-height: 1;">✕</button>
+        </div>
+      </div>
+
+      <div class="mudrex-card-body" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 12px; margin-bottom: 22px;">
+        <div class="mudrex-stat-box">
+          <div class="mudrex-stat-label">Position Side &amp; Size</div>
+          <div class="mudrex-stat-val" id="mudrexStatSize" style="color: var(--accent-red-bright); font-size: 1.15rem;">SHORT · 109.0 BBL</div>
+          <div class="mudrex-stat-sub">109 Barrels Contract</div>
+        </div>
+
+        <div class="mudrex-stat-box">
+          <div class="mudrex-stat-label">Avg Entry Price</div>
+          <div class="mudrex-stat-val" id="mudrexStatEntry" style="font-size: 1.15rem;">$93.32</div>
+          <div class="mudrex-stat-sub" id="mudrexStatEntryINR">≈ ₹8,950.32 / bbl</div>
+        </div>
+
+        <div class="mudrex-stat-box">
+          <div class="mudrex-stat-label">Market Live Rate</div>
+          <div class="mudrex-stat-val rate-cyan" id="mudrexStatCurrent" style="font-size: 1.15rem;">$93.31</div>
+          <div class="mudrex-stat-sub" id="mudrexStatDiff">-$0.01 (-0.01%)</div>
+        </div>
+
+        <div class="mudrex-stat-box">
+          <div class="mudrex-stat-label">Locked Margin (Held)</div>
+          <div class="mudrex-stat-val" id="mudrexStatMargin" style="font-size: 1.15rem;">₹2,08,242.61</div>
+          <div class="mudrex-stat-sub" id="mudrexStatMarginUSD">$2,171.23 Locked</div>
+        </div>
+
+        <div class="mudrex-stat-box">
+          <div class="mudrex-stat-label">Est. Liquidation Price</div>
+          <div class="mudrex-stat-val" id="mudrexStatLiq" style="color: var(--accent-gold); font-size: 1.15rem;">$110.12</div>
+          <div class="mudrex-stat-sub">5x Cross Margin Safety</div>
+        </div>
+      </div>
+
+      <div style="background: rgba(15, 23, 42, 0.7); border: 1px solid rgba(255,255,255,0.08); border-radius: 12px; padding: 16px 20px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 14px;">
+        <div>
+          <div style="font-size: 0.9rem; color: #fff; font-weight: 700;">Direct Exchange Market Exit &amp; Margin Release</div>
+          <div style="font-size: 0.75rem; color: var(--text-dim); margin-top: 2px;">Market-close the entire 109 Barrels net position on Mudrex exchange and release ₹2,08,242.61 locked margin. Protected by PIN: 340556.</div>
+        </div>
+        <div style="display: flex; gap: 10px; align-items: center;">
+          <button class="btn btn-outline" onclick="closeMudrexDataModal()">Close</button>
+          <button class="btn btn-close-mudrex" id="closeMudrexPositionBtn" onclick="promptAction('closeMudrexExchangePosition')">
+            <span>❌ CLOSE MUDREX POSITION</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Admin PIN Modal (PIN 340556) -->
+  <div class="modal-overlay" id="pinModal" style="z-index: 1200;">
+    <div class="modal-card">
+      <h3 class="modal-title" id="modalActionTitle">Admin Security Verification</h3>
+      <p class="modal-subtitle" id="modalActionSubtitle">Please enter Admin PIN (340556) to confirm this action.</p>
+      
+      <input type="password" id="adminPinInput" class="modal-input" maxlength="6" placeholder="••••••" autofocus>
+      
+      <div class="modal-buttons">
+        <button class="btn btn-outline" onclick="closePinModal()">Cancel</button>
+        <button class="btn btn-cyan" id="confirmActionBtn" onclick="executePendingAction()">Verify & Proceed</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Session Auto-Scheduler Configuration Modal (PIN 340556) -->
+  <div class="modal-overlay" id="sessionModal" style="z-index: 1250;" onclick="if(event.target === this) closeSessionModal()">
+    <div class="modal-card" style="max-width: 680px; width: 95%; padding: 24px; background: linear-gradient(145deg, #0b1329, #080d1e); border: 1px solid rgba(147, 51, 234, 0.5); box-shadow: 0 25px 70px rgba(0, 0, 0, 0.85);">
+      <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 12px; margin-bottom: 18px;">
+        <h3 class="modal-title" style="margin: 0; font-size: 1.2rem; color: #fff; display: flex; align-items: center; gap: 8px;">
+          <span>⏰ Market Session Auto-Scheduler</span>
+        </h3>
+        <button onclick="closeSessionModal()" style="background: none; border: none; color: var(--text-muted); font-size: 1.4rem; cursor: pointer;">✕</button>
+      </div>
+
+      <div style="margin-bottom: 18px; display: flex; justify-content: space-between; align-items: center; background: rgba(255,255,255,0.03); padding: 10px 14px; border-radius: 8px;">
+        <label for="sessionSchedulerToggle" style="font-size: 0.85rem; font-weight: 700; color: #fff; cursor: pointer;">
+          Auto-Scheduler Enabled (Time aane par apne aap Barrels aur Punarjanm badle)
+        </label>
+        <input type="checkbox" id="sessionSchedulerToggle" checked style="width: 20px; height: 20px; cursor: pointer; accent-color: #8b5cf6;">
+      </div>
+
+      <!-- Slot 1: European & US High Volatility Session -->
+      <div style="border: 1px solid rgba(239, 68, 68, 0.35); background: rgba(239, 68, 68, 0.04); border-radius: 10px; padding: 14px; margin-bottom: 14px;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+          <strong style="color: #f87171; font-size: 0.92rem;">⚡ Slot 1: European &amp; US Session (High Volatility)</strong>
+          <span style="font-size: 0.72rem; color: var(--text-dim);">Main Volatility Wave</span>
+        </div>
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(110px, 1fr)); gap: 10px;">
+          <div>
+            <label style="font-size: 0.7rem; color: var(--text-muted); display: block; margin-bottom: 4px;">Start Time (IST)</label>
+            <input type="text" id="slot1Start" value="13:00" class="modal-input" style="font-size: 0.85rem; padding: 6px;" placeholder="13:00">
+          </div>
+          <div>
+            <label style="font-size: 0.7rem; color: var(--text-muted); display: block; margin-bottom: 4px;">End Time (IST)</label>
+            <input type="text" id="slot1End" value="23:30" class="modal-input" style="font-size: 0.85rem; padding: 6px;" placeholder="23:30">
+          </div>
+          <div>
+            <label style="font-size: 0.7rem; color: var(--text-muted); display: block; margin-bottom: 4px;">Lot Size (Barrels)</label>
+            <input type="number" id="slot1Qty" value="2.0" step="0.5" min="0.5" class="modal-input" style="font-size: 0.85rem; padding: 6px;">
+          </div>
+          <div>
+            <label style="font-size: 0.7rem; color: var(--text-muted); display: block; margin-bottom: 4px;">Target Move ($)</label>
+            <input type="number" id="slot1TargetMove" value="0.25" step="0.05" min="0.05" class="modal-input" style="font-size: 0.85rem; padding: 6px;">
+          </div>
+          <div>
+            <label style="font-size: 0.7rem; color: var(--text-muted); display: block; margin-bottom: 4px;">Punarjanm (₹)</label>
+            <input type="number" id="slot1Basket" value="200" step="10" min="50" class="modal-input" style="font-size: 0.85rem; padding: 6px;">
+          </div>
+        </div>
+      </div>
+
+      <!-- Slot 2: Asian & Night Low Volatility Session -->
+      <div style="border: 1px solid rgba(59, 130, 246, 0.35); background: rgba(59, 130, 246, 0.04); border-radius: 10px; padding: 14px; margin-bottom: 18px;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+          <strong style="color: #60a5fa; font-size: 0.92rem;">🌙 Slot 2: Asian &amp; Night Session (Low Volatility)</strong>
+          <span style="font-size: 0.72rem; color: var(--text-dim);">Calm Range (3:30 AM - 7:00 AM)</span>
+        </div>
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(110px, 1fr)); gap: 10px;">
+          <div>
+            <label style="font-size: 0.7rem; color: var(--text-muted); display: block; margin-bottom: 4px;">Start Time (IST)</label>
+            <input type="text" id="slot2Start" value="23:30" class="modal-input" style="font-size: 0.85rem; padding: 6px;" placeholder="23:30">
+          </div>
+          <div>
+            <label style="font-size: 0.7rem; color: var(--text-muted); display: block; margin-bottom: 4px;">End Time (IST)</label>
+            <input type="text" id="slot2End" value="13:00" class="modal-input" style="font-size: 0.85rem; padding: 6px;" placeholder="13:00">
+          </div>
+          <div>
+            <label style="font-size: 0.7rem; color: var(--text-muted); display: block; margin-bottom: 4px;">Lot Size (Barrels)</label>
+            <input type="number" id="slot2Qty" value="2.0" step="0.5" min="0.5" class="modal-input" style="font-size: 0.85rem; padding: 6px;">
+          </div>
+          <div>
+            <label style="font-size: 0.7rem; color: var(--text-muted); display: block; margin-bottom: 4px;">Target Move ($)</label>
+            <input type="number" id="slot2TargetMove" value="0.25" step="0.05" min="0.05" class="modal-input" style="font-size: 0.85rem; padding: 6px;">
+          </div>
+          <div>
+            <label style="font-size: 0.7rem; color: var(--text-muted); display: block; margin-bottom: 4px;">Punarjanm (₹)</label>
+            <input type="number" id="slot2Basket" value="100" step="10" min="50" class="modal-input" style="font-size: 0.85rem; padding: 6px;">
+          </div>
+        </div>
+      </div>
+
+      <!-- Admin PIN Input & Save -->
+      <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 14px;">
+        <div style="display: flex; align-items: center; gap: 8px;">
+          <label style="font-size: 0.78rem; color: var(--text-muted);">Admin PIN:</label>
+          <input type="password" id="sessionPinInput" class="modal-input" maxlength="6" placeholder="340556" style="width: 100px; padding: 6px 10px; font-size: 0.85rem;">
+        </div>
+        <div style="display: flex; gap: 10px;">
+          <button class="btn btn-outline" onclick="closeSessionModal()">Cancel</button>
+          <button class="btn btn-purple" onclick="saveSessionSchedulerConfig()" style="background: linear-gradient(135deg, #7c3aed, #db2777); color: #fff; font-weight: 800; border: 1px solid #f472b6;">
+            <span>Save &amp; Apply Schedule</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Client-Side Real-Time Trading Controller -->
+  <script>
+    let currentPendingAction = null;
+    let cachedData = null;
+
+    function switchTab(tabId) {
+      document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+      document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+
+      const activeBtn = Array.from(document.querySelectorAll('.tab-btn')).find(b => b.getAttribute('onclick').includes(tabId));
+      if (activeBtn) activeBtn.classList.add('active');
+
+      const content = document.getElementById(tabId);
+      if (content) content.classList.add('active');
+    }
+
+    function promptAction(action) {
+      currentPendingAction = action;
+      const modal = document.getElementById('pinModal');
+      const title = document.getElementById('modalActionTitle');
+      const sub = document.getElementById('modalActionSubtitle');
+      const pinInput = document.getElementById('adminPinInput');
+
+      pinInput.value = '';
+      if (action === 'toggleEngine') {
+        const isRunning = cachedData && cachedData.engine && cachedData.engine.status === 'RUNNING';
+        title.innerText = isRunning ? 'Pause Live Engine' : 'Start Live Engine';
+        sub.innerText = `Enter Admin PIN (340556) to ${isRunning ? 'pause' : 'resume'} the Crude Oil trading engine.`;
+      } else if (action === 'addNewPair') {
+        title.innerText = 'Add New Crude Pair';
+        sub.innerText = 'Enter Admin PIN (340556) to create a new 2.0 Barrels Hedged Pair at current market price.';
+      } else if (action === 'closeMudrexExchangePosition') {
+        const netSum = (cachedData && cachedData.mudrexExchange && cachedData.mudrexExchange.netSummary) || {};
+        const q = netSum.quantity || 16;
+        const side = netSum.sideDisplay || 'SHORT';
+        title.innerText = `Close Mudrex ${side} ${q} BBL Position`;
+        sub.innerText = `Enter Admin PIN (340556) to market-close the ${q} Barrels position on Mudrex exchange and release margin.`;
+      } else if (action === 'punarjanm') {
+        const nextCycle = (cachedData && cachedData.punarjanm && cachedData.punarjanm.currentCycleName) || 'Punarjanm 1';
+        title.innerText = `✨ Execute ${nextCycle} (Rebirth Cycle)`;
+        sub.innerText = `Enter Admin PIN (340556) to harvest Mudrex profit, flush stale pairs, release locked margin, and spawn a fresh 2.0B pair at the live rate.`;
+      }
+
+      modal.style.display = 'flex';
+      pinInput.focus();
+    }
+
+    function closePinModal() {
+      document.getElementById('pinModal').style.display = 'none';
+      currentPendingAction = null;
+    }
+
+    function openMudrexDataModal() {
+      const modal = document.getElementById('mudrexDataModal');
+      if (modal) modal.style.display = 'flex';
+    }
+
+    function closeMudrexDataModal() {
+      const modal = document.getElementById('mudrexDataModal');
+      if (modal) modal.style.display = 'none';
+    }
+
+    async function executePendingAction() {
+      const pin = document.getElementById('adminPinInput').value.trim();
+      if (!pin) {
+        alert('Please enter Admin PIN');
+        return;
+      }
+
+      let actionEndpointAction = '';
+      if (currentPendingAction === 'toggleEngine') {
+        const isRunning = cachedData && cachedData.engine && cachedData.engine.status === 'RUNNING';
+        actionEndpointAction = isRunning ? 'pauseEngine' : 'startEngine';
+      } else if (currentPendingAction === 'addNewPair') {
+        actionEndpointAction = 'addNewPair';
+      } else if (currentPendingAction === 'closeMudrexExchangePosition') {
+        actionEndpointAction = 'closeMudrexExchangePosition';
+      } else if (currentPendingAction === 'punarjanm') {
+        actionEndpointAction = 'punarjanm';
+      }
+
+      try {
+        const res = await fetch('/api/crude-live-mudrex/action', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: actionEndpointAction, password: pin })
+        });
+        const json = await res.json();
+        if (json.success) {
+          closePinModal();
+          if (actionEndpointAction === 'punarjanm' || actionEndpointAction === 'closeMudrexExchangePosition') {
+            alert('✨ ' + (json.message || 'Punarjanm cycle executed successfully!'));
+          }
+          await fetchTerminalData();
+        } else {
+          alert('Action Failed: ' + (json.error || 'Incorrect PIN'));
+        }
+      } catch (err) {
+        alert('Error: ' + err.message);
+      }
+    }
+
+    async function quickSetBasketTarget(targetINR) {
+      const pin = prompt(`Enter Admin PIN (340556) to set Punarjanm Target to ₹${targetINR} INR:`);
+      if (!pin) return;
+      try {
+        const res = await fetch('/api/crude-live-mudrex/action', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: 'updateBasketTarget', targetINR, password: pin })
+        });
+        const json = await res.json();
+        if (json.success) {
+          alert(`✅ Punarjanm Basket Profit Target updated to ₹${targetINR} INR!`);
+          await fetchTerminalData();
+        } else {
+          alert('Failed: ' + (json.error || 'Incorrect PIN'));
+        }
+      } catch (e) {
+        alert('Error: ' + e.message);
+      }
+    }
+
+    function promptCustomBasketTarget() {
+      const curr = cachedData?.punarjanm?.basketTargetINR || 100;
+      const custom = prompt(`Enter custom Punarjanm target in INR (₹):\n(Current: ₹${curr})`, curr);
+      if (!custom) return;
+      const num = parseFloat(custom);
+      if (isNaN(num) || num <= 0) {
+        alert('Please enter a valid positive number');
+        return;
+      }
+      quickSetBasketTarget(num);
+    }
+
+    function openSessionModal() {
+      const sched = cachedData?.sessionScheduler || {};
+      const sessions = sched.sessions || [];
+      const s1 = sessions.find(s => s.id === 'high_vol_eu_us') || {};
+      const s2 = sessions.find(s => s.id === 'low_vol_asian_night') || {};
+
+      document.getElementById('sessionSchedulerToggle').checked = sched.enabled !== false;
+
+      if (s1.startIST) document.getElementById('slot1Start').value = s1.startIST;
+      if (s1.endIST) document.getElementById('slot1End').value = s1.endIST;
+      if (s1.contractQuantity) document.getElementById('slot1Qty').value = s1.contractQuantity;
+      if (s1.profitTargetMove) document.getElementById('slot1TargetMove').value = s1.profitTargetMove;
+      if (s1.basketProfitTargetINR) document.getElementById('slot1Basket').value = s1.basketProfitTargetINR;
+
+      if (s2.startIST) document.getElementById('slot2Start').value = s2.startIST;
+      if (s2.endIST) document.getElementById('slot2End').value = s2.endIST;
+      if (s2.contractQuantity) document.getElementById('slot2Qty').value = s2.contractQuantity;
+      if (s2.profitTargetMove) document.getElementById('slot2TargetMove').value = s2.profitTargetMove;
+      if (s2.basketProfitTargetINR) document.getElementById('slot2Basket').value = s2.basketProfitTargetINR;
+
+      document.getElementById('sessionPinInput').value = '';
+      document.getElementById('sessionModal').style.display = 'flex';
+    }
+
+    function closeSessionModal() {
+      document.getElementById('sessionModal').style.display = 'none';
+    }
+
+    async function saveSessionSchedulerConfig() {
+      const pin = document.getElementById('sessionPinInput').value.trim();
+      if (!pin) {
+        alert('Please enter Admin PIN (340556)');
+        return;
+      }
+
+      const payload = {
+        enabled: document.getElementById('sessionSchedulerToggle').checked,
+        sessions: [
+          {
+            id: 'high_vol_eu_us',
+            name: '⚡ European & US Session (High Volatility)',
+            shortName: 'EU / US Session',
+            startIST: document.getElementById('slot1Start').value.trim() || '13:00',
+            endIST: document.getElementById('slot1End').value.trim() || '23:30',
+            contractQuantity: parseFloat(document.getElementById('slot1Qty').value) || 2.0,
+            profitTargetMove: parseFloat(document.getElementById('slot1TargetMove').value) || 0.25,
+            basketProfitTargetINR: parseFloat(document.getElementById('slot1Basket').value) || 200
+          },
+          {
+            id: 'low_vol_asian_night',
+            name: '🌙 Asian & Night Session (Low Volatility)',
+            shortName: 'Night / Asian Session',
+            startIST: document.getElementById('slot2Start').value.trim() || '23:30',
+            endIST: document.getElementById('slot2End').value.trim() || '13:00',
+            contractQuantity: parseFloat(document.getElementById('slot2Qty').value) || 2.0,
+            profitTargetMove: parseFloat(document.getElementById('slot2TargetMove').value) || 0.25,
+            basketProfitTargetINR: parseFloat(document.getElementById('slot2Basket').value) || 100
+          }
+        ]
+      };
+
+      try {
+        const res = await fetch('/api/crude-live-mudrex/action', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: 'updateSessionScheduler', sessionScheduler: payload, password: pin })
+        });
+        const json = await res.json();
+        if (json.success) {
+          alert('✅ Market Session Auto-Scheduler updated successfully!');
+          closeSessionModal();
+          await fetchTerminalData();
+        } else {
+          alert('Failed: ' + (json.error || 'Incorrect PIN'));
+        }
+      } catch (err) {
+        alert('Error: ' + err.message);
+      }
+    }
+
+    async function fetchTerminalData() {
+      try {
+        const res = await fetch('/api/crude-live-mudrex/data');
+        if (!res.ok) return;
+        const data = await res.json();
+        if (data.success) {
+          cachedData = data;
+          renderTerminalUI(data);
+        }
+      } catch (err) {
+        console.warn('[Terminal] Poll Error:', err.message);
+      }
+    }
+
+    function renderTerminalUI(data) {
+      const rate = data.rate || {};
+      const wallet = data.wallet || {};
+      const engine = data.engine || {};
+      const pnl = data.pnl || {};
+      const exchange = data.mudrexExchange || {};
+      const usdInr = rate.usdInrRate || 102.00;
+      const livePrice = rate.price || 92.90;
+
+      // 1. Header & Engine Status
+      const statusLabel = document.getElementById('engineStatusLabel');
+      const statusInd = document.getElementById('engineStatusIndicator');
+      const toggleBtn = document.getElementById('toggleEngineBtn');
+
+      if (engine.status === 'RUNNING') {
+        statusLabel.innerText = 'ENGINE RUNNING';
+        statusInd.className = 'status-indicator status-running';
+        toggleBtn.innerHTML = '<span>⏸ PAUSE ENGINE</span>';
+        toggleBtn.className = 'btn btn-amber';
+      } else {
+        const pReason = engine.pauseReason || '';
+        let shortText = 'ENGINE PAUSED';
+        if (pReason.includes('INSUFFICIENT MARGIN') || pReason.includes('MARGIN')) {
+          shortText = 'PAUSED · LOW MARGIN';
+        } else if (pReason.includes('STALE')) {
+          shortText = 'PAUSED · STALE FEED';
+        } else if (pReason.includes('STOPPED')) {
+          shortText = 'ENGINE STOPPED';
+        }
+        statusLabel.innerText = shortText;
+        statusInd.className = 'status-indicator status-paused';
+        statusInd.title = pReason || 'Engine paused';
+        toggleBtn.innerHTML = '<span>▶️ START ENGINE</span>';
+        toggleBtn.className = 'btn btn-green';
+      }
+
+      document.getElementById('lastUpdateTime').innerText = `Sync: ${new Date().toLocaleTimeString('en-IN', { timeZone: 'Asia/Kolkata' })} IST`;
+
+      if (data.punarjanm) {
+        const pBadge = document.getElementById('navPunarjanmBadge');
+        if (pBadge) {
+          pBadge.innerText = data.punarjanm.currentCycleName || 'Punarjanm 1';
+        }
+        const curBasketTarget = (data.punarjanm && data.punarjanm.basketTargetINR) || 250;
+        const pLabel = document.getElementById('punarjanmNavBtnLabel');
+        if (pLabel) {
+          pLabel.innerText = `✨ PUNARJANM (₹${curBasketTarget})`;
+        }
+      }
+
+      // 1b. Update Market Session Auto-Scheduler Control Strip
+      const sched = data.sessionScheduler;
+      if (sched) {
+        const active = sched.activeSession;
+        const schedBadge = document.getElementById('sessionSchedulerStatusBadge');
+        if (schedBadge) {
+          schedBadge.innerText = sched.enabled ? 'AUTO ACTIVE' : 'PAUSED';
+          schedBadge.style.color = sched.enabled ? '#34d399' : '#f87171';
+          schedBadge.style.borderColor = sched.enabled ? '#10b981' : '#ef4444';
+          schedBadge.style.background = sched.enabled ? 'rgba(16, 185, 129, 0.2)' : 'rgba(239, 68, 68, 0.2)';
+        }
+
+        if (active) {
+          const actBadge = document.getElementById('sessionActiveBadge');
+          if (actBadge) actBadge.innerText = active.name || active.shortName || 'Active Session';
+          
+          const timeWin = document.getElementById('sessionTimeWindow');
+          if (timeWin) {
+            timeWin.innerText = `Session Window: ${active.startIST} – ${active.endIST} IST | Live Clock: ${sched.currentTimeIST || '--:--'} IST`;
+          }
+
+          const lotEl = document.getElementById('sessionLotSize');
+          if (lotEl) lotEl.innerText = `${active.currentContractQuantity || active.contractQuantity || 2.0} Barrels`;
+
+          const targetEl = document.getElementById('sessionTargetMove');
+          if (targetEl) targetEl.innerText = `$${Number(active.currentProfitTargetMove || active.profitTargetMove || 0.25).toFixed(2)}`;
+
+          const basketEl = document.getElementById('sessionBasketTarget');
+          if (basketEl) basketEl.innerText = `₹${active.currentBasketProfitTargetINR || active.basketProfitTargetINR || 100}`;
+        }
+      }
+
+      // 2. Ticker Hero
+      const crudeEl = document.getElementById('liveCrudePrice');
+      crudeEl.innerText = `$${livePrice.toFixed(2)}`;
+      
+      const targetMove = engine.profitTargetMove || 0.25;
+      const contractQty = engine.contractQuantity || 2.0;
+      const pairs = engine.pairs || [];
+
+      // Find active BUY and SELL positions to match the tables below
+      const activeBuyList = pairs.filter(p => p.buy && p.buy.status === 'OPEN').map(p => p.buy);
+      const activeSellList = pairs.filter(p => p.sell && p.sell.status === 'OPEN').map(p => p.sell);
+
+      let buyTarget = livePrice + targetMove;
+      let buyDistText = `Distance: +$${targetMove.toFixed(2)} (+₹${(targetMove * usdInr).toFixed(2)})`;
+      let buyLabelText = `🎯 BUY TARGET EXIT (+$${targetMove.toFixed(2)})`;
+
+      if (activeBuyList.length > 0) {
+        // Nearest active BUY position target exit to current market price
+        const nearestBuy = [...activeBuyList].sort((a, b) => Math.abs(a.targetPrice - livePrice) - Math.abs(b.targetPrice - livePrice))[0];
+        buyTarget = nearestBuy.targetPrice;
+        const bDist = Number((buyTarget - livePrice).toFixed(2));
+        const bDistSign = bDist >= 0 ? '+' : '';
+        buyDistText = `Distance: ${bDistSign}$${bDist.toFixed(2)} (${bDistSign}₹${(bDist * usdInr).toFixed(2)})`;
+        buyLabelText = `🎯 ACTIVE BUY TARGET (${nearestBuy.positionId})`;
+      }
+
+      let sellTarget = livePrice - targetMove;
+      let sellDistText = `Distance: -$${targetMove.toFixed(2)} (-₹${(targetMove * usdInr).toFixed(2)})`;
+      let sellLabelText = `🎯 SELL TARGET EXIT (-$${targetMove.toFixed(2)})`;
+
+      if (activeSellList.length > 0) {
+        // Nearest active SELL position target exit to current market price
+        const nearestSell = [...activeSellList].sort((a, b) => Math.abs(a.targetPrice - livePrice) - Math.abs(b.targetPrice - livePrice))[0];
+        sellTarget = nearestSell.targetPrice;
+        const sDist = Number((livePrice - sellTarget).toFixed(2));
+        const sDistSign = sDist >= 0 ? '+' : '';
+        sellDistText = `Distance: ${sDistSign}$${sDist.toFixed(2)} (${sDistSign}₹${(sDist * usdInr).toFixed(2)})`;
+        sellLabelText = `🎯 ACTIVE SELL TARGET (${nearestSell.positionId})`;
+      }
+
+      document.getElementById('buyTargetRate').innerText = `$${buyTarget.toFixed(2)}`;
+      document.getElementById('sellTargetRate').innerText = `$${sellTarget.toFixed(2)}`;
+      document.getElementById('buyTargetDist').innerText = buyDistText;
+      document.getElementById('sellTargetDist').innerText = sellDistText;
+
+      const buyLabel = document.getElementById('buyTargetLabel');
+      if (buyLabel) buyLabel.innerText = buyLabelText;
+      const sellLabel = document.getElementById('sellTargetLabel');
+      if (sellLabel) sellLabel.innerText = sellLabelText;
+
+      const liveRateSub = document.getElementById('liveRateSubtext');
+      if (liveRateSub) {
+        const markStr = rate.markPrice ? `Mark: $${Number(rate.markPrice).toFixed(2)} | ` : '';
+        liveRateSub.innerText = `${markStr}USD/INR: ₹${usdInr.toFixed(2)} | ${contractQty.toFixed(1)}B Lot`;
+      }
+
+      // Hero Total Active Pairs (Prominent Display)
+      const heroPairsEl = document.getElementById('heroActivePairsCount');
+      if (heroPairsEl) {
+        heroPairsEl.innerText = `${pairs.length} PAIRS`;
+      }
+      const heroConfigSub = document.getElementById('heroConfigSubtext');
+      if (heroConfigSub) {
+        heroConfigSub.innerText = `${engine.activeBuyCount || 0} BUY / ${engine.activeSellCount || 0} SELL | ${contractQty.toFixed(1)}B 5x`;
+      }
+
+      // 3. Financial Metrics (Both ₹ and $ required)
+      const availValINR = typeof wallet.availableMarginINR === 'number' ? wallet.availableMarginINR : 0;
+      const availValUSD = typeof wallet.availableMarginUSD === 'number' ? wallet.availableMarginUSD : 0;
+      const spotValINR = typeof wallet.spotBalanceINR === 'number' ? wallet.spotBalanceINR : 0;
+      
+      document.getElementById('kpiAvailableMarginINR').innerText = `₹${availValINR.toLocaleString('en-IN', { minimumFractionDigits: 2 })}`;
+      let availSub = `$${availValUSD.toFixed(2)} Available`;
+      if (spotValINR > 0) {
+        availSub += ` | Spot: ₹${spotValINR.toLocaleString('en-IN', { minimumFractionDigits: 2 })}`;
+      }
+      document.getElementById('kpiAvailableMarginUSD').innerText = availSub;
+
+      document.getElementById('kpiLockedMarginINR').innerText = `₹${wallet.lockedMarginINR.toLocaleString('en-IN', { minimumFractionDigits: 2 })}`;
+      document.getElementById('kpiLockedMarginUSD').innerText = `$${wallet.lockedMarginUSD.toFixed(2)} Locked`;
+
+      document.getElementById('kpiEquityINR').innerText = `₹${wallet.equityINR.toLocaleString('en-IN', { minimumFractionDigits: 2 })}`;
+      document.getElementById('kpiEquityUSD').innerText = `$${wallet.equityUSD.toFixed(2)} Total`;
+
+      const rINR = pnl.totalRealizedINR || 2540.90;
+      const rUSD = pnl.totalRealizedUSD || 26.21;
+      const rSign = rINR >= 0 ? '+' : '';
+      document.getElementById('kpiRealizedNetINR').innerText = `${rSign}₹${rINR.toLocaleString('en-IN', { minimumFractionDigits: 2 })}`;
+      document.getElementById('kpiRealizedNetUSD').innerText = `${rSign}$${rUSD.toFixed(2)} Net (${pnl.closedTradesCount || 33} Trades)`;
+
+      const fINR = pnl.totalFloatingINR || 0;
+      const fUSD = pnl.totalFloatingUSD || 0;
+      const fSign = fINR >= 0 ? '+' : '';
+      const fColor = fINR >= 0 ? 'var(--accent-green-bright)' : 'var(--accent-red-bright)';
+      const floatEl = document.getElementById('kpiFloatingNetINR');
+      floatEl.innerText = `${fSign}₹${fINR.toLocaleString('en-IN', { minimumFractionDigits: 2 })}`;
+      floatEl.style.color = fColor;
+      document.getElementById('kpiFloatingNetUSD').innerText = `${fSign}$${fUSD.toFixed(2)} Unrealized`;
+
+      // 4. Mudrex Real Exchange Position Summary Card
+      const netSum = exchange.netSummary;
+      const exPos = (exchange.positions && exchange.positions.length > 0) ? exchange.positions[0] : null;
+
+      if (netSum || exPos) {
+        const posQty = netSum ? netSum.quantity : Number(exPos.quantity || 109);
+        const posEntry = netSum ? netSum.entryPrice : Number(exPos.entry_price || 93.32);
+        const side = netSum ? netSum.sideDisplay : (exPos.order_type || exPos.side || 'SHORT').toUpperCase();
+        const isShort = side.includes('SHORT') || side === 'SELL';
+        const sideColor = isShort ? 'var(--accent-red-bright)' : 'var(--accent-green-bright)';
+        const marginINR = netSum ? netSum.initialMarginINR : Number(exPos.initial_margin || wallet.lockedMarginINR || 208242.61);
+        const marginUSD = netSum ? netSum.initialMarginUSD : Number((marginINR / usdInr).toFixed(2));
+        
+        let pnlUSD = netSum ? netSum.unrealisedPnlUSD : (isShort ? (posEntry - livePrice) * posQty : (livePrice - posEntry) * posQty);
+        let pnlINR = netSum ? netSum.unrealisedPnlINR : (pnlUSD * usdInr);
+        let pnlPercent = netSum ? netSum.unrealisedPnlPercent : (marginINR > 0 ? (pnlINR / marginINR) * 100 : 0);
+        let liqPrice = netSum ? netSum.liquidationPrice : (isShort ? posEntry * 1.18 : posEntry * 0.82);
+
+        const pnlSign = pnlINR >= 0 ? '+' : '';
+        const pnlBadgeClass = pnlINR >= 0 ? 'pnl-badge-positive' : 'pnl-badge-negative';
+
+        const navBadge = document.getElementById('navMudrexBadge');
+        if (navBadge) navBadge.innerText = `${side} ${posQty} BBL`;
+
+        // Update Hero Ticker Live Mudrex Unrealised P&L (R/G) - ONLY ₹ INR
+        const heroPnlVal = document.getElementById('heroMudrexPnlVal');
+        if (heroPnlVal) {
+          heroPnlVal.innerText = `${pnlSign}₹${pnlINR.toFixed(2)}`;
+          heroPnlVal.style.color = pnlINR >= 0 ? 'var(--accent-green-bright)' : 'var(--accent-red-bright)';
+          heroPnlVal.style.textShadow = pnlINR >= 0 ? '0 0 20px rgba(16, 185, 129, 0.4)' : '0 0 20px rgba(239, 68, 68, 0.4)';
+        }
+
+        const heroSideBadge = document.getElementById('heroMudrexSideBadge');
+        if (heroSideBadge) {
+          heroSideBadge.innerText = `${side} ${posQty} BBL`;
+          heroSideBadge.style.color = sideColor;
+          heroSideBadge.style.borderColor = sideColor;
+        }
+
+        const heroSub = document.getElementById('heroMudrexSubtext');
+        if (heroSub) {
+          heroSub.innerText = `Entry: $${posEntry.toFixed(2)} | Liq: $${liqPrice.toFixed(2)} | ${pnlSign}${pnlPercent.toFixed(2)}%`;
+        }
+
+        const heroInd = document.getElementById('heroMudrexIndicator');
+        if (heroInd) {
+          heroInd.style.background = pnlINR >= 0 ? '#10b981' : '#ef4444';
+          heroInd.style.boxShadow = pnlINR >= 0 ? '0 0 10px #10b981' : '0 0 10px #ef4444';
+        }
+
+        // Update Target Chips active status
+        const curTarget = (data.punarjanm && data.punarjanm.basketTargetINR) || 250;
+        ['100', '250', '500', '1000'].forEach(v => {
+          const c = document.getElementById('chipTarget' + v);
+          if (c) {
+            if (curTarget === Number(v)) c.classList.add('active');
+            else c.classList.remove('active');
+          }
+        });
+
+        const modalSideBadge = document.getElementById('modalMudrexSideBadge');
+        if (modalSideBadge) {
+          modalSideBadge.innerText = `${side} ${posQty} BBL`;
+          modalSideBadge.style.color = sideColor;
+        }
+
+        const modalPnlBadge = document.getElementById('modalMudrexLivePnlBadge');
+        if (modalPnlBadge) {
+          modalPnlBadge.className = `mudrex-pnl-badge ${pnlBadgeClass}`;
+          modalPnlBadge.innerText = `${pnlSign}₹${pnlINR.toFixed(2)} (${pnlSign}${pnlPercent.toFixed(2)}%)`;
+        }
+
+        const statSize = document.getElementById('mudrexStatSize');
+        if (statSize) {
+          statSize.innerText = `${side} · ${posQty.toFixed(1)} BBL`;
+          statSize.style.color = sideColor;
+        }
+
+        const statEntry = document.getElementById('mudrexStatEntry');
+        if (statEntry) statEntry.innerText = `$${posEntry.toFixed(2)}`;
+
+        const statEntryINR = document.getElementById('mudrexStatEntryINR');
+        if (statEntryINR) statEntryINR.innerText = `≈ ₹${(posEntry * usdInr).toLocaleString('en-IN', { minimumFractionDigits: 2 })} / bbl`;
+
+        const statCurrent = document.getElementById('mudrexStatCurrent');
+        if (statCurrent) statCurrent.innerText = `$${livePrice.toFixed(2)}`;
+
+        const priceDiff = livePrice - posEntry;
+        const diffSign = priceDiff >= 0 ? '+' : '';
+        const diffPercent = posEntry > 0 ? (priceDiff / posEntry) * 100 : 0;
+        const statDiff = document.getElementById('mudrexStatDiff');
+        if (statDiff) statDiff.innerText = `${diffSign}$${priceDiff.toFixed(2)} (${diffSign}${diffPercent.toFixed(2)}%)`;
+
+        const statMargin = document.getElementById('mudrexStatMargin');
+        if (statMargin) statMargin.innerText = `₹${marginINR.toLocaleString('en-IN', { minimumFractionDigits: 2 })}`;
+
+        const statMarginUSD = document.getElementById('mudrexStatMarginUSD');
+        if (statMarginUSD) statMarginUSD.innerText = `$${marginUSD.toFixed(2)} Locked`;
+
+        const statLiq = document.getElementById('mudrexStatLiq');
+        if (statLiq) statLiq.innerText = `$${liqPrice.toFixed(2)}`;
+
+        const closeBtn = document.getElementById('closeMudrexPositionBtn');
+        if (closeBtn) {
+          closeBtn.innerHTML = `<span>❌ CLOSE MUDREX POSITION (${posQty} BBL)</span>`;
+          closeBtn.disabled = false;
+        }
+      } else {
+        const heroSideBadge = document.getElementById('heroMudrexSideBadge');
+        if (heroSideBadge) {
+          heroSideBadge.innerText = 'FLAT (0 BBL)';
+          heroSideBadge.style.color = 'var(--text-muted)';
+          heroSideBadge.style.borderColor = 'rgba(255,255,255,0.2)';
+          heroSideBadge.style.background = 'rgba(255,255,255,0.06)';
+        }
+        const heroSub = document.getElementById('heroMudrexSubtext');
+        if (heroSub) {
+          heroSub.innerText = 'Exchange Flat · Hedged in Engine';
+        }
+        const heroPnlVal = document.getElementById('heroMudrexPnlVal');
+        if (heroPnlVal) {
+          heroPnlVal.innerText = '₹0.00';
+          heroPnlVal.style.color = 'var(--text-muted)';
+          heroPnlVal.style.textShadow = 'none';
+        }
+        const heroInd = document.getElementById('heroMudrexIndicator');
+        if (heroInd) {
+          heroInd.style.background = '#64748b';
+          heroInd.style.boxShadow = 'none';
+        }
+
+        const navBadge = document.getElementById('navMudrexBadge');
+        if (navBadge) navBadge.innerText = '0 BBL';
+        const modalSideBadge = document.getElementById('modalMudrexSideBadge');
+        if (modalSideBadge) modalSideBadge.innerText = 'FLAT (0 BBL)';
+        const modalPnlBadge = document.getElementById('modalMudrexLivePnlBadge');
+        if (modalPnlBadge) {
+          modalPnlBadge.className = 'mudrex-pnl-badge';
+          modalPnlBadge.innerText = '₹0.00 (0.00%)';
+        }
+
+        const statSize = document.getElementById('mudrexStatSize');
+        if (statSize) statSize.innerText = 'FLAT · 0.0 BBL';
+        const statEntry = document.getElementById('mudrexStatEntry');
+        if (statEntry) statEntry.innerText = '--';
+        const statCurrent = document.getElementById('mudrexStatCurrent');
+        if (statCurrent) statCurrent.innerText = `$${livePrice.toFixed(2)}`;
+        const statMargin = document.getElementById('mudrexStatMargin');
+        if (statMargin) statMargin.innerText = '₹0.00';
+        const statLiq = document.getElementById('mudrexStatLiq');
+        if (statLiq) statLiq.innerText = '--';
+        const closeBtn = document.getElementById('closeMudrexPositionBtn');
+        if (closeBtn) {
+          closeBtn.innerHTML = '<span>NO OPEN POSITION</span>';
+          closeBtn.disabled = true;
+        }
+      }
+
+      // Badges & Subtitles
+      const badgePairs = document.getElementById('badgePairsCount');
+      if (badgePairs) badgePairs.innerText = pairs.length;
+      document.getElementById('badgeBuySellCount').innerText = `${engine.activeBuyCount || 0} / ${engine.activeSellCount || 0}`;
+      const badgeEx = document.getElementById('badgeExchangeCount');
+      if (badgeEx) badgeEx.innerText = (exchange.positions || []).length;
+      document.getElementById('badgeClosedCount').innerText = (data.closedPositions || []).length;
+      const activePairsText = document.getElementById('activePairsSummaryText');
+      if (activePairsText) activePairsText.innerText = `${pairs.length} Pairs Active (${pairs.length} BUY Legs + ${pairs.length} SELL Legs)`;
+
+      const closedList = data.closedPositions || [];
+      const sumClosedNetINR = closedList.reduce((sum, c) => sum + (c.netProfitINR !== undefined ? c.netProfitINR : ((c.netProfitUSD || 0) * usdInr)), 0);
+      const sumClosedNetUSD = sumClosedNetINR / usdInr;
+      const closedSign = sumClosedNetINR >= 0 ? '+' : '';
+      const closedNetEl = document.getElementById('closedTradesTotalNet');
+      if (closedNetEl) {
+        closedNetEl.innerText = `Net: ${closedSign}₹${sumClosedNetINR.toLocaleString('en-IN', { minimumFractionDigits: 2 })} (${closedSign}$${sumClosedNetUSD.toFixed(2)})`;
+      }
+      const closedSummarySub = document.getElementById('closedTradesSummarySub');
+      if (closedSummarySub) {
+        closedSummarySub.innerText = `Total: ${closedList.length} Trades | Realized Net: ${closedSign}₹${sumClosedNetINR.toFixed(2)}`;
+      }
+
+      // Render Tables with active sorting
+      if (document.getElementById('pairsTableBody')) renderPairsTable(pairs);
+      renderSplitTables(pairs);
+      if (document.getElementById('exchangeTableBody')) renderExchangeTable(exchange.positions || []);
+      renderClosedTable(closedList);
+      renderSummaryTab(data.closedSummary, closedList, usdInr);
+      renderHarvestTab(closedList, data.punarjanm, usdInr);
+    }
+
+    // --- UNIVERSAL COLUMN SORTING ENGINE ---
+    const sortState = {
+      pairs: { col: null, dir: 'asc' },
+      buy: { col: null, dir: 'asc' },
+      sell: { col: null, dir: 'asc' },
+      exchange: { col: null, dir: 'asc' },
+      closed: { col: 'exitTime', dir: 'desc' }
+    };
+
+    function sortTable(tableKey, colKey) {
+      const state = sortState[tableKey];
+      if (state.col === colKey) {
+        state.dir = state.dir === 'asc' ? 'desc' : 'asc';
+      } else {
+        state.col = colKey;
+        // Default P/L, Margin, and Time to 'desc' on first click, others to 'asc'
+        const lower = colKey.toLowerCase();
+        state.dir = (lower.includes('pnl') || lower.includes('profit') || lower.includes('time') || lower.includes('margin')) ? 'desc' : 'asc';
+      }
+      updateSortIcons(tableKey);
+      if (cachedData) renderTerminalUI(cachedData);
+    }
+
+    function updateSortIcons(tableKey) {
+      const state = sortState[tableKey];
+      document.querySelectorAll(`[id^="sort-${tableKey}-"]`).forEach(el => {
+        el.innerText = '⬍';
+        el.parentElement.classList.remove('sort-active');
+      });
+      if (state.col) {
+        const iconEl = document.getElementById(`sort-${tableKey}-${state.col}`);
+        if (iconEl) {
+          iconEl.innerText = state.dir === 'asc' ? '▲' : '▼';
+          iconEl.parentElement.classList.add('sort-active');
+        }
+      }
+    }
+
+    function extractNumber(val) {
+      if (typeof val === 'number') return val;
+      if (!val) return 0;
+      const num = parseFloat(String(val).replace(/[^0-9.-]/g, ''));
+      return isNaN(num) ? 0 : num;
+    }
+
+    function formatExitTimeIST(timeVal) {
+      if (!timeVal) return '--';
+      try {
+        let clean = String(timeVal);
+        // Fix invalid 24+ hour ISO format (e.g. T25:53:00)
+        const m = clean.match(/T(\d{2}):(\d{2}):(\d{2})/);
+        if (m) {
+          let h = parseInt(m[1], 10);
+          if (h >= 24) {
+            h = h % 24;
+            clean = clean.replace(/T\d{2}:/, `T${h.toString().padStart(2, '0')}:`);
+          }
+        }
+        const d = new Date(clean);
+        if (!isNaN(d.getTime())) {
+          return d.toLocaleTimeString('en-IN', { timeZone: 'Asia/Kolkata', hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true });
+        }
+      } catch (e) {}
+      return String(timeVal).replace('T', ' ').slice(0, 19);
+    }
+
+    function formatDateTimeIST(timeVal) {
+      if (!timeVal) return '--';
+      try {
+        let clean = String(timeVal);
+        const m = clean.match(/T(\d{2}):(\d{2}):(\d{2})/);
+        if (m) {
+          let h = parseInt(m[1], 10);
+          if (h >= 24) {
+            h = h % 24;
+            clean = clean.replace(/T\d{2}:/, `T${h.toString().padStart(2, '0')}:`);
+          }
+        }
+        const d = new Date(clean);
+        if (!isNaN(d.getTime())) {
+          const dStr = d.toLocaleDateString('en-GB', { timeZone: 'Asia/Kolkata', day: '2-digit', month: '2-digit', year: '2-digit' });
+          const tStr = d.toLocaleTimeString('en-IN', { timeZone: 'Asia/Kolkata', hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true });
+          return `${dStr} ${tStr}`;
+        }
+      } catch (e) {}
+      return String(timeVal).replace('T', ' ').slice(0, 19);
+    }
+
+    function sortArray(items, col, dir, extractFn) {
+      if (!col || !items || items.length === 0) return items;
+      const sorted = [...items];
+      sorted.sort((a, b) => {
+        const valA = extractFn(a, col);
+        const valB = extractFn(b, col);
+        if (valA === valB) return 0;
+        if (valA === null || valA === undefined) return 1;
+        if (valB === null || valB === undefined) return -1;
+        let res = 0;
+        if (typeof valA === 'number' && typeof valB === 'number') {
+          res = valA - valB;
+        } else {
+          res = String(valA).localeCompare(String(valB), undefined, { numeric: true, sensitivity: 'base' });
+        }
+        return dir === 'desc' ? -res : res;
+      });
+      return sorted;
+    }
+
+    function getPairSortValue(p, col) {
+      if (col === 'pairId') return p.pairId || '';
+      if (col === 'buyEntry') return p.buy?.entryPrice || 0;
+      if (col === 'buyPnl') return p.buy?.floatingPnlINR || 0;
+      if (col === 'sellEntry') return p.sell?.entryPrice || 0;
+      if (col === 'sellPnl') return p.sell?.floatingPnlINR || 0;
+      if (col === 'netPnl') return p.netPairPnlINR || 0;
+      if (col === 'status') return p.status || '';
+      return 0;
+    }
+
+    function getBuySortValue(p, col) {
+      if (col === 'slNo') return p.slNo || 0;
+      const b = p.buy || {};
+      if (col === 'entryTime' || col === 'positionId') {
+        const t = new Date(b.entryTime || p.createdAt || 0).getTime();
+        return isNaN(t) ? 0 : t;
+      }
+      if (col === 'quantity') return b.quantity || 1.0;
+      if (col === 'entryPrice') return b.entryPrice || 0;
+      if (col === 'targetPrice') return b.targetPrice || 0;
+      if (col === 'distToTarget') return b.distToTarget || 0;
+      if (col === 'floatingPnl') return b.floatingPnlINR || 0;
+      return 0;
+    }
+
+    function getSellSortValue(p, col) {
+      if (col === 'slNo') return p.slNo || 0;
+      const s = p.sell || {};
+      if (col === 'entryTime' || col === 'positionId') {
+        const t = new Date(s.entryTime || p.createdAt || 0).getTime();
+        return isNaN(t) ? 0 : t;
+      }
+      if (col === 'quantity') return s.quantity || 1.0;
+      if (col === 'entryPrice') return s.entryPrice || 0;
+      if (col === 'targetPrice') return s.targetPrice || 0;
+      if (col === 'distToTarget') return s.distToTarget || 0;
+      if (col === 'floatingPnl') return s.floatingPnlINR || 0;
+      return 0;
+    }
+
+    function getExchangeSortValue(pos, col) {
+      if (col === 'symbol') return pos.symbol || '';
+      if (col === 'side') return (pos.order_type || pos.side || '').toUpperCase();
+      if (col === 'quantity') return extractNumber(pos.quantity);
+      if (col === 'entryPrice') return extractNumber(pos.entry_price);
+      if (col === 'currentPrice') return extractNumber(pos.current_price);
+      if (col === 'margin') return extractNumber(pos.initial_margin);
+      if (col === 'positionId') return pos.id || pos.position_id || '';
+      if (col === 'status') return pos.status || '';
+      return 0;
+    }
+
+    function getClosedSortValue(cp, col) {
+      if (col === 'slNo') return cp.slNo || 0;
+      const netINR = cp.netProfitINR !== undefined ? cp.netProfitINR : (cp.netProfitUSD * 102);
+      const netUSD = cp.netProfitUSD !== undefined ? cp.netProfitUSD : (netINR / 102);
+      if (col === 'exitTime') {
+        let clean = String(cp.exitTime || cp.closedTimestamp || '');
+        const m = clean.match(/T(\d{2}):/);
+        if (m && parseInt(m[1], 10) >= 24) {
+          clean = clean.replace(/T\d{2}:/, `T${(parseInt(m[1], 10) % 24).toString().padStart(2, '0')}:`);
+        }
+        const t = new Date(clean).getTime();
+        return isNaN(t) ? 0 : t;
+      }
+      if (col === 'netINR') return netINR;
+      if (col === 'netUSD') return netUSD;
+      if (col === 'side') return cp.direction || (cp.positionId && cp.positionId.includes('BUY') ? 'BUY' : 'SELL');
+      if (col === 'entryPrice') return extractNumber(cp.entryPrice);
+      if (col === 'exitPrice') return extractNumber(cp.exitPrice);
+      if (col === 'positionId') return cp.positionId || '';
+      return 0;
+    }
+
+    function renderPairsTable(pairs) {
+      const tbody = document.getElementById('pairsTableBody');
+      if (!pairs || pairs.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="7" class="empty-state">No active hedged pairs. Waiting for rate movement...</td></tr>';
+        return;
+      }
+
+      const sorted = sortArray(pairs, sortState.pairs.col, sortState.pairs.dir, getPairSortValue);
+
+      tbody.innerHTML = sorted.map(p => {
+        const b = p.buy || {};
+        const s = p.sell || {};
+
+        const bPnlClass = (b.floatingPnlINR || 0) >= 0 ? 'pnl-positive' : 'pnl-negative';
+        const sPnlClass = (s.floatingPnlINR || 0) >= 0 ? 'pnl-positive' : 'pnl-negative';
+        const netPnlClass = p.netPairPnlINR >= 0 ? 'pnl-positive' : 'pnl-negative';
+
+        const bPnlSign = (b.floatingPnlINR || 0) >= 0 ? '+' : '';
+        const sPnlSign = (s.floatingPnlINR || 0) >= 0 ? '+' : '';
+        const netSign = p.netPairPnlINR >= 0 ? '+' : '';
+
+        return `
+          <tr>
+            <td>
+              <strong style="color: #fff; font-size: 0.9rem;">${p.pairId}</strong>
+              <div style="font-size: 0.7rem; color: var(--text-dim);">${p.createdAt ? new Date(p.createdAt).toLocaleTimeString('en-IN', { timeZone: 'Asia/Kolkata' }) : ''}</div>
+            </td>
+            <td>
+              <span class="badge badge-buy">BUY 1.0B</span>
+              <span style="color: #fff; font-weight: 700;">$${b.entryPrice ? b.entryPrice.toFixed(2) : '--'}</span>
+              <span style="color: var(--text-dim);">➔</span>
+              <span style="color: var(--accent-green-bright); font-weight: 700;">$${b.targetPrice ? b.targetPrice.toFixed(2) : '--'}</span>
+            </td>
+            <td class="${bPnlClass}">
+              ${bPnlSign}₹${(b.floatingPnlINR || 0).toFixed(2)}
+              <div style="font-size: 0.72rem; color: var(--text-dim);">${bPnlSign}$${(b.floatingPnlUSD || 0).toFixed(2)}</div>
+            </td>
+            <td>
+              <span class="badge badge-sell">SELL 1.0B</span>
+              <span style="color: #fff; font-weight: 700;">$${s.entryPrice ? s.entryPrice.toFixed(2) : '--'}</span>
+              <span style="color: var(--text-dim);">➔</span>
+              <span style="color: var(--accent-red-bright); font-weight: 700;">$${s.targetPrice ? s.targetPrice.toFixed(2) : '--'}</span>
+            </td>
+            <td class="${sPnlClass}">
+              ${sPnlSign}₹${(s.floatingPnlINR || 0).toFixed(2)}
+              <div style="font-size: 0.72rem; color: var(--text-dim);">${sPnlSign}$${(s.floatingPnlUSD || 0).toFixed(2)}</div>
+            </td>
+            <td class="${netPnlClass}">
+              <strong>${netSign}₹${p.netPairPnlINR.toFixed(2)}</strong>
+              <div style="font-size: 0.72rem; color: var(--text-dim);">${netSign}$${p.netPairPnlUSD.toFixed(2)}</div>
+            </td>
+            <td>
+              <span class="badge badge-open">PAIR OPEN</span>
+              <div style="font-size: 0.68rem; color: var(--text-dim); margin-top: 2px;">
+                ${b.mudrexOrderId ? '● Real Mudrex ID' : 'Transmitting'}
+              </div>
+            </td>
+          </tr>
+        `;
+      }).join('');
+    }
+
+    function renderSplitTables(pairs) {
+      const buyTbody = document.getElementById('splitBuyTableBody');
+      const sellTbody = document.getElementById('splitSellTableBody');
+
+      const buyRows = [];
+      const sellRows = [];
+      let totalBuyINR = 0;
+      let totalSellINR = 0;
+
+      const buyPairs = pairs.filter(p => p.buy && p.buy.status === 'OPEN').map((p, idx) => ({ ...p, slNo: idx + 1 }));
+      const sellPairs = pairs.filter(p => p.sell && p.sell.status === 'OPEN').map((p, idx) => ({ ...p, slNo: idx + 1 }));
+
+      buyPairs.forEach(p => totalBuyINR += (p.buy.floatingPnlINR || 0));
+      sellPairs.forEach(p => totalSellINR += (p.sell.floatingPnlINR || 0));
+
+      const sortedBuyPairs = sortArray(buyPairs, sortState.buy.col, sortState.buy.dir, getBuySortValue);
+      const sortedSellPairs = sortArray(sellPairs, sortState.sell.col, sortState.sell.dir, getSellSortValue);
+
+      sortedBuyPairs.forEach(p => {
+        const pnlClass = (p.buy.floatingPnlINR || 0) >= 0 ? 'pnl-positive' : 'pnl-negative';
+        const pnlSign = (p.buy.floatingPnlINR || 0) >= 0 ? '+' : '';
+        buyRows.push(`
+          <tr>
+            <td><strong style="color: var(--accent-green-bright); font-family: var(--font-mono); font-size: 0.84rem;">#${p.slNo}</strong></td>
+            <td>
+              <strong style="color: #fff; font-size: 0.88rem;">${formatDateTimeIST(p.buy.entryTime || p.createdAt)}</strong>
+              <div style="font-size: 0.70rem; color: var(--text-dim); font-family: var(--font-mono); margin-top: 1px;">${p.buy.positionId}</div>
+            </td>
+            <td><strong style="color: var(--accent-gold); font-size: 0.85rem;">${(p.buy.quantity || 1.0).toFixed(1)} BBL</strong></td>
+            <td>$${p.buy.entryPrice.toFixed(2)}</td>
+            <td style="color: var(--accent-green-bright); font-weight: 800;">$${p.buy.targetPrice.toFixed(2)}</td>
+            <td>${p.buy.distToTarget >= 0 ? '+' : ''}$${p.buy.distToTarget.toFixed(2)}</td>
+          </tr>
+        `);
+      });
+
+      sortedSellPairs.forEach(p => {
+        sellRows.push(`
+          <tr>
+            <td><strong style="color: var(--accent-red-bright); font-family: var(--font-mono); font-size: 0.84rem;">#${p.slNo}</strong></td>
+            <td>
+              <strong style="color: #fff; font-size: 0.88rem;">${formatDateTimeIST(p.sell.entryTime || p.createdAt)}</strong>
+              <div style="font-size: 0.70rem; color: var(--text-dim); font-family: var(--font-mono); margin-top: 1px;">${p.sell.positionId}</div>
+            </td>
+            <td><strong style="color: var(--accent-gold); font-size: 0.85rem;">${(p.sell.quantity || 1.0).toFixed(1)} BBL</strong></td>
+            <td>$${p.sell.entryPrice.toFixed(2)}</td>
+            <td style="color: var(--accent-red-bright); font-weight: 800;">$${p.sell.targetPrice.toFixed(2)}</td>
+            <td>${p.sell.distToTarget >= 0 ? '+' : ''}$${p.sell.distToTarget.toFixed(2)}</td>
+          </tr>
+        `);
+      });
+
+      document.getElementById('splitBuyBadge').innerText = `${buyRows.length} Active`;
+      document.getElementById('splitSellBadge').innerText = `${sellRows.length} Active`;
+
+      buyTbody.innerHTML = buyRows.length > 0 ? buyRows.join('') : '<tr><td colspan="6" class="empty-state">No active BUY positions</td></tr>';
+      sellTbody.innerHTML = sellRows.length > 0 ? sellRows.join('') : '<tr><td colspan="6" class="empty-state">No active SELL positions</td></tr>';
+    }
+
+    function renderExchangeTable(positions) {
+      const tbody = document.getElementById('exchangeTableBody');
+      if (!tbody) return;
+      if (!positions || positions.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="8" class="empty-state">No open positions on Mudrex exchange.</td></tr>';
+        return;
+      }
+
+      const sortedExchange = sortArray(positions, sortState.exchange.col, sortState.exchange.dir, getExchangeSortValue);
+
+      tbody.innerHTML = sortedExchange.map((pos, idx) => {
+        const side = (pos.order_type || pos.side || 'SHORT').toUpperCase();
+        const badgeClass = side === 'BUY' || side === 'LONG' ? 'badge-buy' : 'badge-sell';
+        return `
+          <tr>
+            <td><strong>${pos.symbol || 'CLUSDT'}</strong></td>
+            <td><span class="badge ${badgeClass}">${side}</span></td>
+            <td><strong>${pos.quantity || 1} Barrels</strong></td>
+            <td>$${pos.entry_price ? Number(pos.entry_price).toFixed(2) : '--'}</td>
+            <td>$${pos.current_price ? Number(pos.current_price).toFixed(2) : '--'}</td>
+            <td>₹${pos.initial_margin ? Number(pos.initial_margin).toLocaleString('en-IN', { minimumFractionDigits: 2 }) : '₹9,513.15'}</td>
+            <td style="font-size: 0.72rem; color: var(--text-muted);">${pos.id || pos.position_id || '--'}</td>
+            <td><span class="badge badge-open">REAL EXCHANGE OPEN</span></td>
+          </tr>
+        `;
+      }).join('');
+    }
+
+    let currentClosedFilter = 'ALL';
+    function setClosedFilter(filterType) {
+      currentClosedFilter = filterType;
+      document.querySelectorAll('.trade-filter-btn[id^="filter"]').forEach(btn => btn.classList.remove('active'));
+      const activeBtn = document.getElementById(
+        filterType === 'ALL' ? 'filterAll' :
+        filterType === 'HARVEST' ? 'filterHarvest' :
+        filterType === 'BUY' ? 'filterBuy' : 'filterSell'
+      );
+      if (activeBtn) activeBtn.classList.add('active');
+      if (cachedData) renderClosedTable(cachedData.closedPositions || []);
+    }
+
+    let currentClosedTimeFilter = 'ALL';
+    function setClosedTimeFilter(timeKey) {
+      currentClosedTimeFilter = timeKey;
+      document.querySelectorAll('.trade-filter-btn[id^="timeFilter"]').forEach(btn => btn.classList.remove('active'));
+      const activeBtn = document.getElementById(
+        timeKey === 'ALL' ? 'timeFilterAll' :
+        timeKey === 'TODAY' ? 'timeFilterToday' :
+        timeKey === '1H' ? 'timeFilter1h' :
+        timeKey === '4H' ? 'timeFilter4h' :
+        timeKey === '24H' ? 'timeFilter24h' :
+        timeKey === '7D' ? 'timeFilter7d' : 'timeFilterMonth'
+      );
+      if (activeBtn) activeBtn.classList.add('active');
+      if (cachedData) renderClosedTable(cachedData.closedPositions || []);
+    }
+
+    function getClosedTimestamp(cp) {
+      if (cp.closedTimestamp && typeof cp.closedTimestamp === 'number') return cp.closedTimestamp;
+      if (!cp.exitTime) return 0;
+      let clean = String(cp.exitTime);
+      const m = clean.match(/T(\d{2}):/);
+      if (m && parseInt(m[1], 10) >= 24) {
+        clean = clean.replace(/T\d{2}:/, 'T' + (parseInt(m[1], 10) % 24).toString().padStart(2, '0') + ':');
+      }
+      const ts = new Date(clean).getTime();
+      return isNaN(ts) ? 0 : ts;
+    }
+
+    function renderClosedTable(closedPositions) {
+      const tbody = document.getElementById('closedTableBody');
+      if (!tbody) return;
+      if (!closedPositions || closedPositions.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="8" class="empty-state">No closed trades recorded.</td></tr>';
+        return;
+      }
+
+      // Assign persistent chronological Serial Number (#1 to #N)
+      const allWithSlNo = closedPositions.map((cp, idx) => ({
+        ...cp,
+        slNo: cp.slNo !== undefined ? cp.slNo : (idx + 1)
+      }));
+
+      // Count harvests for badge
+      const harvestTrades = allWithSlNo.filter(cp => 
+        (cp.direction && (cp.direction.includes('BASKET') || cp.direction.includes('HARVEST'))) ||
+        (cp.positionId && (cp.positionId.includes('HARVEST') || cp.positionId.includes('Punarjanm')))
+      );
+      const harvestBadgeEl = document.getElementById('harvestFilterCount');
+      if (harvestBadgeEl) harvestBadgeEl.innerText = harvestTrades.length;
+
+      // 1. Filter rows by Direction / Side
+      let filtered = allWithSlNo;
+      if (currentClosedFilter === 'HARVEST') {
+        filtered = harvestTrades;
+      } else if (currentClosedFilter === 'BUY') {
+        filtered = allWithSlNo.filter(cp => (cp.direction === 'BUY' || (cp.positionId && cp.positionId.includes('BUY'))));
+      } else if (currentClosedFilter === 'SELL') {
+        filtered = allWithSlNo.filter(cp => (cp.direction === 'SELL' || (cp.positionId && cp.positionId.includes('SELL'))));
+      }
+
+      // 2. Filter rows by Timeframe (1h, 4h, 24h, Today, 7d, Month)
+      if (currentClosedTimeFilter !== 'ALL') {
+        const now = Date.now();
+        const todayISTStr = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Kolkata' });
+        const startOfTodayIST = new Date(todayISTStr + 'T00:00:00+05:30').getTime();
+        const startOfMonthIST = new Date(todayISTStr.slice(0, 8) + '01T00:00:00+05:30').getTime();
+
+        filtered = filtered.filter(cp => {
+          const ts = getClosedTimestamp(cp);
+          if (currentClosedTimeFilter === '1H') return ts >= now - 3600000;
+          if (currentClosedTimeFilter === '4H') return ts >= now - 4 * 3600000;
+          if (currentClosedTimeFilter === '24H') return ts >= now - 24 * 3600000;
+          if (currentClosedTimeFilter === 'TODAY') return ts >= startOfTodayIST;
+          if (currentClosedTimeFilter === '7D') return ts >= now - 7 * 86400000;
+          if (currentClosedTimeFilter === 'MONTH') return ts >= startOfMonthIST;
+          return true;
+        });
+      }
+
+      // Update Toolbar Summary Subtitle and Total Net PnL for the filtered set
+      const sumFilteredNetINR = filtered.reduce((sum, c) => sum + (c.netProfitINR !== undefined ? c.netProfitINR : ((c.netProfitUSD || 0) * 102)), 0);
+      const sumFilteredNetUSD = sumFilteredNetINR / 102;
+      const filteredSign = sumFilteredNetINR >= 0 ? '+' : '';
+      const closedNetEl = document.getElementById('closedTradesTotalNet');
+      if (closedNetEl) {
+        closedNetEl.innerText = `Net: ${filteredSign}₹${sumFilteredNetINR.toLocaleString('en-IN', { minimumFractionDigits: 2 })} (${filteredSign}$${sumFilteredNetUSD.toFixed(2)})`;
+        closedNetEl.style.color = sumFilteredNetINR >= 0 ? 'var(--accent-green-bright)' : 'var(--accent-red-bright)';
+      }
+      const closedSummarySub = document.getElementById('closedTradesSummarySub');
+      if (closedSummarySub) {
+        const winCount = filtered.filter(c => (c.netProfitINR !== undefined ? c.netProfitINR : c.netProfitUSD) >= 0).length;
+        const winRate = filtered.length > 0 ? ((winCount / filtered.length) * 100).toFixed(0) : '0';
+        closedSummarySub.innerText = `Shown: ${filtered.length} of ${allWithSlNo.length} Trades | Win Rate: ${winRate}%`;
+      }
+
+      if (filtered.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="8" class="empty-state">No trades found for selected filters.</td></tr>`;
+        return;
+      }
+
+      const sortedList = sortArray(filtered, sortState.closed.col, sortState.closed.dir, getClosedSortValue);
+
+      tbody.innerHTML = sortedList.map(cp => {
+        const netINR = cp.netProfitINR !== undefined ? cp.netProfitINR : (cp.netProfitUSD * 102);
+        const netUSD = cp.netProfitUSD !== undefined ? cp.netProfitUSD : (netINR / 102);
+        const pnlClass = netINR >= 0 ? 'pnl-positive' : 'pnl-negative';
+        const sign = netINR >= 0 ? '+' : '';
+        const isHarvest = (cp.direction && (cp.direction.includes('BASKET') || cp.direction.includes('HARVEST'))) || 
+                          (cp.positionId && (cp.positionId.includes('HARVEST') || cp.positionId.includes('Punarjanm')));
+        const side = isHarvest ? '✨ PUNARJANM' : (cp.direction || (cp.positionId && cp.positionId.includes('BUY') ? 'BUY' : 'SELL'));
+        const badgeClass = isHarvest ? 'badge-harvest' : (side === 'BUY' ? 'badge-buy' : 'badge-sell');
+
+        if (isHarvest) {
+          return `
+            <tr class="harvest-row">
+              <td><strong style="color: #f59e0b; font-family: var(--font-mono); font-size: 0.90rem;">👑 #${cp.slNo}</strong></td>
+              <td>
+                <strong style="color: #fde047; font-size: 0.96rem;">${formatExitTimeIST(cp.exitTime || cp.closedTimestamp)}</strong>
+                <span style="font-size: 0.68rem; background: rgba(245,158,11,0.25); color: #f59e0b; padding: 2px 7px; border-radius: 4px; font-weight: 800; border: 1px solid rgba(245,158,11,0.45); margin-left: 5px;">👑 PUNARJANM</span>
+              </td>
+              <td class="pnl-big" style="color: #fde047; font-size: 1.25rem; font-weight: 900; text-shadow: 0 0 14px rgba(245, 158, 11, 0.7);">${sign}₹${netINR.toFixed(2)}</td>
+              <td class="exit-price-big" style="color: #fff; font-size: 1.05rem;">$${cp.exitPrice ? Number(cp.exitPrice).toFixed(2) : '--'}</td>
+              <td style="color: #fde047; font-weight: 800; font-size: 0.92rem;">${sign}$${netUSD.toFixed(2)}</td>
+              <td><span class="badge badge-harvest">✨ HARVEST</span></td>
+              <td>$${cp.entryPrice ? Number(cp.entryPrice).toFixed(2) : '--'}</td>
+              <td><span style="font-family: var(--font-mono); font-size: 0.80rem; color: #f59e0b; font-weight: 800;">${cp.positionId || '--'}</span></td>
+            </tr>
+          `;
+        }
+
+        return `
+          <tr>
+            <td><strong style="color: var(--accent-cyan); font-family: var(--font-mono); font-size: 0.84rem;">#${cp.slNo}</strong></td>
+            <td><strong style="color: #fff; font-size: 0.92rem;">${formatExitTimeIST(cp.exitTime || cp.closedTimestamp)}</strong></td>
+            <td class="${pnlClass} pnl-big">${sign}₹${netINR.toFixed(2)}</td>
+            <td class="exit-price-big">$${cp.exitPrice ? Number(cp.exitPrice).toFixed(2) : '--'}</td>
+            <td class="${pnlClass}" style="font-weight: 700; font-size: 0.88rem;">${sign}$${netUSD.toFixed(2)}</td>
+            <td><span class="badge ${badgeClass}">${side}</span></td>
+            <td>$${cp.entryPrice ? Number(cp.entryPrice).toFixed(2) : '--'}</td>
+            <td><span style="font-family: var(--font-mono); font-size: 0.78rem; color: var(--text-dim);">${cp.positionId || '--'}</span></td>
+          </tr>
+        `;
+      }).join('');
+    }
+
+    // --- Performance Summary Controller (Hrs / Day / Month Engine) ---
+    let currentSummaryPeriod = 'today';
+    function selectSummaryPeriod(periodKey) {
+      currentSummaryPeriod = periodKey;
+      document.querySelectorAll('.summary-period-pill').forEach(btn => btn.classList.remove('active'));
+      const activeBtn = document.getElementById(`sumPill-${periodKey}`);
+      if (activeBtn) activeBtn.classList.add('active');
+      if (cachedData) {
+        renderSummaryTab(cachedData.closedSummary, cachedData.closedPositions || [], (cachedData.rate && cachedData.rate.usdInrRate) || 102);
+      }
+    }
+
+    function calculateClientSummary(trades, usdInrRate) {
+      const now = Date.now();
+      const todayISTStr = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Kolkata' });
+      const startOfTodayIST = new Date(todayISTStr + 'T00:00:00+05:30').getTime();
+      const startOfYesterdayIST = startOfTodayIST - 86400000;
+      const startOfMonthIST = new Date(todayISTStr.slice(0, 8) + '01T00:00:00+05:30').getTime();
+
+      const parseTs = (t) => getClosedTimestamp(t);
+
+      const periodGroups = {
+        '1h': trades.filter(t => parseTs(t) >= now - 3600000),
+        '2h': trades.filter(t => parseTs(t) >= now - 2 * 3600000),
+        '4h': trades.filter(t => parseTs(t) >= now - 4 * 3600000),
+        '8h': trades.filter(t => parseTs(t) >= now - 8 * 3600000),
+        '12h': trades.filter(t => parseTs(t) >= now - 12 * 3600000),
+        '24h': trades.filter(t => parseTs(t) >= now - 24 * 3600000),
+        'today': trades.filter(t => parseTs(t) >= startOfTodayIST),
+        'yesterday': trades.filter(t => { const ts = parseTs(t); return ts >= startOfYesterdayIST && ts < startOfTodayIST; }),
+        '7d': trades.filter(t => parseTs(t) >= now - 7 * 86400000),
+        'thisMonth': trades.filter(t => parseTs(t) >= startOfMonthIST),
+        '30d': trades.filter(t => parseTs(t) >= now - 30 * 86400000),
+        'all': trades
+      };
+
+      const computeMetrics = (arr) => {
+        let netINR = 0, grossINR = 0, chargesINR = 0;
+        let winCount = 0, lossCount = 0, totalBarrels = 0, harvestCount = 0, buyCount = 0, sellCount = 0;
+        let bestTradeINR = arr.length > 0 ? -Infinity : 0;
+        let worstTradeINR = arr.length > 0 ? Infinity : 0;
+
+        for (const t of arr) {
+          const rate = t.usdInrRate || usdInrRate || 102.0;
+          const tNetINR = t.netProfitINR !== undefined ? t.netProfitINR : ((t.netProfitUSD || 0) * rate);
+          const tGrossINR = t.grossProfitINR !== undefined ? t.grossProfitINR : ((t.grossProfitUSD || 0) * rate);
+          const tChargesINR = t.totalChargesINR !== undefined ? t.totalChargesINR : ((t.totalChargesUSD || 0) * rate);
+          const qty = Number(t.quantity || 1.0);
+
+          netINR += tNetINR;
+          grossINR += tGrossINR;
+          chargesINR += tChargesINR;
+          totalBarrels += qty;
+
+          if (tNetINR >= 0) winCount++;
+          else lossCount++;
+
+          if (tNetINR > bestTradeINR) bestTradeINR = tNetINR;
+          if (tNetINR < worstTradeINR) worstTradeINR = tNetINR;
+
+          const isHarvest = (t.direction && (t.direction.includes('BASKET') || t.direction.includes('HARVEST'))) ||
+                            (t.positionId && (t.positionId.includes('HARVEST') || t.positionId.includes('Punarjanm')));
+          if (isHarvest) harvestCount++;
+          else if (t.direction === 'BUY' || (t.positionId && t.positionId.includes('BUY'))) buyCount++;
+          else sellCount++;
+        }
+
+        const tradesCount = arr.length;
+        const netUSD = Number((netINR / usdInrRate).toFixed(2));
+        const grossUSD = Number((grossINR / usdInrRate).toFixed(2));
+        const chargesUSD = Number((chargesINR / usdInrRate).toFixed(2));
+        const winRate = tradesCount > 0 ? Number(((winCount / tradesCount) * 100).toFixed(1)) : 0;
+        const avgProfitINR = tradesCount > 0 ? Number((netINR / tradesCount).toFixed(2)) : 0;
+        const avgProfitUSD = Number((avgProfitINR / usdInrRate).toFixed(2));
+
+        return {
+          tradesCount,
+          winCount,
+          lossCount,
+          winRate,
+          netProfitINR: Number(netINR.toFixed(2)),
+          netProfitUSD: netUSD,
+          grossProfitINR: Number(grossINR.toFixed(2)),
+          grossProfitUSD: grossUSD,
+          totalChargesINR: Number(chargesINR.toFixed(2)),
+          totalChargesUSD: chargesUSD,
+          totalBarrels: Number(totalBarrels.toFixed(1)),
+          harvestCount,
+          buyCount,
+          sellCount,
+          avgProfitINR,
+          avgProfitUSD,
+          bestTradeINR: bestTradeINR === -Infinity ? 0 : Number(bestTradeINR.toFixed(2)),
+          worstTradeINR: worstTradeINR === Infinity ? 0 : Number(worstTradeINR.toFixed(2))
+        };
+      };
+
+      const periods = {};
+      for (const [k, arr] of Object.entries(periodGroups)) {
+        periods[k] = computeMetrics(arr);
+      }
+
+      const dayGroups = {};
+      for (const t of trades) {
+        const ts = parseTs(t);
+        if (!ts) continue;
+        const dateKey = new Date(ts).toLocaleDateString('en-CA', { timeZone: 'Asia/Kolkata' });
+        if (!dayGroups[dateKey]) dayGroups[dateKey] = [];
+        dayGroups[dateKey].push(t);
+      }
+
+      const dailyBreakdown = Object.keys(dayGroups).sort().reverse().slice(0, 14).map(dateKey => ({
+        date: dateKey,
+        ...computeMetrics(dayGroups[dateKey])
+      }));
+
+      return {
+        periods,
+        dailyBreakdown,
+        today: periods.today,
+        all: periods.all
+      };
+    }
+
+    function renderSummaryTab(summaryData, closedPositions, usdInr) {
+      if (!summaryData || !summaryData.periods) {
+        summaryData = calculateClientSummary(closedPositions || [], usdInr);
+      }
+      const periods = summaryData.periods || {};
+      const todayMetrics = periods.today || { netProfitINR: 0, netProfitUSD: 0 };
+
+      // Update Tab Badge
+      const badgeToday = document.getElementById('badgeSummaryToday');
+      if (badgeToday) {
+        const sign = todayMetrics.netProfitINR >= 0 ? '+' : '';
+        badgeToday.innerText = `Today: ${sign}₹${(todayMetrics.netProfitINR || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}`;
+        badgeToday.style.color = todayMetrics.netProfitINR >= 0 ? 'var(--accent-green-bright)' : 'var(--accent-red-bright)';
+      }
+
+      // Period Display Name
+      const periodNames = {
+        '1h': 'Last 1 Hour',
+        '2h': 'Last 2 Hours',
+        '4h': 'Last 4 Hours',
+        '8h': 'Last 8 Hours',
+        '12h': 'Last 12 Hours',
+        '24h': 'Last 24 Hours',
+        'today': 'Today (IST)',
+        'yesterday': 'Yesterday',
+        '7d': 'Last 7 Days',
+        'thisMonth': 'This Month',
+        'all': 'All-Time Total',
+        'custom': 'Custom Range'
+      };
+
+      const curMetrics = periods[currentSummaryPeriod] || {
+        tradesCount: 0,
+        winCount: 0,
+        lossCount: 0,
+        winRate: 0,
+        netProfitINR: 0,
+        netProfitUSD: 0,
+        grossProfitINR: 0,
+        grossProfitUSD: 0,
+        totalChargesINR: 0,
+        totalChargesUSD: 0,
+        totalBarrels: 0,
+        harvestCount: 0,
+        buyCount: 0,
+        sellCount: 0,
+        avgProfitINR: 0,
+        avgProfitUSD: 0,
+        bestTradeINR: 0,
+        worstTradeINR: 0
+      };
+
+      const pLabel = document.getElementById('sumCardPeriodLabel');
+      if (pLabel) pLabel.innerText = periodNames[currentSummaryPeriod] || currentSummaryPeriod;
+
+      const pnlSign = curMetrics.netProfitINR >= 0 ? '+' : '';
+      const pnlClass = curMetrics.netProfitINR >= 0 ? 'pnl-positive' : 'pnl-negative';
+
+      // Update Calculator Tab Header Badge
+      const badgeCalcNet = document.getElementById('badgeCalcNet');
+      if (badgeCalcNet) {
+        const activeNet = curMetrics.netProfitINR || 0;
+        const sign = activeNet >= 0 ? '+' : '';
+        badgeCalcNet.innerText = `${periodNames[currentSummaryPeriod] || 'Range'}: ${sign}₹${activeNet.toLocaleString('en-IN', { minimumFractionDigits: 2 })}`;
+        badgeCalcNet.style.color = activeNet >= 0 ? 'var(--accent-green-bright)' : 'var(--accent-red-bright)';
+      }
+
+      const elNetINR = document.getElementById('sumCardNetINR');
+      if (elNetINR) {
+        elNetINR.innerText = `${pnlSign}₹${(curMetrics.netProfitINR || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}`;
+        elNetINR.className = `card-big-val ${pnlClass}`;
+        elNetINR.style.color = curMetrics.netProfitINR >= 0 ? 'var(--accent-green-bright)' : 'var(--accent-red-bright)';
+      }
+
+      const elNetUSD = document.getElementById('sumCardNetUSD');
+      if (elNetUSD) elNetUSD.innerText = `${pnlSign}$${(curMetrics.netProfitUSD || 0).toFixed(2)} Net Profit`;
+
+      const elWinRate = document.getElementById('sumCardWinRate');
+      if (elWinRate) elWinRate.innerText = `${(curMetrics.winRate || 0).toFixed(1)}%`;
+
+      const elRecord = document.getElementById('sumCardRecord');
+      if (elRecord) elRecord.innerText = `${curMetrics.winCount || 0} Wins / ${curMetrics.lossCount || 0} Losses`;
+
+      const elTrades = document.getElementById('sumCardTotalTrades');
+      if (elTrades) elTrades.innerText = `${curMetrics.tradesCount || 0} Total Closed Trades`;
+
+      const elBarrels = document.getElementById('sumCardBarrels');
+      if (elBarrels) elBarrels.innerText = `${(curMetrics.totalBarrels || 0).toFixed(1)} BBL`;
+
+      const elLegs = document.getElementById('sumCardLegs');
+      if (elLegs) elLegs.innerText = `${curMetrics.buyCount || 0} BUY Legs · ${curMetrics.sellCount || 0} SELL Legs`;
+
+      const elGross = document.getElementById('sumCardGross');
+      if (elGross) elGross.innerText = `Gross: ₹${(curMetrics.grossProfitINR || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}`;
+
+      const elCharges = document.getElementById('sumCardCharges');
+      if (elCharges) elCharges.innerText = `Fees + GST: ₹${(curMetrics.totalChargesINR || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}`;
+
+      const elChargesUSD = document.getElementById('sumCardChargesUSD');
+      if (elChargesUSD) elChargesUSD.innerText = `$${(curMetrics.totalChargesUSD || 0).toFixed(2)} Mudrex Charges`;
+
+      const elHarvests = document.getElementById('sumCardHarvests');
+      if (elHarvests) elHarvests.innerText = `${curMetrics.harvestCount || 0} Cycle${curMetrics.harvestCount === 1 ? '' : 's'}`;
+
+      const elAvg = document.getElementById('sumCardAvg');
+      if (elAvg) elAvg.innerText = `Avg: ${curMetrics.avgProfitINR >= 0 ? '+' : ''}₹${(curMetrics.avgProfitINR || 0).toFixed(2)}`;
+
+      const elBest = document.getElementById('sumCardBest');
+      if (elBest) elBest.innerText = `Best: +₹${(curMetrics.bestTradeINR || 0).toFixed(2)}`;
+
+      const elWorst = document.getElementById('sumCardWorst');
+      if (elWorst) elWorst.innerText = `Worst: ${curMetrics.worstTradeINR >= 0 ? '+' : ''}₹${(curMetrics.worstTradeINR || 0).toFixed(2)}`;
+
+      // Render Multi-Period Matrix Table
+      const matrixTbody = document.getElementById('periodMatrixTableBody');
+      if (matrixTbody) {
+        const matrixPeriods = [
+          { key: '1h', icon: '⚡', name: 'Last 1 Hour' },
+          { key: '2h', icon: '⏱️', name: 'Last 2 Hours' },
+          { key: '4h', icon: '⏱️', name: 'Last 4 Hours' },
+          { key: '8h', icon: '⏱️', name: 'Last 8 Hours' },
+          { key: '12h', icon: '🕛', name: 'Last 12 Hours' },
+          { key: '24h', icon: '⚡', name: 'Last 24 Hours' },
+          { key: 'today', icon: '📅', name: 'Today (IST)' },
+          { key: 'yesterday', icon: '⏪', name: 'Yesterday' },
+          { key: '7d', icon: '🗓️', name: 'Last 7 Days (Week)' },
+          { key: 'thisMonth', icon: '📆', name: 'This Month' },
+          { key: 'all', icon: '🌐', name: 'All-Time Total' }
+        ];
+
+        matrixTbody.innerHTML = matrixPeriods.map(p => {
+          const m = periods[p.key] || {
+            netProfitINR: 0, netProfitUSD: 0, tradesCount: 0, winRate: 0, winCount: 0, lossCount: 0,
+            grossProfitINR: 0, totalChargesINR: 0, totalBarrels: 0, harvestCount: 0, avgProfitINR: 0
+          };
+          const sign = m.netProfitINR >= 0 ? '+' : '';
+          const color = m.netProfitINR >= 0 ? 'var(--accent-green-bright)' : 'var(--accent-red-bright)';
+          const isSelected = p.key === currentSummaryPeriod;
+          const isToday = p.key === 'today';
+          const rowClass = isSelected ? 'matrix-row-selected' : (isToday ? 'matrix-row-today' : '');
+
+          return `
+            <tr class="${rowClass}" style="cursor: pointer;" onclick="selectSummaryPeriod('${p.key}')" title="Click to view ${p.name} metrics above">
+              <td>
+                <strong style="color: #fff; display: flex; align-items: center; gap: 6px;">
+                  <span>${p.icon}</span>
+                  <span>${p.name}</span>
+                  ${isSelected ? '<span style="font-size: 0.65rem; background: var(--accent-cyan); color: #000; padding: 1px 6px; border-radius: 4px; font-weight: 900;">ACTIVE</span>' : ''}
+                </strong>
+              </td>
+              <td><strong style="color: ${color}; font-size: 1.05rem; font-family: var(--font-mono);">${sign}₹${(m.netProfitINR || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</strong></td>
+              <td><span style="color: ${color}; font-weight: 700; font-family: var(--font-mono);">${sign}$${(m.netProfitUSD || 0).toFixed(2)}</span></td>
+              <td><strong style="color: #fff;">${m.tradesCount}</strong></td>
+              <td><span style="font-weight: 800; color: ${m.winRate >= 80 ? 'var(--accent-green-bright)' : (m.winRate >= 50 ? 'var(--accent-gold)' : 'var(--accent-red-bright)')};">${m.winRate.toFixed(1)}%</span></td>
+              <td><span style="font-size: 0.76rem; color: var(--text-dim);">${m.winCount}W / ${m.lossCount}L</span></td>
+              <td>₹${(m.grossProfitINR || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</td>
+              <td style="color: var(--accent-red-bright);">₹${(m.totalChargesINR || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</td>
+              <td><strong style="color: var(--accent-gold);">${(m.totalBarrels || 0).toFixed(1)} BBL</strong></td>
+              <td>${m.harvestCount > 0 ? `<span style="color: #fde047; font-weight: 800;">👑 ${m.harvestCount}</span>` : '<span style="color: var(--text-dim);">0</span>'}</td>
+              <td><span style="color: ${color}; font-weight: 700;">${m.avgProfitINR >= 0 ? '+' : ''}₹${(m.avgProfitINR || 0).toFixed(2)}</span></td>
+            </tr>
+          `;
+        }).join('');
+      }
+
+      // Render Daily Breakdown Table
+      const dailyTbody = document.getElementById('dailyBreakdownTableBody');
+      if (dailyTbody) {
+        const days = summaryData.dailyBreakdown || [];
+        if (days.length === 0) {
+          dailyTbody.innerHTML = '<tr><td colspan="10" class="empty-state">No historical daily trades recorded.</td></tr>';
+        } else {
+          const todayKey = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Kolkata' });
+          const yesterdayKey = new Date(Date.now() - 86400000).toLocaleDateString('en-CA', { timeZone: 'Asia/Kolkata' });
+
+          dailyTbody.innerHTML = days.map(d => {
+            const sign = d.netProfitINR >= 0 ? '+' : '';
+            const color = d.netProfitINR >= 0 ? 'var(--accent-green-bright)' : 'var(--accent-red-bright)';
+            const isToday = d.date === todayKey;
+            const isYesterday = d.date === yesterdayKey;
+            const dateLabel = isToday ? `${d.date} (Today)` : (isYesterday ? `${d.date} (Yesterday)` : d.date);
+
+            return `
+              <tr class="${isToday ? 'matrix-row-today' : ''}">
+                <td>
+                  <strong style="color: ${isToday ? 'var(--accent-green-bright)' : '#fff'};">${dateLabel}</strong>
+                </td>
+                <td><strong style="color: #fff;">${d.tradesCount}</strong></td>
+                <td><span style="font-weight: 800; color: ${d.winRate >= 80 ? 'var(--accent-green-bright)' : 'var(--accent-gold)'};">${d.winRate.toFixed(1)}%</span></td>
+                <td><span style="font-size: 0.76rem; color: var(--text-dim);">${d.winCount}W / ${d.lossCount}L</span></td>
+                <td><strong style="color: ${color}; font-size: 1.05rem; font-family: var(--font-mono);">${sign}₹${(d.netProfitINR || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</strong></td>
+                <td><span style="color: ${color}; font-weight: 700; font-family: var(--font-mono);">${sign}$${(d.netProfitUSD || 0).toFixed(2)}</span></td>
+                <td>₹${(d.grossProfitINR || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</td>
+                <td style="color: var(--accent-red-bright);">₹${(d.totalChargesINR || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</td>
+                <td><strong style="color: var(--accent-gold);">${(d.totalBarrels || 0).toFixed(1)} BBL</strong></td>
+                <td>${d.harvestCount > 0 ? `<span style="color: #fde047; font-weight: 800;">👑 ${d.harvestCount}</span>` : '<span style="color: var(--text-dim);">0</span>'}</td>
+              </tr>
+            `;
+          }).join('');
+        }
+      }
+    }
+
+    // --- MUDREX HARVEST (PUNARJANM) CONTROLLER ---
+    function renderHarvestTab(closedPositions, punarjanm, usdInr) {
+      usdInr = usdInr || 102.0;
+      const allTrades = closedPositions || [];
+      const harvestList = allTrades.filter(cp => 
+        (cp.direction && (cp.direction.includes('BASKET') || cp.direction.includes('HARVEST'))) ||
+        (cp.positionId && (cp.positionId.includes('HARVEST') || cp.positionId.includes('Punarjanm')))
+      );
+
+      let totalHarvestNetINR = 0;
+      let totalBarrels = 0;
+      for (const h of harvestList) {
+        const net = h.netProfitINR !== undefined ? h.netProfitINR : ((h.netProfitUSD || 0) * usdInr);
+        totalHarvestNetINR += net;
+        totalBarrels += Number(h.quantity || 2.0);
+      }
+      const totalHarvestNetUSD = totalHarvestNetINR / usdInr;
+      const cycleCount = harvestList.length;
+
+      // Update KPI Cards
+      const kpiNetINR = document.getElementById('harvestKpiNetINR');
+      if (kpiNetINR) {
+        const sign = totalHarvestNetINR >= 0 ? '+' : '';
+        kpiNetINR.innerText = `${sign}₹${totalHarvestNetINR.toLocaleString('en-IN', { minimumFractionDigits: 2 })}`;
+      }
+
+      const kpiNetUSD = document.getElementById('harvestKpiNetUSD');
+      if (kpiNetUSD) {
+        const sign = totalHarvestNetUSD >= 0 ? '+' : '';
+        kpiNetUSD.innerText = `${sign}$${totalHarvestNetUSD.toFixed(2)} Net`;
+      }
+
+      const kpiCycles = document.getElementById('harvestKpiCycles');
+      if (kpiCycles) {
+        kpiCycles.innerText = `${cycleCount} Cycle${cycleCount === 1 ? '' : 's'}`;
+      }
+
+      const kpiLast = document.getElementById('harvestKpiLastCycle');
+      if (kpiLast) {
+        if (harvestList.length > 0) {
+          const last = harvestList[harvestList.length - 1];
+          kpiLast.innerText = `Last: ${last.positionId || last.pairId || 'Cycle'}`;
+        } else {
+          kpiLast.innerText = 'Last: None';
+        }
+      }
+
+      const kpiBarrels = document.getElementById('harvestKpiBarrels');
+      if (kpiBarrels) {
+        kpiBarrels.innerText = `${totalBarrels.toFixed(1)} BBL`;
+      }
+
+      const kpiTarget = document.getElementById('harvestKpiTarget');
+      if (kpiTarget) {
+        const targetVal = (punarjanm && punarjanm.basketTargetINR) || 250;
+        kpiTarget.innerText = `₹${targetVal}`;
+      }
+
+      const kpiCurr = document.getElementById('harvestKpiCurrentMudrex');
+      if (kpiCurr) {
+        const currPnl = (punarjanm && punarjanm.mudrexFloatingNetINR) || 0;
+        const sign = currPnl >= 0 ? '+' : '';
+        kpiCurr.innerText = `Current: ${sign}₹${currPnl.toFixed(2)}`;
+        kpiCurr.style.color = currPnl >= 0 ? 'var(--accent-green-bright)' : 'var(--accent-red-bright)';
+      }
+
+      // Update Tab Navigation Badge
+      const badgeHarvest = document.getElementById('badgeHarvestCount');
+      if (badgeHarvest) {
+        badgeHarvest.innerText = `${cycleCount} Cycle${cycleCount === 1 ? '' : 's'} (+₹${totalHarvestNetINR.toFixed(0)})`;
+      }
+
+      // Render Harvest Table Rows
+      const tbody = document.getElementById('mudrexHarvestTableBody');
+      if (tbody) {
+        if (harvestList.length === 0) {
+          tbody.innerHTML = '<tr><td colspan="9" class="empty-state">No Punarjanm basket settlements executed yet.</td></tr>';
+          return;
+        }
+
+        // Sort descending by exit time
+        const sortedHarvest = harvestList.slice().reverse();
+        tbody.innerHTML = sortedHarvest.map((h, idx) => {
+          const netINR = h.netProfitINR !== undefined ? h.netProfitINR : ((h.netProfitUSD || 0) * usdInr);
+          const netUSD = h.netProfitUSD !== undefined ? h.netProfitUSD : (netINR / usdInr);
+          const grossINR = h.grossProfitINR !== undefined ? h.grossProfitINR : netINR;
+          const chargesINR = h.totalChargesINR !== undefined ? h.totalChargesINR : 0;
+          const qty = Number(h.quantity || 2.0);
+          const exitTimeStr = formatExitTimeIST(h.exitTime || h.closedTimestamp || Date.now());
+          const reason = h.exitReason || 'Punarjanm Basket Profit Harvest';
+
+          return `
+            <tr style="background: rgba(245, 158, 11, 0.04);">
+              <td>
+                <strong style="color: #f59e0b; font-family: var(--font-mono); font-size: 0.92rem; display: flex; align-items: center; gap: 6px;">
+                  <span>👑</span>
+                  <span>${h.positionId || h.pairId || `Punarjanm-${idx + 1}`}</span>
+                </strong>
+              </td>
+              <td><strong style="color: #fff; font-size: 0.90rem;">${exitTimeStr}</strong></td>
+              <td><strong style="color: var(--accent-gold); font-size: 0.88rem;">${qty.toFixed(1)} BBL</strong></td>
+              <td style="color: #fff; font-size: 0.95rem; font-weight: 700;">$${h.exitPrice ? Number(h.exitPrice).toFixed(2) : '--'}</td>
+              <td style="color: #34d399; font-weight: 700;">+₹${grossINR.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</td>
+              <td style="color: var(--text-dim);">₹${chargesINR.toFixed(2)}</td>
+              <td>
+                <strong style="color: #fde047; font-size: 1.15rem; font-weight: 900; text-shadow: 0 0 10px rgba(245, 158, 11, 0.5);">
+                  +₹${netINR.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                </strong>
+                <div style="font-size: 0.72rem; color: #fde047;">(+ $${netUSD.toFixed(2)})</div>
+              </td>
+              <td style="font-size: 0.78rem; color: #cbd5e1;">${reason}</td>
+              <td>
+                <span class="badge" style="background: rgba(16, 185, 129, 0.2); color: #34d399; border: 1px solid #10b981; font-size: 0.70rem; font-weight: 800;">
+                  ✓ CREDITED TO WALLET
+                </span>
+              </td>
+            </tr>
+          `;
+        }).join('');
+      }
+    }
+
+    // --- CUSTOM TIME RANGE CALCULATOR CONTROLLER ---
+    function runCustomTimeCalc() {
+      const fromVal = document.getElementById('calcFromTime').value;
+      const toVal = document.getElementById('calcToTime').value;
+      if (!fromVal || !toVal) {
+        alert('Please select both FROM and TO dates/times.');
+        return;
+      }
+      const fromTs = new Date(fromVal).getTime();
+      const toTs = new Date(toVal).getTime();
+      if (isNaN(fromTs) || isNaN(toTs) || fromTs >= toTs) {
+        alert('Please enter a valid FROM date/time that is before TO date/time.');
+        return;
+      }
+
+      currentSummaryPeriod = 'custom';
+      document.querySelectorAll('.summary-period-pill').forEach(btn => btn.classList.remove('active'));
+
+      const fromFmt = new Date(fromTs).toLocaleString('en-IN', { timeZone: 'Asia/Kolkata', dateStyle: 'short', timeStyle: 'short' });
+      const toFmt = new Date(toTs).toLocaleString('en-IN', { timeZone: 'Asia/Kolkata', dateStyle: 'short', timeStyle: 'short' });
+      const txt = document.getElementById('calcActiveWindowText');
+      if (txt) {
+        txt.innerText = `Active Custom Window: ${fromFmt} to ${toFmt} IST`;
+      }
+
+      if (cachedData) {
+        const closedList = cachedData.closedPositions || [];
+        const usdInr = (cachedData.rate && cachedData.rate.usdInrRate) || 102;
+        const filtered = closedList.filter(t => {
+          const ts = getClosedTimestamp(t);
+          return ts >= fromTs && ts <= toTs;
+        });
+
+        const summaryObj = calculateClientSummary(closedList, usdInr);
+        const customMetrics = calculateClientSummary(filtered, usdInr).all;
+        summaryObj.periods['custom'] = customMetrics;
+        renderSummaryTab(summaryObj, closedList, usdInr);
+      }
+    }
+
+    // Initialize polling loop (every 1 second)
+    fetchTerminalData();
+    setInterval(fetchTerminalData, 1000);
+  </script>
+</body>
+</html>

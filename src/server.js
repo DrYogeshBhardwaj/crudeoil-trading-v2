@@ -64,6 +64,7 @@ app.get(['/paper-calc', '/paper_calc', '/paper_calc.html', '/paper-calc.html'], 
 app.get(['/mudrex-live', '/mudrex_live', '/mudrex_live.html', '/mudrex-live.html'], (req, res) => res.sendFile(path.join(__dirname, '../public/mudrex_live.html')));
 app.get(['/mudrex-crude-live', '/mudrex_crude_live', '/mudrex_crude_live.html', '/mudrex-crude-live.html'], (req, res) => res.sendFile(path.join(__dirname, '../public/mudrex_crude_live.html')));
 app.get(['/crude-live-mudrex', '/crude_live_mudrex', '/Crude-Live-Mudrex', '/crude-live-mudrex.html', '/crude_live_mudrex.html'], (req, res) => res.sendFile(path.join(__dirname, '../public/crude_live_mudrex.html')));
+app.get(['/crude-live-mudrex-pro', '/crude_live_mudrex_pro', '/Crude-Live-Mudrex-Pro', '/crude-live-mudrex-pro.html', '/crude_live_mudrex_pro.html'], (req, res) => res.sendFile(path.join(__dirname, '../public/crude_live_mudrex_pro.html')));
 app.get(['/mudrex-crude-calc', '/mudrex_crude_calc', '/mudrex_crude_calc.html', '/mudrex-crude-calc.html'], (req, res) => res.sendFile(path.join(__dirname, '../public/mudrex_crude_calc.html')));
 app.get(['/pair-add', '/pair_add', '/pair_add.html', '/pair-add.html'], (req, res) => res.sendFile(path.join(__dirname, '../public/pair_add.html')));
 
@@ -433,6 +434,144 @@ app.get('/api/mudrex/order-diagnostic', async (req, res) => {
   }
 });
 
+// --- Authoritative Closed Trades Summary Engine (Hrs, Day, Month & Period Analytics) ---
+function parseExitTimestamp(t) {
+  if (t.closedTimestamp && typeof t.closedTimestamp === 'number') return t.closedTimestamp;
+  if (!t.exitTime) return 0;
+  let clean = String(t.exitTime);
+  const m = clean.match(/T(\d{2}):/);
+  if (m && parseInt(m[1], 10) >= 24) {
+    clean = clean.replace(/T\d{2}:/, 'T' + (parseInt(m[1], 10) % 24).toString().padStart(2, '0') + ':');
+  }
+  const ts = new Date(clean).getTime();
+  return isNaN(ts) ? 0 : ts;
+}
+
+function calculateBucketMetrics(trades, usdInrRate) {
+  let netINR = 0, grossINR = 0, chargesINR = 0;
+  let winCount = 0, lossCount = 0, totalBarrels = 0, harvestCount = 0, buyCount = 0, sellCount = 0;
+  let bestTradeINR = trades.length > 0 ? -Infinity : 0;
+  let worstTradeINR = trades.length > 0 ? Infinity : 0;
+
+  for (const t of trades) {
+    const rate = t.usdInrRate || usdInrRate || 102.0;
+    const tNetINR = t.netProfitINR !== undefined ? t.netProfitINR : ((t.netProfitUSD || 0) * rate);
+    const tGrossINR = t.grossProfitINR !== undefined ? t.grossProfitINR : ((t.grossProfitUSD || 0) * rate);
+    const tChargesINR = t.totalChargesINR !== undefined ? t.totalChargesINR : ((t.totalChargesUSD || 0) * rate);
+    const qty = Number(t.quantity || 1.0);
+
+    netINR += tNetINR;
+    grossINR += tGrossINR;
+    chargesINR += tChargesINR;
+    totalBarrels += qty;
+
+    if (tNetINR >= 0) winCount++;
+    else lossCount++;
+
+    if (tNetINR > bestTradeINR) bestTradeINR = tNetINR;
+    if (tNetINR < worstTradeINR) worstTradeINR = tNetINR;
+
+    const isHarvest = (t.direction && (t.direction.includes('BASKET') || t.direction.includes('HARVEST'))) ||
+                      (t.positionId && (t.positionId.includes('HARVEST') || t.positionId.includes('Punarjanm')));
+    if (isHarvest) harvestCount++;
+    else if (t.direction === 'BUY' || (t.positionId && t.positionId.includes('BUY'))) buyCount++;
+    else sellCount++;
+  }
+
+  const tradesCount = trades.length;
+  const netUSD = Number((netINR / usdInrRate).toFixed(2));
+  const grossUSD = Number((grossINR / usdInrRate).toFixed(2));
+  const chargesUSD = Number((chargesINR / usdInrRate).toFixed(2));
+  const winRate = tradesCount > 0 ? Number(((winCount / tradesCount) * 100).toFixed(1)) : 0;
+  const avgProfitINR = tradesCount > 0 ? Number((netINR / tradesCount).toFixed(2)) : 0;
+  const avgProfitUSD = Number((avgProfitINR / usdInrRate).toFixed(2));
+
+  return {
+    tradesCount,
+    winCount,
+    lossCount,
+    winRate,
+    netProfitINR: Number(netINR.toFixed(2)),
+    netProfitUSD: netUSD,
+    grossProfitINR: Number(grossINR.toFixed(2)),
+    grossProfitUSD: grossUSD,
+    totalChargesINR: Number(chargesINR.toFixed(2)),
+    totalChargesUSD: chargesUSD,
+    totalBarrels: Number(totalBarrels.toFixed(1)),
+    harvestCount,
+    buyCount,
+    sellCount,
+    avgProfitINR,
+    avgProfitUSD,
+    bestTradeINR: bestTradeINR === -Infinity ? 0 : Number(bestTradeINR.toFixed(2)),
+    worstTradeINR: worstTradeINR === Infinity ? 0 : Number(worstTradeINR.toFixed(2))
+  };
+}
+
+function computeClosedTradesSummary(trades, usdInrRate) {
+  const now = Date.now();
+  // Compute start of Today in IST (ISO format: YYYY-MM-DDT00:00:00+05:30)
+  const todayISTStr = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Kolkata' });
+  const startOfTodayIST = new Date(todayISTStr + 'T00:00:00+05:30').getTime();
+  const startOfYesterdayIST = startOfTodayIST - 86400000;
+  const startOfMonthIST = new Date(todayISTStr.slice(0, 8) + '01T00:00:00+05:30').getTime();
+
+  const periods = {
+    '1h': trades.filter(t => parseExitTimestamp(t) >= now - 3600000),
+    '2h': trades.filter(t => parseExitTimestamp(t) >= now - 2 * 3600000),
+    '4h': trades.filter(t => parseExitTimestamp(t) >= now - 4 * 3600000),
+    '8h': trades.filter(t => parseExitTimestamp(t) >= now - 8 * 3600000),
+    '12h': trades.filter(t => parseExitTimestamp(t) >= now - 12 * 3600000),
+    '24h': trades.filter(t => parseExitTimestamp(t) >= now - 24 * 3600000),
+    'today': trades.filter(t => parseExitTimestamp(t) >= startOfTodayIST),
+    'yesterday': trades.filter(t => { const ts = parseExitTimestamp(t); return ts >= startOfYesterdayIST && ts < startOfTodayIST; }),
+    '7d': trades.filter(t => parseExitTimestamp(t) >= now - 7 * 86400000),
+    'thisMonth': trades.filter(t => parseExitTimestamp(t) >= startOfMonthIST),
+    '30d': trades.filter(t => parseExitTimestamp(t) >= now - 30 * 86400000),
+    'all': trades
+  };
+
+  const periodSummaries = {};
+  for (const [k, arr] of Object.entries(periods)) {
+    periodSummaries[k] = calculateBucketMetrics(arr, usdInrRate);
+  }
+
+  // Daily breakdown (group by IST date for the last 14 days)
+  const dayGroups = {};
+  for (const t of trades) {
+    const ts = parseExitTimestamp(t);
+    if (!ts) continue;
+    const dateKey = new Date(ts).toLocaleDateString('en-CA', { timeZone: 'Asia/Kolkata' }); // YYYY-MM-DD
+    if (!dayGroups[dateKey]) dayGroups[dateKey] = [];
+    dayGroups[dateKey].push(t);
+  }
+
+  const dailyBreakdown = Object.keys(dayGroups).sort().reverse().slice(0, 14).map(dateKey => {
+    const metrics = calculateBucketMetrics(dayGroups[dateKey], usdInrRate);
+    return {
+      date: dateKey,
+      ...metrics
+    };
+  });
+
+  return {
+    periods: periodSummaries,
+    dailyBreakdown,
+    all: periodSummaries.all,
+    today: periodSummaries.today,
+    yesterday: periodSummaries.yesterday,
+    last1h: periodSummaries['1h'],
+    last2h: periodSummaries['2h'],
+    last4h: periodSummaries['4h'],
+    last8h: periodSummaries['8h'],
+    last12h: periodSummaries['12h'],
+    last24h: periodSummaries['24h'],
+    last7d: periodSummaries['7d'],
+    thisMonth: periodSummaries.thisMonth,
+    last30d: periodSummaries['30d']
+  };
+}
+
 // Dedicated Clean Endpoint for Crude-Live-Mudrex Pro Desk
 app.get('/api/crude-live-mudrex/data', async (req, res) => {
   try {
@@ -573,18 +712,14 @@ app.get('/api/crude-live-mudrex/data', async (req, res) => {
     });
 
     // 4. Closed Positions History & Realized P/L (Preserving all historical trades)
-    let closedTrades = (paperEngine.closedPositions || []).slice(-500);
-    let totalRealizedINR = 2330.04;
-    let totalRealizedUSD = 24.29;
-    let winCount = 35, lossCount = 2;
+    const allClosedPositions = paperEngine.closedPositions || [];
+    let closedTrades = allClosedPositions.slice(-500);
+    const closedSummary = computeClosedTradesSummary(allClosedPositions, usdInrRate);
 
-    if (closedTrades.length > 0) {
-      const sumNet = closedTrades.reduce((sum, c) => sum + (c.netProfitINR || (c.netProfitUSD * usdInrRate) || 0), 0);
-      totalRealizedINR = Number(sumNet.toFixed(2));
-      totalRealizedUSD = Number((totalRealizedINR / usdInrRate).toFixed(2));
-      winCount = closedTrades.filter(c => (c.netProfitINR || c.netProfitUSD || 0) >= 0).length;
-      lossCount = closedTrades.length - winCount;
-    }
+    const totalRealizedINR = closedSummary.all.netProfitINR;
+    const totalRealizedUSD = closedSummary.all.netProfitUSD;
+    const winCount = closedSummary.all.winCount;
+    const lossCount = closedSummary.all.lossCount;
 
     const totalFloatingINR = openPairs.reduce((sum, p) => sum + p.netPairPnlINR, 0);
     const totalFloatingUSD = Number((totalFloatingINR / usdInrRate).toFixed(2));
@@ -643,9 +778,10 @@ app.get('/api/crude-live-mudrex/data', async (req, res) => {
         totalFloatingUSD,
         winCount,
         lossCount,
-        closedTradesCount: closedTrades.length
+        closedTradesCount: closedSummary.all.tradesCount
       },
       closedPositions: closedTrades,
+      closedSummary,
       sessionScheduler: paperEngine.getSessionSchedulerStatus ? paperEngine.getSessionSchedulerStatus() : null
     });
   } catch (err) {

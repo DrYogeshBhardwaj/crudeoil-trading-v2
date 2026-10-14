@@ -67,6 +67,7 @@ async function runTestSuite() {
       paperEngine.settings.dailyLossCircuitBreakerINR = 2000;
       paperEngine.settings.startingCapitalINR = 200000;
       paperEngine.settings.instrument = 'CLUSDT';
+      if (paperEngine.settings.sessionScheduler) paperEngine.settings.sessionScheduler.enabled = false;
       
       await tc.fn();
       console.log(`[PASS] ${tc.name}`);

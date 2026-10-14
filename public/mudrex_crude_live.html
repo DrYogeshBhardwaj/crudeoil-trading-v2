@@ -845,6 +845,110 @@
       display: block;
     }
 
+    /* Summary Period Selector Pills */
+    .summary-period-pill {
+      font-family: var(--font-main);
+      font-weight: 700;
+      font-size: 0.76rem;
+      padding: 5px 12px;
+      border-radius: 8px;
+      background: transparent;
+      border: 1px solid transparent;
+      color: var(--text-muted);
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .summary-period-pill:hover {
+      background: rgba(255, 255, 255, 0.08);
+      color: #fff;
+    }
+    .summary-period-pill.active {
+      background: linear-gradient(135deg, #0284c7, #0284c7);
+      border-color: #38bdf8;
+      color: #fff;
+      font-weight: 800;
+      box-shadow: 0 0 12px rgba(56, 189, 248, 0.4);
+    }
+
+    /* Summary Cards Grid */
+    .summary-cards-grid {
+      display: grid;
+      grid-template-columns: repeat(6, 1fr);
+      gap: 12px;
+    }
+    @media (max-width: 1400px) {
+      .summary-cards-grid {
+        grid-template-columns: repeat(3, 1fr);
+      }
+    }
+    @media (max-width: 768px) {
+      .summary-cards-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .summary-stat-card {
+      background: rgba(0, 0, 0, 0.35);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 12px;
+      padding: 14px 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 3px;
+      position: relative;
+      overflow: hidden;
+      transition: transform 0.2s, border-color 0.2s;
+    }
+    .summary-stat-card:hover {
+      transform: translateY(-2px);
+      border-color: rgba(255, 255, 255, 0.18);
+    }
+
+    .summary-stat-card.highlight-card {
+      background: linear-gradient(135deg, rgba(16, 185, 129, 0.12), rgba(15, 23, 42, 0.4));
+      border: 1px solid rgba(16, 185, 129, 0.4);
+      box-shadow: 0 0 20px rgba(16, 185, 129, 0.15);
+    }
+
+    .summary-stat-card .card-label {
+      font-size: 0.68rem;
+      font-weight: 800;
+      color: var(--text-dim);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .summary-stat-card .card-big-val {
+      font-family: var(--font-display);
+      font-size: 1.45rem;
+      font-weight: 900;
+      color: var(--accent-green-bright);
+      line-height: 1.2;
+    }
+
+    .summary-stat-card .card-sub-val {
+      font-family: var(--font-mono);
+      font-size: 0.82rem;
+      font-weight: 700;
+      color: #e2e8f0;
+      margin-top: 1px;
+    }
+
+    .summary-stat-card .card-footnote {
+      font-size: 0.68rem;
+      color: var(--text-muted);
+      margin-top: 3px;
+    }
+
+    .matrix-row-today {
+      background: rgba(16, 185, 129, 0.08) !important;
+      font-weight: 700;
+    }
+    .matrix-row-selected {
+      border-left: 3px solid var(--accent-cyan) !important;
+      background: rgba(56, 189, 248, 0.09) !important;
+    }
+
     /* Data Tables */
     .table-container {
       background: var(--bg-surface);
@@ -1353,12 +1457,20 @@
     <!-- Tabs Navigation Bar -->
     <nav class="tabs-bar">
       <button class="tab-btn active" onclick="switchTab('tabSplit')">
-        <span>🎯 Active Bids &amp; Orders</span>
+        <span>Active BUY/Sell Positions</span>
         <span class="tab-badge" id="badgeBuySellCount">0 / 0</span>
       </button>
       <button class="tab-btn" onclick="switchTab('tabClosed')">
-        <span>📜 Closed Trades History</span>
-        <span class="tab-badge" id="badgeClosedCount">33</span>
+        <span>Closed Trades History</span>
+        <span class="tab-badge" id="badgeClosedCount">0</span>
+      </button>
+      <button class="tab-btn" onclick="switchTab('tabHarvest')">
+        <span>1 Mudrex Harvest</span>
+        <span class="tab-badge" id="badgeHarvestCount" style="background: rgba(245, 158, 11, 0.25); color: #fde047; border: 1px solid #f59e0b;">0</span>
+      </button>
+      <button class="tab-btn" onclick="switchTab('tabCalc')">
+        <span>2 Closed Trades Calc</span>
+        <span class="tab-badge" id="badgeCalcNet" style="background: rgba(16, 185, 129, 0.2); color: var(--accent-green-bright); border: 1px solid rgba(16, 185, 129, 0.4);">Range: +₹0.00</span>
       </button>
     </nav>
 
@@ -1437,6 +1549,15 @@
               <button type="button" class="trade-filter-btn" id="filterBuy" onclick="setClosedFilter('BUY')">🟢 BUYs</button>
               <button type="button" class="trade-filter-btn" id="filterSell" onclick="setClosedFilter('SELL')">🔴 SELLs</button>
             </div>
+            <div style="display: inline-flex; background: rgba(0,0,0,0.35); padding: 3px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.1); gap: 3px;">
+              <button type="button" class="trade-filter-btn active" id="timeFilterAll" onclick="setClosedTimeFilter('ALL')">All Time</button>
+              <button type="button" class="trade-filter-btn" id="timeFilterToday" onclick="setClosedTimeFilter('TODAY')">📅 Today</button>
+              <button type="button" class="trade-filter-btn" id="timeFilter1h" onclick="setClosedTimeFilter('1H')">⚡ 1 Hr</button>
+              <button type="button" class="trade-filter-btn" id="timeFilter4h" onclick="setClosedTimeFilter('4H')">⏱️ 4 Hrs</button>
+              <button type="button" class="trade-filter-btn" id="timeFilter24h" onclick="setClosedTimeFilter('24H')">24 Hrs</button>
+              <button type="button" class="trade-filter-btn" id="timeFilter7d" onclick="setClosedTimeFilter('7D')">7 Days</button>
+              <button type="button" class="trade-filter-btn" id="timeFilterMonth" onclick="setClosedTimeFilter('MONTH')">This Month</button>
+            </div>
             <div style="font-size: 0.88rem; font-weight: 800; color: var(--accent-green-bright);" id="closedTradesTotalNet">
               Net: +₹2,540.90 (+ $26.21)
             </div>
@@ -1461,6 +1582,270 @@
             </tbody>
           </table>
         </div>
+      </div>
+    </section>
+
+    <!-- TAB 3: 1 Mudrex Harvest -->
+    <section id="tabHarvest" class="tab-content">
+      <div class="summary-wrapper" style="display: flex; flex-direction: column; gap: 16px;">
+        
+        <!-- Mudrex Harvest Header Strip -->
+        <div class="table-container" style="padding: 16px 20px; border-top: 3px solid #f59e0b;">
+          <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; margin-bottom: 14px;">
+            <div>
+              <div style="font-family: var(--font-display); font-size: 1.15rem; font-weight: 800; color: #fff; display: flex; align-items: center; gap: 8px;">
+                <span>🌾 Mudrex Harvest Settlements</span>
+                <span class="badge" style="background: rgba(245, 158, 11, 0.25); color: #fde047; border: 1px solid #f59e0b; font-size: 0.72rem;">OFFICIAL GODAM DEPOSITS</span>
+              </div>
+              <div style="font-size: 0.76rem; color: var(--text-muted); margin-top: 2px;">
+                Official Punarjanm basket settlements executed on Mudrex exchange with net profit credited to Futures Wallet.
+              </div>
+            </div>
+
+            <!-- Instant Trigger Button -->
+            <div style="display: flex; gap: 10px; align-items: center;">
+              <button class="btn" onclick="promptAction('punarjanm')" style="background: linear-gradient(135deg, #7c3aed, #db2777); border: 1px solid #f472b6; color: #fff; font-weight: 800; padding: 8px 16px; border-radius: 8px; cursor: pointer; display: inline-flex; align-items: center; gap: 6px;">
+                <span>⚡ HARVEST NOW (PIN 340556)</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- 4 KPI Cards for Harvest -->
+          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px;">
+            <div class="summary-stat-card highlight-card">
+              <div class="card-label">Total Harvested Net Profit</div>
+              <div class="card-big-val" style="color: #fde047;" id="harvestKpiNetINR">+₹0.00</div>
+              <div class="card-sub-val" id="harvestKpiNetUSD">+ $0.00 Net</div>
+              <div class="card-footnote">Credited to Mudrex Wallet</div>
+            </div>
+
+            <div class="summary-stat-card">
+              <div class="card-label">Completed Cycles</div>
+              <div class="card-big-val" style="color: #c084fc;" id="harvestKpiCycles">0 Cycles</div>
+              <div class="card-sub-val" id="harvestKpiLastCycle">Last: None</div>
+              <div class="card-footnote">Rebirth &amp; Basket Flushes</div>
+            </div>
+
+            <div class="summary-stat-card">
+              <div class="card-label">Total Volume Harvested</div>
+              <div class="card-big-val" style="color: var(--accent-cyan);" id="harvestKpiBarrels">0 BBL</div>
+              <div class="card-sub-val">Settled on Exchange</div>
+              <div class="card-footnote">Closed Position Lots</div>
+            </div>
+
+            <div class="summary-stat-card">
+              <div class="card-label">Active Basket Target</div>
+              <div class="card-big-val" style="color: var(--accent-green-bright);" id="harvestKpiTarget">₹250</div>
+              <div class="card-sub-val" id="harvestKpiCurrentMudrex">Current: ₹0.00</div>
+              <div class="card-footnote">Auto-Triggers at Target</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Harvest History Table -->
+        <div class="table-container">
+          <div class="table-toolbar">
+            <div class="table-title">
+              <span>📜 Mudrex Official Harvest Receipts</span>
+              <span style="font-size: 0.74rem; color: var(--text-dim);">Historical Punarjanm basket closes executed on exchange</span>
+            </div>
+          </div>
+          <div style="overflow-x: auto;">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>Cycle Name</th>
+                  <th>Date &amp; Time (IST)</th>
+                  <th>Quantity Settled</th>
+                  <th>Exit Price</th>
+                  <th>Gross Profit</th>
+                  <th>Mudrex Charges</th>
+                  <th>Net Credited to Wallet</th>
+                  <th>Trigger Reason</th>
+                  <th>Exchange Status</th>
+                </tr>
+              </thead>
+              <tbody id="mudrexHarvestTableBody">
+                <tr><td colspan="9" class="empty-state">Loading harvest records...</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- TAB 4: 2 Closed Trades Calc -->
+    <section id="tabCalc" class="tab-content">
+      <div class="summary-wrapper" style="display: flex; flex-direction: column; gap: 16px;">
+        
+        <!-- Calculator Top Control Bar with Custom From/To & Quick Presets -->
+        <div class="table-container" style="padding: 16px 20px; border-top: 3px solid var(--accent-cyan);">
+          <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; margin-bottom: 12px;">
+            <div>
+              <div style="font-family: var(--font-display); font-size: 1.15rem; font-weight: 800; color: #fff; display: flex; align-items: center; gap: 8px;">
+                <span>🧮 Closed Trades Calculator (Hrs / Date Range Net P/L)</span>
+                <span class="badge badge-buy" style="font-size: 0.72rem;">CUSTOM RANGE &amp; HRS</span>
+              </div>
+              <div style="font-size: 0.76rem; color: var(--text-muted); margin-top: 2px;">
+                From-To time window ya quick hours choose karke exact Net P/L, fees, aur volume calculate karein.
+              </div>
+            </div>
+
+            <!-- Quick Hours Buttons -->
+            <div style="display: inline-flex; background: rgba(0,0,0,0.4); padding: 4px; border-radius: 10px; border: 1px solid rgba(255,255,255,0.1); gap: 4px; flex-wrap: wrap;">
+              <button type="button" class="summary-period-pill" id="sumPill-1h" onclick="selectSummaryPeriod('1h')">⚡ 1 Hr</button>
+              <button type="button" class="summary-period-pill" id="sumPill-2h" onclick="selectSummaryPeriod('2h')">⏱️ 2 Hrs</button>
+              <button type="button" class="summary-period-pill" id="sumPill-4h" onclick="selectSummaryPeriod('4h')">⏱️ 4 Hrs</button>
+              <button type="button" class="summary-period-pill" id="sumPill-8h" onclick="selectSummaryPeriod('8h')">⏱️ 8 Hrs</button>
+              <button type="button" class="summary-period-pill" id="sumPill-12h" onclick="selectSummaryPeriod('12h')">🕛 12 Hrs</button>
+              <button type="button" class="summary-period-pill active" id="sumPill-today" onclick="selectSummaryPeriod('today')">📅 Today (IST)</button>
+              <button type="button" class="summary-period-pill" id="sumPill-yesterday" onclick="selectSummaryPeriod('yesterday')">⏪ Yesterday</button>
+              <button type="button" class="summary-period-pill" id="sumPill-7d" onclick="selectSummaryPeriod('7d')">🗓️ 7 Days</button>
+              <button type="button" class="summary-period-pill" id="sumPill-thisMonth" onclick="selectSummaryPeriod('thisMonth')">📆 Month</button>
+              <button type="button" class="summary-period-pill" id="sumPill-all" onclick="selectSummaryPeriod('all')">🌐 All-Time</button>
+            </div>
+          </div>
+
+          <!-- Custom From / To DateTime Strip -->
+          <div style="background: rgba(0,0,0,0.35); border: 1px solid rgba(255,255,255,0.08); border-radius: 10px; padding: 10px 14px; margin-bottom: 14px; display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap;">
+            <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
+              <span style="font-size: 0.72rem; font-weight: 800; color: var(--text-dim); text-transform: uppercase;">Custom Window:</span>
+              <div style="display: inline-flex; align-items: center; gap: 6px;">
+                <label style="font-size: 0.72rem; color: var(--text-muted); font-weight: 700;">FROM:</label>
+                <input type="datetime-local" id="calcFromTime" style="background: rgba(0,0,0,0.6); border: 1px solid rgba(255,255,255,0.2); color: #fff; padding: 4px 8px; border-radius: 6px; font-family: var(--font-mono); font-size: 0.76rem;">
+              </div>
+              <div style="display: inline-flex; align-items: center; gap: 6px;">
+                <label style="font-size: 0.72rem; color: var(--text-muted); font-weight: 700;">TO:</label>
+                <input type="datetime-local" id="calcToTime" style="background: rgba(0,0,0,0.6); border: 1px solid rgba(255,255,255,0.2); color: #fff; padding: 4px 8px; border-radius: 6px; font-family: var(--font-mono); font-size: 0.76rem;">
+              </div>
+              <button type="button" class="btn btn-blue" onclick="runCustomTimeCalc()" style="padding: 5px 12px; font-size: 0.76rem;">
+                <span>⚡ Calculate Net P/L</span>
+              </button>
+              <button type="button" class="btn btn-outline" onclick="selectSummaryPeriod('today')" style="padding: 5px 10px; font-size: 0.74rem;">
+                <span>🔄 Today</span>
+              </button>
+            </div>
+            <div style="font-size: 0.74rem; color: var(--text-dim); font-family: var(--font-mono);" id="calcActiveWindowText">
+              Active: Today (Since 12:00 AM IST)
+            </div>
+          </div>
+
+          <!-- Hero Metric 6 Cards for Selected Timeframe -->
+          <div class="summary-cards-grid">
+            <!-- 1. Realized Net Profit (Huge, Bold, ₹ and $) -->
+            <div class="summary-stat-card highlight-card">
+              <div class="card-label">Realized Net Profit (<span id="sumCardPeriodLabel">Today</span>)</div>
+              <div class="card-big-val" id="sumCardNetINR">+₹0.00</div>
+              <div class="card-sub-val" id="sumCardNetUSD">+ $0.00 Net</div>
+              <div class="card-footnote">After Mudrex Taker Fees &amp; GST</div>
+            </div>
+
+            <!-- 2. Win Rate & Trade Count -->
+            <div class="summary-stat-card">
+              <div class="card-label">Win Rate &amp; Closed Count</div>
+              <div class="card-big-val" style="color: var(--accent-cyan);" id="sumCardWinRate">100.0%</div>
+              <div class="card-sub-val" id="sumCardRecord">0 Wins / 0 Losses</div>
+              <div class="card-footnote" id="sumCardTotalTrades">0 Total Closed Trades</div>
+            </div>
+
+            <!-- 3. Traded Volume & Barrels -->
+            <div class="summary-stat-card">
+              <div class="card-label">Trading Volume (Barrels)</div>
+              <div class="card-big-val" style="color: var(--accent-gold);" id="sumCardBarrels">0.0 BBL</div>
+              <div class="card-sub-val" id="sumCardLegs">0 BUY Legs · 0 SELL Legs</div>
+              <div class="card-footnote">Closed Position Volume</div>
+            </div>
+
+            <!-- 4. Gross Profit vs Charges -->
+            <div class="summary-stat-card">
+              <div class="card-label">Gross P&amp;L vs Charges</div>
+              <div class="card-big-val" style="font-size: 1.15rem; color: #fff;" id="sumCardGross">Gross: ₹0.00</div>
+              <div class="card-sub-val" style="color: var(--accent-red-bright);" id="sumCardCharges">Fees + GST: ₹0.00</div>
+              <div class="card-footnote" id="sumCardChargesUSD">$0.00 Total Mudrex Charges</div>
+            </div>
+
+            <!-- 5. Punarjanm Cycles Harvested -->
+            <div class="summary-stat-card">
+              <div class="card-label">Punarjanm Harvests</div>
+              <div class="card-big-val" style="color: #fde047;" id="sumCardHarvests">0 Cycles</div>
+              <div class="card-sub-val" style="color: #fde047;">👑 Basket Profit Locks</div>
+              <div class="card-footnote">Rebirth &amp; Flush Triggers (₹250+)</div>
+            </div>
+
+            <!-- 6. Average & Peak Trades -->
+            <div class="summary-stat-card">
+              <div class="card-label">Average &amp; Peak Trade</div>
+              <div class="card-big-val" style="font-size: 1.15rem; color: var(--accent-cyan);" id="sumCardAvg">Avg: +₹0.00</div>
+              <div class="card-sub-val" id="sumCardBest">Best: +₹0.00</div>
+              <div class="card-footnote" id="sumCardWorst">Worst: ₹0.00</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Comprehensive Multi-Period Comparison Matrix Table -->
+        <div class="table-container">
+          <div class="table-toolbar">
+            <div class="table-title">
+              <span>📅 Multi-Period Performance Matrix</span>
+              <span style="font-size: 0.74rem; color: var(--text-dim);">Side-by-side comparison across all trading timeframes</span>
+            </div>
+          </div>
+          <div style="overflow-x: auto;">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>Timeframe / Period</th>
+                  <th>Realized Net Profit (₹ INR)</th>
+                  <th>Realized Net Profit ($ USD)</th>
+                  <th>Trades</th>
+                  <th>Win Rate %</th>
+                  <th>Win / Loss</th>
+                  <th>Gross Profit (₹)</th>
+                  <th>Fees &amp; GST (₹)</th>
+                  <th>Barrels</th>
+                  <th>Punarjanm</th>
+                  <th>Avg / Trade</th>
+                </tr>
+              </thead>
+              <tbody id="periodMatrixTableBody">
+                <tr><td colspan="11" class="empty-state">Computing period matrix...</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Historical Daily Breakdown Table (Recent Days) -->
+        <div class="table-container">
+          <div class="table-toolbar">
+            <div class="table-title">
+              <span>🗓️ Daily Historical Breakdown (Last 14 Days)</span>
+              <span style="font-size: 0.74rem; color: var(--text-dim);">Daily realized closed trades log grouped by date (IST)</span>
+            </div>
+          </div>
+          <div style="overflow-x: auto;">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>Date (IST)</th>
+                  <th>Closed Trades</th>
+                  <th>Win Rate %</th>
+                  <th>Win / Loss</th>
+                  <th>Realized Net Profit (₹ INR)</th>
+                  <th>Realized Net Profit ($ USD)</th>
+                  <th>Gross Profit (₹)</th>
+                  <th>Mudrex Fees &amp; GST (₹)</th>
+                  <th>Volume (Barrels)</th>
+                  <th>Punarjanm</th>
+                </tr>
+              </thead>
+              <tbody id="dailyBreakdownTableBody">
+                <tr><td colspan="10" class="empty-state">Loading daily history...</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
       </div>
     </section>
 
@@ -2233,6 +2618,8 @@
       renderSplitTables(pairs);
       if (document.getElementById('exchangeTableBody')) renderExchangeTable(exchange.positions || []);
       renderClosedTable(closedList);
+      renderSummaryTab(data.closedSummary, closedList, usdInr);
+      renderHarvestTab(closedList, data.punarjanm, usdInr);
     }
 
     // --- UNIVERSAL COLUMN SORTING ENGINE ---
@@ -2570,14 +2957,42 @@
     let currentClosedFilter = 'ALL';
     function setClosedFilter(filterType) {
       currentClosedFilter = filterType;
-      document.querySelectorAll('.trade-filter-btn').forEach(btn => btn.classList.remove('active'));
+      document.querySelectorAll('.trade-filter-btn[id^="filter"]').forEach(btn => btn.classList.remove('active'));
       const activeBtn = document.getElementById(
         filterType === 'ALL' ? 'filterAll' :
         filterType === 'HARVEST' ? 'filterHarvest' :
         filterType === 'BUY' ? 'filterBuy' : 'filterSell'
       );
       if (activeBtn) activeBtn.classList.add('active');
-      if (cachedData) renderTerminalUI(cachedData);
+      if (cachedData) renderClosedTable(cachedData.closedPositions || []);
+    }
+
+    let currentClosedTimeFilter = 'ALL';
+    function setClosedTimeFilter(timeKey) {
+      currentClosedTimeFilter = timeKey;
+      document.querySelectorAll('.trade-filter-btn[id^="timeFilter"]').forEach(btn => btn.classList.remove('active'));
+      const activeBtn = document.getElementById(
+        timeKey === 'ALL' ? 'timeFilterAll' :
+        timeKey === 'TODAY' ? 'timeFilterToday' :
+        timeKey === '1H' ? 'timeFilter1h' :
+        timeKey === '4H' ? 'timeFilter4h' :
+        timeKey === '24H' ? 'timeFilter24h' :
+        timeKey === '7D' ? 'timeFilter7d' : 'timeFilterMonth'
+      );
+      if (activeBtn) activeBtn.classList.add('active');
+      if (cachedData) renderClosedTable(cachedData.closedPositions || []);
+    }
+
+    function getClosedTimestamp(cp) {
+      if (cp.closedTimestamp && typeof cp.closedTimestamp === 'number') return cp.closedTimestamp;
+      if (!cp.exitTime) return 0;
+      let clean = String(cp.exitTime);
+      const m = clean.match(/T(\d{2}):/);
+      if (m && parseInt(m[1], 10) >= 24) {
+        clean = clean.replace(/T\d{2}:/, 'T' + (parseInt(m[1], 10) % 24).toString().padStart(2, '0') + ':');
+      }
+      const ts = new Date(clean).getTime();
+      return isNaN(ts) ? 0 : ts;
     }
 
     function renderClosedTable(closedPositions) {
@@ -2602,7 +3017,7 @@
       const harvestBadgeEl = document.getElementById('harvestFilterCount');
       if (harvestBadgeEl) harvestBadgeEl.innerText = harvestTrades.length;
 
-      // Filter rows
+      // 1. Filter rows by Direction / Side
       let filtered = allWithSlNo;
       if (currentClosedFilter === 'HARVEST') {
         filtered = harvestTrades;
@@ -2612,8 +3027,43 @@
         filtered = allWithSlNo.filter(cp => (cp.direction === 'SELL' || (cp.positionId && cp.positionId.includes('SELL'))));
       }
 
+      // 2. Filter rows by Timeframe (1h, 4h, 24h, Today, 7d, Month)
+      if (currentClosedTimeFilter !== 'ALL') {
+        const now = Date.now();
+        const todayISTStr = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Kolkata' });
+        const startOfTodayIST = new Date(todayISTStr + 'T00:00:00+05:30').getTime();
+        const startOfMonthIST = new Date(todayISTStr.slice(0, 8) + '01T00:00:00+05:30').getTime();
+
+        filtered = filtered.filter(cp => {
+          const ts = getClosedTimestamp(cp);
+          if (currentClosedTimeFilter === '1H') return ts >= now - 3600000;
+          if (currentClosedTimeFilter === '4H') return ts >= now - 4 * 3600000;
+          if (currentClosedTimeFilter === '24H') return ts >= now - 24 * 3600000;
+          if (currentClosedTimeFilter === 'TODAY') return ts >= startOfTodayIST;
+          if (currentClosedTimeFilter === '7D') return ts >= now - 7 * 86400000;
+          if (currentClosedTimeFilter === 'MONTH') return ts >= startOfMonthIST;
+          return true;
+        });
+      }
+
+      // Update Toolbar Summary Subtitle and Total Net PnL for the filtered set
+      const sumFilteredNetINR = filtered.reduce((sum, c) => sum + (c.netProfitINR !== undefined ? c.netProfitINR : ((c.netProfitUSD || 0) * 102)), 0);
+      const sumFilteredNetUSD = sumFilteredNetINR / 102;
+      const filteredSign = sumFilteredNetINR >= 0 ? '+' : '';
+      const closedNetEl = document.getElementById('closedTradesTotalNet');
+      if (closedNetEl) {
+        closedNetEl.innerText = `Net: ${filteredSign}₹${sumFilteredNetINR.toLocaleString('en-IN', { minimumFractionDigits: 2 })} (${filteredSign}$${sumFilteredNetUSD.toFixed(2)})`;
+        closedNetEl.style.color = sumFilteredNetINR >= 0 ? 'var(--accent-green-bright)' : 'var(--accent-red-bright)';
+      }
+      const closedSummarySub = document.getElementById('closedTradesSummarySub');
+      if (closedSummarySub) {
+        const winCount = filtered.filter(c => (c.netProfitINR !== undefined ? c.netProfitINR : c.netProfitUSD) >= 0).length;
+        const winRate = filtered.length > 0 ? ((winCount / filtered.length) * 100).toFixed(0) : '0';
+        closedSummarySub.innerText = `Shown: ${filtered.length} of ${allWithSlNo.length} Trades | Win Rate: ${winRate}%`;
+      }
+
       if (filtered.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="8" class="empty-state">No trades found for filter: ${currentClosedFilter}</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="8" class="empty-state">No trades found for selected filters.</td></tr>`;
         return;
       }
 
@@ -2660,6 +3110,499 @@
           </tr>
         `;
       }).join('');
+    }
+
+    // --- Performance Summary Controller (Hrs / Day / Month Engine) ---
+    let currentSummaryPeriod = 'today';
+    function selectSummaryPeriod(periodKey) {
+      currentSummaryPeriod = periodKey;
+      document.querySelectorAll('.summary-period-pill').forEach(btn => btn.classList.remove('active'));
+      const activeBtn = document.getElementById(`sumPill-${periodKey}`);
+      if (activeBtn) activeBtn.classList.add('active');
+      const txt = document.getElementById('calcActiveWindowText');
+      if (txt) {
+        txt.innerText = `Active: ${periodKey === '1h' ? 'Last 1 Hour' : periodKey === '2h' ? 'Last 2 Hours' : periodKey === '4h' ? 'Last 4 Hours' : periodKey === '8h' ? 'Last 8 Hours' : periodKey === '12h' ? 'Last 12 Hours' : periodKey === 'today' ? 'Today (Since 12:00 AM IST)' : periodKey === 'yesterday' ? 'Yesterday' : periodKey === '7d' ? 'Last 7 Days' : periodKey === 'thisMonth' ? 'This Month' : 'All-Time Total'}`;
+      }
+      if (cachedData) {
+        renderSummaryTab(cachedData.closedSummary, cachedData.closedPositions || [], (cachedData.rate && cachedData.rate.usdInrRate) || 102);
+      }
+    }
+
+    function calculateClientSummary(trades, usdInrRate) {
+      const now = Date.now();
+      const todayISTStr = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Kolkata' });
+      const startOfTodayIST = new Date(todayISTStr + 'T00:00:00+05:30').getTime();
+      const startOfYesterdayIST = startOfTodayIST - 86400000;
+      const startOfMonthIST = new Date(todayISTStr.slice(0, 8) + '01T00:00:00+05:30').getTime();
+
+      const parseTs = (t) => getClosedTimestamp(t);
+
+      const periodGroups = {
+        '1h': trades.filter(t => parseTs(t) >= now - 3600000),
+        '2h': trades.filter(t => parseTs(t) >= now - 2 * 3600000),
+        '4h': trades.filter(t => parseTs(t) >= now - 4 * 3600000),
+        '8h': trades.filter(t => parseTs(t) >= now - 8 * 3600000),
+        '12h': trades.filter(t => parseTs(t) >= now - 12 * 3600000),
+        '24h': trades.filter(t => parseTs(t) >= now - 24 * 3600000),
+        'today': trades.filter(t => parseTs(t) >= startOfTodayIST),
+        'yesterday': trades.filter(t => { const ts = parseTs(t); return ts >= startOfYesterdayIST && ts < startOfTodayIST; }),
+        '7d': trades.filter(t => parseTs(t) >= now - 7 * 86400000),
+        'thisMonth': trades.filter(t => parseTs(t) >= startOfMonthIST),
+        '30d': trades.filter(t => parseTs(t) >= now - 30 * 86400000),
+        'all': trades
+      };
+
+      const computeMetrics = (arr) => {
+        let netINR = 0, grossINR = 0, chargesINR = 0;
+        let winCount = 0, lossCount = 0, totalBarrels = 0, harvestCount = 0, buyCount = 0, sellCount = 0;
+        let bestTradeINR = arr.length > 0 ? -Infinity : 0;
+        let worstTradeINR = arr.length > 0 ? Infinity : 0;
+
+        for (const t of arr) {
+          const rate = t.usdInrRate || usdInrRate || 102.0;
+          const tNetINR = t.netProfitINR !== undefined ? t.netProfitINR : ((t.netProfitUSD || 0) * rate);
+          const tGrossINR = t.grossProfitINR !== undefined ? t.grossProfitINR : ((t.grossProfitUSD || 0) * rate);
+          const tChargesINR = t.totalChargesINR !== undefined ? t.totalChargesINR : ((t.totalChargesUSD || 0) * rate);
+          const qty = Number(t.quantity || 1.0);
+
+          netINR += tNetINR;
+          grossINR += tGrossINR;
+          chargesINR += tChargesINR;
+          totalBarrels += qty;
+
+          if (tNetINR >= 0) winCount++;
+          else lossCount++;
+
+          if (tNetINR > bestTradeINR) bestTradeINR = tNetINR;
+          if (tNetINR < worstTradeINR) worstTradeINR = tNetINR;
+
+          const isHarvest = (t.direction && (t.direction.includes('BASKET') || t.direction.includes('HARVEST'))) ||
+                            (t.positionId && (t.positionId.includes('HARVEST') || t.positionId.includes('Punarjanm')));
+          if (isHarvest) harvestCount++;
+          else if (t.direction === 'BUY' || (t.positionId && t.positionId.includes('BUY'))) buyCount++;
+          else sellCount++;
+        }
+
+        const tradesCount = arr.length;
+        const netUSD = Number((netINR / usdInrRate).toFixed(2));
+        const grossUSD = Number((grossINR / usdInrRate).toFixed(2));
+        const chargesUSD = Number((chargesINR / usdInrRate).toFixed(2));
+        const winRate = tradesCount > 0 ? Number(((winCount / tradesCount) * 100).toFixed(1)) : 0;
+        const avgProfitINR = tradesCount > 0 ? Number((netINR / tradesCount).toFixed(2)) : 0;
+        const avgProfitUSD = Number((avgProfitINR / usdInrRate).toFixed(2));
+
+        return {
+          tradesCount,
+          winCount,
+          lossCount,
+          winRate,
+          netProfitINR: Number(netINR.toFixed(2)),
+          netProfitUSD: netUSD,
+          grossProfitINR: Number(grossINR.toFixed(2)),
+          grossProfitUSD: grossUSD,
+          totalChargesINR: Number(chargesINR.toFixed(2)),
+          totalChargesUSD: chargesUSD,
+          totalBarrels: Number(totalBarrels.toFixed(1)),
+          harvestCount,
+          buyCount,
+          sellCount,
+          avgProfitINR,
+          avgProfitUSD,
+          bestTradeINR: bestTradeINR === -Infinity ? 0 : Number(bestTradeINR.toFixed(2)),
+          worstTradeINR: worstTradeINR === Infinity ? 0 : Number(worstTradeINR.toFixed(2))
+        };
+      };
+
+      const periods = {};
+      for (const [k, arr] of Object.entries(periodGroups)) {
+        periods[k] = computeMetrics(arr);
+      }
+
+      const dayGroups = {};
+      for (const t of trades) {
+        const ts = parseTs(t);
+        if (!ts) continue;
+        const dateKey = new Date(ts).toLocaleDateString('en-CA', { timeZone: 'Asia/Kolkata' });
+        if (!dayGroups[dateKey]) dayGroups[dateKey] = [];
+        dayGroups[dateKey].push(t);
+      }
+
+      const dailyBreakdown = Object.keys(dayGroups).sort().reverse().slice(0, 14).map(dateKey => ({
+        date: dateKey,
+        ...computeMetrics(dayGroups[dateKey])
+      }));
+
+      return {
+        periods,
+        dailyBreakdown,
+        today: periods.today,
+        all: periods.all
+      };
+    }
+
+    function renderSummaryTab(summaryData, closedPositions, usdInr) {
+      if (!summaryData || !summaryData.periods) {
+        summaryData = calculateClientSummary(closedPositions || [], usdInr);
+      }
+      const periods = summaryData.periods || {};
+      const todayMetrics = periods.today || { netProfitINR: 0, netProfitUSD: 0 };
+
+      // Update Tab Badge
+      const badgeToday = document.getElementById('badgeSummaryToday');
+      if (badgeToday) {
+        const sign = todayMetrics.netProfitINR >= 0 ? '+' : '';
+        badgeToday.innerText = `Today: ${sign}₹${(todayMetrics.netProfitINR || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}`;
+        badgeToday.style.color = todayMetrics.netProfitINR >= 0 ? 'var(--accent-green-bright)' : 'var(--accent-red-bright)';
+      }
+
+      // Period Display Name
+      const periodNames = {
+        '1h': 'Last 1 Hour',
+        '2h': 'Last 2 Hours',
+        '4h': 'Last 4 Hours',
+        '8h': 'Last 8 Hours',
+        '12h': 'Last 12 Hours',
+        '24h': 'Last 24 Hours',
+        'today': 'Today (IST)',
+        'yesterday': 'Yesterday',
+        '7d': 'Last 7 Days',
+        'thisMonth': 'This Month',
+        'all': 'All-Time Total',
+        'custom': 'Custom Range'
+      };
+
+      const curMetrics = periods[currentSummaryPeriod] || {
+        tradesCount: 0,
+        winCount: 0,
+        lossCount: 0,
+        winRate: 0,
+        netProfitINR: 0,
+        netProfitUSD: 0,
+        grossProfitINR: 0,
+        grossProfitUSD: 0,
+        totalChargesINR: 0,
+        totalChargesUSD: 0,
+        totalBarrels: 0,
+        harvestCount: 0,
+        buyCount: 0,
+        sellCount: 0,
+        avgProfitINR: 0,
+        avgProfitUSD: 0,
+        bestTradeINR: 0,
+        worstTradeINR: 0
+      };
+
+      const pLabel = document.getElementById('sumCardPeriodLabel');
+      if (pLabel) pLabel.innerText = periodNames[currentSummaryPeriod] || currentSummaryPeriod;
+
+      const pnlSign = curMetrics.netProfitINR >= 0 ? '+' : '';
+      const pnlClass = curMetrics.netProfitINR >= 0 ? 'pnl-positive' : 'pnl-negative';
+
+      // Update Calculator Tab Header Badge
+      const badgeCalcNet = document.getElementById('badgeCalcNet');
+      if (badgeCalcNet) {
+        const activeNet = curMetrics.netProfitINR || 0;
+        const sign = activeNet >= 0 ? '+' : '';
+        badgeCalcNet.innerText = `${periodNames[currentSummaryPeriod] || 'Range'}: ${sign}₹${activeNet.toLocaleString('en-IN', { minimumFractionDigits: 2 })}`;
+        badgeCalcNet.style.color = activeNet >= 0 ? 'var(--accent-green-bright)' : 'var(--accent-red-bright)';
+      }
+
+      const elNetINR = document.getElementById('sumCardNetINR');
+      if (elNetINR) {
+        elNetINR.innerText = `${pnlSign}₹${(curMetrics.netProfitINR || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}`;
+        elNetINR.className = `card-big-val ${pnlClass}`;
+        elNetINR.style.color = curMetrics.netProfitINR >= 0 ? 'var(--accent-green-bright)' : 'var(--accent-red-bright)';
+      }
+
+      const elNetUSD = document.getElementById('sumCardNetUSD');
+      if (elNetUSD) elNetUSD.innerText = `${pnlSign}$${(curMetrics.netProfitUSD || 0).toFixed(2)} Net Profit`;
+
+      const elWinRate = document.getElementById('sumCardWinRate');
+      if (elWinRate) elWinRate.innerText = `${(curMetrics.winRate || 0).toFixed(1)}%`;
+
+      const elRecord = document.getElementById('sumCardRecord');
+      if (elRecord) elRecord.innerText = `${curMetrics.winCount || 0} Wins / ${curMetrics.lossCount || 0} Losses`;
+
+      const elTrades = document.getElementById('sumCardTotalTrades');
+      if (elTrades) elTrades.innerText = `${curMetrics.tradesCount || 0} Total Closed Trades`;
+
+      const elBarrels = document.getElementById('sumCardBarrels');
+      if (elBarrels) elBarrels.innerText = `${(curMetrics.totalBarrels || 0).toFixed(1)} BBL`;
+
+      const elLegs = document.getElementById('sumCardLegs');
+      if (elLegs) elLegs.innerText = `${curMetrics.buyCount || 0} BUY Legs · ${curMetrics.sellCount || 0} SELL Legs`;
+
+      const elGross = document.getElementById('sumCardGross');
+      if (elGross) elGross.innerText = `Gross: ₹${(curMetrics.grossProfitINR || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}`;
+
+      const elCharges = document.getElementById('sumCardCharges');
+      if (elCharges) elCharges.innerText = `Fees + GST: ₹${(curMetrics.totalChargesINR || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}`;
+
+      const elChargesUSD = document.getElementById('sumCardChargesUSD');
+      if (elChargesUSD) elChargesUSD.innerText = `$${(curMetrics.totalChargesUSD || 0).toFixed(2)} Mudrex Charges`;
+
+      const elHarvests = document.getElementById('sumCardHarvests');
+      if (elHarvests) elHarvests.innerText = `${curMetrics.harvestCount || 0} Cycle${curMetrics.harvestCount === 1 ? '' : 's'}`;
+
+      const elAvg = document.getElementById('sumCardAvg');
+      if (elAvg) elAvg.innerText = `Avg: ${curMetrics.avgProfitINR >= 0 ? '+' : ''}₹${(curMetrics.avgProfitINR || 0).toFixed(2)}`;
+
+      const elBest = document.getElementById('sumCardBest');
+      if (elBest) elBest.innerText = `Best: +₹${(curMetrics.bestTradeINR || 0).toFixed(2)}`;
+
+      const elWorst = document.getElementById('sumCardWorst');
+      if (elWorst) elWorst.innerText = `Worst: ${curMetrics.worstTradeINR >= 0 ? '+' : ''}₹${(curMetrics.worstTradeINR || 0).toFixed(2)}`;
+
+      // Render Multi-Period Matrix Table
+      const matrixTbody = document.getElementById('periodMatrixTableBody');
+      if (matrixTbody) {
+        const matrixPeriods = [
+          { key: '1h', icon: '⚡', name: 'Last 1 Hour' },
+          { key: '2h', icon: '⏱️', name: 'Last 2 Hours' },
+          { key: '4h', icon: '⏱️', name: 'Last 4 Hours' },
+          { key: '8h', icon: '⏱️', name: 'Last 8 Hours' },
+          { key: '12h', icon: '🕛', name: 'Last 12 Hours' },
+          { key: '24h', icon: '⚡', name: 'Last 24 Hours' },
+          { key: 'today', icon: '📅', name: 'Today (IST)' },
+          { key: 'yesterday', icon: '⏪', name: 'Yesterday' },
+          { key: '7d', icon: '🗓️', name: 'Last 7 Days (Week)' },
+          { key: 'thisMonth', icon: '📆', name: 'This Month' },
+          { key: 'all', icon: '🌐', name: 'All-Time Total' }
+        ];
+
+        matrixTbody.innerHTML = matrixPeriods.map(p => {
+          const m = periods[p.key] || {
+            netProfitINR: 0, netProfitUSD: 0, tradesCount: 0, winRate: 0, winCount: 0, lossCount: 0,
+            grossProfitINR: 0, totalChargesINR: 0, totalBarrels: 0, harvestCount: 0, avgProfitINR: 0
+          };
+          const sign = m.netProfitINR >= 0 ? '+' : '';
+          const color = m.netProfitINR >= 0 ? 'var(--accent-green-bright)' : 'var(--accent-red-bright)';
+          const isSelected = p.key === currentSummaryPeriod;
+          const isToday = p.key === 'today';
+          const rowClass = isSelected ? 'matrix-row-selected' : (isToday ? 'matrix-row-today' : '');
+
+          return `
+            <tr class="${rowClass}" style="cursor: pointer;" onclick="selectSummaryPeriod('${p.key}')" title="Click to view ${p.name} metrics above">
+              <td>
+                <strong style="color: #fff; display: flex; align-items: center; gap: 6px;">
+                  <span>${p.icon}</span>
+                  <span>${p.name}</span>
+                  ${isSelected ? '<span style="font-size: 0.65rem; background: var(--accent-cyan); color: #000; padding: 1px 6px; border-radius: 4px; font-weight: 900;">ACTIVE</span>' : ''}
+                </strong>
+              </td>
+              <td><strong style="color: ${color}; font-size: 1.05rem; font-family: var(--font-mono);">${sign}₹${(m.netProfitINR || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</strong></td>
+              <td><span style="color: ${color}; font-weight: 700; font-family: var(--font-mono);">${sign}$${(m.netProfitUSD || 0).toFixed(2)}</span></td>
+              <td><strong style="color: #fff;">${m.tradesCount}</strong></td>
+              <td><span style="font-weight: 800; color: ${m.winRate >= 80 ? 'var(--accent-green-bright)' : (m.winRate >= 50 ? 'var(--accent-gold)' : 'var(--accent-red-bright)')};">${m.winRate.toFixed(1)}%</span></td>
+              <td><span style="font-size: 0.76rem; color: var(--text-dim);">${m.winCount}W / ${m.lossCount}L</span></td>
+              <td>₹${(m.grossProfitINR || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</td>
+              <td style="color: var(--accent-red-bright);">₹${(m.totalChargesINR || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</td>
+              <td><strong style="color: var(--accent-gold);">${(m.totalBarrels || 0).toFixed(1)} BBL</strong></td>
+              <td>${m.harvestCount > 0 ? `<span style="color: #fde047; font-weight: 800;">👑 ${m.harvestCount}</span>` : '<span style="color: var(--text-dim);">0</span>'}</td>
+              <td><span style="color: ${color}; font-weight: 700;">${m.avgProfitINR >= 0 ? '+' : ''}₹${(m.avgProfitINR || 0).toFixed(2)}</span></td>
+            </tr>
+          `;
+        }).join('');
+      }
+
+      // Render Daily Breakdown Table
+      const dailyTbody = document.getElementById('dailyBreakdownTableBody');
+      if (dailyTbody) {
+        const days = summaryData.dailyBreakdown || [];
+        if (days.length === 0) {
+          dailyTbody.innerHTML = '<tr><td colspan="10" class="empty-state">No historical daily trades recorded.</td></tr>';
+        } else {
+          const todayKey = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Kolkata' });
+          const yesterdayKey = new Date(Date.now() - 86400000).toLocaleDateString('en-CA', { timeZone: 'Asia/Kolkata' });
+
+          dailyTbody.innerHTML = days.map(d => {
+            const sign = d.netProfitINR >= 0 ? '+' : '';
+            const color = d.netProfitINR >= 0 ? 'var(--accent-green-bright)' : 'var(--accent-red-bright)';
+            const isToday = d.date === todayKey;
+            const isYesterday = d.date === yesterdayKey;
+            const dateLabel = isToday ? `${d.date} (Today)` : (isYesterday ? `${d.date} (Yesterday)` : d.date);
+
+            return `
+              <tr class="${isToday ? 'matrix-row-today' : ''}">
+                <td>
+                  <strong style="color: ${isToday ? 'var(--accent-green-bright)' : '#fff'};">${dateLabel}</strong>
+                </td>
+                <td><strong style="color: #fff;">${d.tradesCount}</strong></td>
+                <td><span style="font-weight: 800; color: ${d.winRate >= 80 ? 'var(--accent-green-bright)' : 'var(--accent-gold)'};">${d.winRate.toFixed(1)}%</span></td>
+                <td><span style="font-size: 0.76rem; color: var(--text-dim);">${d.winCount}W / ${d.lossCount}L</span></td>
+                <td><strong style="color: ${color}; font-size: 1.05rem; font-family: var(--font-mono);">${sign}₹${(d.netProfitINR || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</strong></td>
+                <td><span style="color: ${color}; font-weight: 700; font-family: var(--font-mono);">${sign}$${(d.netProfitUSD || 0).toFixed(2)}</span></td>
+                <td>₹${(d.grossProfitINR || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</td>
+                <td style="color: var(--accent-red-bright);">₹${(d.totalChargesINR || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</td>
+                <td><strong style="color: var(--accent-gold);">${(d.totalBarrels || 0).toFixed(1)} BBL</strong></td>
+                <td>${d.harvestCount > 0 ? `<span style="color: #fde047; font-weight: 800;">👑 ${d.harvestCount}</span>` : '<span style="color: var(--text-dim);">0</span>'}</td>
+              </tr>
+            `;
+          }).join('');
+        }
+      }
+    }
+
+    // --- MUDREX HARVEST (PUNARJANM) CONTROLLER ---
+    function renderHarvestTab(closedPositions, punarjanm, usdInr) {
+      usdInr = usdInr || 102.0;
+      const allTrades = closedPositions || [];
+      const harvestList = allTrades.filter(cp => 
+        (cp.direction && (cp.direction.includes('BASKET') || cp.direction.includes('HARVEST'))) ||
+        (cp.positionId && (cp.positionId.includes('HARVEST') || cp.positionId.includes('Punarjanm')))
+      );
+
+      let totalHarvestNetINR = 0;
+      let totalBarrels = 0;
+      for (const h of harvestList) {
+        const net = h.netProfitINR !== undefined ? h.netProfitINR : ((h.netProfitUSD || 0) * usdInr);
+        totalHarvestNetINR += net;
+        totalBarrels += Number(h.quantity || 2.0);
+      }
+      const totalHarvestNetUSD = totalHarvestNetINR / usdInr;
+      const cycleCount = harvestList.length;
+
+      // Update KPI Cards
+      const kpiNetINR = document.getElementById('harvestKpiNetINR');
+      if (kpiNetINR) {
+        const sign = totalHarvestNetINR >= 0 ? '+' : '';
+        kpiNetINR.innerText = `${sign}₹${totalHarvestNetINR.toLocaleString('en-IN', { minimumFractionDigits: 2 })}`;
+      }
+
+      const kpiNetUSD = document.getElementById('harvestKpiNetUSD');
+      if (kpiNetUSD) {
+        const sign = totalHarvestNetUSD >= 0 ? '+' : '';
+        kpiNetUSD.innerText = `${sign}$${totalHarvestNetUSD.toFixed(2)} Net`;
+      }
+
+      const kpiCycles = document.getElementById('harvestKpiCycles');
+      if (kpiCycles) {
+        kpiCycles.innerText = `${cycleCount} Cycle${cycleCount === 1 ? '' : 's'}`;
+      }
+
+      const kpiLast = document.getElementById('harvestKpiLastCycle');
+      if (kpiLast) {
+        if (harvestList.length > 0) {
+          const last = harvestList[harvestList.length - 1];
+          kpiLast.innerText = `Last: ${last.positionId || last.pairId || 'Cycle'}`;
+        } else {
+          kpiLast.innerText = 'Last: None';
+        }
+      }
+
+      const kpiBarrels = document.getElementById('harvestKpiBarrels');
+      if (kpiBarrels) {
+        kpiBarrels.innerText = `${totalBarrels.toFixed(1)} BBL`;
+      }
+
+      const kpiTarget = document.getElementById('harvestKpiTarget');
+      if (kpiTarget) {
+        const targetVal = (punarjanm && punarjanm.basketTargetINR) || 250;
+        kpiTarget.innerText = `₹${targetVal}`;
+      }
+
+      const kpiCurr = document.getElementById('harvestKpiCurrentMudrex');
+      if (kpiCurr) {
+        const currPnl = (punarjanm && punarjanm.mudrexFloatingNetINR) || 0;
+        const sign = currPnl >= 0 ? '+' : '';
+        kpiCurr.innerText = `Current: ${sign}₹${currPnl.toFixed(2)}`;
+        kpiCurr.style.color = currPnl >= 0 ? 'var(--accent-green-bright)' : 'var(--accent-red-bright)';
+      }
+
+      // Update Tab Navigation Badge
+      const badgeHarvest = document.getElementById('badgeHarvestCount');
+      if (badgeHarvest) {
+        badgeHarvest.innerText = `${cycleCount} Cycle${cycleCount === 1 ? '' : 's'} (+₹${totalHarvestNetINR.toFixed(0)})`;
+      }
+
+      // Render Harvest Table Rows
+      const tbody = document.getElementById('mudrexHarvestTableBody');
+      if (tbody) {
+        if (harvestList.length === 0) {
+          tbody.innerHTML = '<tr><td colspan="9" class="empty-state">No Punarjanm basket settlements executed yet.</td></tr>';
+          return;
+        }
+
+        // Sort descending by exit time
+        const sortedHarvest = harvestList.slice().reverse();
+        tbody.innerHTML = sortedHarvest.map((h, idx) => {
+          const netINR = h.netProfitINR !== undefined ? h.netProfitINR : ((h.netProfitUSD || 0) * usdInr);
+          const netUSD = h.netProfitUSD !== undefined ? h.netProfitUSD : (netINR / usdInr);
+          const grossINR = h.grossProfitINR !== undefined ? h.grossProfitINR : netINR;
+          const chargesINR = h.totalChargesINR !== undefined ? h.totalChargesINR : 0;
+          const qty = Number(h.quantity || 2.0);
+          const exitTimeStr = formatExitTimeIST(h.exitTime || h.closedTimestamp || Date.now());
+          const reason = h.exitReason || 'Punarjanm Basket Profit Harvest';
+
+          return `
+            <tr style="background: rgba(245, 158, 11, 0.04);">
+              <td>
+                <strong style="color: #f59e0b; font-family: var(--font-mono); font-size: 0.92rem; display: flex; align-items: center; gap: 6px;">
+                  <span>👑</span>
+                  <span>${h.positionId || h.pairId || `Punarjanm-${idx + 1}`}</span>
+                </strong>
+              </td>
+              <td><strong style="color: #fff; font-size: 0.90rem;">${exitTimeStr}</strong></td>
+              <td><strong style="color: var(--accent-gold); font-size: 0.88rem;">${qty.toFixed(1)} BBL</strong></td>
+              <td style="color: #fff; font-size: 0.95rem; font-weight: 700;">$${h.exitPrice ? Number(h.exitPrice).toFixed(2) : '--'}</td>
+              <td style="color: #34d399; font-weight: 700;">+₹${grossINR.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</td>
+              <td style="color: var(--text-dim);">₹${chargesINR.toFixed(2)}</td>
+              <td>
+                <strong style="color: #fde047; font-size: 1.15rem; font-weight: 900; text-shadow: 0 0 10px rgba(245, 158, 11, 0.5);">
+                  +₹${netINR.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                </strong>
+                <div style="font-size: 0.72rem; color: #fde047;">(+ $${netUSD.toFixed(2)})</div>
+              </td>
+              <td style="font-size: 0.78rem; color: #cbd5e1;">${reason}</td>
+              <td>
+                <span class="badge" style="background: rgba(16, 185, 129, 0.2); color: #34d399; border: 1px solid #10b981; font-size: 0.70rem; font-weight: 800;">
+                  ✓ CREDITED TO WALLET
+                </span>
+              </td>
+            </tr>
+          `;
+        }).join('');
+      }
+    }
+
+    // --- CUSTOM TIME RANGE CALCULATOR CONTROLLER ---
+    function runCustomTimeCalc() {
+      const fromVal = document.getElementById('calcFromTime').value;
+      const toVal = document.getElementById('calcToTime').value;
+      if (!fromVal || !toVal) {
+        alert('Please select both FROM and TO dates/times.');
+        return;
+      }
+      const fromTs = new Date(fromVal).getTime();
+      const toTs = new Date(toVal).getTime();
+      if (isNaN(fromTs) || isNaN(toTs) || fromTs >= toTs) {
+        alert('Please enter a valid FROM date/time that is before TO date/time.');
+        return;
+      }
+
+      currentSummaryPeriod = 'custom';
+      document.querySelectorAll('.summary-period-pill').forEach(btn => btn.classList.remove('active'));
+
+      const fromFmt = new Date(fromTs).toLocaleString('en-IN', { timeZone: 'Asia/Kolkata', dateStyle: 'short', timeStyle: 'short' });
+      const toFmt = new Date(toTs).toLocaleString('en-IN', { timeZone: 'Asia/Kolkata', dateStyle: 'short', timeStyle: 'short' });
+      const txt = document.getElementById('calcActiveWindowText');
+      if (txt) {
+        txt.innerText = `Active Custom Window: ${fromFmt} to ${toFmt} IST`;
+      }
+
+      if (cachedData) {
+        const closedList = cachedData.closedPositions || [];
+        const usdInr = (cachedData.rate && cachedData.rate.usdInrRate) || 102;
+        const filtered = closedList.filter(t => {
+          const ts = getClosedTimestamp(t);
+          return ts >= fromTs && ts <= toTs;
+        });
+
+        const summaryObj = calculateClientSummary(closedList, usdInr);
+        const customMetrics = calculateClientSummary(filtered, usdInr).all;
+        summaryObj.periods['custom'] = customMetrics;
+        renderSummaryTab(summaryObj, closedList, usdInr);
+      }
     }
 
     // Initialize polling loop (every 1 second)
