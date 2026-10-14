@@ -62,16 +62,19 @@ class SolanaEngine {
   initFromStorage() {
     try {
       let raw = null;
+      const seedFile = path.join(__dirname, 'solana_state_seed.json');
       if (fs.existsSync(this.storagePath)) {
         raw = fs.readFileSync(this.storagePath, 'utf8');
       } else if (fs.existsSync(this.backupPath)) {
         raw = fs.readFileSync(this.backupPath, 'utf8');
+      } else if (fs.existsSync(seedFile)) {
+        raw = fs.readFileSync(seedFile, 'utf8');
       }
 
       if (raw) {
         const data = JSON.parse(raw);
         if (data) {
-          if (Array.isArray(data.pairs)) this.pairs = data.pairs;
+          if (Array.isArray(data.pairs) && data.pairs.length > 0) this.pairs = data.pairs;
           if (Array.isArray(data.closedPositions)) this.closedPositions = data.closedPositions;
           if (Array.isArray(data.punarjanmCycles)) this.punarjanmCycles = data.punarjanmCycles;
           if (typeof data.punarjanmCount === 'number') this.punarjanmCount = data.punarjanmCount;
@@ -81,9 +84,25 @@ class SolanaEngine {
           this.settings.realOrdersDisabled = false;
           this.settings.autoAddNewPairs = true;
           this.settings.gridSpacing = this.settings.gridSpacing || 0.02;
+          this.settings.maxActivePairs = 20;
           if (Array.isArray(data.processedRates)) this.processedRates = new Set(data.processedRates);
           console.log(`[Solana Engine] Restored state from storage: ${this.pairs.length} pairs, ${this.closedPositions.length} closed trades.`);
         }
+      }
+
+      // If pairs is still empty, load from seed file
+      if (this.pairs.length === 0 && fs.existsSync(seedFile)) {
+        try {
+          const seedData = JSON.parse(fs.readFileSync(seedFile, 'utf8'));
+          if (seedData && Array.isArray(seedData.pairs) && seedData.pairs.length > 0) {
+            this.pairs = seedData.pairs;
+            this.pairCounter = seedData.pairCounter || (this.pairs.length + 1);
+            if (Array.isArray(seedData.processedRates)) {
+              seedData.processedRates.forEach(r => this.processedRates.add(r));
+            }
+            console.log(`[Solana Engine] Seeded ${this.pairs.length} pairs from solana_state_seed.json.`);
+          }
+        } catch (e) {}
       }
     } catch (e) {
       console.warn('[Solana Engine] Error initializing from storage:', e.message);
