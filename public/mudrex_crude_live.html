@@ -256,7 +256,7 @@
       border-radius: 16px;
       padding: 16px 22px;
       display: grid;
-      grid-template-columns: 1fr 1.6fr 0.9fr 0.9fr 0.8fr;
+      grid-template-columns: 1.6fr 1fr 0.9fr 0.9fr 0.8fr;
       gap: 16px;
       box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
       align-items: center;
@@ -969,6 +969,14 @@
       color: var(--accent-red-bright);
     }
 
+    .badge-harvest {
+      background: linear-gradient(135deg, rgba(124, 58, 237, 0.35), rgba(219, 39, 119, 0.35));
+      border: 1px solid #f472b6;
+      color: #fbcfe8;
+      box-shadow: 0 0 10px rgba(219, 39, 119, 0.3);
+      font-weight: 800;
+    }
+
     .badge-open {
       background: rgba(56, 189, 248, 0.15);
       border: 1px solid rgba(56, 189, 248, 0.35);
@@ -1126,17 +1134,8 @@
 
     <!-- Live Rate Ticker Hero Banner -->
     <section class="hero-ticker-banner">
-      <!-- Live Price Callout -->
-      <div class="ticker-block">
-        <div class="ticker-label">
-          <span>🛢️ CLUSDT CRUDE OIL LIVE RATE</span>
-        </div>
-        <div class="ticker-rate-value rate-cyan" id="liveCrudePrice">$0.00</div>
-        <div class="ticker-sub" id="liveRateSubtext">USD/INR: ₹102.00 | 2.0 Barrels Lot</div>
-      </div>
-
-      <!-- Live Mudrex Unrealised PnL (R/G) & Punarjanm Basket Controls -->
-      <div class="ticker-block border-left ticker-block-mudrex" style="display: flex; flex-direction: column; justify-content: center; gap: 4px;">
+      <!-- 1. Live Mudrex Unrealised PnL (R/G) & Punarjanm Basket Controls (FIRST) -->
+      <div class="ticker-block ticker-block-mudrex" style="display: flex; flex-direction: column; justify-content: center; gap: 4px;">
         <div class="ticker-label" style="display: flex; justify-content: space-between; align-items: center;">
           <span style="display: inline-flex; align-items: center; gap: 6px;">
             <span class="mudrex-live-indicator" id="heroMudrexIndicator" style="width: 8px; height: 8px; border-radius: 50%; background: #ef4444; display: inline-block;"></span>
@@ -1144,7 +1143,7 @@
           </span>
           <span class="badge" id="heroMudrexSideBadge" style="background: rgba(239, 68, 68, 0.25); border: 1px solid #ef4444; color: #f87171; font-weight: 800; font-size: 0.72rem; padding: 2px 7px; border-radius: 5px;">SHORT 16 BBL</span>
         </div>
-        <div class="ticker-rate-value" id="heroMudrexPnlVal" style="font-size: 1.95rem; line-height: 1.1; font-family: var(--font-display); font-weight: 900; color: #ef4444;">₹0.00</div>
+        <div class="ticker-rate-value" id="heroMudrexPnlVal" style="font-size: 2.1rem; line-height: 1.1; font-family: var(--font-display); font-weight: 900; color: #ef4444;">₹0.00</div>
         
         <div style="display: flex; justify-content: space-between; align-items: center; gap: 6px; flex-wrap: wrap; margin-top: 3px;">
           <div class="ticker-sub" id="heroMudrexSubtext" style="font-size: 0.75rem; font-family: var(--font-mono); color: var(--text-dim);">Entry: $93.74 | Liq: $110.61</div>
@@ -1166,6 +1165,15 @@
             </button>
           </div>
         </div>
+      </div>
+
+      <!-- 2. Live Price Callout (SECOND) -->
+      <div class="ticker-block border-left">
+        <div class="ticker-label">
+          <span>🛢️ CLUSDT CRUDE OIL LIVE RATE</span>
+        </div>
+        <div class="ticker-rate-value rate-cyan" id="liveCrudePrice">$0.00</div>
+        <div class="ticker-sub" id="liveRateSubtext">USD/INR: ₹102.00 | 2.0 Barrels Lot</div>
       </div>
 
       <!-- BUY Target Exit Callout -->
@@ -1749,10 +1757,10 @@
         const navBadge = document.getElementById('navMudrexBadge');
         if (navBadge) navBadge.innerText = `${side} ${posQty} BBL`;
 
-        // Update Hero Ticker Live Mudrex Unrealised P&L (R/G)
+        // Update Hero Ticker Live Mudrex Unrealised P&L (R/G) - ONLY ₹ INR
         const heroPnlVal = document.getElementById('heroMudrexPnlVal');
         if (heroPnlVal) {
-          heroPnlVal.innerText = `${pnlSign}₹${pnlINR.toFixed(2)} (${pnlSign}$${pnlUSD.toFixed(2)})`;
+          heroPnlVal.innerText = `${pnlSign}₹${pnlINR.toFixed(2)}`;
           heroPnlVal.style.color = pnlINR >= 0 ? 'var(--accent-green-bright)' : 'var(--accent-red-bright)';
           heroPnlVal.style.textShadow = pnlINR >= 0 ? '0 0 20px rgba(16, 185, 129, 0.4)' : '0 0 20px rgba(239, 68, 68, 0.4)';
         }
@@ -2231,8 +2239,9 @@
         const netUSD = cp.netProfitUSD !== undefined ? cp.netProfitUSD : (netINR / 102);
         const pnlClass = netINR >= 0 ? 'pnl-positive' : 'pnl-negative';
         const sign = netINR >= 0 ? '+' : '';
-        const side = cp.direction || (cp.positionId && cp.positionId.includes('BUY') ? 'BUY' : 'SELL');
-        const badgeClass = side === 'BUY' ? 'badge-buy' : 'badge-sell';
+        const isHarvest = (cp.direction && cp.direction.includes('BASKET')) || (cp.positionId && cp.positionId.includes('HARVEST'));
+        const side = isHarvest ? '✨ HARVEST' : (cp.direction || (cp.positionId && cp.positionId.includes('BUY') ? 'BUY' : 'SELL'));
+        const badgeClass = isHarvest ? 'badge-harvest' : (side === 'BUY' ? 'badge-buy' : 'badge-sell');
 
         return `
           <tr>

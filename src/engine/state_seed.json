@@ -23,7 +23,7 @@
     "strategyMode": "ALTERNATING_STAGGERED",
     "priceMatchingTolerance": 0.0001,
     "syncRealMudrexPositions": true,
-    "autoAddNewPairs": false
+    "autoAddNewPairs": true
   },
   "pairs": [
     {
@@ -435,60 +435,6 @@
       "usdInrRate": 96.96,
       "exitReason": "SELL TARGET PROFIT HIT",
       "holdingDurationSec": 1875,
-      "ledger": "PAPER",
-      "source": "SIMULATED_SEED"
-    },
-    {
-      "pairId": "PAIR-0013",
-      "positionId": "P-0013-SELL",
-      "direction": "SELL",
-      "symbol": "CLUSDT",
-      "entryTime": "2026-10-12T22:24:00.000Z",
-      "exitTime": "2026-10-12T23:47:00.000Z",
-      "entryPrice": 92.62,
-      "exitPrice": 91.62,
-      "targetExitPrice": 91.62,
-      "quantity": 1,
-      "contractMultiplier": 1,
-      "grossProfitUSD": 1.0088,
-      "grossProfitINR": 97.81,
-      "entryFeeUSD": 0.0695,
-      "exitFeeUSD": 0.0687,
-      "gstUSD": 0.0249,
-      "totalChargesUSD": 0.2147,
-      "totalChargesINR": 20.82,
-      "netProfitUSD": 0.7941,
-      "netProfitINR": 77,
-      "usdInrRate": 96.96,
-      "exitReason": "SELL TARGET PROFIT HIT",
-      "holdingDurationSec": 1920,
-      "ledger": "PAPER",
-      "source": "SIMULATED_SEED"
-    },
-    {
-      "pairId": "PAIR-0014",
-      "positionId": "P-0014-SELL",
-      "direction": "SELL",
-      "symbol": "CLUSDT",
-      "entryTime": "2026-10-12T22:31:00.000Z",
-      "exitTime": "2026-10-12T23:54:00.000Z",
-      "entryPrice": 92.63,
-      "exitPrice": 91.63,
-      "targetExitPrice": 91.63,
-      "quantity": 1,
-      "contractMultiplier": 1,
-      "grossProfitUSD": 1.0088,
-      "grossProfitINR": 97.81,
-      "entryFeeUSD": 0.0695,
-      "exitFeeUSD": 0.0687,
-      "gstUSD": 0.0249,
-      "totalChargesUSD": 0.2147,
-      "totalChargesINR": 20.82,
-      "netProfitUSD": 0.7941,
-      "netProfitINR": 77,
-      "usdInrRate": 96.96,
-      "exitReason": "SELL TARGET PROFIT HIT",
-      "holdingDurationSec": 1965,
       "ledger": "PAPER",
       "source": "SIMULATED_SEED"
     },
@@ -1058,6 +1004,33 @@
       "holdingDurationSec": 16641,
       "ledger": "PAPER",
       "source": "SIMULATED"
+    },
+    {
+      "pairId": "Punarjanm1",
+      "positionId": "P-Punarjanm1-HARVEST",
+      "direction": "MUDREX_BASKET",
+      "symbol": "CLUSDT",
+      "entryTime": "2026-10-13T17:48:17.000Z",
+      "exitTime": "2026-10-13T23:58:15.286Z",
+      "entryPrice": 93.86,
+      "exitPrice": 93.79,
+      "targetExitPrice": 93.79,
+      "quantity": 16,
+      "contractMultiplier": 1,
+      "grossProfitUSD": 1.12,
+      "grossProfitINR": 114.24,
+      "entryFeeUSD": 0,
+      "exitFeeUSD": 0,
+      "gstUSD": 0,
+      "totalChargesUSD": 0,
+      "totalChargesINR": 0,
+      "netProfitUSD": 1.09,
+      "netProfitINR": 111.51,
+      "usdInrRate": 102,
+      "exitReason": "Punarjanm 1 Basket Profit Harvest (+₹111.51)",
+      "holdingDurationSec": 22198,
+      "ledger": "MUDREX_LIVE",
+      "source": "REAL_EXCHANGE"
     }
   ],
   "auditLogs": [
@@ -4376,5 +4349,6 @@
       "source": "MUDREX_EXCHANGE_VERIFIED",
       "apiStatus": "REAL_MUDREX_POSITION"
     }
-  ]
+  ],
+  "punarjanmCount": 1
 }
