@@ -6,7 +6,8 @@ class RateFeedManager {
     this.rates = {
       CLUSDT: { price: null, lastTime: 0, receivedTime: 0, status: 'INITIALIZING', source: 'NONE' },
       XAGUSDT: { price: null, lastTime: 0, receivedTime: 0, status: 'INITIALIZING', source: 'NONE' },
-      BTCUSDT: { price: null, lastTime: 0, receivedTime: 0, status: 'INITIALIZING', source: 'NONE' }
+      BTCUSDT: { price: null, lastTime: 0, receivedTime: 0, status: 'INITIALIZING', source: 'NONE' },
+      SOLUSDT: { price: null, lastTime: 0, receivedTime: 0, status: 'INITIALIZING', source: 'NONE' }
     };
 
     this.activeSymbol = 'CLUSDT';
@@ -67,7 +68,7 @@ class RateFeedManager {
   }
 
   initWebSockets() {
-    const symbols = ['clusdt', 'xagusdt', 'btcusdt'];
+    const symbols = ['clusdt', 'xagusdt', 'btcusdt', 'solusdt'];
     for (const symbolLower of symbols) {
       const symbolUpper = symbolLower.toUpperCase();
       this.connectSymbolWebSocket(symbolUpper, symbolLower);
@@ -123,7 +124,7 @@ class RateFeedManager {
   }
 
   pollRestPrices() {
-    const symbols = ['CLUSDT', 'XAGUSDT', 'BTCUSDT'];
+    const symbols = ['CLUSDT', 'XAGUSDT', 'BTCUSDT', 'SOLUSDT'];
     for (const symbol of symbols) {
       // If WebSocket is quiet for > 4 seconds, poll REST
       if (Date.now() - this.rates[symbol].lastTime > 4000) {
@@ -134,20 +135,23 @@ class RateFeedManager {
   }
 
   fetchMarkPrices() {
-    const url = 'https://fapi.binance.com/fapi/v1/premiumIndex?symbol=CLUSDT';
-    http.get(url, (res) => {
-      let body = '';
-      res.on('data', chunk => body += chunk);
-      res.on('end', () => {
-        try {
-          const data = JSON.parse(body);
-          if (data && data.markPrice && this.rates.CLUSDT) {
-            this.rates.CLUSDT.markPrice = parseFloat(data.markPrice);
-            this.rates.CLUSDT.indexPrice = parseFloat(data.indexPrice);
-          }
-        } catch (e) {}
-      });
-    }).on('error', () => {});
+    const symbols = ['CLUSDT', 'SOLUSDT'];
+    for (const sym of symbols) {
+      const url = `https://fapi.binance.com/fapi/v1/premiumIndex?symbol=${sym}`;
+      http.get(url, (res) => {
+        let body = '';
+        res.on('data', chunk => body += chunk);
+        res.on('end', () => {
+          try {
+            const data = JSON.parse(body);
+            if (data && data.markPrice && this.rates[sym]) {
+              this.rates[sym].markPrice = parseFloat(data.markPrice);
+              this.rates[sym].indexPrice = parseFloat(data.indexPrice);
+            }
+          } catch (e) {}
+        });
+      }).on('error', () => {});
+    }
   }
 
   fetchRestPrice(symbol) {

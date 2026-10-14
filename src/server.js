@@ -65,6 +65,20 @@ app.get(['/mudrex-live', '/mudrex_live', '/mudrex_live.html', '/mudrex-live.html
 app.get(['/mudrex-crude-live', '/mudrex_crude_live', '/mudrex_crude_live.html', '/mudrex-crude-live.html'], (req, res) => res.sendFile(path.join(__dirname, '../public/mudrex_crude_live.html')));
 app.get(['/crude-live-mudrex', '/crude_live_mudrex', '/Crude-Live-Mudrex', '/crude-live-mudrex.html', '/crude_live_mudrex.html'], (req, res) => res.redirect(301, '/Crude-Live-Mudrex-Pro'));
 app.get(['/crude-live-mudrex-pro', '/crude_live_mudrex_pro', '/Crude-Live-Mudrex-Pro', '/crude-live-mudrex-pro.html', '/crude_live_mudrex_pro.html'], (req, res) => res.sendFile(path.join(__dirname, '../public/crude_live_mudrex_pro.html')));
+app.get([
+  '/crude-live-mudrex-solana',
+  '/Crude-Live-Mudrex-Solana',
+  '/crude_live_mudrex_solana',
+  '/crude-live-solana',
+  '/Crude-Live-Solana',
+  '/solana-live-mudrex',
+  '/Solana-Live-Mudrex',
+  '/solana-live-mudrex-pro',
+  '/Solana-Live-Mudrex-Pro',
+  '/solana_live_mudrex',
+  '/solana',
+  '/Solana'
+], (req, res) => res.sendFile(path.join(__dirname, '../public/solana_live_mudrex.html')));
 app.get(['/mudrex-crude-calc', '/mudrex_crude_calc', '/mudrex_crude_calc.html', '/mudrex-crude-calc.html'], (req, res) => res.sendFile(path.join(__dirname, '../public/mudrex_crude_calc.html')));
 app.get(['/pair-add', '/pair_add', '/pair_add.html', '/pair-add.html'], (req, res) => res.sendFile(path.join(__dirname, '../public/pair_add.html')));
 
@@ -887,6 +901,77 @@ app.post(['/api/crude-live-mudrex/action', '/api/crude-live-mudrex-pro/action'],
     }
 
     return res.status(400).json({ success: false, error: 'Unknown action.' });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// Dedicated Clean Endpoint for Crude-Live-Mudrex-Solana / Solana-Live-Mudrex-Pro (Simulator ₹1.5 Lakh)
+app.get(['/api/solana-live-mudrex/data', '/api/crude-live-mudrex-solana/data', '/api/solana/data'], async (req, res) => {
+  try {
+    const solanaEngine = require('./engine/solanaEngine');
+    const data = solanaEngine.getDashboardMetrics();
+    res.json(data);
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// Dedicated Action Endpoint for Solana Simulator with Admin PIN Protection (340556)
+app.post(['/api/solana-live-mudrex/action', '/api/crude-live-mudrex-solana/action', '/api/solana/action'], async (req, res) => {
+  try {
+    const { action, password } = req.body || {};
+    if (password !== '340556') {
+      return res.status(403).json({ success: false, error: 'Incorrect Admin Password. Must provide 340556.' });
+    }
+
+    const solanaEngine = require('./engine/solanaEngine');
+    const rateFeed = require('./engine/rateFeed');
+
+    if (action === 'startEngine') {
+      solanaEngine.engineStatus = 'RUNNING';
+      solanaEngine.isEngineRunning = true;
+      solanaEngine.pauseReason = '';
+      solanaEngine.saveState();
+      return res.json({ success: true, message: 'Solana Simulation Engine started successfully.' });
+    } else if (action === 'pauseEngine') {
+      solanaEngine.engineStatus = 'PAUSED';
+      solanaEngine.isEngineRunning = false;
+      solanaEngine.pauseReason = 'User paused engine from Solana desk';
+      solanaEngine.saveState();
+      return res.json({ success: true, message: 'Solana Simulation Engine paused successfully.' });
+    } else if (action === 'addNewPair') {
+      const cur = rateFeed.getCurrentRate('SOLUSDT');
+      const price = cur ? cur.price : 106.30;
+      const usdInrRate = cur ? (cur.usdInrRate || 102.00) : 102.00;
+      
+      const pair = solanaEngine.createNewPair('SOLUSDT', price, Date.now(), usdInrRate);
+      return res.json({ success: true, message: `New Solana Pair created at $${price.toFixed(2)}.`, pair });
+    } else if (action === 'punarjanm') {
+      const cur = rateFeed.getCurrentRate('SOLUSDT');
+      const closeRate = cur ? cur.price : 106.30;
+      const usdInrRate = cur ? (cur.usdInrRate || 102.00) : 102.00;
+      
+      const punarjanmResult = solanaEngine.executePunarjanm('MANUAL_USER_REQUEST', closeRate, usdInrRate);
+      return res.json({
+        success: true,
+        message: 'Solana Punarjanm executed successfully!',
+        punarjanm: punarjanmResult
+      });
+    } else if (action === 'updateBasketTarget') {
+      const newTarget = Number(req.body.targetINR);
+      if (isNaN(newTarget) || newTarget <= 0) {
+        return res.status(400).json({ success: false, error: 'Target INR must be a positive number.' });
+      }
+      solanaEngine.settings.basketProfitTargetINR = newTarget;
+      solanaEngine.saveState();
+      return res.json({ success: true, message: `Solana Punarjanm target updated to ₹${newTarget.toFixed(2)} INR.`, targetINR: newTarget });
+    } else if (action === 'resetData') {
+      const result = solanaEngine.resetData();
+      return res.json({ success: true, message: result.message });
+    } else {
+      return res.status(400).json({ success: false, error: 'Unknown action: ' + action });
+    }
   } catch (err) {
     res.status(500).json({ success: false, error: err.message });
   }

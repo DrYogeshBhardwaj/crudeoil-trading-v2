@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" width="128" height="128">
+  <defs>
+    <linearGradient id="solanaGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#00FFA3" />
+      <stop offset="50%" stop-color="#03E1FF" />
+      <stop offset="100%" stop-color="#DC1FFF" />
+    </linearGradient>
+    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0f172a" />
+      <stop offset="100%" stop-color="#020617" />
+    </linearGradient>
+  </defs>
+  <!-- Background Circle with glow -->
+  <rect width="128" height="128" rx="28" fill="url(#bgGrad)" stroke="rgba(0, 255, 163, 0.3)" stroke-width="2"/>
+  
+  <!-- Solana Logo 3 Iconic Bars -->
+  <!-- Top Bar -->
+  <path d="M 28 32 L 95 32 C 98 32 101 34.5 99.5 37.5 L 94 47 C 93 49 90.5 50 88 50 L 21 50 C 18 50 15 47.5 16.5 44.5 L 22 35 C 23 33 25.5 32 28 32 Z" fill="url(#solanaGrad)" />
+  
+  <!-- Middle Bar -->
+  <path d="M 22 59 L 89 59 C 91.5 59 94 60 95 62 L 100.5 71.5 C 102 74.5 99 77 96 77 L 29 77 C 26.5 77 24 76 23 74 L 17.5 64.5 C 16 61.5 19 59 22 59 Z" fill="url(#solanaGrad)" />
+  
+  <!-- Bottom Bar -->
+  <path d="M 28 86 L 95 86 C 98 86 101 88.5 99.5 91.5 L 94 101 C 93 103 90.5 104 88 104 L 21 104 C 18 104 15 101.5 16.5 98.5 L 22 89 C 23 87 25.5 86 28 86 Z" fill="url(#solanaGrad)" />
+</svg>
