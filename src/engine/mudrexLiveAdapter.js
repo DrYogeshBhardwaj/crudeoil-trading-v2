@@ -146,11 +146,15 @@ class MudrexLiveAdapter {
         return false;
       }
 
-      // Fail-Closed Rule 3: Engine settings check (if paperEngine explicitly disabled real orders, fail closed)
+      // Fail-Closed Rule 3: Engine settings check (allow if EITHER paperEngine OR solanaEngine is in LIVE mode)
       const paperEngine = require('./paperEngine');
-      if (!paperEngine || !paperEngine.settings) return false;
-      if (paperEngine.settings.realOrdersDisabled === true) return false;
-      if (paperEngine.settings.tradingMode !== 'LIVE') return false;
+      let solanaEngine = null;
+      try { solanaEngine = require('./solanaEngine'); } catch(e) {}
+
+      const isPaperLive = paperEngine && paperEngine.settings && paperEngine.settings.tradingMode === 'LIVE' && !paperEngine.settings.realOrdersDisabled;
+      const isSolanaLive = solanaEngine && solanaEngine.settings && solanaEngine.settings.tradingMode === 'LIVE' && !solanaEngine.settings.realOrdersDisabled;
+
+      if (!isPaperLive && !isSolanaLive) return false;
 
       return true;
     } catch (e) {

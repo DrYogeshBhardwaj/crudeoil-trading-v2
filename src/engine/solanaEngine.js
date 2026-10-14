@@ -5,24 +5,24 @@ const rateFeed = require('./rateFeed');
 class SolanaEngine {
   constructor() {
     this.settings = {
-      startingCapitalINR: 300000.00, // ₹3.0 Lakh starting capital requested by user
+      startingCapitalINR: 186682.39, // Mudrex Futures Wallet Available Cash
       contractQuantity: 3.0, // 3.0 SOL default lot size requested by user
       leverage: 5,
       instrument: 'SOLUSDT',
-      profitTargetMove: 0.45, // $0.45 Target Move for Solana as configured
+      profitTargetMove: 0.45, // $0.45 Target Move for Solana
       buyTargetMove: 0.45,
       sellTargetMove: 0.45,
       basketProfitTargetINR: 250, // ₹250 Punarjanm Basket Profit Threshold
       autoPunarjanmEnabled: false, // Auto-harvest disabled per user request
-      autoAddNewPairs: true,
-      maxActivePairs: 50,
+      autoAddNewPairs: false, // Explicit pair creation
+      maxActivePairs: 20,
       takerFeeRate: 0.00075, // 0.075% Mudrex taker fee
       gstRate: 0.18, // 18% GST
-      conservativeFeeMultiplier: 1.40, // 1.4x conservative buffer (50 -> 70 charges) requested by user
+      conservativeFeeMultiplier: 1.40, // 1.4x conservative buffer
       slippageBufferINR: 2.0, // ₹2.00 slippage buffer
       usdInrRate: 102.00, // Authoritative Mudrex INR Futures Rate
-      tradingMode: 'PAPER', // Pure simulator for checking only as requested
-      realOrdersDisabled: true
+      tradingMode: 'LIVE', // Real Live Trading on Mudrex
+      realOrdersDisabled: false
     };
 
     this.pairs = [];
@@ -60,7 +60,9 @@ class SolanaEngine {
           if (Array.isArray(data.punarjanmCycles)) this.punarjanmCycles = data.punarjanmCycles;
           if (typeof data.punarjanmCount === 'number') this.punarjanmCount = data.punarjanmCount;
           if (typeof data.pairCounter === 'number') this.pairCounter = data.pairCounter;
-          if (data.settings) this.settings = { ...this.settings, ...data.settings, tradingMode: 'PAPER', realOrdersDisabled: true };
+          if (data.settings) this.settings = { ...this.settings, ...data.settings };
+          this.settings.tradingMode = 'LIVE';
+          this.settings.realOrdersDisabled = false;
           if (Array.isArray(data.processedRates)) this.processedRates = new Set(data.processedRates);
           console.log(`[Solana Engine] Restored state from storage: ${this.pairs.length} pairs, ${this.closedPositions.length} closed trades.`);
         }
@@ -287,6 +289,60 @@ class SolanaEngine {
     this.pairs.push(pair);
     this.processedRates.add(price);
     this.lastProcessedRate = price;
+
+    // Real Live Mudrex Order Dispatch
+    if (this.settings.tradingMode === 'LIVE' && !this.settings.realOrdersDisabled) {
+      try {
+        const mudrexLive = require('./mudrexLiveAdapter');
+        buyPos.ledger = 'LIVE';
+        sellPos.ledger = 'LIVE';
+        buyPos.source = 'MUDREX_EXCHANGE';
+        sellPos.source = 'MUDREX_EXCHANGE';
+
+        // Dispatch BUY
+        mudrexLive.createRealOrder({
+          symbol: 'SOLUSDT',
+          side: 'BUY',
+          quantity: qty,
+          leverage: this.settings.leverage || 5,
+          targetPrice: buyTarget
+        }).then(bRes => {
+          if (bRes && bRes.success) {
+            buyPos.mudrexOrderId = mudrexLive.extractOrderId(bRes.data);
+            buyPos.apiStatus = 'REAL_MUDREX_POSITION';
+            console.log(`[Solana Live] Real BUY Order sent to Mudrex for ${pairId}: ${buyPos.mudrexOrderId}`);
+            this.saveState();
+          } else {
+            buyPos.apiError = bRes ? (bRes.error || JSON.stringify(bRes)) : 'Failed';
+            console.warn(`[Solana Live] Real BUY Order rejected for ${pairId}:`, buyPos.apiError);
+            this.saveState();
+          }
+        }).catch(err => { buyPos.apiError = err.message; this.saveState(); });
+
+        // Dispatch SELL
+        mudrexLive.createRealOrder({
+          symbol: 'SOLUSDT',
+          side: 'SELL',
+          quantity: qty,
+          leverage: this.settings.leverage || 5,
+          targetPrice: sellTarget
+        }).then(sRes => {
+          if (sRes && sRes.success) {
+            sellPos.mudrexOrderId = mudrexLive.extractOrderId(sRes.data);
+            sellPos.apiStatus = 'REAL_MUDREX_POSITION';
+            console.log(`[Solana Live] Real SELL Order sent to Mudrex for ${pairId}: ${sellPos.mudrexOrderId}`);
+            this.saveState();
+          } else {
+            sellPos.apiError = sRes ? (sRes.error || JSON.stringify(sRes)) : 'Failed';
+            console.warn(`[Solana Live] Real SELL Order rejected for ${pairId}:`, sellPos.apiError);
+            this.saveState();
+          }
+        }).catch(err => { sellPos.apiError = err.message; this.saveState(); });
+      } catch (err) {
+        console.error('[Solana Live] Order dispatch error:', err.message);
+      }
+    }
+
     this.saveState();
     return pair;
   }
@@ -358,6 +414,20 @@ class SolanaEngine {
     pos.netProfitUSD = Number(netUSD.toFixed(4));
     pos.netProfitINR = Number(netINR.toFixed(2));
     pos.usdInrRate = usdInr;
+
+    // Real Live Exit Order Dispatch on Mudrex
+    if (this.settings.tradingMode === 'LIVE' && !this.settings.realOrdersDisabled && pos.mudrexOrderId) {
+      try {
+        const mudrexLive = require('./mudrexLiveAdapter');
+        mudrexLive.executeRealExit(null, pos, exitPrice, exitTime, usdInr, exitReason).then(res => {
+          console.log(`[Solana Live] Real Exit Order dispatched on Mudrex for ${pos.positionId}:`, res);
+        }).catch(err => {
+          console.error(`[Solana Live] Real Exit Order error for ${pos.positionId}:`, err.message);
+        });
+      } catch (e) {
+        console.error('[Solana Live] Real Exit dispatch error:', e.message);
+      }
+    }
 
     this.closedPositions.unshift({ ...pos });
     this.saveState();
@@ -652,7 +722,7 @@ class SolanaEngine {
         positions: [],
         count: openPairs.length,
         netSummary,
-        note: realMudrexAvailINR !== null ? 'SUBH MONEY SOLANA LIVE DESK (Authoritative Mudrex Exchange Balance)' : 'SUBH MONEY SOLANA DESK'
+        note: realMudrexAvailINR !== null ? 'SUBH-MANI SOLANA LIVE DESK (Authoritative Mudrex Exchange Balance)' : 'SUBH-MANI SOLANA DESK'
       },
       engine: {
         status: this.engineStatus,
@@ -665,8 +735,8 @@ class SolanaEngine {
         profitTargetMove: this.settings.profitTargetMove,
         basketProfitTargetINR: this.settings.basketProfitTargetINR,
         leverage: this.settings.leverage,
-        tradingMode: 'PAPER',
-        realOrdersDisabled: true,
+        tradingMode: this.settings.tradingMode || 'LIVE',
+        realOrdersDisabled: this.settings.realOrdersDisabled || false,
         pairs: openPairs
       },
       punarjanm: {
@@ -704,8 +774,8 @@ class SolanaEngine {
     };
   }
 
-  resetData(newQty = null, newCapital = 300000.00, newTargetMove = null) {
-    this.settings.startingCapitalINR = (newCapital && !isNaN(newCapital) && Number(newCapital) > 0) ? Number(newCapital) : 300000.00;
+  resetData(newQty = null, newCapital = 186682.39, newTargetMove = null) {
+    this.settings.startingCapitalINR = (newCapital && !isNaN(newCapital) && Number(newCapital) > 0) ? Number(newCapital) : 186682.39;
     if (newQty && !isNaN(newQty) && Number(newQty) > 0) {
       this.settings.contractQuantity = Number(newQty);
     } else {
@@ -715,8 +785,15 @@ class SolanaEngine {
       this.settings.profitTargetMove = Number(newTargetMove);
       this.settings.buyTargetMove = Number(newTargetMove);
       this.settings.sellTargetMove = Number(newTargetMove);
+    } else {
+      this.settings.profitTargetMove = 0.45;
+      this.settings.buyTargetMove = 0.45;
+      this.settings.sellTargetMove = 0.45;
     }
+    this.settings.tradingMode = 'LIVE';
+    this.settings.realOrdersDisabled = false;
     this.settings.autoPunarjanmEnabled = false; // Harvest disabled per user request
+    this.settings.autoAddNewPairs = false;
     this.pairs = [];
     this.closedPositions = [];
     this.punarjanmCount = 0;

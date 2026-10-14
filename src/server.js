@@ -66,13 +66,20 @@ app.get(['/mudrex-crude-live', '/mudrex_crude_live', '/mudrex_crude_live.html', 
 app.get(['/crude-live-mudrex', '/crude_live_mudrex', '/Crude-Live-Mudrex', '/crude-live-mudrex.html', '/crude_live_mudrex.html'], (req, res) => res.redirect(301, '/Crude-Live-Mudrex-Pro'));
 app.get(['/crude-live-mudrex-pro', '/crude_live_mudrex_pro', '/Crude-Live-Mudrex-Pro', '/crude-live-mudrex-pro.html', '/crude_live_mudrex_pro.html'], (req, res) => res.sendFile(path.join(__dirname, '../public/crude_live_mudrex_pro.html')));
 app.get([
+  '/subh-mani',
+  '/Subh-Mani',
+  '/subh-mani-solana',
+  '/Subh-Mani-Solana',
+  '/subh_mani_solana',
   '/subh-money',
   '/Subh-Money',
   '/subh-money-solana',
   '/Subh-Money-Solana',
   '/subh_money_solana',
   '/subhmoney',
-  '/SubhMoney'
+  '/SubhMoney',
+  '/subhmani',
+  '/SubhMani'
 ], (req, res) => res.sendFile(path.join(__dirname, '../public/subh_money_solana.html')));
 
 app.get([
@@ -918,8 +925,8 @@ app.post(['/api/crude-live-mudrex/action', '/api/crude-live-mudrex-pro/action'],
   }
 });
 
-// Dedicated Clean Endpoint for Solana-Live-Mudrex and Subh-Money-Solana
-app.get(['/api/solana-live-mudrex/data', '/api/subh-money-solana/data', '/api/subh-money/data', '/api/crude-live-mudrex-solana/data', '/api/solana/data'], async (req, res) => {
+// Dedicated Clean Endpoint for Solana-Live-Mudrex and Subh-Mani-Solana
+app.get(['/api/solana-live-mudrex/data', '/api/subh-mani-solana/data', '/api/subh-mani/data', '/api/subh-money-solana/data', '/api/subh-money/data', '/api/crude-live-mudrex-solana/data', '/api/solana/data'], async (req, res) => {
   try {
     const solanaEngine = require('./engine/solanaEngine');
     const mudrexLive = require('./engine/mudrexLiveAdapter');
@@ -945,23 +952,7 @@ app.post(['/api/solana-live-mudrex/action', '/api/crude-live-mudrex-solana/actio
     const rateFeed = require('./engine/rateFeed');
     const mudrexLive = require('./engine/mudrexLiveAdapter');
 
-    if (action === 'probeMudrexSolana') {
-      const p1 = await mudrexLive.request('GET', `${mudrexLive.baseUrl}/exchangeInfo`);
-      const p2 = await mudrexLive.request('GET', `${mudrexLive.baseUrl}/markets`);
-      const p3 = await mudrexLive.request('GET', `${mudrexLive.baseUrl}/futures/markets`);
-      const p4 = await mudrexLive.request('GET', `https://trade.mudrex.com/api/v1/markets`);
-      const p5 = await mudrexLive.request('GET', `${mudrexLive.baseUrl}/ticker/24hr`);
-      return res.json({
-        success: true,
-        probes: {
-          exchangeInfo: p1,
-          markets: p2,
-          futures_markets: p3,
-          api_v1_markets: p4,
-          ticker_24hr: p5 ? { success: p5.success, count: Array.isArray(p5.data) ? p5.data.length : (p5.data ? Object.keys(p5.data).length : null), sample: Array.isArray(p5.data) ? p5.data.slice(0, 5) : p5.data } : null
-        }
-      });
-    }
+
 
     if (action === 'startEngine') {
       solanaEngine.engineStatus = 'RUNNING';
