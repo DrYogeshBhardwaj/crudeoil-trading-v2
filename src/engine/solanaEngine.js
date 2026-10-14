@@ -12,10 +12,11 @@ class SolanaEngine {
       profitTargetMove: 0.45, // $0.45 Target Move for Solana
       buyTargetMove: 0.45,
       sellTargetMove: 0.45,
+      gridSpacing: 0.10, // $0.10 price difference triggers a new pair
       basketProfitTargetINR: 250, // ₹250 Punarjanm Basket Profit Threshold
       autoPunarjanmEnabled: false, // Auto-harvest disabled per user request
-      autoAddNewPairs: false, // Explicit pair creation
-      maxActivePairs: 20,
+      autoAddNewPairs: true, // Automatic pair creation on rate change enabled!
+      maxActivePairs: 12, // Safe active pairs limit for ₹1.80L margin
       takerFeeRate: 0.00075, // 0.075% Mudrex taker fee
       gstRate: 0.18, // 18% GST
       conservativeFeeMultiplier: 1.40, // 1.4x conservative buffer
@@ -63,6 +64,8 @@ class SolanaEngine {
           if (data.settings) this.settings = { ...this.settings, ...data.settings };
           this.settings.tradingMode = 'LIVE';
           this.settings.realOrdersDisabled = false;
+          this.settings.autoAddNewPairs = true;
+          this.settings.gridSpacing = this.settings.gridSpacing || 0.10;
           if (Array.isArray(data.processedRates)) this.processedRates = new Set(data.processedRates);
           console.log(`[Solana Engine] Restored state from storage: ${this.pairs.length} pairs, ${this.closedPositions.length} closed trades.`);
         }
@@ -153,12 +156,13 @@ class SolanaEngine {
       }
     }
 
-    // 3. Check if a full active pair (both legs OPEN) already exists at this exact rate
+    // 3. Check if a full active pair (both legs OPEN) already exists within gridSpacing
+    const gridSpacing = Number(this.settings.gridSpacing || 0.10);
     const existingBothOpenPairAtRate = this.pairs.find(p => {
       if (p.status !== 'OPEN') return false;
       const bOpen = p.buyPosition && p.buyPosition.status === 'OPEN';
       const sOpen = p.sellPosition && p.sellPosition.status === 'OPEN';
-      return bOpen && sOpen && Math.abs(p.entryPrice - roundedPrice) < 0.005;
+      return bOpen && sOpen && Math.abs(p.entryPrice - roundedPrice) < gridSpacing;
     });
 
     if (existingBothOpenPairAtRate) {
@@ -168,7 +172,7 @@ class SolanaEngine {
 
     // 4. Check active pairs cap
     const activePairsCount = this.pairs.filter(p => p.status === 'OPEN').length;
-    if (activePairsCount >= (this.settings.maxActivePairs || 50)) {
+    if (activePairsCount >= (this.settings.maxActivePairs || 12)) {
       return;
     }
 
