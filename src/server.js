@@ -1007,6 +1007,15 @@ app.post(['/api/solana-live-mudrex/action', '/api/crude-live-mudrex-solana/actio
       }
       solanaEngine.settings.profitTargetMove = newMove;
       solanaEngine.saveState();
+      return res.json({ success: true, message: `Solana Target Move updated to $${newMove.toFixed(2)}.`, profitTargetMove: newMove });
+    } else if (action === 'updateMaxActivePairs') {
+      const newMax = Number(req.body.maxActivePairs);
+      if (isNaN(newMax) || newMax < 1) {
+        return res.status(400).json({ success: false, error: 'maxActivePairs must be a positive number.' });
+      }
+      solanaEngine.settings.maxActivePairs = newMax;
+      solanaEngine.saveState();
+      return res.json({ success: true, message: `Solana Max Active Pairs updated to ${newMax}.`, maxActivePairs: newMax });
     } else if (action === 'resetData' || action === 'resetSimulator') {
       const customQty = req.body.quantity ? Number(req.body.quantity) : null;
       const customCapital = req.body.capitalINR ? Number(req.body.capitalINR) : 300000.00;

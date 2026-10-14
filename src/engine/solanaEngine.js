@@ -16,7 +16,7 @@ class SolanaEngine {
       basketProfitTargetINR: 250, // ₹250 Punarjanm Basket Profit Threshold
       autoPunarjanmEnabled: false, // Auto-harvest disabled per user request
       autoAddNewPairs: true, // Automatic pair creation on rate change enabled!
-      maxActivePairs: 25, // Safe active pairs limit for ₹2.60L margin
+      maxActivePairs: 50, // Safe active pairs limit for available margin (₹2.15L+)
       takerFeeRate: 0.00075, // 0.075% Mudrex taker fee
       gstRate: 0.18, // 18% GST
       conservativeFeeMultiplier: 1.40, // 1.4x conservative buffer
@@ -83,8 +83,8 @@ class SolanaEngine {
           this.settings.tradingMode = 'LIVE';
           this.settings.realOrdersDisabled = false;
           this.settings.autoAddNewPairs = true;
-          this.settings.gridSpacing = this.settings.gridSpacing || 0.02;
-          this.settings.maxActivePairs = 20;
+          this.settings.gridSpacing = 0.005;
+          this.settings.maxActivePairs = 50;
           if (Array.isArray(data.processedRates)) this.processedRates = new Set(data.processedRates);
           console.log(`[Solana Engine] Restored state from storage: ${this.pairs.length} pairs, ${this.closedPositions.length} closed trades.`);
         }
@@ -234,6 +234,8 @@ class SolanaEngine {
     const seq = pair.pairId.replace('PAIR-SOL-', '');
     const legId = `P-PAIR-SOL-${seq}-${direction}-${Date.now().toString().slice(-4)}`;
 
+    const isLive = this.settings.tradingMode === 'LIVE' && !this.settings.realOrdersDisabled;
+
     if (direction === 'BUY') {
       const buyTarget = Number((entryPrice + targetMove).toFixed(2));
       pair.buyPosition = {
@@ -247,8 +249,9 @@ class SolanaEngine {
         targetExitPrice: buyTarget,
         quantity: qty,
         status: 'OPEN',
-        ledger: 'PAPER',
-        source: 'SOLANA_SIMULATOR'
+        ledger: isLive ? 'LIVE' : 'PAPER',
+        source: isLive ? 'MUDREX_EXCHANGE' : 'SOLANA_SIMULATOR',
+        apiStatus: isLive ? 'PENDING_TRANSMISSION' : null
       };
       console.log(`[Solana Engine] Reopened missing BUY leg for ${pair.pairId} at $${entryPrice.toFixed(2)}`);
     } else {
@@ -264,13 +267,19 @@ class SolanaEngine {
         targetExitPrice: sellTarget,
         quantity: qty,
         status: 'OPEN',
-        ledger: 'PAPER',
-        source: 'SOLANA_SIMULATOR'
+        ledger: isLive ? 'LIVE' : 'PAPER',
+        source: isLive ? 'MUDREX_EXCHANGE' : 'SOLANA_SIMULATOR',
+        apiStatus: isLive ? 'PENDING_TRANSMISSION' : null
       };
       console.log(`[Solana Engine] Reopened missing SELL leg for ${pair.pairId} at $${entryPrice.toFixed(2)}`);
     }
 
     pair.status = 'OPEN';
+    if (isLive) {
+      this.dispatchPairOrders(pair).catch(err => {
+        console.error('[Solana Live] Error dispatching reopened leg order:', err.message);
+      });
+    }
     this.saveState();
   }
 
