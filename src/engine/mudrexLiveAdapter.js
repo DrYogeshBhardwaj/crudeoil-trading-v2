@@ -399,8 +399,8 @@ class MudrexLiveAdapter {
           if (Date.now() < this.rateLimitUntil) continue;
 
           const posSymbol = (pos.symbol || pair.symbol || 'CLUSDT').toUpperCase();
-          if (!posSymbol.includes('CL')) {
-            console.warn(`[Mudrex Live Adapter] Skipping non-Crude position: ${pos.positionId} (${posSymbol})`);
+          if (!posSymbol.includes('CL') && !posSymbol.includes('SOL')) {
+            console.warn(`[Mudrex Live Adapter] Skipping unsupported position: ${pos.positionId} (${posSymbol})`);
             continue;
           }
 
@@ -410,7 +410,8 @@ class MudrexLiveAdapter {
           const lev = this.settings.leverage || 5;
 
           try {
-            const res = await this.createRealOrder({ symbol: 'CLUSDT', side: pos.direction, quantity: qty, leverage: lev });
+            const orderSym = posSymbol.includes('SOL') ? 'SOLUSDT' : 'CLUSDT';
+            const res = await this.createRealOrder({ symbol: orderSym, side: pos.direction, quantity: qty, leverage: lev });
             if (res.success) {
               pos.mudrexOrderId = this.extractOrderId(res.data);
               pos.apiStatus = 'REAL_MUDREX_POSITION';
@@ -771,7 +772,7 @@ class MudrexLiveAdapter {
 
     // 5. Net Position Mode Setup: Determine Exact Leg Direction, Opposites & Quantity
     const symbol = (position.symbol || 'CLUSDT').toUpperCase();
-    const cleanSymbol = symbol === 'CL-USDT' ? 'CLUSDT' : symbol;
+    const cleanSymbol = symbol.replace('-', '');
     const direction = (position.direction || 'BUY').toUpperCase();
     const oppositeSide = direction === 'BUY' ? 'SELL' : 'BUY';
     const oppositeOrderType = direction === 'BUY' ? 'SHORT' : 'LONG';

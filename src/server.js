@@ -922,6 +922,10 @@ app.post(['/api/crude-live-mudrex/action', '/api/crude-live-mudrex-pro/action'],
 app.get(['/api/solana-live-mudrex/data', '/api/subh-money-solana/data', '/api/subh-money/data', '/api/crude-live-mudrex-solana/data', '/api/solana/data'], async (req, res) => {
   try {
     const solanaEngine = require('./engine/solanaEngine');
+    const mudrexLive = require('./engine/mudrexLiveAdapter');
+    if (!mudrexLive.lastAuthCheckRes && (process.env.MUDREX_API_KEY || mudrexLive.mudrexApiKey)) {
+      mudrexLive.testAuthentication().catch(() => {});
+    }
     const data = solanaEngine.getDashboardMetrics();
     res.json(data);
   } catch (err) {

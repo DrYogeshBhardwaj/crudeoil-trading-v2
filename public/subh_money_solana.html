@@ -369,6 +369,153 @@
       box-shadow: 0 4px 20px rgba(0, 0, 0, 0.35);
     }
 
+    /* Dual Side-by-Side Position Columns */
+    .dual-positions-wrapper {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+      margin-top: 4px;
+    }
+
+    .dual-positions-col {
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: 14px;
+      overflow: hidden;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.35);
+      display: flex;
+      flex-direction: column;
+    }
+
+    .dual-positions-col.buy-col {
+      border-top: 3px solid var(--green-primary);
+    }
+
+    .dual-positions-col.sell-col {
+      border-top: 3px solid var(--red-primary);
+    }
+
+    .dual-col-header {
+      padding: 10px 14px;
+      background: rgba(7, 13, 24, 0.95);
+      border-bottom: 1px solid var(--border-color);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .dual-header-left {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .dual-header-title {
+      font-size: 0.76rem;
+      font-weight: 800;
+      letter-spacing: 0.6px;
+      text-transform: uppercase;
+    }
+
+    .buy-header .dual-header-title {
+      color: var(--green-primary);
+    }
+
+    .sell-header .dual-header-title {
+      color: var(--red-primary);
+    }
+
+    .indicator-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+    }
+
+    .dot-buy {
+      background: var(--green-primary);
+      box-shadow: 0 0 8px var(--green-primary);
+    }
+
+    .dot-sell {
+      background: var(--red-primary);
+      box-shadow: 0 0 8px var(--red-primary);
+    }
+
+    .dual-count-pill {
+      font-size: 0.68rem;
+      font-weight: 800;
+      padding: 2px 7px;
+      border-radius: 4px;
+      font-family: var(--font-mono);
+    }
+
+    .pill-buy {
+      background: rgba(0, 255, 163, 0.15);
+      color: var(--green-primary);
+      border: 1px solid rgba(0, 255, 163, 0.3);
+    }
+
+    .pill-sell {
+      background: rgba(244, 63, 94, 0.15);
+      color: var(--red-primary);
+      border: 1px solid rgba(244, 63, 94, 0.3);
+    }
+
+    /* Scrollable Box for Tables */
+    .scroll-table-box {
+      max-height: 400px;
+      overflow-y: auto;
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+    }
+
+    .scroll-table-box::-webkit-scrollbar {
+      width: 5px;
+      height: 5px;
+    }
+    .scroll-table-box::-webkit-scrollbar-track {
+      background: rgba(7, 13, 24, 0.9);
+    }
+    .scroll-table-box::-webkit-scrollbar-thumb {
+      background: rgba(255, 255, 255, 0.2);
+      border-radius: 3px;
+    }
+    .scroll-table-box::-webkit-scrollbar-thumb:hover {
+      background: var(--green-primary);
+    }
+
+    .th-target-buy {
+      color: var(--green-primary) !important;
+    }
+    .th-target-sell {
+      color: var(--red-primary) !important;
+    }
+
+    /* View Switcher Chips (Mobile) */
+    .side-switcher-bar {
+      display: none;
+      gap: 6px;
+      margin-bottom: 8px;
+    }
+
+    .side-chip {
+      background: rgba(13, 22, 38, 0.7);
+      border: 1px solid var(--border-color);
+      color: var(--text-muted);
+      font-size: 0.72rem;
+      font-weight: 800;
+      padding: 5px 12px;
+      border-radius: 20px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .side-chip.active {
+      background: rgba(0, 255, 163, 0.2);
+      border-color: var(--green-primary);
+      color: #fff;
+    }
+
     .table-responsive {
       overflow-x: auto;
       width: 100%;
@@ -389,13 +536,16 @@
       text-transform: uppercase;
       font-size: 0.68rem;
       letter-spacing: 0.5px;
-      padding: 12px 14px;
+      padding: 10px 12px;
       border-bottom: 1px solid var(--border-color);
       white-space: nowrap;
+      position: sticky;
+      top: 0;
+      z-index: 2;
     }
 
     table.data-table td {
-      padding: 11px 14px;
+      padding: 10px 12px;
       border-bottom: 1px solid rgba(255, 255, 255, 0.04);
       white-space: nowrap;
       font-family: var(--font-mono);
@@ -438,6 +588,17 @@
       }
       .kpi-box-primary {
         font-size: 1.85rem;
+      }
+    @media (max-width: 768px) {
+      .dual-positions-wrapper {
+        grid-template-columns: 1fr;
+        gap: 10px;
+      }
+      .side-switcher-bar {
+        display: flex;
+      }
+      .scroll-table-box {
+        max-height: 270px;
       }
     }
 
@@ -592,61 +753,111 @@
       </button>
     </div>
 
-    <!-- Tab Panel 1: Active BUY/Sell Positions -->
+    <!-- Tab Panel 1: Active BUY/Sell Positions (Dual Side-by-Side Inside Dedicated Scrollboxes) -->
     <div class="tab-panel active" id="panelActive">
-      <div class="table-card">
-        <div class="table-responsive">
-          <table class="data-table">
-            <thead>
-              <tr>
-                <th>#</th>
-                <th>Side</th>
-                <th>Position ID</th>
-                <th>Entry Price</th>
-                <th>Target Exit</th>
-                <th>Current Dist</th>
-                <th>Quantity</th>
-                <th>Floating PnL (₹)</th>
-              </tr>
-            </thead>
-            <tbody id="tbodyActivePositions">
-              <tr>
-                <td colspan="8" style="text-align: center; color: var(--text-dim); padding: 24px;">Loading active positions...</td>
-              </tr>
-            </tbody>
-          </table>
+      <!-- Mobile Quick Filter Chips -->
+      <div class="side-switcher-bar" id="mobileSideSwitcher">
+        <button type="button" class="side-chip active" id="chipBoth" onclick="filterSideView('both')">⚡ BOTH BUY & SELL</button>
+        <button type="button" class="side-chip" id="chipBuy" onclick="filterSideView('buy')">🟢 BUY ONLY</button>
+        <button type="button" class="side-chip" id="chipSell" onclick="filterSideView('sell')">🔴 SELL ONLY</button>
+      </div>
+
+      <div class="dual-positions-wrapper">
+        <!-- Left: Active BUY Positions -->
+        <div class="dual-positions-col buy-col" id="colBuyWrap">
+          <div class="dual-col-header buy-header">
+            <div class="dual-header-left">
+              <span class="indicator-dot dot-buy"></span>
+              <span class="dual-header-title">ACTIVE BUY POSITIONS</span>
+            </div>
+            <span class="dual-count-pill pill-buy" id="badgeBuyCount">0 BUYS</span>
+          </div>
+          <div class="scroll-table-box">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>#</th>
+                  <th>ID</th>
+                  <th>Entry</th>
+                  <th class="th-target-buy">🎯 Exit Target</th>
+                  <th>Dist</th>
+                  <th>PnL (₹)</th>
+                </tr>
+              </thead>
+              <tbody id="tbodyActiveBuys">
+                <tr>
+                  <td colspan="6" style="text-align: center; color: var(--text-dim); padding: 24px;">Waiting for BUY positions...</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Right: Active SELL Positions -->
+        <div class="dual-positions-col sell-col" id="colSellWrap">
+          <div class="dual-col-header sell-header">
+            <div class="dual-header-left">
+              <span class="indicator-dot dot-sell"></span>
+              <span class="dual-header-title">ACTIVE SELL POSITIONS</span>
+            </div>
+            <span class="dual-count-pill pill-sell" id="badgeSellCount">0 SELLS</span>
+          </div>
+          <div class="scroll-table-box">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>#</th>
+                  <th>ID</th>
+                  <th>Entry</th>
+                  <th class="th-target-sell">🎯 Exit Target</th>
+                  <th>Dist</th>
+                  <th>PnL (₹)</th>
+                </tr>
+              </thead>
+              <tbody id="tbodyActiveSells">
+                <tr>
+                  <td colspan="6" style="text-align: center; color: var(--text-dim); padding: 24px;">Waiting for SELL positions...</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
         </div>
       </div>
     </div>
 
-    <!-- Tab Panel 2: Closed Trades History -->
+    <!-- Tab Panel 2: Closed Trades History (Inside Dedicated Scrollbox - NO Time/Date) -->
     <div class="tab-panel" id="panelClosed">
       <div class="table-card">
-        <div class="table-responsive">
+        <div class="dual-col-header" style="background: rgba(7, 13, 24, 0.95); border-bottom: 1px solid var(--border-color);">
+          <div class="dual-header-left">
+            <span class="indicator-dot" style="background: var(--gold-primary); box-shadow: 0 0 8px var(--gold-primary);"></span>
+            <span class="dual-header-title" style="color: var(--gold-primary);">CLOSED TRADES HISTORY</span>
+          </div>
+          <span class="dual-count-pill" style="background: rgba(251, 191, 36, 0.15); color: var(--gold-primary); border: 1px solid rgba(251, 191, 36, 0.3);" id="badgeClosedCount">0 TRADES</span>
+        </div>
+        <div class="scroll-table-box">
           <table class="data-table">
             <thead>
               <tr>
                 <th>#</th>
-                <th>Exit Time</th>
                 <th>Side</th>
                 <th>Entry Price</th>
-                <th>Exit Price</th>
-                <th>Gross Profit</th>
-                <th>Total Charges</th>
+                <th style="color: var(--gold-primary); font-weight: 800;">🎯 Exit Price</th>
+                <th>Gross (₹)</th>
+                <th>Charges (₹)</th>
                 <th>Net Profit (₹ / $)</th>
                 <th>Exit Reason</th>
               </tr>
             </thead>
             <tbody id="tbodyClosedHistory">
               <tr>
-                <td colspan="9" style="text-align: center; color: var(--text-dim); padding: 24px;">No closed trades recorded yet.</td>
+                <td colspan="8" style="text-align: center; color: var(--text-dim); padding: 24px;">No closed trades recorded yet.</td>
               </tr>
             </tbody>
           </table>
         </div>
       </div>
     </div>
-
   </div>
 
   <script>
@@ -674,7 +885,7 @@
 
     async function fetchSubhMoneyData() {
       try {
-        const res = await fetch('/api/solana-live-mudrex/data');
+        const res = await fetch('/api/subh-money-solana/data');
         if (!res.ok) return;
         const data = await res.json();
         if (data && data.success) {
@@ -763,60 +974,81 @@
       document.getElementById('tabCountActive').innerText = `${activeBuys.length + activeSells.length}`;
       document.getElementById('tabCountClosed').innerText = `${closedTradesCount}`;
 
-      // 7. Render Active Positions Table
-      const allActivePos = [];
-      pairs.forEach(p => {
-        if (p.buy && p.buy.status === 'OPEN') allActivePos.push(p.buy);
-        if (p.sell && p.sell.status === 'OPEN') allActivePos.push(p.sell);
-      });
+      // 7. Render Dual Active Positions (BUY & SELL Separated Side-by-Side Inside Dedicated Scrollboxes)
+      document.getElementById('badgeBuyCount').innerText = `${activeBuys.length} BUYS`;
+      document.getElementById('badgeSellCount').innerText = `${activeSells.length} SELLS`;
 
-      const tbodyActive = document.getElementById('tbodyActivePositions');
-      if (allActivePos.length === 0) {
-        tbodyActive.innerHTML = `<tr><td colspan="8" style="text-align: center; color: var(--text-dim); padding: 24px;">No active positions open right now. Waiting for next market rate tick...</td></tr>`;
+      // Render Active BUYs Table
+      const tbodyBuys = document.getElementById('tbodyActiveBuys');
+      if (activeBuys.length === 0) {
+        tbodyBuys.innerHTML = `<tr><td colspan="6" style="text-align: center; color: var(--text-dim); padding: 24px;">Waiting for BUY positions...</td></tr>`;
       } else {
-        tbodyActive.innerHTML = allActivePos.map((pos, idx) => {
-          const isBuy = pos.direction === 'BUY';
-          const dist = isBuy ? (pos.targetPrice - livePrice) : (livePrice - pos.targetPrice);
+        tbodyBuys.innerHTML = activeBuys.map((pos, idx) => {
+          const dist = pos.targetPrice - livePrice;
           const distSign = dist >= 0 ? '+' : '';
           const pnlINR = Number(pos.floatingPnlINR || 0);
           const pnlColor = pnlINR >= 0 ? 'var(--green-primary)' : 'var(--red-primary)';
           const pnlSign = pnlINR >= 0 ? '+' : '';
+          const shortId = pos.positionId ? pos.positionId.replace('P-PAIR-SOL-', '').replace('-BUY', '').replace('P-', '') : `${idx + 1}`;
 
           return `
             <tr>
               <td style="color: var(--text-dim); font-weight: 700;">#${idx + 1}</td>
-              <td><span class="${isBuy ? 'badge-buy' : 'badge-sell'}">${pos.direction}</span></td>
-              <td style="color: var(--text-main); font-weight: 700;">${pos.positionId}</td>
+              <td style="color: var(--text-main); font-weight: 800;">${shortId}</td>
               <td style="color: #cbd5e1;">$${Number(pos.entryPrice).toFixed(2)}</td>
-              <td style="color: ${isBuy ? 'var(--green-primary)' : 'var(--red-primary)'}; font-weight: 800;">$${Number(pos.targetPrice).toFixed(2)}</td>
-              <td style="color: #94a3b8;">${distSign}$${dist.toFixed(2)}</td>
-              <td style="color: var(--cyan-primary); font-weight: 700;">${pos.quantity || 3.0} SOL</td>
+              <td style="color: var(--green-primary); font-weight: 900; font-size: 0.95rem; text-shadow: 0 0 10px rgba(0, 255, 163, 0.35);">$${Number(pos.targetPrice).toFixed(2)}</td>
+              <td style="color: #94a3b8; font-size: 0.76rem;">${distSign}$${dist.toFixed(2)}</td>
               <td style="color: ${pnlColor}; font-weight: 800;">${pnlSign}₹${pnlINR.toFixed(2)}</td>
             </tr>
           `;
         }).join('');
       }
 
-      // 8. Render Closed Trades History Table
-      const tbodyClosed = document.getElementById('tbodyClosedHistory');
-      if (closed.length === 0) {
-        tbodyClosed.innerHTML = `<tr><td colspan="9" style="text-align: center; color: var(--text-dim); padding: 24px;">No closed trades recorded yet.</td></tr>`;
+      // Render Active SELLs Table
+      const tbodySells = document.getElementById('tbodyActiveSells');
+      if (activeSells.length === 0) {
+        tbodySells.innerHTML = `<tr><td colspan="6" style="text-align: center; color: var(--text-dim); padding: 24px;">Waiting for SELL positions...</td></tr>`;
       } else {
-        tbodyClosed.innerHTML = closed.slice(0, 80).map((t, idx) => {
+        tbodySells.innerHTML = activeSells.map((pos, idx) => {
+          const dist = livePrice - pos.targetPrice;
+          const distSign = dist >= 0 ? '+' : '';
+          const pnlINR = Number(pos.floatingPnlINR || 0);
+          const pnlColor = pnlINR >= 0 ? 'var(--green-primary)' : 'var(--red-primary)';
+          const pnlSign = pnlINR >= 0 ? '+' : '';
+          const shortId = pos.positionId ? pos.positionId.replace('P-PAIR-SOL-', '').replace('-SELL', '').replace('P-', '') : `${idx + 1}`;
+
+          return `
+            <tr>
+              <td style="color: var(--text-dim); font-weight: 700;">#${idx + 1}</td>
+              <td style="color: var(--text-main); font-weight: 800;">${shortId}</td>
+              <td style="color: #cbd5e1;">$${Number(pos.entryPrice).toFixed(2)}</td>
+              <td style="color: var(--red-primary); font-weight: 900; font-size: 0.95rem; text-shadow: 0 0 10px rgba(244, 63, 94, 0.35);">$${Number(pos.targetPrice).toFixed(2)}</td>
+              <td style="color: #94a3b8; font-size: 0.76rem;">${distSign}$${dist.toFixed(2)}</td>
+              <td style="color: ${pnlColor}; font-weight: 800;">${pnlSign}₹${pnlINR.toFixed(2)}</td>
+            </tr>
+          `;
+        }).join('');
+      }
+
+      // 8. Render Closed Trades History Table (NO Time/Date Clutter)
+      const tbodyClosed = document.getElementById('tbodyClosedHistory');
+      document.getElementById('badgeClosedCount').innerText = `${closedTradesCount} TRADES`;
+      if (closed.length === 0) {
+        tbodyClosed.innerHTML = `<tr><td colspan="8" style="text-align: center; color: var(--text-dim); padding: 24px;">No closed trades recorded yet.</td></tr>`;
+      } else {
+        tbodyClosed.innerHTML = closed.slice(0, 100).map((t, idx) => {
           const isBuy = t.direction === 'BUY';
           const netINR = Number(t.netProfitINR || 0);
           const netUSD = Number(t.netProfitUSD || (netINR / usdInr));
           const netSign = netINR >= 0 ? '+' : '';
           const netColor = netINR >= 0 ? 'var(--green-primary)' : 'var(--red-primary)';
-          const timeStr = t.exitTime ? new Date(t.exitTime).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true }) : '--';
 
           return `
             <tr>
               <td style="color: var(--text-dim); font-weight: 700;">#${idx + 1}</td>
-              <td style="color: #94a3b8;">${timeStr}</td>
               <td><span class="${isBuy ? 'badge-buy' : 'badge-sell'}">${t.direction}</span></td>
               <td style="color: #cbd5e1;">$${Number(t.entryPrice).toFixed(2)}</td>
-              <td style="color: #ffffff; font-weight: 800;">$${Number(t.exitPrice).toFixed(2)}</td>
+              <td style="color: #ffffff; font-weight: 900; font-size: 0.95rem; text-shadow: 0 0 10px rgba(251, 191, 36, 0.3);">$${Number(t.exitPrice).toFixed(2)}</td>
               <td style="color: #38bdf8;">+₹${Number(t.grossProfitINR || 0).toFixed(2)}</td>
               <td style="color: #f87171;">-₹${Number(t.totalChargesINR || 0).toFixed(2)}</td>
               <td style="color: ${netColor}; font-weight: 900;">${netSign}₹${netINR.toFixed(2)} <span style="font-size: 0.72rem; color: #94a3b8;">(${netSign}$${netUSD.toFixed(2)})</span></td>
@@ -824,6 +1056,32 @@
             </tr>
           `;
         }).join('');
+      }
+    }
+
+    function filterSideView(side) {
+      const colBuy = document.getElementById('colBuyWrap');
+      const colSell = document.getElementById('colSellWrap');
+      const chipBoth = document.getElementById('chipBoth');
+      const chipBuy = document.getElementById('chipBuy');
+      const chipSell = document.getElementById('chipSell');
+
+      chipBoth.classList.remove('active');
+      chipBuy.classList.remove('active');
+      chipSell.classList.remove('active');
+
+      if (side === 'buy') {
+        colBuy.style.display = 'flex';
+        colSell.style.display = 'none';
+        chipBuy.classList.add('active');
+      } else if (side === 'sell') {
+        colBuy.style.display = 'none';
+        colSell.style.display = 'flex';
+        chipSell.classList.add('active');
+      } else {
+        colBuy.style.display = 'flex';
+        colSell.style.display = 'flex';
+        chipBoth.classList.add('active');
       }
     }
 

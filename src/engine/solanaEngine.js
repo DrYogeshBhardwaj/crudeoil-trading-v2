@@ -9,9 +9,9 @@ class SolanaEngine {
       contractQuantity: 3.0, // 3.0 SOL default lot size requested by user
       leverage: 5,
       instrument: 'SOLUSDT',
-      profitTargetMove: 0.50, // $0.50 Target Move for Solana
-      buyTargetMove: 0.50,
-      sellTargetMove: 0.50,
+      profitTargetMove: 0.45, // $0.45 Target Move for Solana as configured
+      buyTargetMove: 0.45,
+      sellTargetMove: 0.45,
       basketProfitTargetINR: 250, // ₹250 Punarjanm Basket Profit Threshold
       autoPunarjanmEnabled: false, // Auto-harvest disabled per user request
       autoAddNewPairs: true,
@@ -520,11 +520,28 @@ class SolanaEngine {
     // Floating metrics
     const floating = this.calculateFloatingSummary(livePrice);
 
-    // Margins and Capital
+    // Margins and Capital (Authoritative Real Mudrex Exchange Sync)
+    let mudrexAdapter = null;
+    try {
+      mudrexAdapter = require('./mudrexLiveAdapter');
+    } catch (e) {}
+
+    let realMudrexAvailINR = null;
+    let realMudrexLockedINR = null;
+    let realMudrexSpotINR = null;
+    if (mudrexAdapter && mudrexAdapter.lastAuthCheckRes && mudrexAdapter.lastAuthCheckRes.success) {
+      if (typeof mudrexAdapter.lastAuthCheckRes.futuresBalance === 'number' && mudrexAdapter.lastAuthCheckRes.futuresBalance > 0) {
+        realMudrexAvailINR = mudrexAdapter.lastAuthCheckRes.futuresBalance;
+        realMudrexLockedINR = Number(mudrexAdapter.lastAuthCheckRes.raw?.futures?.data?.locked_amount || 0);
+        realMudrexSpotINR = Number(mudrexAdapter.lastAuthCheckRes.spotBalance || 0);
+      }
+    }
+
     const startingCapitalINR = this.settings.startingCapitalINR || 300000.00;
-    const lockedMarginINR = floating.dynamicMarginUsedINR;
-    const availableMarginINR = Math.max(0, Number((startingCapitalINR + realizedNetINR - lockedMarginINR).toFixed(2)));
+    const lockedMarginINR = realMudrexLockedINR !== null && realMudrexLockedINR > 0 ? realMudrexLockedINR : floating.dynamicMarginUsedINR;
+    const availableMarginINR = realMudrexAvailINR !== null ? realMudrexAvailINR : Math.max(0, Number((startingCapitalINR + realizedNetINR - lockedMarginINR).toFixed(2)));
     const equityINR = Number((availableMarginINR + lockedMarginINR + floating.floatingNetINR).toFixed(2));
+    const spotBalanceINR = realMudrexSpotINR || 0;
 
     const openPairs = this.pairs.filter(p => p.status === 'OPEN').map(p => {
       const b = p.buyPosition;
@@ -626,15 +643,16 @@ class SolanaEngine {
         lockedMarginUSD: Number((lockedMarginINR / usdInr).toFixed(2)),
         equityINR,
         equityUSD: Number((equityINR / usdInr).toFixed(2)),
-        spotBalanceINR: 0,
-        spotBalanceUSD: 0,
-        usdInrRate: usdInr
+        spotBalanceINR,
+        spotBalanceUSD: Number((spotBalanceINR / usdInr).toFixed(2)),
+        usdInrRate: usdInr,
+        isRealMudrexExchangeWallet: realMudrexAvailINR !== null
       },
       mudrexExchange: {
         positions: [],
         count: openPairs.length,
         netSummary,
-        note: 'SOLANA SIMULATOR (₹3.5 Lakh Capital, 5x Leverage, Mudrex 102.00 INR/USD rate)'
+        note: realMudrexAvailINR !== null ? 'SUBH MONEY SOLANA LIVE DESK (Authoritative Mudrex Exchange Balance)' : 'SUBH MONEY SOLANA DESK'
       },
       engine: {
         status: this.engineStatus,
