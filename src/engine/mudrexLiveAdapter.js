@@ -217,8 +217,9 @@ class MudrexLiveAdapter {
       return { success: false, error: `TRADING_BLOCKED: Only Crude Oil (CLUSDT) and Solana (SOLUSDT) are permitted. Blocked trade for ${rawSym}.` };
     }
 
-    const symb = rawSym === 'CL-USDT' ? 'CLUSDT' : (rawSym === 'SOL-USDT' ? 'SOLUSDT' : rawSym);
-    const dashSymb = rawSym === 'CLUSDT' ? 'CL-USDT' : (rawSym === 'SOLUSDT' ? 'SOL-USDT' : rawSym);
+    const isSolana = rawSym.includes('SOL');
+    const symb = isSolana ? 'SOLUSDT' : (rawSym === 'CL-USDT' ? 'CLUSDT' : rawSym);
+    const dashSymb = isSolana ? 'SOLUSDT' : (rawSym === 'CLUSDT' ? 'CL-USDT' : rawSym);
     const sideUpper = (side || 'BUY').toUpperCase();
     const orderType = (sideUpper === 'BUY' || sideUpper === 'LONG') ? 'LONG' : 'SHORT';
     const qty = String(quantity || this.settings.contractQuantity || 1.0);
@@ -244,7 +245,18 @@ class MudrexLiveAdapter {
     const url = `${this.baseUrl}/futures/${symb}/order?is_symbol=true&trade_currency=INR`;
     console.log(`[Mudrex Live Adapter] Sending Real Order POST to ${url}:`, body);
     let res = await this.request('POST', url, body);
-    if (!res.success) {
+
+    // If initial order with TP was rejected, retry without takeprofit price
+    if (!res.success && body.is_takeprofit) {
+      console.warn(`[Mudrex Live Adapter] Order with TP rejected (${res.error}). Retrying market order without takeprofit...`);
+      const retryBody = { ...body };
+      delete retryBody.takeprofit_price;
+      delete retryBody.is_takeprofit;
+      res = await this.request('POST', url, retryBody);
+    }
+
+    // Only retry CLUSDT with dash variant CL-USDT. Never retry SOLUSDT with hyphen variant
+    if (!res.success && !isSolana && dashSymb !== symb) {
       const altUrl = `${this.baseUrl}/futures/${dashSymb}/order?is_symbol=true&trade_currency=INR`;
       console.log(`[Mudrex Live Adapter] Retrying with symbol variant ${dashSymb} via ${altUrl}...`);
       body.symbol = dashSymb;
@@ -388,10 +400,19 @@ class MudrexLiveAdapter {
     this.isTransmittingQueue = true;
     try {
       if (!this.isRealExecutionEnabled()) return;
+      const pairsToCheck = [];
       const paperEngine = require('./paperEngine');
-      if (!paperEngine || !Array.isArray(paperEngine.pairs)) return;
+      if (paperEngine && Array.isArray(paperEngine.pairs) && paperEngine.isEngineRunning) {
+        pairsToCheck.push(...paperEngine.pairs);
+      }
+      try {
+        const solanaEngine = require('./solanaEngine');
+        if (solanaEngine && Array.isArray(solanaEngine.pairs) && solanaEngine.isEngineRunning) {
+          pairsToCheck.push(...solanaEngine.pairs);
+        }
+      } catch (e) {}
 
-      for (const pair of paperEngine.pairs) {
+      for (const pair of pairsToCheck) {
         if (pair.status === 'CLOSED') continue;
         for (const pos of [pair.buyPosition, pair.sellPosition]) {
           if (!pos || pos.status !== 'OPEN') continue;
@@ -410,12 +431,13 @@ class MudrexLiveAdapter {
 
           pos.apiStatus = 'TRANSMITTING_TO_MUDREX';
           pos.transmittingSince = Date.now();
-          const qty = this.settings.contractQuantity || pos.quantity || 1.0;
-          const lev = this.settings.leverage || 5;
+          const qty = pos.quantity || this.settings.contractQuantity || 1.0;
+          const lev = pos.leverage || this.settings.leverage || 5;
+          const targetPrice = pos.targetExitPrice || null;
 
           try {
             const orderSym = posSymbol.includes('SOL') ? 'SOLUSDT' : 'CLUSDT';
-            const res = await this.createRealOrder({ symbol: orderSym, side: pos.direction, quantity: qty, leverage: lev });
+            const res = await this.createRealOrder({ symbol: orderSym, side: pos.direction, quantity: qty, leverage: lev, targetPrice });
             if (res.success) {
               pos.mudrexOrderId = this.extractOrderId(res.data);
               pos.apiStatus = 'REAL_MUDREX_POSITION';

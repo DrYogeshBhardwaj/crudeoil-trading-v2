@@ -12,7 +12,7 @@ class SolanaEngine {
       profitTargetMove: 0.45, // $0.45 Target Move for Solana
       buyTargetMove: 0.45,
       sellTargetMove: 0.45,
-      gridSpacing: 0.10, // $0.10 price difference triggers a new pair
+      gridSpacing: 0.02, // $0.02 price difference triggers a new pair (responsive to 2-cent movements)
       basketProfitTargetINR: 250, // ₹250 Punarjanm Basket Profit Threshold
       autoPunarjanmEnabled: false, // Auto-harvest disabled per user request
       autoAddNewPairs: true, // Automatic pair creation on rate change enabled!
@@ -48,6 +48,13 @@ class SolanaEngine {
 
     // Subscribe to real-time market rates
     rateFeed.subscribe((type, data) => this.handleRateEvent(type, data));
+
+    // Periodic order transmission & retry loop for unfulfilled Solana orders
+    setInterval(() => {
+      if (this.isEngineRunning && this.settings.tradingMode === 'LIVE' && !this.settings.realOrdersDisabled) {
+        this.transmitPendingSolanaOrders();
+      }
+    }, 7000);
   }
 
   initFromStorage() {
@@ -157,7 +164,7 @@ class SolanaEngine {
     }
 
     // 3. Check if a full active pair (both legs OPEN) already exists within gridSpacing
-    const gridSpacing = Number(this.settings.gridSpacing || 0.10);
+    const gridSpacing = Number(this.settings.gridSpacing || 0.02);
     const existingBothOpenPairAtRate = this.pairs.find(p => {
       if (p.status !== 'OPEN') return false;
       const bOpen = p.buyPosition && p.buyPosition.status === 'OPEN';
@@ -296,59 +303,116 @@ class SolanaEngine {
 
     // Real Live Mudrex Order Dispatch
     if (this.settings.tradingMode === 'LIVE' && !this.settings.realOrdersDisabled) {
-      try {
-        const mudrexLive = require('./mudrexLiveAdapter');
-        buyPos.ledger = 'LIVE';
-        sellPos.ledger = 'LIVE';
-        buyPos.source = 'MUDREX_EXCHANGE';
-        sellPos.source = 'MUDREX_EXCHANGE';
+      buyPos.ledger = 'LIVE';
+      sellPos.ledger = 'LIVE';
+      buyPos.source = 'MUDREX_EXCHANGE';
+      sellPos.source = 'MUDREX_EXCHANGE';
+      buyPos.apiStatus = 'PENDING_TRANSMISSION';
+      sellPos.apiStatus = 'PENDING_TRANSMISSION';
 
-        // Dispatch BUY
-        mudrexLive.createRealOrder({
-          symbol: 'SOLUSDT',
-          side: 'BUY',
-          quantity: qty,
-          leverage: this.settings.leverage || 5,
-          targetPrice: buyTarget
-        }).then(bRes => {
-          if (bRes && bRes.success) {
-            buyPos.mudrexOrderId = mudrexLive.extractOrderId(bRes.data);
-            buyPos.apiStatus = 'REAL_MUDREX_POSITION';
-            console.log(`[Solana Live] Real BUY Order sent to Mudrex for ${pairId}: ${buyPos.mudrexOrderId}`);
-            this.saveState();
-          } else {
-            buyPos.apiError = bRes ? (bRes.error || JSON.stringify(bRes)) : 'Failed';
-            console.warn(`[Solana Live] Real BUY Order rejected for ${pairId}:`, buyPos.apiError);
-            this.saveState();
-          }
-        }).catch(err => { buyPos.apiError = err.message; this.saveState(); });
-
-        // Dispatch SELL
-        mudrexLive.createRealOrder({
-          symbol: 'SOLUSDT',
-          side: 'SELL',
-          quantity: qty,
-          leverage: this.settings.leverage || 5,
-          targetPrice: sellTarget
-        }).then(sRes => {
-          if (sRes && sRes.success) {
-            sellPos.mudrexOrderId = mudrexLive.extractOrderId(sRes.data);
-            sellPos.apiStatus = 'REAL_MUDREX_POSITION';
-            console.log(`[Solana Live] Real SELL Order sent to Mudrex for ${pairId}: ${sellPos.mudrexOrderId}`);
-            this.saveState();
-          } else {
-            sellPos.apiError = sRes ? (sRes.error || JSON.stringify(sRes)) : 'Failed';
-            console.warn(`[Solana Live] Real SELL Order rejected for ${pairId}:`, sellPos.apiError);
-            this.saveState();
-          }
-        }).catch(err => { sellPos.apiError = err.message; this.saveState(); });
-      } catch (err) {
-        console.error('[Solana Live] Order dispatch error:', err.message);
-      }
+      this.dispatchPairOrders(pair).catch(err => {
+        console.error('[Solana Live] Error dispatching pair orders:', err.message);
+      });
     }
 
     this.saveState();
     return pair;
+  }
+
+  async dispatchPairOrders(pair) {
+    if (this.settings.tradingMode !== 'LIVE' || this.settings.realOrdersDisabled) return;
+
+    let mudrexLive = null;
+    try {
+      mudrexLive = require('./mudrexLiveAdapter');
+      if (!mudrexLive.isRealExecutionEnabled()) return;
+    } catch (e) {
+      return;
+    }
+
+    const { buyPosition, sellPosition } = pair;
+
+    // 1. Dispatch BUY if not already filled
+    if (buyPosition && (!buyPosition.mudrexOrderId || buyPosition.apiStatus !== 'REAL_MUDREX_POSITION')) {
+      buyPosition.apiStatus = 'TRANSMITTING_TO_MUDREX';
+      this.saveState();
+      try {
+        const bRes = await mudrexLive.createRealOrder({
+          symbol: 'SOLUSDT',
+          side: 'BUY',
+          quantity: buyPosition.quantity || this.settings.contractQuantity || 3.0,
+          leverage: this.settings.leverage || 5,
+          targetPrice: buyPosition.targetExitPrice
+        });
+        if (bRes && bRes.success) {
+          buyPosition.mudrexOrderId = mudrexLive.extractOrderId(bRes.data);
+          buyPosition.apiStatus = 'REAL_MUDREX_POSITION';
+          buyPosition.apiError = null;
+          console.log(`[Solana Live] Real BUY Order confirmed for ${pair.pairId}: ${buyPosition.mudrexOrderId}`);
+        } else {
+          buyPosition.apiError = bRes ? (bRes.error || JSON.stringify(bRes)) : 'Failed';
+          buyPosition.apiStatus = 'LIVE_ENGINE_PAIR (RETRY_QUEUED)';
+          console.warn(`[Solana Live] Real BUY Order rejected for ${pair.pairId}:`, buyPosition.apiError);
+        }
+      } catch (e) {
+        buyPosition.apiError = e.message;
+        buyPosition.apiStatus = 'LIVE_ENGINE_PAIR (RETRY_QUEUED)';
+      }
+      this.saveState();
+    }
+
+    // Wait 1000ms before sending SELL to prevent Mudrex API rate limit (5002)
+    await new Promise(r => setTimeout(r, 1000));
+
+    // 2. Dispatch SELL if not already filled
+    if (sellPosition && (!sellPosition.mudrexOrderId || sellPosition.apiStatus !== 'REAL_MUDREX_POSITION')) {
+      sellPosition.apiStatus = 'TRANSMITTING_TO_MUDREX';
+      this.saveState();
+      try {
+        const sRes = await mudrexLive.createRealOrder({
+          symbol: 'SOLUSDT',
+          side: 'SELL',
+          quantity: sellPosition.quantity || this.settings.contractQuantity || 3.0,
+          leverage: this.settings.leverage || 5,
+          targetPrice: sellPosition.targetExitPrice
+        });
+        if (sRes && sRes.success) {
+          sellPosition.mudrexOrderId = mudrexLive.extractOrderId(sRes.data);
+          sellPosition.apiStatus = 'REAL_MUDREX_POSITION';
+          sellPosition.apiError = null;
+          console.log(`[Solana Live] Real SELL Order confirmed for ${pair.pairId}: ${sellPosition.mudrexOrderId}`);
+        } else {
+          sellPosition.apiError = sRes ? (sRes.error || JSON.stringify(sRes)) : 'Failed';
+          sellPosition.apiStatus = 'LIVE_ENGINE_PAIR (RETRY_QUEUED)';
+          console.warn(`[Solana Live] Real SELL Order rejected for ${pair.pairId}:`, sellPosition.apiError);
+        }
+      } catch (e) {
+        sellPosition.apiError = e.message;
+        sellPosition.apiStatus = 'LIVE_ENGINE_PAIR (RETRY_QUEUED)';
+      }
+      this.saveState();
+    }
+  }
+
+  transmitPendingSolanaOrders() {
+    if (this.isTransmittingQueue) return;
+    this.isTransmittingQueue = true;
+    (async () => {
+      try {
+        for (const pair of this.pairs) {
+          if (pair.status === 'CLOSED') continue;
+          const bOpen = pair.buyPosition && pair.buyPosition.status === 'OPEN';
+          const sOpen = pair.sellPosition && pair.sellPosition.status === 'OPEN';
+          const bNeedsOrder = bOpen && (!pair.buyPosition.mudrexOrderId || pair.buyPosition.apiStatus !== 'REAL_MUDREX_POSITION');
+          const sNeedsOrder = sOpen && (!pair.sellPosition.mudrexOrderId || pair.sellPosition.apiStatus !== 'REAL_MUDREX_POSITION');
+          if (bNeedsOrder || sNeedsOrder) {
+            await this.dispatchPairOrders(pair);
+          }
+        }
+      } finally {
+        this.isTransmittingQueue = false;
+      }
+    })();
   }
 
   evaluateOpenPositions(livePrice) {
