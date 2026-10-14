@@ -8,7 +8,7 @@
     "profitTargetMove": 0.25,
     "buyTargetMove": 0.25,
     "sellTargetMove": 0.25,
-    "basketProfitTargetINR": 100,
+    "basketProfitTargetINR": 250,
     "autoPunarjanmEnabled": true,
     "autoAiTargetMode": true,
     "targetDisabled": false,

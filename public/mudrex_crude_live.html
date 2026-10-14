@@ -970,11 +970,63 @@
     }
 
     .badge-harvest {
-      background: linear-gradient(135deg, rgba(124, 58, 237, 0.35), rgba(219, 39, 119, 0.35));
+      background: linear-gradient(135deg, #7c3aed, #db2777);
       border: 1px solid #f472b6;
-      color: #fbcfe8;
-      box-shadow: 0 0 10px rgba(219, 39, 119, 0.3);
-      font-weight: 800;
+      color: #fff;
+      box-shadow: 0 0 14px rgba(219, 39, 119, 0.6);
+      font-weight: 900;
+      padding: 4px 10px;
+      letter-spacing: 0.5px;
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    /* Punarjanm Basket Harvest Highlight Row */
+    tr.harvest-row {
+      background: linear-gradient(90deg, rgba(124, 58, 237, 0.32) 0%, rgba(245, 158, 11, 0.22) 50%, rgba(16, 185, 129, 0.20) 100%) !important;
+      border-top: 1.5px solid rgba(245, 158, 11, 0.75) !important;
+      border-bottom: 1.5px solid rgba(245, 158, 11, 0.75) !important;
+      box-shadow: inset 0 0 20px rgba(245, 158, 11, 0.22), 0 0 16px rgba(124, 58, 237, 0.2) !important;
+    }
+    tr.harvest-row td {
+      border-color: rgba(245, 158, 11, 0.35) !important;
+      background: transparent !important;
+    }
+    tr.harvest-row td:first-child {
+      border-left: 5px solid #f59e0b !important;
+    }
+    tr.harvest-row:hover td {
+      background: rgba(245, 158, 11, 0.12) !important;
+    }
+
+    /* Trade Filter Buttons */
+    .trade-filter-btn {
+      background: transparent;
+      border: none;
+      color: var(--text-muted);
+      font-size: 0.74rem;
+      font-weight: 700;
+      padding: 4px 10px;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: all 0.15s ease;
+      font-family: var(--font-main);
+    }
+    .trade-filter-btn:hover {
+      color: #fff;
+      background: rgba(255, 255, 255, 0.08);
+    }
+    .trade-filter-btn.active {
+      background: rgba(56, 189, 248, 0.22);
+      color: #38bdf8;
+      border: 1px solid rgba(56, 189, 248, 0.4);
+    }
+    .trade-filter-btn#filterHarvest.active {
+      background: linear-gradient(135deg, rgba(124, 58, 237, 0.4), rgba(219, 39, 119, 0.4));
+      color: #fef08a;
+      border: 1px solid #f59e0b;
+      box-shadow: 0 0 10px rgba(245, 158, 11, 0.35);
     }
 
     .badge-open {
@@ -1119,7 +1171,7 @@
           <span>➕ ADD NEW PAIR</span>
         </button>
         <button class="btn btn-purple" id="punarjanmBtn" onclick="promptAction('punarjanm')" style="background: linear-gradient(135deg, #7c3aed, #db2777); border: 1px solid #f472b6; box-shadow: 0 0 16px rgba(219, 39, 119, 0.45); font-weight: 800; color: #fff;">
-          <span>✨ PUNARJANM (₹100)</span>
+          <span id="punarjanmNavBtnLabel">✨ PUNARJANM (₹250)</span>
           <span class="badge" id="navPunarjanmBadge" style="background: rgba(0,0,0,0.5); font-size: 0.72rem; padding: 2px 6px; border-radius: 4px; margin-left: 4px;">Punarjanm 1</span>
         </button>
         <button class="btn btn-blue" id="mudrexDataBtn" onclick="openMudrexDataModal()">
@@ -1152,8 +1204,8 @@
             <!-- Target Chips -->
             <div class="target-chip-group" style="display: inline-flex; align-items: center; gap: 3px; background: rgba(0,0,0,0.4); padding: 2px 5px; border-radius: 7px; border: 1px solid rgba(255,255,255,0.12);">
               <span style="font-size: 0.66rem; color: var(--text-muted); font-weight: 800;">TARGET:</span>
-              <button type="button" class="target-chip active" id="chipTarget100" onclick="quickSetBasketTarget(100)">₹100</button>
-              <button type="button" class="target-chip" id="chipTarget250" onclick="quickSetBasketTarget(250)">₹250</button>
+              <button type="button" class="target-chip" id="chipTarget100" onclick="quickSetBasketTarget(100)">₹100</button>
+              <button type="button" class="target-chip active" id="chipTarget250" onclick="quickSetBasketTarget(250)">₹250</button>
               <button type="button" class="target-chip" id="chipTarget500" onclick="quickSetBasketTarget(500)">₹500</button>
               <button type="button" class="target-chip" id="chipTarget1000" onclick="quickSetBasketTarget(1000)">₹1k</button>
               <button type="button" class="target-chip" onclick="promptCustomBasketTarget()" title="Custom Target">✏️</button>
@@ -1286,7 +1338,7 @@
         </div>
         <div style="text-align: center; border-left: 1px solid rgba(255,255,255,0.1); padding-left: 14px;">
           <div style="font-size: 0.7rem; color: var(--text-dim); text-transform: uppercase;">Punarjanm Target</div>
-          <div style="font-size: 1.05rem; font-weight: 800; color: #f472b6;" id="sessionBasketTarget">₹100</div>
+          <div style="font-size: 1.05rem; font-weight: 800; color: #f472b6;" id="sessionBasketTarget">₹250</div>
         </div>
       </div>
 
@@ -1325,6 +1377,7 @@
             <table class="data-table">
               <thead>
                 <tr>
+                  <th class="sortable-th" onclick="sortTable('buy', 'slNo')" style="width: 48px;"># <span class="sort-icon" id="sort-buy-slNo">⬍</span></th>
                   <th class="sortable-th" onclick="sortTable('buy', 'entryTime')">Date/Time (dd/mm/yy) <span class="sort-icon" id="sort-buy-entryTime">⬍</span></th>
                   <th class="sortable-th" onclick="sortTable('buy', 'quantity')">Barrels <span class="sort-icon" id="sort-buy-quantity">⬍</span></th>
                   <th class="sortable-th" onclick="sortTable('buy', 'entryPrice')">Entry <span class="sort-icon" id="sort-buy-entryPrice">⬍</span></th>
@@ -1333,7 +1386,7 @@
                 </tr>
               </thead>
               <tbody id="splitBuyTableBody">
-                <tr><td colspan="5" class="empty-state">No active BUY positions</td></tr>
+                <tr><td colspan="6" class="empty-state">No active BUY positions</td></tr>
               </tbody>
             </table>
           </div>
@@ -1351,6 +1404,7 @@
             <table class="data-table">
               <thead>
                 <tr>
+                  <th class="sortable-th" onclick="sortTable('sell', 'slNo')" style="width: 48px;"># <span class="sort-icon" id="sort-sell-slNo">⬍</span></th>
                   <th class="sortable-th" onclick="sortTable('sell', 'entryTime')">Date/Time (dd/mm/yy) <span class="sort-icon" id="sort-sell-entryTime">⬍</span></th>
                   <th class="sortable-th" onclick="sortTable('sell', 'quantity')">Barrels <span class="sort-icon" id="sort-sell-quantity">⬍</span></th>
                   <th class="sortable-th" onclick="sortTable('sell', 'entryPrice')">Entry <span class="sort-icon" id="sort-sell-entryPrice">⬍</span></th>
@@ -1359,7 +1413,7 @@
                 </tr>
               </thead>
               <tbody id="splitSellTableBody">
-                <tr><td colspan="5" class="empty-state">No active SELL positions</td></tr>
+                <tr><td colspan="6" class="empty-state">No active SELL positions</td></tr>
               </tbody>
             </table>
           </div>
@@ -1376,14 +1430,23 @@
             <span>📜 Realized Closed Trades History</span>
             <span style="font-size: 0.76rem; color: var(--text-dim);" id="closedTradesSummarySub">Total: 33 Trades | Win Rate: 100%</span>
           </div>
-          <div style="font-size: 0.88rem; font-weight: 800; color: var(--accent-green-bright);" id="closedTradesTotalNet">
-            Net: +₹2,540.90 (+ $26.21)
+          <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
+            <div style="display: inline-flex; background: rgba(0,0,0,0.35); padding: 3px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.1); gap: 3px;">
+              <button type="button" class="trade-filter-btn active" id="filterAll" onclick="setClosedFilter('ALL')">All Trades</button>
+              <button type="button" class="trade-filter-btn" id="filterHarvest" onclick="setClosedFilter('HARVEST')" style="color: #fde047; font-weight: 800;">👑 Harvests (<span id="harvestFilterCount">0</span>)</button>
+              <button type="button" class="trade-filter-btn" id="filterBuy" onclick="setClosedFilter('BUY')">🟢 BUYs</button>
+              <button type="button" class="trade-filter-btn" id="filterSell" onclick="setClosedFilter('SELL')">🔴 SELLs</button>
+            </div>
+            <div style="font-size: 0.88rem; font-weight: 800; color: var(--accent-green-bright);" id="closedTradesTotalNet">
+              Net: +₹2,540.90 (+ $26.21)
+            </div>
           </div>
         </div>
         <div style="overflow-x: auto;">
           <table class="data-table">
             <thead>
               <tr>
+                <th class="sortable-th" onclick="sortTable('closed', 'slNo')" style="width: 55px;"># <span class="sort-icon" id="sort-closed-slNo">⬍</span></th>
                 <th class="sortable-th" onclick="sortTable('closed', 'exitTime')">Exit Time (IST) <span class="sort-icon" id="sort-closed-exitTime">▼</span></th>
                 <th class="sortable-th" onclick="sortTable('closed', 'netINR')">Net Profit (₹ INR) <span class="sort-icon" id="sort-closed-netINR">⬍</span></th>
                 <th class="sortable-th" onclick="sortTable('closed', 'exitPrice')">Exit Price <span class="sort-icon" id="sort-closed-exitPrice">⬍</span></th>
@@ -1394,7 +1457,7 @@
               </tr>
             </thead>
             <tbody id="closedTableBody">
-              <tr><td colspan="7" class="empty-state">Loading closed trades...</td></tr>
+              <tr><td colspan="8" class="empty-state">Loading closed trades...</td></tr>
             </tbody>
           </table>
         </div>
@@ -1846,6 +1909,11 @@
         if (pBadge) {
           pBadge.innerText = data.punarjanm.currentCycleName || 'Punarjanm 1';
         }
+        const curBasketTarget = (data.punarjanm && data.punarjanm.basketTargetINR) || 250;
+        const pLabel = document.getElementById('punarjanmNavBtnLabel');
+        if (pLabel) {
+          pLabel.innerText = `✨ PUNARJANM (₹${curBasketTarget})`;
+        }
       }
 
       // 1b. Update Market Session Auto-Scheduler Control Strip
@@ -2030,7 +2098,7 @@
         }
 
         // Update Target Chips active status
-        const curTarget = (data.punarjanm && data.punarjanm.basketTargetINR) || 100;
+        const curTarget = (data.punarjanm && data.punarjanm.basketTargetINR) || 250;
         ['100', '250', '500', '1000'].forEach(v => {
           const c = document.getElementById('chipTarget' + v);
           if (c) {
@@ -2287,6 +2355,7 @@
     }
 
     function getBuySortValue(p, col) {
+      if (col === 'slNo') return p.slNo || 0;
       const b = p.buy || {};
       if (col === 'entryTime' || col === 'positionId') {
         const t = new Date(b.entryTime || p.createdAt || 0).getTime();
@@ -2301,6 +2370,7 @@
     }
 
     function getSellSortValue(p, col) {
+      if (col === 'slNo') return p.slNo || 0;
       const s = p.sell || {};
       if (col === 'entryTime' || col === 'positionId') {
         const t = new Date(s.entryTime || p.createdAt || 0).getTime();
@@ -2327,6 +2397,7 @@
     }
 
     function getClosedSortValue(cp, col) {
+      if (col === 'slNo') return cp.slNo || 0;
       const netINR = cp.netProfitINR !== undefined ? cp.netProfitINR : (cp.netProfitUSD * 102);
       const netUSD = cp.netProfitUSD !== undefined ? cp.netProfitUSD : (netINR / 102);
       if (col === 'exitTime') {
@@ -2418,8 +2489,8 @@
       let totalBuyINR = 0;
       let totalSellINR = 0;
 
-      const buyPairs = pairs.filter(p => p.buy && p.buy.status === 'OPEN');
-      const sellPairs = pairs.filter(p => p.sell && p.sell.status === 'OPEN');
+      const buyPairs = pairs.filter(p => p.buy && p.buy.status === 'OPEN').map((p, idx) => ({ ...p, slNo: idx + 1 }));
+      const sellPairs = pairs.filter(p => p.sell && p.sell.status === 'OPEN').map((p, idx) => ({ ...p, slNo: idx + 1 }));
 
       buyPairs.forEach(p => totalBuyINR += (p.buy.floatingPnlINR || 0));
       sellPairs.forEach(p => totalSellINR += (p.sell.floatingPnlINR || 0));
@@ -2432,6 +2503,7 @@
         const pnlSign = (p.buy.floatingPnlINR || 0) >= 0 ? '+' : '';
         buyRows.push(`
           <tr>
+            <td><strong style="color: var(--accent-green-bright); font-family: var(--font-mono); font-size: 0.84rem;">#${p.slNo}</strong></td>
             <td>
               <strong style="color: #fff; font-size: 0.88rem;">${formatDateTimeIST(p.buy.entryTime || p.createdAt)}</strong>
               <div style="font-size: 0.70rem; color: var(--text-dim); font-family: var(--font-mono); margin-top: 1px;">${p.buy.positionId}</div>
@@ -2447,6 +2519,7 @@
       sortedSellPairs.forEach(p => {
         sellRows.push(`
           <tr>
+            <td><strong style="color: var(--accent-red-bright); font-family: var(--font-mono); font-size: 0.84rem;">#${p.slNo}</strong></td>
             <td>
               <strong style="color: #fff; font-size: 0.88rem;">${formatDateTimeIST(p.sell.entryTime || p.createdAt)}</strong>
               <div style="font-size: 0.70rem; color: var(--text-dim); font-family: var(--font-mono); margin-top: 1px;">${p.sell.positionId}</div>
@@ -2462,8 +2535,8 @@
       document.getElementById('splitBuyBadge').innerText = `${buyRows.length} Active`;
       document.getElementById('splitSellBadge').innerText = `${sellRows.length} Active`;
 
-      buyTbody.innerHTML = buyRows.length > 0 ? buyRows.join('') : '<tr><td colspan="5" class="empty-state">No active BUY positions</td></tr>';
-      sellTbody.innerHTML = sellRows.length > 0 ? sellRows.join('') : '<tr><td colspan="5" class="empty-state">No active SELL positions</td></tr>';
+      buyTbody.innerHTML = buyRows.length > 0 ? buyRows.join('') : '<tr><td colspan="6" class="empty-state">No active BUY positions</td></tr>';
+      sellTbody.innerHTML = sellRows.length > 0 ? sellRows.join('') : '<tr><td colspan="6" class="empty-state">No active SELL positions</td></tr>';
     }
 
     function renderExchangeTable(positions) {
@@ -2476,7 +2549,7 @@
 
       const sortedExchange = sortArray(positions, sortState.exchange.col, sortState.exchange.dir, getExchangeSortValue);
 
-      tbody.innerHTML = sortedExchange.map(pos => {
+      tbody.innerHTML = sortedExchange.map((pos, idx) => {
         const side = (pos.order_type || pos.side || 'SHORT').toUpperCase();
         const badgeClass = side === 'BUY' || side === 'LONG' ? 'badge-buy' : 'badge-sell';
         return `
@@ -2494,26 +2567,89 @@
       }).join('');
     }
 
+    let currentClosedFilter = 'ALL';
+    function setClosedFilter(filterType) {
+      currentClosedFilter = filterType;
+      document.querySelectorAll('.trade-filter-btn').forEach(btn => btn.classList.remove('active'));
+      const activeBtn = document.getElementById(
+        filterType === 'ALL' ? 'filterAll' :
+        filterType === 'HARVEST' ? 'filterHarvest' :
+        filterType === 'BUY' ? 'filterBuy' : 'filterSell'
+      );
+      if (activeBtn) activeBtn.classList.add('active');
+      if (cachedData) renderTerminalUI(cachedData);
+    }
+
     function renderClosedTable(closedPositions) {
       const tbody = document.getElementById('closedTableBody');
+      if (!tbody) return;
       if (!closedPositions || closedPositions.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="7" class="empty-state">No closed trades recorded.</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="8" class="empty-state">No closed trades recorded.</td></tr>';
         return;
       }
 
-      const sortedList = sortArray(closedPositions, sortState.closed.col, sortState.closed.dir, getClosedSortValue);
+      // Assign persistent chronological Serial Number (#1 to #N)
+      const allWithSlNo = closedPositions.map((cp, idx) => ({
+        ...cp,
+        slNo: cp.slNo !== undefined ? cp.slNo : (idx + 1)
+      }));
+
+      // Count harvests for badge
+      const harvestTrades = allWithSlNo.filter(cp => 
+        (cp.direction && (cp.direction.includes('BASKET') || cp.direction.includes('HARVEST'))) ||
+        (cp.positionId && (cp.positionId.includes('HARVEST') || cp.positionId.includes('Punarjanm')))
+      );
+      const harvestBadgeEl = document.getElementById('harvestFilterCount');
+      if (harvestBadgeEl) harvestBadgeEl.innerText = harvestTrades.length;
+
+      // Filter rows
+      let filtered = allWithSlNo;
+      if (currentClosedFilter === 'HARVEST') {
+        filtered = harvestTrades;
+      } else if (currentClosedFilter === 'BUY') {
+        filtered = allWithSlNo.filter(cp => (cp.direction === 'BUY' || (cp.positionId && cp.positionId.includes('BUY'))));
+      } else if (currentClosedFilter === 'SELL') {
+        filtered = allWithSlNo.filter(cp => (cp.direction === 'SELL' || (cp.positionId && cp.positionId.includes('SELL'))));
+      }
+
+      if (filtered.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="8" class="empty-state">No trades found for filter: ${currentClosedFilter}</td></tr>`;
+        return;
+      }
+
+      const sortedList = sortArray(filtered, sortState.closed.col, sortState.closed.dir, getClosedSortValue);
 
       tbody.innerHTML = sortedList.map(cp => {
         const netINR = cp.netProfitINR !== undefined ? cp.netProfitINR : (cp.netProfitUSD * 102);
         const netUSD = cp.netProfitUSD !== undefined ? cp.netProfitUSD : (netINR / 102);
         const pnlClass = netINR >= 0 ? 'pnl-positive' : 'pnl-negative';
         const sign = netINR >= 0 ? '+' : '';
-        const isHarvest = (cp.direction && cp.direction.includes('BASKET')) || (cp.positionId && cp.positionId.includes('HARVEST'));
-        const side = isHarvest ? '✨ HARVEST' : (cp.direction || (cp.positionId && cp.positionId.includes('BUY') ? 'BUY' : 'SELL'));
+        const isHarvest = (cp.direction && (cp.direction.includes('BASKET') || cp.direction.includes('HARVEST'))) || 
+                          (cp.positionId && (cp.positionId.includes('HARVEST') || cp.positionId.includes('Punarjanm')));
+        const side = isHarvest ? '✨ PUNARJANM' : (cp.direction || (cp.positionId && cp.positionId.includes('BUY') ? 'BUY' : 'SELL'));
         const badgeClass = isHarvest ? 'badge-harvest' : (side === 'BUY' ? 'badge-buy' : 'badge-sell');
+
+        if (isHarvest) {
+          return `
+            <tr class="harvest-row">
+              <td><strong style="color: #f59e0b; font-family: var(--font-mono); font-size: 0.90rem;">👑 #${cp.slNo}</strong></td>
+              <td>
+                <strong style="color: #fde047; font-size: 0.96rem;">${formatExitTimeIST(cp.exitTime || cp.closedTimestamp)}</strong>
+                <span style="font-size: 0.68rem; background: rgba(245,158,11,0.25); color: #f59e0b; padding: 2px 7px; border-radius: 4px; font-weight: 800; border: 1px solid rgba(245,158,11,0.45); margin-left: 5px;">👑 PUNARJANM</span>
+              </td>
+              <td class="pnl-big" style="color: #fde047; font-size: 1.25rem; font-weight: 900; text-shadow: 0 0 14px rgba(245, 158, 11, 0.7);">${sign}₹${netINR.toFixed(2)}</td>
+              <td class="exit-price-big" style="color: #fff; font-size: 1.05rem;">$${cp.exitPrice ? Number(cp.exitPrice).toFixed(2) : '--'}</td>
+              <td style="color: #fde047; font-weight: 800; font-size: 0.92rem;">${sign}$${netUSD.toFixed(2)}</td>
+              <td><span class="badge badge-harvest">✨ HARVEST</span></td>
+              <td>$${cp.entryPrice ? Number(cp.entryPrice).toFixed(2) : '--'}</td>
+              <td><span style="font-family: var(--font-mono); font-size: 0.80rem; color: #f59e0b; font-weight: 800;">${cp.positionId || '--'}</span></td>
+            </tr>
+          `;
+        }
 
         return `
           <tr>
+            <td><strong style="color: var(--accent-cyan); font-family: var(--font-mono); font-size: 0.84rem;">#${cp.slNo}</strong></td>
             <td><strong style="color: #fff; font-size: 0.92rem;">${formatExitTimeIST(cp.exitTime || cp.closedTimestamp)}</strong></td>
             <td class="${pnlClass} pnl-big">${sign}₹${netINR.toFixed(2)}</td>
             <td class="exit-price-big">$${cp.exitPrice ? Number(cp.exitPrice).toFixed(2) : '--'}</td>

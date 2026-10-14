@@ -19,9 +19,9 @@
 - Margin check must always use authoritative available margin based only on actually OPEN positions, immediately freeing margin when any leg closes.
 
 ## 4. Punarjanm (Basket Profit Harvest & Rebirth Cycle) Rule
-- **Threshold**: ₹100 INR (`basketProfitTargetINR: 100`) for testing mode.
+- **Threshold**: ₹250 INR (`basketProfitTargetINR: 250`) (auto-harvest test passed, upgraded from ₹100 to ₹250).
 - **Sequential Numbering**: Cycles are sequentially named `Punarjanm 1`, `Punarjanm 2`, `Punarjanm 3`, etc.
-- **Action**: When Mudrex net position reaches $\ge$ ₹100 profit (or triggered manually with PIN `340556`), it market-closes the exchange position to lock in the profit, flushes stale pairs into closed history, resets the price grid, frees all margin, and immediately spawns a fresh 2.0B pair at the live price.
+- **Action**: When Mudrex net position reaches $\ge$ ₹250 profit (or triggered manually with PIN `340556`), it market-closes the exchange position to lock in the profit, flushes stale pairs into closed history, resets the price grid, frees all margin, and immediately spawns a fresh 2.0B pair at the live price.
 
 ## 5. UI Updates & Data Integrity Shield (Admin Password: 340556)
 - **Live Trading Data Must NEVER Be Touched or Cleared**: Closed trade history, open positions, active pairs, and balance/margin states must NEVER be cleared or modified during UI styling, frontend refactoring, or minor feature changes.

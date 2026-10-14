@@ -12,7 +12,7 @@ class PaperEngine {
       profitTargetMove: 0.25, // $0.25 Target Move (User-Configured)
       buyTargetMove: 0.25,
       sellTargetMove: 0.25,
-      basketProfitTargetINR: 100, // ₹100 Punarjanm Basket Profit Threshold (Testing Mode)
+      basketProfitTargetINR: 250, // ₹250 Punarjanm Basket Profit Threshold (Promoted from ₹100 testing)
       autoPunarjanmEnabled: true,
       autoAiTargetMode: false,
       autoAddNewPairs: true, // Auto add new pairs on rate changes
@@ -36,7 +36,7 @@ class PaperEngine {
             endIST: '23:30',
             contractQuantity: 2.0,
             profitTargetMove: 0.25,
-            basketProfitTargetINR: 200
+            basketProfitTargetINR: 250
           },
           {
             id: 'low_vol_asian_night',
@@ -46,7 +46,7 @@ class PaperEngine {
             endIST: '13:00',
             contractQuantity: 2.0,
             profitTargetMove: 0.25,
-            basketProfitTargetINR: 100
+            basketProfitTargetINR: 250
           }
         ]
       }
@@ -218,7 +218,7 @@ class PaperEngine {
       this.settings.profitTargetMove = 0.25; // $0.25 Target Move (User-Configured)
       this.settings.buyTargetMove = 0.25;
       this.settings.sellTargetMove = 0.25;
-      this.settings.basketProfitTargetINR = 100; // ₹100 Punarjanm Basket Profit Threshold (Testing Mode)
+      this.settings.basketProfitTargetINR = 250; // ₹250 Punarjanm Basket Profit Threshold (Promoted from ₹100 testing)
       this.settings.autoPunarjanmEnabled = true;
       this.settings.profitTargetMode = 'PRICE_MOVE';
       this.settings.tradingMode = 'LIVE';
@@ -875,7 +875,7 @@ class PaperEngine {
     }
 
     // 2b. Authoritatively record the real Mudrex Basket Profit Harvest trade in closed positions ledger!
-    const harvestPnlINR = (mudrexPnlINR && mudrexPnlINR > 0) ? mudrexPnlINR : (this.settings.basketProfitTargetINR || 100);
+    const harvestPnlINR = (mudrexPnlINR && mudrexPnlINR > 0) ? mudrexPnlINR : (this.settings.basketProfitTargetINR || 250);
     const harvestPnlUSD = Number((harvestPnlINR / usdInrRate).toFixed(4));
     const harvestRecord = {
       pairId: cycleTag,
