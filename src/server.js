@@ -639,7 +639,8 @@ app.get('/api/crude-live-mudrex/data', async (req, res) => {
         lossCount,
         closedTradesCount: closedTrades.length
       },
-      closedPositions: closedTrades
+      closedPositions: closedTrades,
+      sessionScheduler: paperEngine.getSessionSchedulerStatus ? paperEngine.getSessionSchedulerStatus() : null
     });
   } catch (err) {
     res.status(500).json({ success: false, error: err.message });
@@ -701,6 +702,17 @@ app.post('/api/crude-live-mudrex/action', async (req, res) => {
       paperEngine.settings.basketProfitTargetINR = newTarget;
       paperEngine.saveState();
       return res.json({ success: true, message: `Punarjanm target updated to ₹${newTarget.toFixed(2)} INR.`, targetINR: newTarget });
+    } else if (action === 'updateSessionScheduler') {
+      const { sessionScheduler } = req.body;
+      if (sessionScheduler && typeof sessionScheduler === 'object') {
+        const ok = paperEngine.updateSessionScheduler(sessionScheduler);
+        return res.json({
+          success: ok,
+          message: 'Market Session Auto-Scheduler updated successfully.',
+          sessionScheduler: paperEngine.getSessionSchedulerStatus ? paperEngine.getSessionSchedulerStatus() : null
+        });
+      }
+      return res.status(400).json({ success: false, error: 'Invalid sessionScheduler configuration payload.' });
     }
 
     return res.status(400).json({ success: false, error: 'Unknown action.' });

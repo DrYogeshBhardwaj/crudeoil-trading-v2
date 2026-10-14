@@ -1257,6 +1257,47 @@
       </div>
     </section>
 
+    <!-- Market Session Auto-Scheduler Control Strip -->
+    <section class="session-scheduler-banner" id="sessionSchedulerBanner" style="margin-bottom: 20px; background: linear-gradient(135deg, rgba(15, 23, 42, 0.95), rgba(30, 41, 59, 0.85)); border: 1px solid rgba(147, 51, 234, 0.45); border-radius: 14px; padding: 14px 20px; display: flex; justify-content: space-between; align-items: center; gap: 16px; flex-wrap: wrap; box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);">
+      <!-- Left: Active Session Info & Clock -->
+      <div style="display: flex; align-items: center; gap: 12px; flex-wrap: wrap;">
+        <span style="font-size: 1.45rem;">⏰</span>
+        <div>
+          <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+            <span style="font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.6px; color: var(--text-dim); font-weight: 700;">Market Session Auto-Scheduler</span>
+            <span class="badge" id="sessionActiveBadge" style="background: linear-gradient(135deg, rgba(124, 58, 237, 0.35), rgba(219, 39, 119, 0.35)); border: 1px solid #f472b6; color: #fbcfe8; font-weight: 800; font-size: 0.76rem; padding: 3px 9px; border-radius: 5px;">🌙 Asian &amp; Night Session (Low Vol)</span>
+            <span class="badge" id="sessionSchedulerStatusBadge" style="background: rgba(16, 185, 129, 0.2); border: 1px solid #10b981; color: #34d399; font-weight: 800; font-size: 0.72rem; padding: 3px 8px; border-radius: 5px;">AUTO ACTIVE</span>
+          </div>
+          <div style="font-size: 0.78rem; color: var(--text-muted); margin-top: 3px; font-family: var(--font-mono);" id="sessionTimeWindow">
+            Session Window: 11:30 PM – 1:00 PM IST | Live Clock: --:--:-- IST
+          </div>
+        </div>
+      </div>
+
+      <!-- Middle: Dynamic Parameters for Current Session -->
+      <div style="display: flex; align-items: center; gap: 18px; flex-wrap: wrap;">
+        <div style="text-align: center; border-left: 1px solid rgba(255,255,255,0.1); padding-left: 14px;">
+          <div style="font-size: 0.7rem; color: var(--text-dim); text-transform: uppercase;">Session Lot Size</div>
+          <div style="font-size: 1.05rem; font-weight: 800; color: var(--accent-cyan);" id="sessionLotSize">2.0 Barrels</div>
+        </div>
+        <div style="text-align: center; border-left: 1px solid rgba(255,255,255,0.1); padding-left: 14px;">
+          <div style="font-size: 0.7rem; color: var(--text-dim); text-transform: uppercase;">Target Move</div>
+          <div style="font-size: 1.05rem; font-weight: 800; color: var(--accent-green-bright);" id="sessionTargetMove">$0.25</div>
+        </div>
+        <div style="text-align: center; border-left: 1px solid rgba(255,255,255,0.1); padding-left: 14px;">
+          <div style="font-size: 0.7rem; color: var(--text-dim); text-transform: uppercase;">Punarjanm Target</div>
+          <div style="font-size: 1.05rem; font-weight: 800; color: #f472b6;" id="sessionBasketTarget">₹100</div>
+        </div>
+      </div>
+
+      <!-- Right: Action Button to Open Config Modal -->
+      <div>
+        <button class="btn btn-outline" onclick="openSessionModal()" style="border-color: rgba(147, 51, 234, 0.6); color: #c084fc; font-weight: 700; font-size: 0.8rem; padding: 6px 14px; display: inline-flex; align-items: center; gap: 6px;">
+          <span>⚙️ Configure Sessions</span>
+        </button>
+      </div>
+    </section>
+
     <!-- Tabs Navigation Bar -->
     <nav class="tabs-bar">
       <button class="tab-btn active" onclick="switchTab('tabSplit')">
@@ -1440,6 +1481,99 @@
     </div>
   </div>
 
+  <!-- Session Auto-Scheduler Configuration Modal (PIN 340556) -->
+  <div class="modal-overlay" id="sessionModal" style="z-index: 1250;" onclick="if(event.target === this) closeSessionModal()">
+    <div class="modal-card" style="max-width: 680px; width: 95%; padding: 24px; background: linear-gradient(145deg, #0b1329, #080d1e); border: 1px solid rgba(147, 51, 234, 0.5); box-shadow: 0 25px 70px rgba(0, 0, 0, 0.85);">
+      <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 12px; margin-bottom: 18px;">
+        <h3 class="modal-title" style="margin: 0; font-size: 1.2rem; color: #fff; display: flex; align-items: center; gap: 8px;">
+          <span>⏰ Market Session Auto-Scheduler</span>
+        </h3>
+        <button onclick="closeSessionModal()" style="background: none; border: none; color: var(--text-muted); font-size: 1.4rem; cursor: pointer;">✕</button>
+      </div>
+
+      <div style="margin-bottom: 18px; display: flex; justify-content: space-between; align-items: center; background: rgba(255,255,255,0.03); padding: 10px 14px; border-radius: 8px;">
+        <label for="sessionSchedulerToggle" style="font-size: 0.85rem; font-weight: 700; color: #fff; cursor: pointer;">
+          Auto-Scheduler Enabled (Time aane par apne aap Barrels aur Punarjanm badle)
+        </label>
+        <input type="checkbox" id="sessionSchedulerToggle" checked style="width: 20px; height: 20px; cursor: pointer; accent-color: #8b5cf6;">
+      </div>
+
+      <!-- Slot 1: European & US High Volatility Session -->
+      <div style="border: 1px solid rgba(239, 68, 68, 0.35); background: rgba(239, 68, 68, 0.04); border-radius: 10px; padding: 14px; margin-bottom: 14px;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+          <strong style="color: #f87171; font-size: 0.92rem;">⚡ Slot 1: European &amp; US Session (High Volatility)</strong>
+          <span style="font-size: 0.72rem; color: var(--text-dim);">Main Volatility Wave</span>
+        </div>
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(110px, 1fr)); gap: 10px;">
+          <div>
+            <label style="font-size: 0.7rem; color: var(--text-muted); display: block; margin-bottom: 4px;">Start Time (IST)</label>
+            <input type="text" id="slot1Start" value="13:00" class="modal-input" style="font-size: 0.85rem; padding: 6px;" placeholder="13:00">
+          </div>
+          <div>
+            <label style="font-size: 0.7rem; color: var(--text-muted); display: block; margin-bottom: 4px;">End Time (IST)</label>
+            <input type="text" id="slot1End" value="23:30" class="modal-input" style="font-size: 0.85rem; padding: 6px;" placeholder="23:30">
+          </div>
+          <div>
+            <label style="font-size: 0.7rem; color: var(--text-muted); display: block; margin-bottom: 4px;">Lot Size (Barrels)</label>
+            <input type="number" id="slot1Qty" value="2.0" step="0.5" min="0.5" class="modal-input" style="font-size: 0.85rem; padding: 6px;">
+          </div>
+          <div>
+            <label style="font-size: 0.7rem; color: var(--text-muted); display: block; margin-bottom: 4px;">Target Move ($)</label>
+            <input type="number" id="slot1TargetMove" value="0.25" step="0.05" min="0.05" class="modal-input" style="font-size: 0.85rem; padding: 6px;">
+          </div>
+          <div>
+            <label style="font-size: 0.7rem; color: var(--text-muted); display: block; margin-bottom: 4px;">Punarjanm (₹)</label>
+            <input type="number" id="slot1Basket" value="200" step="10" min="50" class="modal-input" style="font-size: 0.85rem; padding: 6px;">
+          </div>
+        </div>
+      </div>
+
+      <!-- Slot 2: Asian & Night Low Volatility Session -->
+      <div style="border: 1px solid rgba(59, 130, 246, 0.35); background: rgba(59, 130, 246, 0.04); border-radius: 10px; padding: 14px; margin-bottom: 18px;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+          <strong style="color: #60a5fa; font-size: 0.92rem;">🌙 Slot 2: Asian &amp; Night Session (Low Volatility)</strong>
+          <span style="font-size: 0.72rem; color: var(--text-dim);">Calm Range (3:30 AM - 7:00 AM)</span>
+        </div>
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(110px, 1fr)); gap: 10px;">
+          <div>
+            <label style="font-size: 0.7rem; color: var(--text-muted); display: block; margin-bottom: 4px;">Start Time (IST)</label>
+            <input type="text" id="slot2Start" value="23:30" class="modal-input" style="font-size: 0.85rem; padding: 6px;" placeholder="23:30">
+          </div>
+          <div>
+            <label style="font-size: 0.7rem; color: var(--text-muted); display: block; margin-bottom: 4px;">End Time (IST)</label>
+            <input type="text" id="slot2End" value="13:00" class="modal-input" style="font-size: 0.85rem; padding: 6px;" placeholder="13:00">
+          </div>
+          <div>
+            <label style="font-size: 0.7rem; color: var(--text-muted); display: block; margin-bottom: 4px;">Lot Size (Barrels)</label>
+            <input type="number" id="slot2Qty" value="2.0" step="0.5" min="0.5" class="modal-input" style="font-size: 0.85rem; padding: 6px;">
+          </div>
+          <div>
+            <label style="font-size: 0.7rem; color: var(--text-muted); display: block; margin-bottom: 4px;">Target Move ($)</label>
+            <input type="number" id="slot2TargetMove" value="0.25" step="0.05" min="0.05" class="modal-input" style="font-size: 0.85rem; padding: 6px;">
+          </div>
+          <div>
+            <label style="font-size: 0.7rem; color: var(--text-muted); display: block; margin-bottom: 4px;">Punarjanm (₹)</label>
+            <input type="number" id="slot2Basket" value="100" step="10" min="50" class="modal-input" style="font-size: 0.85rem; padding: 6px;">
+          </div>
+        </div>
+      </div>
+
+      <!-- Admin PIN Input & Save -->
+      <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 14px;">
+        <div style="display: flex; align-items: center; gap: 8px;">
+          <label style="font-size: 0.78rem; color: var(--text-muted);">Admin PIN:</label>
+          <input type="password" id="sessionPinInput" class="modal-input" maxlength="6" placeholder="340556" style="width: 100px; padding: 6px 10px; font-size: 0.85rem;">
+        </div>
+        <div style="display: flex; gap: 10px;">
+          <button class="btn btn-outline" onclick="closeSessionModal()">Cancel</button>
+          <button class="btn btn-purple" onclick="saveSessionSchedulerConfig()" style="background: linear-gradient(135deg, #7c3aed, #db2777); color: #fff; font-weight: 800; border: 1px solid #f472b6;">
+            <span>Save &amp; Apply Schedule</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <!-- Client-Side Real-Time Trading Controller -->
   <script>
     let currentPendingAction = null;
@@ -1575,6 +1709,86 @@
       quickSetBasketTarget(num);
     }
 
+    function openSessionModal() {
+      const sched = cachedData?.sessionScheduler || {};
+      const sessions = sched.sessions || [];
+      const s1 = sessions.find(s => s.id === 'high_vol_eu_us') || {};
+      const s2 = sessions.find(s => s.id === 'low_vol_asian_night') || {};
+
+      document.getElementById('sessionSchedulerToggle').checked = sched.enabled !== false;
+
+      if (s1.startIST) document.getElementById('slot1Start').value = s1.startIST;
+      if (s1.endIST) document.getElementById('slot1End').value = s1.endIST;
+      if (s1.contractQuantity) document.getElementById('slot1Qty').value = s1.contractQuantity;
+      if (s1.profitTargetMove) document.getElementById('slot1TargetMove').value = s1.profitTargetMove;
+      if (s1.basketProfitTargetINR) document.getElementById('slot1Basket').value = s1.basketProfitTargetINR;
+
+      if (s2.startIST) document.getElementById('slot2Start').value = s2.startIST;
+      if (s2.endIST) document.getElementById('slot2End').value = s2.endIST;
+      if (s2.contractQuantity) document.getElementById('slot2Qty').value = s2.contractQuantity;
+      if (s2.profitTargetMove) document.getElementById('slot2TargetMove').value = s2.profitTargetMove;
+      if (s2.basketProfitTargetINR) document.getElementById('slot2Basket').value = s2.basketProfitTargetINR;
+
+      document.getElementById('sessionPinInput').value = '';
+      document.getElementById('sessionModal').style.display = 'flex';
+    }
+
+    function closeSessionModal() {
+      document.getElementById('sessionModal').style.display = 'none';
+    }
+
+    async function saveSessionSchedulerConfig() {
+      const pin = document.getElementById('sessionPinInput').value.trim();
+      if (!pin) {
+        alert('Please enter Admin PIN (340556)');
+        return;
+      }
+
+      const payload = {
+        enabled: document.getElementById('sessionSchedulerToggle').checked,
+        sessions: [
+          {
+            id: 'high_vol_eu_us',
+            name: '⚡ European & US Session (High Volatility)',
+            shortName: 'EU / US Session',
+            startIST: document.getElementById('slot1Start').value.trim() || '13:00',
+            endIST: document.getElementById('slot1End').value.trim() || '23:30',
+            contractQuantity: parseFloat(document.getElementById('slot1Qty').value) || 2.0,
+            profitTargetMove: parseFloat(document.getElementById('slot1TargetMove').value) || 0.25,
+            basketProfitTargetINR: parseFloat(document.getElementById('slot1Basket').value) || 200
+          },
+          {
+            id: 'low_vol_asian_night',
+            name: '🌙 Asian & Night Session (Low Volatility)',
+            shortName: 'Night / Asian Session',
+            startIST: document.getElementById('slot2Start').value.trim() || '23:30',
+            endIST: document.getElementById('slot2End').value.trim() || '13:00',
+            contractQuantity: parseFloat(document.getElementById('slot2Qty').value) || 2.0,
+            profitTargetMove: parseFloat(document.getElementById('slot2TargetMove').value) || 0.25,
+            basketProfitTargetINR: parseFloat(document.getElementById('slot2Basket').value) || 100
+          }
+        ]
+      };
+
+      try {
+        const res = await fetch('/api/crude-live-mudrex/action', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: 'updateSessionScheduler', sessionScheduler: payload, password: pin })
+        });
+        const json = await res.json();
+        if (json.success) {
+          alert('✅ Market Session Auto-Scheduler updated successfully!');
+          closeSessionModal();
+          await fetchTerminalData();
+        } else {
+          alert('Failed: ' + (json.error || 'Incorrect PIN'));
+        }
+      } catch (err) {
+        alert('Error: ' + err.message);
+      }
+    }
+
     async function fetchTerminalData() {
       try {
         const res = await fetch('/api/crude-live-mudrex/data');
@@ -1631,6 +1845,38 @@
         const pBadge = document.getElementById('navPunarjanmBadge');
         if (pBadge) {
           pBadge.innerText = data.punarjanm.currentCycleName || 'Punarjanm 1';
+        }
+      }
+
+      // 1b. Update Market Session Auto-Scheduler Control Strip
+      const sched = data.sessionScheduler;
+      if (sched) {
+        const active = sched.activeSession;
+        const schedBadge = document.getElementById('sessionSchedulerStatusBadge');
+        if (schedBadge) {
+          schedBadge.innerText = sched.enabled ? 'AUTO ACTIVE' : 'PAUSED';
+          schedBadge.style.color = sched.enabled ? '#34d399' : '#f87171';
+          schedBadge.style.borderColor = sched.enabled ? '#10b981' : '#ef4444';
+          schedBadge.style.background = sched.enabled ? 'rgba(16, 185, 129, 0.2)' : 'rgba(239, 68, 68, 0.2)';
+        }
+
+        if (active) {
+          const actBadge = document.getElementById('sessionActiveBadge');
+          if (actBadge) actBadge.innerText = active.name || active.shortName || 'Active Session';
+          
+          const timeWin = document.getElementById('sessionTimeWindow');
+          if (timeWin) {
+            timeWin.innerText = `Session Window: ${active.startIST} – ${active.endIST} IST | Live Clock: ${sched.currentTimeIST || '--:--'} IST`;
+          }
+
+          const lotEl = document.getElementById('sessionLotSize');
+          if (lotEl) lotEl.innerText = `${active.currentContractQuantity || active.contractQuantity || 2.0} Barrels`;
+
+          const targetEl = document.getElementById('sessionTargetMove');
+          if (targetEl) targetEl.innerText = `$${Number(active.currentProfitTargetMove || active.profitTargetMove || 0.25).toFixed(2)}`;
+
+          const basketEl = document.getElementById('sessionBasketTarget');
+          if (basketEl) basketEl.innerText = `₹${active.currentBasketProfitTargetINR || active.basketProfitTargetINR || 100}`;
         }
       }
 

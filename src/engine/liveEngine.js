@@ -24,7 +24,32 @@ class PaperEngine {
       slippageBufferINR: 5.0, // ₹5.00 slippage & funding fee buffer per trade
       usdInrRate: 102.00, // 1 USD = 102.00 INR (Mudrex INR Futures Rate)
       tradingMode: 'LIVE', // 'PAPER' (Simulated) or 'LIVE' (Real Orders)
-      realOrdersDisabled: false
+      realOrdersDisabled: false,
+      sessionScheduler: {
+        enabled: true,
+        sessions: [
+          {
+            id: 'high_vol_eu_us',
+            name: '⚡ European & US Session (High Volatility)',
+            shortName: 'EU / US Session',
+            startIST: '13:00',
+            endIST: '23:30',
+            contractQuantity: 2.0,
+            profitTargetMove: 0.25,
+            basketProfitTargetINR: 200
+          },
+          {
+            id: 'low_vol_asian_night',
+            name: '🌙 Asian & Night Session (Low Volatility)',
+            shortName: 'Night / Asian Session',
+            startIST: '23:30',
+            endIST: '13:00',
+            contractQuantity: 2.0,
+            profitTargetMove: 0.25,
+            basketProfitTargetINR: 100
+          }
+        ]
+      }
     };
 
     this.contractMultipliers = {
@@ -39,6 +64,7 @@ class PaperEngine {
     this.punarjanmCount = 0;
     this.lastPunarjanmSummary = null;
     this.lastPunarjanmTime = 0;
+    this.currentSessionId = null;
     
     // Processed rates sets per instrument to prevent duplicate pairs on identical rates
     this.processedRates = {
@@ -77,6 +103,103 @@ class PaperEngine {
     if (price === null || price === undefined || isNaN(price)) return null;
     const decimals = symbol === 'BTCUSDT' ? 2 : (symbol === 'XAGUSDT' ? 4 : 2);
     return Number(price.toFixed(decimals));
+  }
+
+  getCurrentISTTimeInfo(timestamp = Date.now()) {
+    const d = new Date(timestamp);
+    const timeStr = d.toLocaleTimeString('en-GB', { timeZone: 'Asia/Kolkata', hour12: false }); // "HH:MM:SS"
+    const [hh, mm] = timeStr.split(':').map(Number);
+    const minuteOfDay = (hh || 0) * 60 + (mm || 0);
+    return { timeStr, hh, mm, minuteOfDay };
+  }
+
+  isMinuteInTimeRange(minuteOfDay, startStr, endStr) {
+    if (!startStr || !endStr) return false;
+    const [sH, sM] = startStr.split(':').map(Number);
+    const [eH, eM] = endStr.split(':').map(Number);
+    const startMin = (sH || 0) * 60 + (sM || 0);
+    const endMin = (eH || 0) * 60 + (eM || 0);
+    
+    if (startMin <= endMin) {
+      return minuteOfDay >= startMin && minuteOfDay < endMin;
+    } else {
+      return minuteOfDay >= startMin || minuteOfDay < endMin;
+    }
+  }
+
+  evaluateSessionScheduler(time = Date.now()) {
+    if (!this.settings.sessionScheduler || this.settings.sessionScheduler.enabled === false) return null;
+    const { minuteOfDay, timeStr } = this.getCurrentISTTimeInfo(time);
+    const sessions = this.settings.sessionScheduler.sessions || [];
+    
+    const active = sessions.find(s => this.isMinuteInTimeRange(minuteOfDay, s.startIST, s.endIST));
+    if (!active) return null;
+
+    if (this.currentSessionId !== active.id) {
+      const prevSessionId = this.currentSessionId;
+      this.currentSessionId = active.id;
+      
+      if (active.contractQuantity !== undefined && Number(active.contractQuantity) > 0) {
+        this.settings.contractQuantity = Number(active.contractQuantity);
+      }
+      if (active.basketProfitTargetINR !== undefined && Number(active.basketProfitTargetINR) > 0) {
+        this.settings.basketProfitTargetINR = Number(active.basketProfitTargetINR);
+      }
+      if (active.profitTargetMove !== undefined && Number(active.profitTargetMove) > 0) {
+        this.settings.profitTargetMove = Number(active.profitTargetMove);
+        this.settings.buyTargetMove = Number(active.profitTargetMove);
+        this.settings.sellTargetMove = Number(active.profitTargetMove);
+      }
+      
+      this.logAudit('SESSION_SCHEDULE_SWITCHED', {
+        previousSession: prevSessionId,
+        newSession: active.name,
+        timeIST: timeStr,
+        contractQuantity: this.settings.contractQuantity,
+        basketProfitTargetINR: this.settings.basketProfitTargetINR,
+        profitTargetMove: this.settings.profitTargetMove
+      });
+      this.saveState();
+    }
+
+    return {
+      ...active,
+      timeStr,
+      minuteOfDay
+    };
+  }
+
+  getSessionSchedulerStatus(time = Date.now()) {
+    const { minuteOfDay, timeStr } = this.getCurrentISTTimeInfo(time);
+    const scheduler = this.settings.sessionScheduler || { enabled: true, sessions: [] };
+    const sessions = scheduler.sessions || [];
+    const active = sessions.find(s => this.isMinuteInTimeRange(minuteOfDay, s.startIST, s.endIST)) || null;
+
+    return {
+      enabled: scheduler.enabled !== false,
+      currentTimeIST: timeStr,
+      currentMinuteOfDay: minuteOfDay,
+      activeSession: active ? {
+        ...active,
+        currentContractQuantity: this.settings.contractQuantity,
+        currentBasketProfitTargetINR: this.settings.basketProfitTargetINR,
+        currentProfitTargetMove: this.settings.profitTargetMove
+      } : null,
+      sessions
+    };
+  }
+
+  updateSessionScheduler(newConfig) {
+    if (!newConfig || typeof newConfig !== 'object') return false;
+    if (!this.settings.sessionScheduler) this.settings.sessionScheduler = {};
+    if (newConfig.enabled !== undefined) this.settings.sessionScheduler.enabled = !!newConfig.enabled;
+    if (Array.isArray(newConfig.sessions)) {
+      this.settings.sessionScheduler.sessions = newConfig.sessions;
+    }
+    this.currentSessionId = null; // force re-evaluation
+    this.evaluateSessionScheduler();
+    this.saveState();
+    return true;
   }
 
   initFromStorage() {
@@ -157,6 +280,11 @@ class PaperEngine {
       }
 
       this.deduplicateActivePairs();
+
+      if (saved.settings && saved.settings.sessionScheduler) {
+        this.settings.sessionScheduler = saved.settings.sessionScheduler;
+      }
+      this.evaluateSessionScheduler();
       
       this.logAudit('ENGINE_RESTORED', 'Engine state & processed unique rates restored from storage. Starting capital set to ₹2,00,000.');
       this.saveState();
@@ -288,6 +416,9 @@ class PaperEngine {
 
     const normalizedPrice = this.normalizePrice(price, symbol);
     if (normalizedPrice === null) return;
+
+    // Evaluate market session auto-scheduler on every tick
+    this.evaluateSessionScheduler(time);
 
     // Daily reset check (Asia/Kolkata midnight)
     const currentDateKey = this.getAsiaKolkataDateKey(time);
