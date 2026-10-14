@@ -626,25 +626,15 @@ app.get(['/api/crude-live-mudrex/data', '/api/crude-live-mudrex-pro/data'], asyn
       let pnlPercent = null;
       let pnlUSD = null;
 
-      if (mainPos.unrealisedPnlINR !== undefined && mainPos.unrealisedPnlINR !== null && !isNaN(mainPos.unrealisedPnlINR)) {
-        pnlINR = Number(mainPos.unrealisedPnlINR);
-      } else if (mainPos.raw && (mainPos.raw.unrealised_pnl !== undefined || mainPos.raw.unrealized_pnl !== undefined)) {
-        pnlINR = Number(mainPos.raw.unrealised_pnl ?? mainPos.raw.unrealized_pnl);
-      }
-
-      if (mainPos.unrealisedPnlPercent !== undefined && mainPos.unrealisedPnlPercent !== null && !isNaN(mainPos.unrealisedPnlPercent)) {
-        pnlPercent = Number(mainPos.unrealisedPnlPercent);
-      }
-
-      if (pnlINR === null) {
-        // Authoritative Mudrex Exchange calculation (Entry vs Current * Qty * HedgeRate)
+      // If the exchange raw object contains an authoritative server-calculated PnL, use it
+      if (mainPos.raw && (mainPos.raw.unrealised_pnl_inr !== undefined || mainPos.raw.unrealized_pnl_inr !== undefined)) {
+        pnlINR = Number(mainPos.raw.unrealised_pnl_inr ?? mainPos.raw.unrealized_pnl_inr);
+        pnlUSD = Number((pnlINR / hedgeRate).toFixed(2));
+        pnlPercent = initialMarginINR > 0 ? Number(((pnlINR / initialMarginINR) * 100).toFixed(2)) : 0;
+      } else {
+        // Authoritative Mudrex Exchange calculation dynamically computed against real-time streaming price
         pnlUSD = isShort ? (posEntry - curPrice) * posQty : (curPrice - posEntry) * posQty;
         pnlINR = Number((pnlUSD * hedgeRate).toFixed(2));
-      } else {
-        pnlUSD = Number((pnlINR / hedgeRate).toFixed(2));
-      }
-
-      if (pnlPercent === null) {
         pnlPercent = initialMarginINR > 0 ? Number(((pnlINR / initialMarginINR) * 100).toFixed(2)) : 0;
       }
 
