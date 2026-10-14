@@ -63,7 +63,7 @@ app.get(['/mcx-calc', '/mcx_calc', '/mcx_calc.html', '/mcx-calc.html'], (req, re
 app.get(['/paper-calc', '/paper_calc', '/paper_calc.html', '/paper-calc.html'], (req, res) => res.sendFile(path.join(__dirname, '../public/paper_calc.html')));
 app.get(['/mudrex-live', '/mudrex_live', '/mudrex_live.html', '/mudrex-live.html'], (req, res) => res.sendFile(path.join(__dirname, '../public/mudrex_live.html')));
 app.get(['/mudrex-crude-live', '/mudrex_crude_live', '/mudrex_crude_live.html', '/mudrex-crude-live.html'], (req, res) => res.sendFile(path.join(__dirname, '../public/mudrex_crude_live.html')));
-app.get(['/crude-live-mudrex', '/crude_live_mudrex', '/Crude-Live-Mudrex', '/crude-live-mudrex.html', '/crude_live_mudrex.html'], (req, res) => res.sendFile(path.join(__dirname, '../public/crude_live_mudrex.html')));
+app.get(['/crude-live-mudrex', '/crude_live_mudrex', '/Crude-Live-Mudrex', '/crude-live-mudrex.html', '/crude_live_mudrex.html'], (req, res) => res.redirect(301, '/Crude-Live-Mudrex-Pro'));
 app.get(['/crude-live-mudrex-pro', '/crude_live_mudrex_pro', '/Crude-Live-Mudrex-Pro', '/crude-live-mudrex-pro.html', '/crude_live_mudrex_pro.html'], (req, res) => res.sendFile(path.join(__dirname, '../public/crude_live_mudrex_pro.html')));
 app.get(['/mudrex-crude-calc', '/mudrex_crude_calc', '/mudrex_crude_calc.html', '/mudrex-crude-calc.html'], (req, res) => res.sendFile(path.join(__dirname, '../public/mudrex_crude_calc.html')));
 app.get(['/pair-add', '/pair_add', '/pair_add.html', '/pair-add.html'], (req, res) => res.sendFile(path.join(__dirname, '../public/pair_add.html')));
@@ -573,7 +573,7 @@ function computeClosedTradesSummary(trades, usdInrRate) {
 }
 
 // Dedicated Clean Endpoint for Crude-Live-Mudrex Pro Desk
-app.get('/api/crude-live-mudrex/data', async (req, res) => {
+app.get(['/api/crude-live-mudrex/data', '/api/crude-live-mudrex-pro/data'], async (req, res) => {
   try {
     const mudrexLive = require('./engine/mudrexLiveAdapter');
     const paperEngine = require('./engine/paperEngine');
@@ -617,14 +617,35 @@ app.get('/api/crude-live-mudrex/data', async (req, res) => {
       const posEntry = Number(mainPos.entryPrice || 0);
       const isShort = (mainPos.direction === 'SELL' || mainPos.direction === 'SHORT');
       
-      let pnlUSD = 0;
-      if (posQty > 0 && posEntry > 0) {
-        pnlUSD = isShort ? (posEntry - livePrice) * posQty : (livePrice - posEntry) * posQty;
+      const curPrice = Number(mainPos.currentPrice || mainPos.markPrice || livePrice);
+      const liqPrice = Number(mainPos.liquidationPrice || (isShort ? posEntry * 1.18 : posEntry * 0.82));
+      const initialMarginINR = Number(mainPos.initialMarginINR || lockedINR || 7716.66);
+      
+      let pnlINR = null;
+      let pnlPercent = null;
+      let pnlUSD = null;
+
+      if (mainPos.unrealisedPnlINR !== undefined && mainPos.unrealisedPnlINR !== null && !isNaN(mainPos.unrealisedPnlINR)) {
+        pnlINR = Number(mainPos.unrealisedPnlINR);
+      } else if (mainPos.raw && (mainPos.raw.unrealised_pnl !== undefined || mainPos.raw.unrealized_pnl !== undefined)) {
+        pnlINR = Number(mainPos.raw.unrealised_pnl ?? mainPos.raw.unrealized_pnl);
       }
-      const pnlINR = pnlUSD * usdInrRate;
-      const initialMarginINR = mainPos.initialMarginINR || lockedINR || 208242.61;
-      const pnlPercent = initialMarginINR > 0 ? (pnlINR / initialMarginINR) * 100 : 0;
-      const liqPrice = isShort ? posEntry * 1.18 : posEntry * 0.82;
+
+      if (mainPos.unrealisedPnlPercent !== undefined && mainPos.unrealisedPnlPercent !== null && !isNaN(mainPos.unrealisedPnlPercent)) {
+        pnlPercent = Number(mainPos.unrealisedPnlPercent);
+      }
+
+      if (pnlINR === null) {
+        // Fallback only if exchange did not provide PnL
+        pnlUSD = isShort ? (posEntry - curPrice) * posQty : (curPrice - posEntry) * posQty;
+        pnlINR = pnlUSD * usdInrRate;
+      } else {
+        pnlUSD = Number((pnlINR / usdInrRate).toFixed(2));
+      }
+
+      if (pnlPercent === null) {
+        pnlPercent = initialMarginINR > 0 ? (pnlINR / initialMarginINR) * 100 : 0;
+      }
 
       mudrexNetSummary = {
         symbol: mainPos.symbol || 'CLUSDT',
@@ -632,15 +653,16 @@ app.get('/api/crude-live-mudrex/data', async (req, res) => {
         direction: mainPos.direction,
         sideDisplay: isShort ? 'SHORT' : 'LONG',
         quantity: posQty,
-        entryPrice: Number(posEntry.toFixed(2)),
-        currentPrice: Number(livePrice.toFixed(2)),
+        entryPrice: Number(posEntry.toFixed(4)),
+        currentPrice: Number(curPrice.toFixed(2)),
         initialMarginINR: Number(initialMarginINR.toFixed(2)),
         initialMarginUSD: Number((initialMarginINR / usdInrRate).toFixed(2)),
         unrealisedPnlUSD: Number(pnlUSD.toFixed(2)),
         unrealisedPnlINR: Number(pnlINR.toFixed(2)),
         unrealisedPnlPercent: Number(pnlPercent.toFixed(2)),
         liquidationPrice: Number(liqPrice.toFixed(2)),
-        leverage: 5
+        leverage: Number(mainPos.leverage || 5),
+        source: 'MUDREX_AUTHORITATIVE_EXCHANGE'
       };
     }
 
@@ -790,7 +812,7 @@ app.get('/api/crude-live-mudrex/data', async (req, res) => {
 });
 
 // Dedicated Clean Action Endpoint with Admin PIN Protection (340556)
-app.post('/api/crude-live-mudrex/action', async (req, res) => {
+app.post(['/api/crude-live-mudrex/action', '/api/crude-live-mudrex-pro/action'], async (req, res) => {
   try {
     const { action, password } = req.body || {};
     if (password !== '340556') {

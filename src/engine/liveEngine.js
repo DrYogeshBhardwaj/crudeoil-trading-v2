@@ -414,12 +414,18 @@ class PaperEngine {
           let currentNetPnlINR = 0;
           if (mudrexLive.lastFetchPositionsRes && mudrexLive.lastFetchPositionsRes.data && mudrexLive.lastFetchPositionsRes.data.length > 0) {
             const mainPos = mudrexLive.lastFetchPositionsRes.data[0];
-            const posQty = Number(mainPos.quantity || 0);
-            const posEntry = Number(mainPos.entryPrice || mainPos.entry_price || 0);
-            const isShort = mainPos.direction === 'SELL' || mainPos.direction === 'SHORT';
-            if (posQty > 0 && posEntry > 0) {
-              const pnlUSD = isShort ? (posEntry - normalizedPrice) * posQty : (normalizedPrice - posEntry) * posQty;
-              currentNetPnlINR = pnlUSD * (usdInrRate || 102.00);
+            if (mainPos.unrealisedPnlINR !== undefined && mainPos.unrealisedPnlINR !== null && !isNaN(mainPos.unrealisedPnlINR)) {
+              currentNetPnlINR = Number(mainPos.unrealisedPnlINR);
+            } else if (mainPos.unrealised_pnl !== undefined && mainPos.unrealised_pnl !== null) {
+              currentNetPnlINR = Number(mainPos.unrealised_pnl);
+            } else {
+              const posQty = Number(mainPos.quantity || 0);
+              const posEntry = Number(mainPos.entryPrice || mainPos.entry_price || 0);
+              const isShort = mainPos.direction === 'SELL' || mainPos.direction === 'SHORT';
+              if (posQty > 0 && posEntry > 0) {
+                const pnlUSD = isShort ? (posEntry - normalizedPrice) * posQty : (normalizedPrice - posEntry) * posQty;
+                currentNetPnlINR = pnlUSD * (usdInrRate || 102.00);
+              }
             }
           }
           if (currentNetPnlINR >= this.settings.basketProfitTargetINR) {
@@ -814,14 +820,15 @@ class PaperEngine {
         const targetPos = posList[0];
         closedPosId = targetPos.positionId || targetPos.exchangePositionId;
         closedQty = targetPos.quantity;
-        mudrexPnlINR = Number(targetPos.unrealized_pnl || targetPos.unrealised_pnl || 0);
+        mudrexPnlINR = Number(targetPos.unrealisedPnlINR ?? targetPos.unrealized_pnl ?? targetPos.unrealised_pnl ?? 0);
         const sym = (targetPos.symbol || 'CLUSDT').replace('-', '');
+        const dashSym = sym === 'CLUSDT' ? 'CL-USDT' : sym;
         const dir = targetPos.direction;
         const oppSide = (dir === 'BUY' || dir === 'LONG') ? 'SELL' : 'BUY';
         const oppOrderType = oppSide === 'BUY' ? 'LONG' : 'SHORT';
 
         if (closedPosId) {
-          mudrexCloseRes = await mudrexLive.closeRealPosition(closedPosId, sym);
+          mudrexCloseRes = await mudrexLive.closeRealPosition(closedPosId, sym, closedQty);
         }
 
         if (!mudrexCloseRes || !mudrexCloseRes.success) {
@@ -837,6 +844,11 @@ class PaperEngine {
           };
           const orderUrl = `${mudrexLive.baseUrl}/futures/${sym}/order?is_symbol=true&trade_currency=INR`;
           mudrexCloseRes = await mudrexLive.request('POST', orderUrl, body);
+          if (!mudrexCloseRes || !mudrexCloseRes.success) {
+            body.symbol = dashSym;
+            const altUrl = `${mudrexLive.baseUrl}/futures/${dashSym}/order?is_symbol=true&trade_currency=INR`;
+            mudrexCloseRes = await mudrexLive.request('POST', altUrl, body);
+          }
         }
 
         if (closedPosId) {

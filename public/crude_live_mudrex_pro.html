@@ -2436,21 +2436,30 @@
       const netSum = exchange.netSummary;
       const exPos = (exchange.positions && exchange.positions.length > 0) ? exchange.positions[0] : null;
 
-      if (netSum || exPos) {
-        const posQty = netSum ? netSum.quantity : Number(exPos.quantity || 109);
-        const posEntry = netSum ? netSum.entryPrice : Number(exPos.entry_price || 93.32);
-        const side = netSum ? netSum.sideDisplay : (exPos.order_type || exPos.side || 'SHORT').toUpperCase();
+      if (netSum || (exPos && Number(exPos.quantity || 0) > 0)) {
+        const posQty = netSum ? netSum.quantity : Number(exPos.quantity || 0);
+        const posEntry = netSum ? netSum.entryPrice : Number(exPos.entryPrice || exPos.entry_price || 0);
+        const side = netSum ? netSum.sideDisplay : (exPos.order_type || exPos.side || (exPos.direction === 'SELL' ? 'SHORT' : 'LONG')).toUpperCase();
         const isShort = side.includes('SHORT') || side === 'SELL';
         const sideColor = isShort ? 'var(--accent-red-bright)' : 'var(--accent-green-bright)';
-        const marginINR = netSum ? netSum.initialMarginINR : Number(exPos.initial_margin || wallet.lockedMarginINR || 208242.61);
+        const marginINR = netSum ? netSum.initialMarginINR : Number(exPos.initialMarginINR || exPos.initial_margin || wallet.lockedMarginINR || 0);
         const marginUSD = netSum ? netSum.initialMarginUSD : Number((marginINR / usdInr).toFixed(2));
         
-        let pnlUSD = netSum ? netSum.unrealisedPnlUSD : (isShort ? (posEntry - livePrice) * posQty : (livePrice - posEntry) * posQty);
-        let pnlINR = netSum ? netSum.unrealisedPnlINR : (pnlUSD * usdInr);
-        let pnlPercent = netSum ? netSum.unrealisedPnlPercent : (marginINR > 0 ? (pnlINR / marginINR) * 100 : 0);
-        let liqPrice = netSum ? netSum.liquidationPrice : (isShort ? posEntry * 1.18 : posEntry * 0.82);
+        let pnlINR = (netSum && netSum.unrealisedPnlINR !== undefined && netSum.unrealisedPnlINR !== null && !isNaN(netSum.unrealisedPnlINR))
+          ? netSum.unrealisedPnlINR
+          : ((exPos && exPos.unrealisedPnlINR !== undefined && exPos.unrealisedPnlINR !== null && !isNaN(exPos.unrealisedPnlINR))
+              ? exPos.unrealisedPnlINR
+              : (isShort ? (posEntry - livePrice) * posQty * usdInr : (livePrice - posEntry) * posQty * usdInr));
+        let pnlUSD = (netSum && netSum.unrealisedPnlUSD !== undefined && netSum.unrealisedPnlUSD !== null && !isNaN(netSum.unrealisedPnlUSD))
+          ? netSum.unrealisedPnlUSD
+          : (pnlINR / usdInr);
+        let pnlPercent = (netSum && netSum.unrealisedPnlPercent !== undefined && netSum.unrealisedPnlPercent !== null && !isNaN(netSum.unrealisedPnlPercent))
+          ? netSum.unrealisedPnlPercent
+          : (marginINR > 0 ? (pnlINR / marginINR) * 100 : 0);
+        let liqPrice = (netSum && netSum.liquidationPrice) ? netSum.liquidationPrice : (Number(exPos?.liquidationPrice || exPos?.liquidation_price || 0) || (isShort ? posEntry * 1.18 : posEntry * 0.82));
 
-        const pnlSign = pnlINR >= 0 ? '+' : '';
+        const formattedPnlINR = pnlINR >= 0 ? `+₹${pnlINR.toFixed(2)}` : `-₹${Math.abs(pnlINR).toFixed(2)}`;
+        const formattedPercent = pnlPercent >= 0 ? `+${pnlPercent.toFixed(2)}%` : `${pnlPercent.toFixed(2)}%`;
         const pnlBadgeClass = pnlINR >= 0 ? 'pnl-badge-positive' : 'pnl-badge-negative';
 
         const navBadge = document.getElementById('navMudrexBadge');
@@ -2459,7 +2468,7 @@
         // Update Hero Ticker Live Mudrex Unrealised P&L (R/G) - ONLY ₹ INR
         const heroPnlVal = document.getElementById('heroMudrexPnlVal');
         if (heroPnlVal) {
-          heroPnlVal.innerText = `${pnlSign}₹${pnlINR.toFixed(2)}`;
+          heroPnlVal.innerText = formattedPnlINR;
           heroPnlVal.style.color = pnlINR >= 0 ? 'var(--accent-green-bright)' : 'var(--accent-red-bright)';
           heroPnlVal.style.textShadow = pnlINR >= 0 ? '0 0 20px rgba(16, 185, 129, 0.4)' : '0 0 20px rgba(239, 68, 68, 0.4)';
         }
@@ -2473,7 +2482,7 @@
 
         const heroSub = document.getElementById('heroMudrexSubtext');
         if (heroSub) {
-          heroSub.innerText = `Entry: $${posEntry.toFixed(2)} | Liq: $${liqPrice.toFixed(2)} | ${pnlSign}${pnlPercent.toFixed(2)}%`;
+          heroSub.innerText = `Entry: $${posEntry.toFixed(2)} | Liq: $${liqPrice.toFixed(2)} | ${formattedPercent}`;
         }
 
         const heroInd = document.getElementById('heroMudrexIndicator');
@@ -2501,7 +2510,7 @@
         const modalPnlBadge = document.getElementById('modalMudrexLivePnlBadge');
         if (modalPnlBadge) {
           modalPnlBadge.className = `mudrex-pnl-badge ${pnlBadgeClass}`;
-          modalPnlBadge.innerText = `${pnlSign}₹${pnlINR.toFixed(2)} (${pnlSign}${pnlPercent.toFixed(2)}%)`;
+          modalPnlBadge.innerText = `${formattedPnlINR} (${formattedPercent})`;
         }
 
         const statSize = document.getElementById('mudrexStatSize');
@@ -2937,17 +2946,21 @@
       const sortedExchange = sortArray(positions, sortState.exchange.col, sortState.exchange.dir, getExchangeSortValue);
 
       tbody.innerHTML = sortedExchange.map((pos, idx) => {
-        const side = (pos.order_type || pos.side || 'SHORT').toUpperCase();
+        const side = (pos.direction || pos.order_type || pos.side || 'SHORT').toUpperCase();
         const badgeClass = side === 'BUY' || side === 'LONG' ? 'badge-buy' : 'badge-sell';
+        const ePrice = (pos.entryPrice !== undefined && pos.entryPrice !== null) ? pos.entryPrice : pos.entry_price;
+        const cPrice = (pos.currentPrice !== undefined && pos.currentPrice !== null) ? pos.currentPrice : (pos.current_price || pos.mark_price);
+        const margin = (pos.initialMarginINR !== undefined && pos.initialMarginINR !== null) ? pos.initialMarginINR : pos.initial_margin;
+        const pid = pos.positionId || pos.id || pos.position_id || '--';
         return `
           <tr>
             <td><strong>${pos.symbol || 'CLUSDT'}</strong></td>
             <td><span class="badge ${badgeClass}">${side}</span></td>
             <td><strong>${pos.quantity || 1} Barrels</strong></td>
-            <td>$${pos.entry_price ? Number(pos.entry_price).toFixed(2) : '--'}</td>
-            <td>$${pos.current_price ? Number(pos.current_price).toFixed(2) : '--'}</td>
-            <td>₹${pos.initial_margin ? Number(pos.initial_margin).toLocaleString('en-IN', { minimumFractionDigits: 2 }) : '₹9,513.15'}</td>
-            <td style="font-size: 0.72rem; color: var(--text-muted);">${pos.id || pos.position_id || '--'}</td>
+            <td>$${ePrice ? Number(ePrice).toFixed(2) : '--'}</td>
+            <td>$${cPrice ? Number(cPrice).toFixed(2) : '--'}</td>
+            <td>₹${margin ? Number(margin).toLocaleString('en-IN', { minimumFractionDigits: 2 }) : '--'}</td>
+            <td style="font-size: 0.72rem; color: var(--text-muted);">${pid}</td>
             <td><span class="badge badge-open">REAL EXCHANGE OPEN</span></td>
           </tr>
         `;

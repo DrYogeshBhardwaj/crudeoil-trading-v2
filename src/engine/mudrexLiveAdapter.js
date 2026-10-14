@@ -968,6 +968,73 @@ class MudrexLiveAdapter {
     }
   }
 
+  async closeRealPosition(positionId, symbol = 'CLUSDT', quantity = null) {
+    const sym = (symbol || 'CLUSDT').replace('-', '');
+    const dashSym = sym === 'CLUSDT' ? 'CL-USDT' : sym;
+
+    // 1. Try Mudrex specific position close endpoint
+    try {
+      if (positionId) {
+        const closeUrl = `${this.baseUrl}/futures/positions/${encodeURIComponent(positionId)}/close`;
+        console.log(`[Mudrex Live Adapter] Calling exchange position close endpoint: ${closeUrl}`);
+        const res = await this.request('POST', closeUrl, { symbol: sym, trade_currency: 'INR' });
+        if (res && res.success) {
+          this.userClosedRealPositionIds.add(String(positionId));
+          this.lastFetchPositionsRes = null;
+          this.lastFetchPositionsTime = 0;
+          return res;
+        }
+      }
+    } catch (e) {
+      console.warn('[Mudrex Live Adapter] Position close endpoint notice:', e.message);
+    }
+
+    // 2. Query position to know side and quantity if not provided
+    let posToClose = null;
+    try {
+      const pRes = await this.fetchPositions();
+      if (pRes.success && Array.isArray(pRes.data)) {
+        posToClose = pRes.data.find(p => (p.positionId === positionId || p.exchangePositionId === positionId || String(p.id) === String(positionId)));
+        if (!posToClose && pRes.data.length === 1) {
+          posToClose = pRes.data[0];
+        }
+      }
+    } catch (e) {}
+
+    const qty = quantity || (posToClose ? posToClose.quantity : 1.0);
+    const dir = posToClose ? posToClose.direction : 'BUY';
+    const oppSide = (dir === 'BUY' || dir === 'LONG') ? 'SELL' : 'BUY';
+    const oppOrderType = oppSide === 'BUY' ? 'LONG' : 'SHORT';
+
+    // 3. Send reduce-only market order
+    const body = {
+      trade_currency: 'INR',
+      symbol: sym,
+      side: oppSide,
+      order_type: oppOrderType,
+      trigger_type: 'MARKET',
+      type: 'MARKET',
+      quantity: String(qty),
+      reduce_only: true
+    };
+
+    const orderUrl = `${this.baseUrl}/futures/${sym}/order?is_symbol=true&trade_currency=INR`;
+    console.log(`[Mudrex Live Adapter] Sending reduce-only close order: ${orderUrl}`, body);
+    let res = await this.request('POST', orderUrl, body);
+    if (!res || !res.success) {
+      body.symbol = dashSym;
+      const altUrl = `${this.baseUrl}/futures/${dashSym}/order?is_symbol=true&trade_currency=INR`;
+      res = await this.request('POST', altUrl, body);
+    }
+
+    if (res && res.success) {
+      if (positionId) this.userClosedRealPositionIds.add(String(positionId));
+      this.lastFetchPositionsRes = null;
+      this.lastFetchPositionsTime = 0;
+    }
+    return res || { success: false, error: 'UNKNOWN_CLOSE_FAILURE' };
+  }
+
   async closeAllRealPositions() {
     try {
       const posRes = await this.fetchPositions();
@@ -1049,6 +1116,25 @@ class MudrexLiveAdapter {
     let combinedItems = [];
     const seenPosIds = new Set();
 
+    const processItems = (list) => {
+      for (const item of list) {
+        if (!item || typeof item !== 'object') continue;
+        const posId = item.position_id || item.id || item.order_id || item.orderId || item.positionId;
+        if (posId && seenPosIds.has(String(posId))) continue;
+        if (posId) seenPosIds.add(String(posId));
+
+        const statusStr = String(item.status || item.position_status || item.state || item.order_status || '').toUpperCase();
+        if (['CLOSED', 'FILLED', 'CANCELLED', 'EXPIRED', 'COMPLETED', 'REJECTED', 'DONE', 'INACTIVE'].includes(statusStr)) {
+          continue;
+        }
+        if (item.closed === true || item.is_closed === true) continue;
+        if (item.quantity !== undefined && Number(item.quantity || item.qty || 0) <= 0) continue;
+        if (posId && (this.userClosedRealPositionIds.has(posId) || this.userClosedRealPositionIds.has(String(posId)))) continue;
+
+        combinedItems.push(item);
+      }
+    };
+
     try {
       const res = await this.request('GET', endpoint);
       if (res.success && res.data !== undefined && res.data !== null) {
@@ -1062,22 +1148,19 @@ class MudrexLiveAdapter {
         } else if (typeof res.data === 'object' && (res.data.position_id || res.data.id)) {
           list = [res.data];
         }
+        processItems(list);
+      }
 
-        for (const item of list) {
-          if (!item || typeof item !== 'object') continue;
-          const posId = item.position_id || item.id || item.order_id || item.orderId || item.positionId;
-          if (posId && seenPosIds.has(String(posId))) continue;
-          if (posId) seenPosIds.add(String(posId));
-
-          const statusStr = String(item.status || item.position_status || item.state || item.order_status || '').toUpperCase();
-          if (['CLOSED', 'FILLED', 'CANCELLED', 'EXPIRED', 'COMPLETED', 'REJECTED', 'DONE', 'INACTIVE'].includes(statusStr)) {
-            continue;
-          }
-          if (item.closed === true || item.is_closed === true) continue;
-          if (item.quantity !== undefined && Number(item.quantity || item.qty || 0) <= 0) continue;
-          if (posId && (this.userClosedRealPositionIds.has(posId) || this.userClosedRealPositionIds.has(String(posId)))) continue;
-
-          combinedItems.push(item);
+      // Secondary fallback query if first query returned empty
+      if (combinedItems.length === 0) {
+        const altRes = await this.request('GET', `${this.baseUrl}/futures/positions`);
+        if (altRes.success && altRes.data !== undefined && altRes.data !== null) {
+          let list = [];
+          if (Array.isArray(altRes.data)) list = altRes.data;
+          else if (Array.isArray(altRes.data.data)) list = altRes.data.data;
+          else if (Array.isArray(altRes.data.positions)) list = altRes.data.positions;
+          else if (typeof altRes.data === 'object' && (altRes.data.position_id || altRes.data.id)) list = [altRes.data];
+          processItems(list);
         }
       }
     } catch (e) {
@@ -1087,7 +1170,7 @@ class MudrexLiveAdapter {
     if (combinedItems.length > 0) {
       const parsedPositions = combinedItems.map((item, idx) => {
         const direction = (item.side || item.direction || item.order_type || 'BUY').toUpperCase().includes('SHORT') || (item.side === 'SELL') ? 'SELL' : 'BUY';
-        const entryPrice = Number(item.entry_price || item.price || item.entryPrice || 92.10);
+        const entryPrice = Number(item.entry_price || item.avg_entry_price || item.avg_price || item.price || item.entryPrice || 92.10);
         const qty = Number(item.quantity || item.qty || 1.0);
         const posId = item.position_id || item.id || item.order_id || item.orderId || item.positionId || `P-REAL-${idx + 1}`;
         const pairId = item.pair_id || item.pairId || `PAIR-MUDREX-${(idx + 1).toString().padStart(2, '0')}`;
@@ -1097,6 +1180,46 @@ class MudrexLiveAdapter {
         const isProtected = EXISTING_PROTECTED_POSITION_IDS.has(String(posId)) || EXISTING_PROTECTED_POSITION_IDS.has(String(item.position_id)) || EXISTING_PROTECTED_POSITION_IDS.has(String(item.id));
         const hasExchangeSideProtection = Boolean(item.takeprofit_price || item.is_takeprofit || item.stoploss_price || item.is_stoploss);
 
+        const currentPrice = Number(item.current_price || item.mark_price || item.markPrice || item.last_price || item.price || entryPrice);
+        const markPrice = Number(item.mark_price || item.markPrice || item.current_price || item.last_price || currentPrice);
+        const liquidationPrice = Number(item.liquidation_price || item.liq_price || item.liquidationPrice || 0);
+        const initialMarginINR = item.initial_margin ? Number(item.initial_margin) : (item.initialMargin ? Number(item.initialMargin) : null);
+        const maintMarginINR = item.maintenance_margin ? Number(item.maintenance_margin) : (item.maint_margin ? Number(item.maint_margin) : null);
+        const leverage = Number(item.leverage || 5);
+
+        let unrealisedPnlINR = null;
+        if (item.unrealised_pnl_inr !== undefined && item.unrealised_pnl_inr !== null) {
+          unrealisedPnlINR = Number(item.unrealised_pnl_inr);
+        } else if (item.unrealized_pnl_inr !== undefined && item.unrealized_pnl_inr !== null) {
+          unrealisedPnlINR = Number(item.unrealized_pnl_inr);
+        } else if (item.unrealised_pnl !== undefined && item.unrealised_pnl !== null) {
+          unrealisedPnlINR = Number(item.unrealised_pnl);
+        } else if (item.unrealized_pnl !== undefined && item.unrealized_pnl !== null) {
+          unrealisedPnlINR = Number(item.unrealized_pnl);
+        } else if (item.pnl !== undefined && item.pnl !== null) {
+          unrealisedPnlINR = Number(item.pnl);
+        }
+
+        let unrealisedPnlPercent = null;
+        if (item.unrealised_pnl_percentage !== undefined && item.unrealised_pnl_percentage !== null) {
+          unrealisedPnlPercent = Number(item.unrealised_pnl_percentage);
+        } else if (item.unrealized_pnl_percentage !== undefined && item.unrealized_pnl_percentage !== null) {
+          unrealisedPnlPercent = Number(item.unrealized_pnl_percentage);
+        } else if (item.pnl_percentage !== undefined && item.pnl_percentage !== null) {
+          unrealisedPnlPercent = Number(item.pnl_percentage);
+        } else if (unrealisedPnlINR !== null && initialMarginINR && initialMarginINR > 0) {
+          unrealisedPnlPercent = Number(((unrealisedPnlINR / initialMarginINR) * 100).toFixed(2));
+        }
+
+        let unrealisedPnlUSD = null;
+        if (item.unrealised_pnl_usd !== undefined && item.unrealised_pnl_usd !== null) {
+          unrealisedPnlUSD = Number(item.unrealised_pnl_usd);
+        } else if (item.unrealized_pnl_usd !== undefined && item.unrealized_pnl_usd !== null) {
+          unrealisedPnlUSD = Number(item.unrealized_pnl_usd);
+        } else if (unrealisedPnlINR !== null) {
+          unrealisedPnlUSD = Number((unrealisedPnlINR / (this.settings.usdInrRate || 102.00)).toFixed(2));
+        }
+
         return {
           pairId,
           positionId: posId,
@@ -1105,7 +1228,9 @@ class MudrexLiveAdapter {
           symbol: sym,
           entryTime: item.created_at || item.created_time || new Date().toISOString(),
           entryPrice,
-          currentPrice: entryPrice,
+          currentPrice,
+          markPrice,
+          liquidationPrice,
           targetExitPrice: targetExit,
           quantity: qty,
           status: 'OPEN',
@@ -1115,7 +1240,15 @@ class MudrexLiveAdapter {
           isProtectedExistingExchangePosition: isProtected,
           hasExchangeSideProtection,
           protectionWarning: !hasExchangeSideProtection ? 'EXCHANGE_SIDE_PROTECTION_MISSING (TP=0, SL=0). DO NOT AUTO-CLOSE WITHOUT USER INSTRUCTION.' : null,
-          initialMarginINR: item.initial_margin ? Number(item.initial_margin) : null
+          initialMarginINR,
+          maintMarginINR,
+          leverage,
+          unrealisedPnlINR,
+          unrealised_pnl: unrealisedPnlINR,
+          unrealized_pnl: unrealisedPnlINR,
+          unrealisedPnlUSD,
+          unrealisedPnlPercent,
+          raw: item
         };
       }).filter(Boolean);
 
