@@ -660,7 +660,10 @@ class SolanaEngine {
           quantity: b.quantity || defQty,
           distToTarget: Number((b.targetExitPrice - livePrice).toFixed(2)),
           floatingPnlUSD: Number(bPnlUSD.toFixed(2)),
-          floatingPnlINR: Number(bPnlINR.toFixed(2))
+          floatingPnlINR: Number(bPnlINR.toFixed(2)),
+          mudrexOrderId: b.mudrexOrderId || null,
+          apiStatus: b.apiStatus || null,
+          apiError: b.apiError || null
         } : null,
         sell: s ? {
           positionId: s.positionId,
@@ -673,7 +676,10 @@ class SolanaEngine {
           quantity: s.quantity || defQty,
           distToTarget: Number((livePrice - s.targetExitPrice).toFixed(2)),
           floatingPnlUSD: Number(sPnlUSD.toFixed(2)),
-          floatingPnlINR: Number(sPnlINR.toFixed(2))
+          floatingPnlINR: Number(sPnlINR.toFixed(2)),
+          mudrexOrderId: s.mudrexOrderId || null,
+          apiStatus: s.apiStatus || null,
+          apiError: s.apiError || null
         } : null
       };
     });
