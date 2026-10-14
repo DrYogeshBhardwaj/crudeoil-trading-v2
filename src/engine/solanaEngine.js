@@ -471,7 +471,8 @@ class SolanaEngine {
       // 1. Evaluate BUY Leg
       if (pair.buyPosition && pair.buyPosition.status === 'OPEN') {
         const b = pair.buyPosition;
-        if (livePrice >= b.targetExitPrice) {
+        const bTarget = Number(b.targetExitPrice || b.targetPrice || pair.buyTarget || (b.entryPrice + 0.45));
+        if (livePrice >= bTarget) {
           this.closePositionLeg(b, livePrice, now, 'BUY TARGET PROFIT HIT', usdInr, takerFee, gstRate);
         }
       }
@@ -479,7 +480,8 @@ class SolanaEngine {
       // 2. Evaluate SELL Leg
       if (pair.sellPosition && pair.sellPosition.status === 'OPEN') {
         const s = pair.sellPosition;
-        if (livePrice <= s.targetExitPrice) {
+        const sTarget = Number(s.targetExitPrice || s.targetPrice || pair.sellTarget || (s.entryPrice - 0.45));
+        if (livePrice <= sTarget) {
           this.closePositionLeg(s, livePrice, now, 'SELL TARGET PROFIT HIT', usdInr, takerFee, gstRate);
         }
       }
@@ -764,9 +766,10 @@ class SolanaEngine {
           entryPrice: b.entryPrice,
           entryTime: b.entryTime,
           currentPrice: livePrice,
-          targetPrice: b.targetExitPrice,
+          targetPrice: Number((b.targetExitPrice || b.targetPrice || p.buyTarget || (b.entryPrice + 0.45)).toFixed(2)),
+          targetExitPrice: Number((b.targetExitPrice || b.targetPrice || p.buyTarget || (b.entryPrice + 0.45)).toFixed(2)),
           quantity: b.quantity || defQty,
-          distToTarget: Number((b.targetExitPrice - livePrice).toFixed(2)),
+          distToTarget: Number(((b.targetExitPrice || b.targetPrice || p.buyTarget || (b.entryPrice + 0.45)) - livePrice).toFixed(2)),
           floatingPnlUSD: Number(bPnlUSD.toFixed(2)),
           floatingPnlINR: Number(bPnlINR.toFixed(2)),
           mudrexOrderId: b.mudrexOrderId || null,
@@ -780,9 +783,10 @@ class SolanaEngine {
           entryPrice: s.entryPrice,
           entryTime: s.entryTime,
           currentPrice: livePrice,
-          targetPrice: s.targetExitPrice,
+          targetPrice: Number((s.targetExitPrice || s.targetPrice || p.sellTarget || (s.entryPrice - 0.45)).toFixed(2)),
+          targetExitPrice: Number((s.targetExitPrice || s.targetPrice || p.sellTarget || (s.entryPrice - 0.45)).toFixed(2)),
           quantity: s.quantity || defQty,
-          distToTarget: Number((livePrice - s.targetExitPrice).toFixed(2)),
+          distToTarget: Number((livePrice - (s.targetExitPrice || s.targetPrice || p.sellTarget || (s.entryPrice - 0.45))).toFixed(2)),
           floatingPnlUSD: Number(sPnlUSD.toFixed(2)),
           floatingPnlINR: Number(sPnlINR.toFixed(2)),
           mudrexOrderId: s.mudrexOrderId || null,

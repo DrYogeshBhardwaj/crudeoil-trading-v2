@@ -914,61 +914,84 @@
     }
 
     function renderSubhMoneyUI(data) {
-      const rate = data.rate || {};
-      const wallet = data.wallet || {};
-      const engine = data.engine || {};
-      const pnl = data.pnl || {};
-      const closed = data.closedPositions || [];
-      const pairs = engine.pairs || [];
+      try {
+        const rate = data.rate || {};
+        const wallet = data.wallet || {};
+        const engine = data.engine || {};
+        const pnl = data.pnl || {};
+        const closed = data.closedPositions || [];
+        const pairs = engine.pairs || [];
 
-      const livePrice = Number(rate.price || 104.50);
-      const usdInr = Number(rate.usdInrRate || 102.00);
+        const livePrice = Number(rate.price || 104.50);
+        const usdInr = Number(rate.usdInrRate || 102.00);
+        const targetMove = Number(engine.profitTargetMove || 0.45);
 
-      // Live Clock
-      const now = new Date();
-      document.getElementById('liveClockText').innerText = `SYNC: ${now.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true })} IST`;
+        // Live Clock
+        const now = new Date();
+        document.getElementById('liveClockText').innerText = `SYNC: ${now.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true })} IST`;
 
-      // 1. Hero Metric 1: Rate (Bada Text)
-      document.getElementById('heroLivePrice').innerText = `$${livePrice.toFixed(2)}`;
+        // 1. Hero Metric 1: Rate (Bada Text)
+        document.getElementById('heroLivePrice').innerText = `$${livePrice.toFixed(2)}`;
 
-      // Active Buy & Sell Lists
-      const activeBuys = pairs.filter(p => p.buy && p.buy.status === 'OPEN').map(p => p.buy);
-      const activeSells = pairs.filter(p => p.sell && p.sell.status === 'OPEN').map(p => p.sell);
+        // Active Buy & Sell Lists with defensive normalization
+        const activeBuys = pairs.filter(p => p.buy && p.buy.status === 'OPEN').map(p => {
+          const entry = Number(p.buy.entryPrice || p.entryPrice || livePrice);
+          const tgt = Number(p.buy.targetPrice || p.buy.targetExitPrice || p.buyTarget || (entry + targetMove));
+          return {
+            ...p.buy,
+            pairId: p.pairId,
+            entryPrice: entry,
+            targetPrice: tgt,
+            targetExitPrice: tgt
+          };
+        });
+        const activeSells = pairs.filter(p => p.sell && p.sell.status === 'OPEN').map(p => {
+          const entry = Number(p.sell.entryPrice || p.entryPrice || livePrice);
+          const tgt = Number(p.sell.targetPrice || p.sell.targetExitPrice || p.sellTarget || (entry - targetMove));
+          return {
+            ...p.sell,
+            pairId: p.pairId,
+            entryPrice: entry,
+            targetPrice: tgt,
+            targetExitPrice: tgt
+          };
+        });
 
-      // 2. Hero Metric 2: Active BUY Target
-      const targetMove = engine.profitTargetMove || 0.45;
-      if (activeBuys.length > 0) {
-        const nearestBuy = [...activeBuys].sort((a, b) => Math.abs(a.targetPrice - livePrice) - Math.abs(b.targetPrice - livePrice))[0];
-        document.getElementById('heroBuyTarget').innerText = `$${nearestBuy.targetPrice.toFixed(2)}`;
-        const dist = nearestBuy.targetPrice - livePrice;
-        const sign = dist >= 0 ? '+' : '';
-        document.getElementById('heroBuyDist').innerText = `Distance: ${sign}$${dist.toFixed(2)} (${sign}₹${(dist * usdInr).toFixed(2)})`;
-        document.getElementById('heroBuyLabel').innerHTML = `<span>🎯 ACTIVE BUY TARGET (${nearestBuy.positionId})</span>`;
-      } else {
-        const estBuy = livePrice + targetMove;
-        document.getElementById('heroBuyTarget').innerText = `$${estBuy.toFixed(2)}`;
-        document.getElementById('heroBuyDist').innerText = `Target Move: +$${targetMove.toFixed(2)}`;
-        document.getElementById('heroBuyLabel').innerHTML = `<span>🎯 ACTIVE BUY TARGET (+$${targetMove.toFixed(2)})</span>`;
-      }
+        // 2. Hero Metric 2: Active BUY Target
+        if (activeBuys.length > 0) {
+          const nearestBuy = [...activeBuys].sort((a, b) => Math.abs(a.targetPrice - livePrice) - Math.abs(b.targetPrice - livePrice))[0];
+          const bTgt = nearestBuy.targetPrice;
+          document.getElementById('heroBuyTarget').innerText = `$${bTgt.toFixed(2)}`;
+          const dist = bTgt - livePrice;
+          const sign = dist >= 0 ? '+' : '';
+          document.getElementById('heroBuyDist').innerText = `Distance: ${sign}$${dist.toFixed(2)} (${sign}₹${(dist * usdInr).toFixed(2)})`;
+          document.getElementById('heroBuyLabel').innerHTML = `<span>🎯 ACTIVE BUY TARGET (${nearestBuy.positionId || 'P-BUY'})</span>`;
+        } else {
+          const estBuy = livePrice + targetMove;
+          document.getElementById('heroBuyTarget').innerText = `$${estBuy.toFixed(2)}`;
+          document.getElementById('heroBuyDist').innerText = `Target Move: +$${targetMove.toFixed(2)}`;
+          document.getElementById('heroBuyLabel').innerHTML = `<span>🎯 ACTIVE BUY TARGET (+$${targetMove.toFixed(2)})</span>`;
+        }
 
-      // 3. Hero Metric 3: Active SELL Target
-      if (activeSells.length > 0) {
-        const nearestSell = [...activeSells].sort((a, b) => Math.abs(livePrice - a.targetPrice) - Math.abs(livePrice - b.targetPrice))[0];
-        document.getElementById('heroSellTarget').innerText = `$${nearestSell.targetPrice.toFixed(2)}`;
-        const dist = livePrice - nearestSell.targetPrice;
-        const sign = dist >= 0 ? '+' : '';
-        document.getElementById('heroSellDist').innerText = `Distance: ${sign}$${dist.toFixed(2)} (${sign}₹${(dist * usdInr).toFixed(2)})`;
-        document.getElementById('heroSellLabel').innerHTML = `<span>🎯 ACTIVE SELL TARGET (${nearestSell.positionId})</span>`;
-      } else {
-        const estSell = livePrice - targetMove;
-        document.getElementById('heroSellTarget').innerText = `$${estSell.toFixed(2)}`;
-        document.getElementById('heroSellDist').innerText = `Target Move: -$${targetMove.toFixed(2)}`;
-        document.getElementById('heroSellLabel').innerHTML = `<span>🎯 ACTIVE SELL TARGET (-$${targetMove.toFixed(2)})</span>`;
-      }
+        // 3. Hero Metric 3: Active SELL Target
+        if (activeSells.length > 0) {
+          const nearestSell = [...activeSells].sort((a, b) => Math.abs(livePrice - a.targetPrice) - Math.abs(livePrice - b.targetPrice))[0];
+          const sTgt = nearestSell.targetPrice;
+          document.getElementById('heroSellTarget').innerText = `$${sTgt.toFixed(2)}`;
+          const dist = livePrice - sTgt;
+          const sign = dist >= 0 ? '+' : '';
+          document.getElementById('heroSellDist').innerText = `Distance: ${sign}$${dist.toFixed(2)} (${sign}₹${(dist * usdInr).toFixed(2)})`;
+          document.getElementById('heroSellLabel').innerHTML = `<span>🎯 ACTIVE SELL TARGET (${nearestSell.positionId || 'P-SELL'})</span>`;
+        } else {
+          const estSell = livePrice - targetMove;
+          document.getElementById('heroSellTarget').innerText = `$${estSell.toFixed(2)}`;
+          document.getElementById('heroSellDist').innerText = `Target Move: -$${targetMove.toFixed(2)}`;
+          document.getElementById('heroSellLabel').innerHTML = `<span>🎯 ACTIVE SELL TARGET (-$${targetMove.toFixed(2)})</span>`;
+        }
 
-      // 4. Hero Metric 4: Total Active Pairs
-      document.getElementById('heroActivePairs').innerText = `${pairs.length} PAIRS`;
-      document.getElementById('heroPairsSub').innerText = `${engine.activeBuyCount || 0} BUY / ${engine.activeSellCount || 0} SELL · ${engine.contractQuantity || 3.0} SOL 5x`;
+        // 4. Hero Metric 4: Total Active Pairs
+        document.getElementById('heroActivePairs').innerText = `${pairs.length} PAIRS`;
+        document.getElementById('heroPairsSub').innerText = `${engine.activeBuyCount || activeBuys.length} BUY / ${engine.activeSellCount || activeSells.length} SELL · ${engine.contractQuantity || 3.0} SOL 5x`;
 
       // 5. Financial KPI 1: Mudrex Available Margin (₹ and $)
       const availINR = Number(wallet.availableMarginINR || 0);
@@ -1006,7 +1029,8 @@
         tbodyBuys.innerHTML = `<tr><td colspan="4" style="text-align: center; color: var(--text-dim); padding: 20px;">Waiting for BUY positions...</td></tr>`;
       } else {
         tbodyBuys.innerHTML = activeBuys.map((pos, idx) => {
-          const dist = pos.targetPrice - livePrice;
+          const bTgt = Number(pos.targetPrice || pos.targetExitPrice || (pos.entryPrice ? (pos.entryPrice + targetMove) : 0));
+          const dist = bTgt - livePrice;
           const distSign = dist >= 0 ? '+' : '';
           const pnlINR = Number(pos.floatingPnlINR || 0);
           const pnlColor = pnlINR >= 0 ? 'var(--green-primary)' : 'var(--red-primary)';
@@ -1015,9 +1039,9 @@
           return `
             <tr>
               <td style="color: var(--text-dim); font-weight: 700;">#${idx + 1}</td>
-              <td style="color: #cbd5e1; font-weight: 600;">$${Number(pos.entryPrice).toFixed(2)}</td>
+              <td style="color: #cbd5e1; font-weight: 600;">$${Number(pos.entryPrice || 0).toFixed(2)}</td>
               <td>
-                <div style="color: var(--green-primary); font-weight: 900; font-size: 0.88rem; text-shadow: 0 0 10px rgba(0, 255, 163, 0.35); line-height: 1.15;">$${Number(pos.targetPrice).toFixed(2)}</div>
+                <div style="color: var(--green-primary); font-weight: 900; font-size: 0.88rem; text-shadow: 0 0 10px rgba(0, 255, 163, 0.35); line-height: 1.15;">$${bTgt.toFixed(2)}</div>
                 <div style="font-size: 0.64rem; color: #94a3b8; font-weight: 700; margin-top: 1px;">${distSign}$${dist.toFixed(2)}</div>
               </td>
               <td style="color: ${pnlColor}; font-weight: 800;">${pnlSign}₹${pnlINR.toFixed(2)}</td>
@@ -1032,7 +1056,8 @@
         tbodySells.innerHTML = `<tr><td colspan="4" style="text-align: center; color: var(--text-dim); padding: 20px;">Waiting for SELL positions...</td></tr>`;
       } else {
         tbodySells.innerHTML = activeSells.map((pos, idx) => {
-          const dist = livePrice - pos.targetPrice;
+          const sTgt = Number(pos.targetPrice || pos.targetExitPrice || (pos.entryPrice ? (pos.entryPrice - targetMove) : 0));
+          const dist = livePrice - sTgt;
           const distSign = dist >= 0 ? '+' : '';
           const pnlINR = Number(pos.floatingPnlINR || 0);
           const pnlColor = pnlINR >= 0 ? 'var(--green-primary)' : 'var(--red-primary)';
@@ -1041,9 +1066,9 @@
           return `
             <tr>
               <td style="color: var(--text-dim); font-weight: 700;">#${idx + 1}</td>
-              <td style="color: #cbd5e1; font-weight: 600;">$${Number(pos.entryPrice).toFixed(2)}</td>
+              <td style="color: #cbd5e1; font-weight: 600;">$${Number(pos.entryPrice || 0).toFixed(2)}</td>
               <td>
-                <div style="color: var(--red-primary); font-weight: 900; font-size: 0.88rem; text-shadow: 0 0 10px rgba(244, 63, 94, 0.35); line-height: 1.15;">$${Number(pos.targetPrice).toFixed(2)}</div>
+                <div style="color: var(--red-primary); font-weight: 900; font-size: 0.88rem; text-shadow: 0 0 10px rgba(244, 63, 94, 0.35); line-height: 1.15;">$${sTgt.toFixed(2)}</div>
                 <div style="font-size: 0.64rem; color: #94a3b8; font-weight: 700; margin-top: 1px;">${distSign}$${dist.toFixed(2)}</div>
               </td>
               <td style="color: ${pnlColor}; font-weight: 800;">${pnlSign}₹${pnlINR.toFixed(2)}</td>
@@ -1089,7 +1114,10 @@
           `;
         }).join('');
       }
+    } catch (err) {
+      console.error('[Subh Money Render Error]', err);
     }
+  }
 
     // Initial Load & High-Frequency Polling (every 1 second)
     fetchSubhMoneyData();
