@@ -972,27 +972,10 @@ class MudrexLiveAdapter {
     const sym = (symbol || 'CLUSDT').replace('-', '');
     const dashSym = sym === 'CLUSDT' ? 'CL-USDT' : sym;
 
-    // 1. Try Mudrex specific position close endpoint
-    try {
-      if (positionId) {
-        const closeUrl = `${this.baseUrl}/futures/positions/${encodeURIComponent(positionId)}/close`;
-        console.log(`[Mudrex Live Adapter] Calling exchange position close endpoint: ${closeUrl}`);
-        const res = await this.request('POST', closeUrl, { symbol: sym, trade_currency: 'INR' });
-        if (res && res.success) {
-          this.userClosedRealPositionIds.add(String(positionId));
-          this.lastFetchPositionsRes = null;
-          this.lastFetchPositionsTime = 0;
-          return res;
-        }
-      }
-    } catch (e) {
-      console.warn('[Mudrex Live Adapter] Position close endpoint notice:', e.message);
-    }
-
-    // 2. Query position to know side and quantity if not provided
+    // 1. Query position to know side, leverage, and quantity if not provided
     let posToClose = null;
     try {
-      const pRes = await this.fetchPositions();
+      const pRes = await this.fetchPositions(true);
       if (pRes.success && Array.isArray(pRes.data)) {
         posToClose = pRes.data.find(p => (p.positionId === positionId || p.exchangePositionId === positionId || String(p.id) === String(positionId)));
         if (!posToClose && pRes.data.length === 1) {
@@ -1002,11 +985,12 @@ class MudrexLiveAdapter {
     } catch (e) {}
 
     const qty = quantity || (posToClose ? posToClose.quantity : 1.0);
-    const dir = posToClose ? posToClose.direction : 'BUY';
+    const dir = posToClose ? posToClose.direction : 'SELL';
     const oppSide = (dir === 'BUY' || dir === 'LONG') ? 'SELL' : 'BUY';
     const oppOrderType = oppSide === 'BUY' ? 'LONG' : 'SHORT';
+    const lev = String(posToClose && posToClose.leverage ? posToClose.leverage : 5);
 
-    // 3. Send reduce-only market order
+    // 2. Send reduce-only market order with leverage
     const body = {
       trade_currency: 'INR',
       symbol: sym,
@@ -1015,6 +999,7 @@ class MudrexLiveAdapter {
       trigger_type: 'MARKET',
       type: 'MARKET',
       quantity: String(qty),
+      leverage: lev,
       reduce_only: true
     };
 
@@ -1024,7 +1009,16 @@ class MudrexLiveAdapter {
     if (!res || !res.success) {
       body.symbol = dashSym;
       const altUrl = `${this.baseUrl}/futures/${dashSym}/order?is_symbol=true&trade_currency=INR`;
+      console.log(`[Mudrex Live Adapter] Retrying with symbol variant ${dashSym} via ${altUrl}...`);
       res = await this.request('POST', altUrl, body);
+    }
+
+    // 3. Fallback: If reduce_only was rejected, send without reduce_only to flatten net position in One-Way Net Mode
+    if (!res || !res.success) {
+      console.log(`[Mudrex Live Adapter] Retrying close order without reduce_only to flatten net position...`);
+      body.symbol = sym;
+      delete body.reduce_only;
+      res = await this.request('POST', orderUrl, body);
     }
 
     if (res && res.success) {
@@ -1106,9 +1100,9 @@ class MudrexLiveAdapter {
     return closedAny || true;
   }
 
-  async fetchPositions() {
+  async fetchPositions(forceRefresh = false) {
     const now = Date.now();
-    if (this.lastFetchPositionsRes && (now - this.lastFetchPositionsTime < 10000)) {
+    if (!forceRefresh && this.lastFetchPositionsRes && (now - this.lastFetchPositionsTime < 3000)) {
       return this.lastFetchPositionsRes;
     }
 
@@ -1129,7 +1123,15 @@ class MudrexLiveAdapter {
         }
         if (item.closed === true || item.is_closed === true) continue;
         if (item.quantity !== undefined && Number(item.quantity || item.qty || 0) <= 0) continue;
-        if (posId && (this.userClosedRealPositionIds.has(posId) || this.userClosedRealPositionIds.has(String(posId)))) continue;
+
+        // CRITICAL SYNC FIX: If Mudrex API reports an active position with status === 'OPEN' and quantity > 0,
+        // it is physically open on the exchange holding real margin!
+        // We MUST NEVER filter it out with userClosedRealPositionIds.
+        // If it was in userClosedRealPositionIds, remove it because Mudrex confirms it is still open on exchange!
+        if (posId && (this.userClosedRealPositionIds.has(posId) || this.userClosedRealPositionIds.has(String(posId)))) {
+          this.userClosedRealPositionIds.delete(posId);
+          this.userClosedRealPositionIds.delete(String(posId));
+        }
 
         combinedItems.push(item);
       }
@@ -1145,8 +1147,14 @@ class MudrexLiveAdapter {
           list = res.data.data;
         } else if (Array.isArray(res.data.positions)) {
           list = res.data.positions;
+        } else if (Array.isArray(res.data?.data?.positions)) {
+          list = res.data.data.positions;
+        } else if (Array.isArray(res.data?.data?.data)) {
+          list = res.data.data.data;
         } else if (typeof res.data === 'object' && (res.data.position_id || res.data.id)) {
           list = [res.data];
+        } else if (typeof res.data?.data === 'object' && (res.data.data.position_id || res.data.data.id)) {
+          list = [res.data.data];
         }
         processItems(list);
       }
@@ -1159,7 +1167,9 @@ class MudrexLiveAdapter {
           if (Array.isArray(altRes.data)) list = altRes.data;
           else if (Array.isArray(altRes.data.data)) list = altRes.data.data;
           else if (Array.isArray(altRes.data.positions)) list = altRes.data.positions;
+          else if (Array.isArray(altRes.data?.data?.positions)) list = altRes.data.data.positions;
           else if (typeof altRes.data === 'object' && (altRes.data.position_id || altRes.data.id)) list = [altRes.data];
+          else if (typeof altRes.data?.data === 'object' && (altRes.data.data.position_id || altRes.data.data.id)) list = [altRes.data.data];
           processItems(list);
         }
       }

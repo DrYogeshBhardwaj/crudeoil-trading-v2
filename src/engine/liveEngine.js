@@ -408,26 +408,31 @@ class PaperEngine {
 
     // Auto-Punarjanm Cycle Check (Idempotency throttle: 30 seconds cooldown)
     if (this.settings.autoPunarjanmEnabled && this.settings.basketProfitTargetINR > 0) {
-      if (!this.lastPunarjanmTime || (time - this.lastPunarjanmTime > 30000)) {
+      if (!this.lastPunarjanmTime || (time - this.lastPunarjanmTime > 15000)) {
         try {
           const mudrexLive = require('./mudrexLiveAdapter');
           let currentNetPnlINR = 0;
+          let mainPos = null;
           if (mudrexLive.lastFetchPositionsRes && mudrexLive.lastFetchPositionsRes.data && mudrexLive.lastFetchPositionsRes.data.length > 0) {
-            const mainPos = mudrexLive.lastFetchPositionsRes.data[0];
-            if (mainPos.unrealisedPnlINR !== undefined && mainPos.unrealisedPnlINR !== null && !isNaN(mainPos.unrealisedPnlINR)) {
+            mainPos = mudrexLive.lastFetchPositionsRes.data[0];
+          } else if (Array.isArray(mudrexLive.liveOpenPositions) && mudrexLive.liveOpenPositions.length > 0) {
+            mainPos = mudrexLive.liveOpenPositions.find(p => p.status === 'OPEN');
+          }
+
+          if (mainPos) {
+            const posQty = Number(mainPos.quantity || 0);
+            const posEntry = Number(mainPos.entryPrice || mainPos.entry_price || 0);
+            const isShort = mainPos.direction === 'SELL' || mainPos.direction === 'SHORT';
+            const hedgeRate = Number(mainPos.entryHedgeRate || mainPos.entry_hedge_rate || usdInrRate || 102.00);
+
+            if (posQty > 0 && posEntry > 0) {
+              const pnlUSD = isShort ? (posEntry - normalizedPrice) * posQty : (normalizedPrice - posEntry) * posQty;
+              currentNetPnlINR = Number((pnlUSD * hedgeRate).toFixed(2));
+            } else if (mainPos.unrealisedPnlINR !== undefined && !isNaN(mainPos.unrealisedPnlINR)) {
               currentNetPnlINR = Number(mainPos.unrealisedPnlINR);
-            } else if (mainPos.unrealised_pnl !== undefined && mainPos.unrealised_pnl !== null) {
-              currentNetPnlINR = Number(mainPos.unrealised_pnl);
-            } else {
-              const posQty = Number(mainPos.quantity || 0);
-              const posEntry = Number(mainPos.entryPrice || mainPos.entry_price || 0);
-              const isShort = mainPos.direction === 'SELL' || mainPos.direction === 'SHORT';
-              if (posQty > 0 && posEntry > 0) {
-                const pnlUSD = isShort ? (posEntry - normalizedPrice) * posQty : (normalizedPrice - posEntry) * posQty;
-                currentNetPnlINR = pnlUSD * (usdInrRate || 102.00);
-              }
             }
           }
+
           if (currentNetPnlINR >= this.settings.basketProfitTargetINR) {
             this.lastPunarjanmTime = time;
             console.log(`[Auto-Punarjanm] Triggering Rebirth Cycle! Mudrex Net Profit: +₹${currentNetPnlINR.toFixed(2)} >= Target ₹${this.settings.basketProfitTargetINR}`);
@@ -813,7 +818,7 @@ class PaperEngine {
     // 1. Close Real Mudrex Position if exists
     try {
       const mudrexLive = require('./mudrexLiveAdapter');
-      const pRes = await mudrexLive.fetchPositions();
+      const pRes = await mudrexLive.fetchPositions(true);
       const posList = (pRes && pRes.success && Array.isArray(pRes.data)) ? pRes.data : [];
 
       if (posList.length > 0) {
@@ -826,6 +831,7 @@ class PaperEngine {
         const dir = targetPos.direction;
         const oppSide = (dir === 'BUY' || dir === 'LONG') ? 'SELL' : 'BUY';
         const oppOrderType = oppSide === 'BUY' ? 'LONG' : 'SHORT';
+        const lev = String(targetPos.leverage || 5);
 
         if (closedPosId) {
           mudrexCloseRes = await mudrexLive.closeRealPosition(closedPosId, sym, closedQty);
@@ -840,19 +846,34 @@ class PaperEngine {
             trigger_type: 'MARKET',
             type: 'MARKET',
             quantity: String(closedQty),
+            leverage: lev,
             reduce_only: true
           };
           const orderUrl = `${mudrexLive.baseUrl}/futures/${sym}/order?is_symbol=true&trade_currency=INR`;
+          console.log(`[${cycleTag}] Closing Mudrex position via reduce-only order to ${orderUrl}:`, body);
           mudrexCloseRes = await mudrexLive.request('POST', orderUrl, body);
           if (!mudrexCloseRes || !mudrexCloseRes.success) {
             body.symbol = dashSym;
             const altUrl = `${mudrexLive.baseUrl}/futures/${dashSym}/order?is_symbol=true&trade_currency=INR`;
+            console.log(`[${cycleTag}] Retrying with symbol variant ${dashSym} via ${altUrl}...`);
             mudrexCloseRes = await mudrexLive.request('POST', altUrl, body);
+          }
+          // Fallback: If reduce_only was rejected, send without reduce_only to flatten net position in One-Way Net Mode
+          if (!mudrexCloseRes || !mudrexCloseRes.success) {
+            console.log(`[${cycleTag}] Retrying close order without reduce_only to flatten net position...`);
+            body.symbol = sym;
+            delete body.reduce_only;
+            mudrexCloseRes = await mudrexLive.request('POST', orderUrl, body);
           }
         }
 
-        if (closedPosId) {
-          mudrexLive.userClosedRealPositionIds.add(String(closedPosId));
+        if (mudrexCloseRes && mudrexCloseRes.success) {
+          console.log(`[${cycleTag}] Successfully closed Mudrex position ${closedPosId} of ${closedQty} ${sym}!`);
+          if (closedPosId) {
+            mudrexLive.userClosedRealPositionIds.add(String(closedPosId));
+          }
+        } else {
+          console.error(`[${cycleTag}] Failed to execute Mudrex close order:`, mudrexCloseRes ? mudrexCloseRes.error : 'Unknown error');
         }
       }
 

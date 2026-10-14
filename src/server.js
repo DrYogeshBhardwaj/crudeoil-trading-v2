@@ -618,7 +618,7 @@ app.get(['/api/crude-live-mudrex/data', '/api/crude-live-mudrex-pro/data'], asyn
     // 2. Mudrex Real Exchange Position (One-Way Net Mode)
     let exchangePositions = [];
     try {
-      const pRes = await mudrexLive.fetchPositions();
+      const pRes = await mudrexLive.fetchPositions(true);
       if (pRes.success && Array.isArray(pRes.data)) {
         exchangePositions = pRes.data;
       }
