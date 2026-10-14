@@ -6,7 +6,7 @@ class SolanaEngine {
   constructor() {
     this.settings = {
       startingCapitalINR: 350000.00, // ₹3.5 Lakh starting capital requested by user
-      contractQuantity: 5.0, // 5.0 SOL default lot size
+      contractQuantity: 3.0, // 3.0 SOL default lot size requested by user
       leverage: 5,
       instrument: 'SOLUSDT',
       profitTargetMove: 0.50, // $0.50 Target Move for Solana
@@ -18,6 +18,7 @@ class SolanaEngine {
       maxActivePairs: 50,
       takerFeeRate: 0.00075, // 0.075% Mudrex taker fee
       gstRate: 0.18, // 18% GST
+      conservativeFeeMultiplier: 1.40, // 1.4x conservative buffer (50 -> 70 charges) requested by user
       slippageBufferINR: 2.0, // ₹2.00 slippage buffer
       usdInrRate: 102.00, // Authoritative Mudrex INR Futures Rate
       tradingMode: 'PAPER', // Pure simulator for checking only as requested
@@ -339,7 +340,9 @@ class SolanaEngine {
     const entryFeeUSD = pos.entryPrice * qty * takerFee;
     const exitFeeUSD = pos.exitPrice * qty * takerFee;
     const gstUSD = (entryFeeUSD + exitFeeUSD) * gstRate;
-    const chargesUSD = entryFeeUSD + exitFeeUSD + gstUSD;
+    const baseChargesUSD = entryFeeUSD + exitFeeUSD + gstUSD;
+    const feeMultiplier = this.settings.conservativeFeeMultiplier || 1.40;
+    const chargesUSD = baseChargesUSD * feeMultiplier;
     const chargesINR = chargesUSD * usdInr;
 
     const netUSD = grossUSD - chargesUSD;
@@ -430,6 +433,8 @@ class SolanaEngine {
     let openBuyCount = 0, openSellCount = 0;
     let dynamicMarginUsedINR = 0;
 
+    const feeMultiplier = this.settings.conservativeFeeMultiplier || 1.40;
+
     for (const pair of this.pairs) {
       if (pair.status === 'CLOSED') continue;
       const qty = pair.quantity || this.settings.contractQuantity || 5.0;
@@ -440,7 +445,7 @@ class SolanaEngine {
         const gUSD = (livePrice - pair.buyPosition.entryPrice) * qty;
         const eFee = pair.buyPosition.entryPrice * qty * 0.00075 * 1.18;
         const xFee = livePrice * qty * 0.00075 * 1.18;
-        const cUSD = eFee + xFee;
+        const cUSD = (eFee + xFee) * feeMultiplier;
         grossUSD += gUSD;
         chargesUSD += cUSD;
         netUSD += (gUSD - cUSD);
@@ -460,7 +465,7 @@ class SolanaEngine {
         const gUSD = (pair.sellPosition.entryPrice - livePrice) * qty;
         const eFee = pair.sellPosition.entryPrice * qty * 0.00075 * 1.18;
         const xFee = livePrice * qty * 0.00075 * 1.18;
-        const cUSD = eFee + xFee;
+        const cUSD = (eFee + xFee) * feeMultiplier;
         grossUSD += gUSD;
         chargesUSD += cUSD;
         netUSD += (gUSD - cUSD);
@@ -528,17 +533,18 @@ class SolanaEngine {
       let sPnlUSD = 0, sPnlINR = 0;
 
       const defQty = this.settings.contractQuantity || 5.0;
+      const feeMultiplier = this.settings.conservativeFeeMultiplier || 1.40;
       if (b && b.status === 'OPEN') {
         const bQty = b.quantity || defQty;
         const g = (livePrice - b.entryPrice) * bQty;
-        const c = (b.entryPrice * 0.00075 + livePrice * 0.00075) * 1.18 * bQty;
+        const c = (b.entryPrice * 0.00075 + livePrice * 0.00075) * 1.18 * bQty * feeMultiplier;
         bPnlUSD = g - c;
         bPnlINR = bPnlUSD * usdInr;
       }
       if (s && s.status === 'OPEN') {
         const sQty = s.quantity || defQty;
         const g = (s.entryPrice - livePrice) * sQty;
-        const c = (s.entryPrice * 0.00075 + livePrice * 0.00075) * 1.18 * sQty;
+        const c = (s.entryPrice * 0.00075 + livePrice * 0.00075) * 1.18 * sQty * feeMultiplier;
         sPnlUSD = g - c;
         sPnlINR = sPnlUSD * usdInr;
       }
@@ -680,9 +686,13 @@ class SolanaEngine {
     };
   }
 
-  resetData() {
+  resetData(newQty = null) {
     this.settings.startingCapitalINR = 350000.00;
-    this.settings.contractQuantity = 5.0;
+    if (newQty && !isNaN(newQty) && Number(newQty) > 0) {
+      this.settings.contractQuantity = Number(newQty);
+    } else {
+      this.settings.contractQuantity = 3.0;
+    }
     this.settings.autoPunarjanmEnabled = false; // Harvest disabled per user request
     this.pairs = [];
     this.closedPositions = [];
@@ -694,7 +704,7 @@ class SolanaEngine {
     this.isEngineRunning = true;
     this.engineStatus = 'RUNNING';
 
-    // Auto-create initial fresh 5.0 SOL pair if live rate is present
+    // Auto-create initial fresh pair with current lot size if live rate is present
     try {
       const cur = rateFeed.getCurrentRate('SOLUSDT');
       if (cur && cur.price > 0) {
@@ -705,8 +715,8 @@ class SolanaEngine {
     }
 
     this.saveState();
-    console.log('[Solana Engine] Reset data: Capital set to ₹3,50,000 INR with 5.0 SOL contract size.');
-    return { success: true, message: 'Solana simulator data reset to ₹3,50,000 capital and 5.0 SOL lot size.' };
+    console.log(`[Solana Engine] Reset data: Capital set to ₹3,50,000 INR with ${this.settings.contractQuantity} SOL contract size.`);
+    return { success: true, message: `Solana simulator data reset to ₹3,50,000 capital and ${this.settings.contractQuantity} SOL lot size.`, contractQuantity: this.settings.contractQuantity };
   }
 }
 

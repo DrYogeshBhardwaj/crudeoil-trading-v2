@@ -1296,6 +1296,9 @@
           <span>⚡ MUDREX DATA</span>
           <span class="badge" id="navMudrexBadge" style="background: rgba(0,0,0,0.4); font-size: 0.72rem; padding: 2px 6px; border-radius: 4px; margin-left: 4px;">0 SOL</span>
         </button>
+        <button class="btn" id="resetSimulatorBtn" onclick="promptAction('resetSimulator')" style="background: rgba(239, 68, 68, 0.2); border: 1px solid #ef4444; color: #fca5a5; font-weight: 800; cursor: pointer;">
+          <span>🔄 RESET SIMULATOR</span>
+        </button>
         <button class="btn btn-outline" onclick="fetchTerminalData()">
           <span>🔄 REFRESH</span>
         </button>
@@ -1343,7 +1346,7 @@
           <span>🟣 SOLUSDT SOLANA LIVE RATE</span>
         </div>
         <div class="ticker-rate-value rate-cyan" id="liveCrudePrice">$0.00</div>
-        <div class="ticker-sub" id="liveRateSubtext">USD/INR: ₹102.00 | 5.0 SOL Lot</div>
+        <div class="ticker-sub" id="liveRateSubtext">USD/INR: ₹102.00 | 3.0 SOL Lot</div>
       </div>
 
       <!-- BUY Target Exit Callout -->
@@ -1370,7 +1373,7 @@
           <span>⚡ TOTAL ACTIVE PAIRS</span>
         </div>
         <div class="ticker-rate-value rate-gold" id="heroActivePairsCount">0 PAIRS</div>
-        <div class="ticker-sub" id="heroConfigSubtext">5.0 SOL/Leg | 5x Lev | Simulator: ACTIVE</div>
+        <div class="ticker-sub" id="heroConfigSubtext">3.0 SOL/Leg | 5x Lev | Simulator: ACTIVE</div>
       </div>
     </section>
 
@@ -1445,23 +1448,40 @@
       </div>
 
       <!-- Middle: Dynamic Parameters for Current Session -->
-      <div style="display: flex; align-items: center; gap: 18px; flex-wrap: wrap;">
-        <div style="text-align: center; border-left: 1px solid rgba(255,255,255,0.1); padding-left: 14px;">
-          <div style="font-size: 0.7rem; color: var(--text-dim); text-transform: uppercase;">Session Lot Size</div>
-          <div style="font-size: 1.05rem; font-weight: 800; color: var(--accent-cyan);" id="sessionLotSize">5.0 SOL</div>
+      <div style="display: flex; align-items: center; gap: 16px; flex-wrap: wrap;">
+        <!-- Quick Lot Size Selector (1 SOL, 2 SOL, 3 SOL, 5 SOL, Custom) -->
+        <div style="display: flex; flex-direction: column; gap: 3px; border-left: 1px solid rgba(255,255,255,0.1); padding-left: 14px;">
+          <div style="display: flex; align-items: center; gap: 6px;">
+            <span style="font-size: 0.68rem; color: #00ffa3; text-transform: uppercase; font-weight: 800; letter-spacing: 0.5px;">LOT SIZE (SOL):</span>
+            <div class="target-chip-group" style="display: inline-flex; align-items: center; gap: 3px; background: rgba(0,0,0,0.45); padding: 2px 5px; border-radius: 7px; border: 1px solid rgba(0, 255, 163, 0.35);">
+              <button type="button" class="target-chip" id="chipLot1" onclick="quickSetLotSize(1)">1 SOL</button>
+              <button type="button" class="target-chip" id="chipLot2" onclick="quickSetLotSize(2)">2 SOL</button>
+              <button type="button" class="target-chip active" id="chipLot3" onclick="quickSetLotSize(3)">3 SOL</button>
+              <button type="button" class="target-chip" id="chipLot5" onclick="quickSetLotSize(5)">5 SOL</button>
+              <button type="button" class="target-chip" onclick="promptCustomLotSize()" title="Custom Lot Size">✏️</button>
+            </div>
+          </div>
+          <div style="font-size: 0.72rem; color: var(--text-dim); font-family: var(--font-mono);" id="activeLotInfo">
+            Current: <strong id="sessionLotSize" style="color: #00ffa3;">3.0 SOL</strong> · Margin: ~₹12.7k/pair (max ~27 pairs)
+          </div>
         </div>
+
         <div style="text-align: center; border-left: 1px solid rgba(255,255,255,0.1); padding-left: 14px;">
           <div style="font-size: 0.7rem; color: var(--text-dim); text-transform: uppercase;">Target Move</div>
           <div style="font-size: 1.05rem; font-weight: 800; color: var(--accent-green-bright);" id="sessionTargetMove">$0.50</div>
         </div>
+
         <div style="text-align: center; border-left: 1px solid rgba(255,255,255,0.1); padding-left: 14px;">
           <div style="font-size: 0.7rem; color: var(--text-dim); text-transform: uppercase;">Punarjanm Target</div>
           <div style="font-size: 1.05rem; font-weight: 800; color: #f472b6;" id="sessionBasketTarget">₹250</div>
         </div>
       </div>
 
-      <!-- Right: Action Button to Open Config Modal -->
-      <div>
+      <!-- Right: Action Buttons -->
+      <div style="display: flex; align-items: center; gap: 8px;">
+        <button class="btn" onclick="promptAction('resetSimulator')" style="background: linear-gradient(135deg, rgba(239, 68, 68, 0.25), rgba(185, 28, 28, 0.45)); border: 1px solid #ef4444; color: #fca5a5; font-weight: 800; font-size: 0.78rem; padding: 6px 14px; border-radius: 8px; cursor: pointer; display: inline-flex; align-items: center; gap: 5px; box-shadow: 0 0 10px rgba(239, 68, 68, 0.3);">
+          <span>🔄 RESET SIMULATOR</span>
+        </button>
         <button class="btn btn-outline" onclick="openSessionModal()" style="border-color: rgba(147, 51, 234, 0.6); color: #c084fc; font-weight: 700; font-size: 0.8rem; padding: 6px 14px; display: inline-flex; align-items: center; gap: 6px;">
           <span>⚙️ Configure Sessions</span>
         </button>
@@ -2076,9 +2096,13 @@
         sub.innerText = `Enter Admin PIN (340556) to market-close the ${q} SOL position on Mudrex exchange and release margin.`;
       } else if (action === 'punarjanm') {
         const nextCycle = (cachedData && cachedData.punarjanm && cachedData.punarjanm.currentCycleName) || 'Punarjanm 1';
-        const lotSize = (cachedData && cachedData.engine && cachedData.engine.contractQuantity) || 5.0;
+        const lotSize = (cachedData && cachedData.engine && cachedData.engine.contractQuantity) || 3.0;
         title.innerText = `✨ Execute ${nextCycle} (Rebirth Cycle)`;
         sub.innerText = `Enter Admin PIN (340556) to harvest profit, flush stale pairs, release locked margin, and spawn a fresh ${lotSize} SOL pair at the live rate.`;
+      } else if (action === 'resetSimulator') {
+        const lotSize = (cachedData && cachedData.engine && cachedData.engine.contractQuantity) || 3.0;
+        title.innerText = '🔄 Reset Solana Simulator';
+        sub.innerText = `Enter Admin PIN (340556) to reset capital to ₹3,50,000, clear active positions and history, and restart fresh with ${lotSize} SOL lots.`;
       }
 
       modal.style.display = 'flex';
@@ -2117,6 +2141,8 @@
         actionEndpointAction = 'closeMudrexExchangePosition';
       } else if (currentPendingAction === 'punarjanm') {
         actionEndpointAction = 'punarjanm';
+      } else if (currentPendingAction === 'resetSimulator') {
+        actionEndpointAction = 'resetSimulator';
       }
 
       try {
@@ -2130,6 +2156,8 @@
           closePinModal();
           if (actionEndpointAction === 'punarjanm' || actionEndpointAction === 'closeMudrexExchangePosition') {
             alert('✨ ' + (json.message || 'Punarjanm cycle executed successfully!'));
+          } else if (actionEndpointAction === 'resetSimulator') {
+            alert('🔄 ' + (json.message || 'Solana Simulator reset to ₹3,50,000 successfully!'));
           }
           await fetchTerminalData();
         } else {
@@ -2138,6 +2166,39 @@
       } catch (err) {
         alert('Error: ' + err.message);
       }
+    }
+
+    async function quickSetLotSize(quantity) {
+      const pin = prompt(`Enter Admin PIN (340556) to change Solana Lot Size to ${quantity} SOL:`);
+      if (!pin) return;
+      try {
+        const res = await fetch('/api/solana-live-mudrex/action', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: 'updateContractQuantity', quantity, password: pin })
+        });
+        const json = await res.json();
+        if (json.success) {
+          alert(`✅ Solana Lot Size updated to ${quantity} SOL!`);
+          await fetchTerminalData();
+        } else {
+          alert('Failed: ' + (json.error || 'Incorrect PIN'));
+        }
+      } catch (e) {
+        alert('Error: ' + e.message);
+      }
+    }
+
+    async function promptCustomLotSize() {
+      const cur = (cachedData && cachedData.engine && cachedData.engine.contractQuantity) || 3.0;
+      const val = prompt('Enter Custom Solana Lot Size (e.g. 1, 2, 3, 4, 5, 10):', cur);
+      if (!val) return;
+      const num = parseFloat(val);
+      if (isNaN(num) || num <= 0) {
+        alert('Invalid lot size number.');
+        return;
+      }
+      await quickSetLotSize(num);
     }
 
     async function quickSetBasketTarget(targetINR) {
@@ -2348,20 +2409,40 @@
           if (basketEl) basketEl.innerText = `₹${active.currentBasketProfitTargetINR || active.basketProfitTargetINR || 250}`;
         }
       } else {
+        const curLot = engine.contractQuantity || 3.0;
         const lotEl = document.getElementById('sessionLotSize');
-        if (lotEl) lotEl.innerText = `${(engine.contractQuantity || 2.0).toFixed(1)} SOL`;
+        if (lotEl) lotEl.innerText = `${curLot.toFixed(1)} SOL`;
         const targetEl = document.getElementById('sessionTargetMove');
         if (targetEl) targetEl.innerText = `$${Number(engine.profitTargetMove || 0.50).toFixed(2)}`;
         const basketEl = document.getElementById('sessionBasketTarget');
         if (basketEl) basketEl.innerText = `₹${engine.basketProfitTargetINR || 250}`;
       }
 
+      // Update interactive lot chips & info banner
+      const curContractLot = engine.contractQuantity || 3.0;
+      ['1', '2', '3', '5'].forEach(q => {
+        const chip = document.getElementById('chipLot' + q);
+        if (chip) {
+          if (Math.abs(curContractLot - Number(q)) < 0.05) {
+            chip.classList.add('active');
+          } else {
+            chip.classList.remove('active');
+          }
+        }
+      });
+      const lotInfoEl = document.getElementById('activeLotInfo');
+      if (lotInfoEl) {
+        const pairMargin = ((livePrice * curContractLot * usdInr) / 5) * 2;
+        const maxPairs = Math.floor(350000 / (pairMargin || 1));
+        lotInfoEl.innerHTML = `Current: <strong style="color: #00ffa3;">${curContractLot.toFixed(1)} SOL</strong> · Margin: ~₹${(pairMargin/1000).toFixed(1)}k/pair (max ~${maxPairs} pairs on ₹3.5L)`;
+      }
+
       // 2. Ticker Hero
       const crudeEl = document.getElementById('liveCrudePrice');
       crudeEl.innerText = `$${livePrice.toFixed(2)}`;
       
-      const targetMove = engine.profitTargetMove || 0.25;
-      const contractQty = engine.contractQuantity || 2.0;
+      const targetMove = engine.profitTargetMove || 0.50;
+      const contractQty = engine.contractQuantity || 3.0;
       const pairs = engine.pairs || [];
 
       // Find active BUY and SELL positions to match the tables below

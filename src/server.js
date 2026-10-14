@@ -983,10 +983,10 @@ app.post(['/api/solana-live-mudrex/action', '/api/crude-live-mudrex-solana/actio
       }
       solanaEngine.settings.profitTargetMove = newMove;
       solanaEngine.saveState();
-      return res.json({ success: true, message: `Solana Profit Target Move updated to $${newMove.toFixed(2)}.`, profitTargetMove: newMove });
-    } else if (action === 'resetData') {
-      const result = solanaEngine.resetData();
-      return res.json({ success: true, message: result.message });
+    } else if (action === 'resetData' || action === 'resetSimulator') {
+      const customQty = req.body.quantity ? Number(req.body.quantity) : null;
+      const result = solanaEngine.resetData(customQty);
+      return res.json({ success: true, message: result.message, contractQuantity: result.contractQuantity });
     } else {
       return res.status(400).json({ success: false, error: 'Unknown action: ' + action });
     }
