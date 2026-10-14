@@ -946,17 +946,19 @@ app.post(['/api/solana-live-mudrex/action', '/api/crude-live-mudrex-solana/actio
     const mudrexLive = require('./engine/mudrexLiveAdapter');
 
     if (action === 'probeMudrexSolana') {
-      const probe1 = await mudrexLive.request('GET', `${mudrexLive.baseUrl}/futures/SOLUSDT/positions?trade_currency=INR`);
-      const probe2 = await mudrexLive.request('GET', `${mudrexLive.baseUrl}/futures/SOL-USDT/positions?trade_currency=INR`);
-      const probe3 = await mudrexLive.request('GET', `${mudrexLive.baseUrl}/futures/orders?trade_currency=INR`);
-      const probe4 = await mudrexLive.request('GET', `${mudrexLive.baseUrl}/futures/positions?trade_currency=INR`);
+      const p1 = await mudrexLive.request('GET', `${mudrexLive.baseUrl}/exchangeInfo`);
+      const p2 = await mudrexLive.request('GET', `${mudrexLive.baseUrl}/markets`);
+      const p3 = await mudrexLive.request('GET', `${mudrexLive.baseUrl}/futures/markets`);
+      const p4 = await mudrexLive.request('GET', `https://trade.mudrex.com/api/v1/markets`);
+      const p5 = await mudrexLive.request('GET', `${mudrexLive.baseUrl}/ticker/24hr`);
       return res.json({
         success: true,
         probes: {
-          solusdt_positions: probe1,
-          sol_usdt_positions: probe2,
-          orders_history: probe3,
-          positions: probe4
+          exchangeInfo: p1,
+          markets: p2,
+          futures_markets: p3,
+          api_v1_markets: p4,
+          ticker_24hr: p5 ? { success: p5.success, count: Array.isArray(p5.data) ? p5.data.length : (p5.data ? Object.keys(p5.data).length : null), sample: Array.isArray(p5.data) ? p5.data.slice(0, 5) : p5.data } : null
         }
       });
     }
