@@ -206,15 +206,15 @@ class MudrexLiveAdapter {
       }
     } catch (authErr) {}
 
-    // STRICT CRUDE OIL ONLY ENFORCEMENT: Never trade Silver (XAG) or Bitcoin (BTC)
+    // Allow Crude Oil (CLUSDT) and Solana (SOLUSDT)
     const rawSym = (symbol || 'CLUSDT').toUpperCase();
-    if (!rawSym.includes('CL')) {
-      console.warn(`[Mudrex Live Adapter] REJECTED non-Crude order for ${rawSym}. Only CLUSDT (Crude Oil) is permitted.`);
-      return { success: false, error: `NON_CRUDE_TRADING_BLOCKED: Only Crude Oil (CLUSDT) is permitted. Blocked trade for ${rawSym}.` };
+    if (!rawSym.includes('CL') && !rawSym.includes('SOL')) {
+      console.warn(`[Mudrex Live Adapter] REJECTED order for ${rawSym}. Only CLUSDT and SOLUSDT are permitted.`);
+      return { success: false, error: `TRADING_BLOCKED: Only Crude Oil (CLUSDT) and Solana (SOLUSDT) are permitted. Blocked trade for ${rawSym}.` };
     }
 
-    const symb = rawSym === 'CL-USDT' ? 'CLUSDT' : rawSym;
-    const dashSymb = rawSym === 'CLUSDT' ? 'CL-USDT' : rawSym;
+    const symb = rawSym === 'CL-USDT' ? 'CLUSDT' : (rawSym === 'SOL-USDT' ? 'SOLUSDT' : rawSym);
+    const dashSymb = rawSym === 'CLUSDT' ? 'CL-USDT' : (rawSym === 'SOLUSDT' ? 'SOL-USDT' : rawSym);
     const sideUpper = (side || 'BUY').toUpperCase();
     const orderType = (sideUpper === 'BUY' || sideUpper === 'LONG') ? 'LONG' : 'SHORT';
     const qty = String(quantity || this.settings.contractQuantity || 1.0);

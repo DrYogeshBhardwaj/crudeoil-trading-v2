@@ -1,0 +1,835 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>SUBH MONEY — Solana Live Trading Desk</title>
+  <!-- SUBH MONEY Premium Golden-Emerald Favicon -->
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0%25' y1='0%25' x2='100%25' y2='100%25'%3E%3Cstop offset='0%25' stop-color='%23fbbf24'/%3E%3Cstop offset='50%25' stop-color='%2310b981'/%3E%3Cstop offset='100%25' stop-color='%2300ffa3'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='100' height='100' rx='24' fill='%23070d18'/%3E%3Cpath d='M50 12 L82 30 L82 70 L50 88 L18 70 L18 30 Z' fill='none' stroke='url(%23g)' stroke-width='4'/%3E%3Ctext x='50' y='64' font-size='42' font-family='system-ui,sans-serif' font-weight='900' fill='url(%23g)' text-anchor='middle'%3ES%3C/text%3E%3C/svg%3E">
+  <meta name="theme-color" content="#070d18">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+
+  <style>
+    :root {
+      --bg-base: #070d18;
+      --bg-card: rgba(13, 22, 38, 0.94);
+      --bg-card-hover: rgba(18, 30, 52, 0.96);
+      --border-color: rgba(255, 255, 255, 0.08);
+      --border-accent: rgba(0, 255, 163, 0.35);
+      --gold-primary: #fbbf24;
+      --gold-glow: rgba(251, 191, 36, 0.25);
+      --green-primary: #00ffa3;
+      --green-glow: rgba(0, 255, 163, 0.25);
+      --cyan-primary: #03e1ff;
+      --red-primary: #f43f5e;
+      --text-main: #f8fafc;
+      --text-muted: #94a3b8;
+      --text-dim: #64748b;
+      --font-main: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    body {
+      background: var(--bg-base);
+      color: var(--text-main);
+      font-family: var(--font-main);
+      min-height: 100vh;
+      line-height: 1.45;
+      padding-bottom: 40px;
+      overflow-x: hidden;
+    }
+
+    /* Ambient glow background */
+    body::before {
+      content: "";
+      position: fixed;
+      top: -150px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 650px;
+      height: 450px;
+      background: radial-gradient(ellipse, rgba(0, 255, 163, 0.08) 0%, rgba(3, 225, 255, 0.04) 40%, transparent 70%);
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    .container {
+      max-width: 1280px;
+      margin: 0 auto;
+      padding: 12px 16px;
+      position: relative;
+      z-index: 1;
+    }
+
+    /* 1. Header: SUBH MONEY Branding (Clean Read-Only) */
+    header.brand-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 14px 18px;
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: 14px;
+      margin-bottom: 16px;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
+    }
+
+    .brand-wrap {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .brand-logo-svg {
+      width: 44px;
+      height: 44px;
+      flex-shrink: 0;
+      filter: drop-shadow(0 0 10px rgba(251, 191, 36, 0.4));
+    }
+
+    .brand-title {
+      font-size: 1.35rem;
+      font-weight: 900;
+      letter-spacing: 1px;
+      background: linear-gradient(135deg, #fbbf24 0%, #00ffa3 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .brand-badge {
+      font-size: 0.65rem;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0.6px;
+      background: rgba(0, 255, 163, 0.15);
+      border: 1px solid var(--green-primary);
+      color: var(--green-primary);
+      padding: 2px 7px;
+      border-radius: 4px;
+      -webkit-text-fill-color: var(--green-primary);
+    }
+
+    .brand-subtitle {
+      font-size: 0.76rem;
+      color: var(--text-muted);
+      font-weight: 500;
+      margin-top: 1px;
+    }
+
+    .header-live-pill {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      background: rgba(0, 0, 0, 0.45);
+      border: 1px solid rgba(0, 255, 163, 0.3);
+      padding: 6px 12px;
+      border-radius: 30px;
+      font-family: var(--font-mono);
+      font-size: 0.74rem;
+      color: var(--green-primary);
+      font-weight: 700;
+    }
+
+    .live-dot {
+      width: 8px;
+      height: 8px;
+      background: var(--green-primary);
+      border-radius: 50%;
+      box-shadow: 0 0 10px var(--green-primary);
+      animation: pulse 1.8s infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.4; transform: scale(0.85); }
+    }
+
+    /* 2. Hero Metric Row (Bade Text Me) */
+    .hero-metrics-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+
+    .hero-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: 14px;
+      padding: 16px 18px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      position: relative;
+      overflow: hidden;
+      box-shadow: 0 4px 18px rgba(0, 0, 0, 0.35);
+      transition: transform 0.2s, border-color 0.2s;
+    }
+
+    .hero-card::before {
+      content: "";
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 4px;
+      height: 100%;
+    }
+
+    .card-rate::before { background: var(--cyan-primary); }
+    .card-buy::before { background: var(--green-primary); }
+    .card-sell::before { background: var(--red-primary); }
+    .card-pairs::before { background: var(--gold-primary); }
+
+    .hero-label {
+      font-size: 0.72rem;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0.6px;
+      color: var(--text-dim);
+      margin-bottom: 6px;
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .hero-value {
+      font-size: 2.1rem;
+      font-weight: 900;
+      font-family: var(--font-mono);
+      letter-spacing: -0.5px;
+      line-height: 1.1;
+      margin-bottom: 4px;
+    }
+
+    .val-cyan { color: var(--cyan-primary); text-shadow: 0 0 16px rgba(3, 225, 255, 0.25); }
+    .val-green { color: var(--green-primary); text-shadow: 0 0 16px rgba(0, 255, 163, 0.25); }
+    .val-red { color: var(--red-primary); text-shadow: 0 0 16px rgba(244, 63, 94, 0.25); }
+    .val-gold { color: var(--gold-primary); text-shadow: 0 0 16px rgba(251, 191, 36, 0.25); }
+
+    .hero-sub {
+      font-size: 0.76rem;
+      color: var(--text-muted);
+      font-family: var(--font-mono);
+      font-weight: 600;
+    }
+
+    /* 3. Financial KPI Row (ONLY 2 Cards: Mudrex Available Margin + Realized Net Profit) */
+    .financial-kpi-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+
+    .kpi-box {
+      background: var(--bg-card);
+      border: 1.5px solid var(--border-color);
+      border-radius: 14px;
+      padding: 18px 22px;
+      position: relative;
+      box-shadow: 0 6px 22px rgba(0, 0, 0, 0.4);
+    }
+
+    .kpi-box.box-margin {
+      border-color: rgba(0, 255, 163, 0.35);
+      background: linear-gradient(135deg, rgba(13, 26, 42, 0.95), rgba(7, 13, 24, 0.95));
+    }
+
+    .kpi-box.box-profit {
+      border-color: rgba(251, 191, 36, 0.35);
+      background: linear-gradient(135deg, rgba(28, 24, 16, 0.95), rgba(7, 13, 24, 0.95));
+    }
+
+    .kpi-box-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 8px;
+    }
+
+    .kpi-box-title {
+      font-size: 0.82rem;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0.6px;
+      color: var(--text-muted);
+    }
+
+    .kpi-box-tag {
+      font-size: 0.68rem;
+      font-weight: 800;
+      padding: 3px 8px;
+      border-radius: 5px;
+      font-family: var(--font-mono);
+    }
+
+    .tag-margin {
+      background: rgba(0, 255, 163, 0.15);
+      border: 1px solid var(--green-primary);
+      color: var(--green-primary);
+    }
+
+    .tag-profit {
+      background: rgba(251, 191, 36, 0.15);
+      border: 1px solid var(--gold-primary);
+      color: var(--gold-primary);
+    }
+
+    .kpi-box-primary {
+      font-size: 2.2rem;
+      font-weight: 900;
+      font-family: var(--font-mono);
+      line-height: 1.15;
+      letter-spacing: -0.5px;
+      margin-bottom: 4px;
+    }
+
+    .kpi-box-secondary {
+      font-size: 0.88rem;
+      font-family: var(--font-mono);
+      color: var(--text-muted);
+      font-weight: 700;
+    }
+
+    /* 4. Tab Navigation (Only 2 Tabs: Active Positions + Closed Trades History) */
+    .tabs-bar {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 14px;
+      border-bottom: 1px solid var(--border-color);
+      padding-bottom: 8px;
+    }
+
+    .tab-button {
+      background: rgba(13, 22, 38, 0.6);
+      border: 1px solid var(--border-color);
+      color: var(--text-muted);
+      font-size: 0.88rem;
+      font-weight: 800;
+      padding: 10px 20px;
+      border-radius: 10px;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      transition: all 0.2s;
+    }
+
+    .tab-button:hover {
+      color: var(--text-main);
+      border-color: rgba(255, 255, 255, 0.2);
+    }
+
+    .tab-button.active {
+      background: linear-gradient(135deg, rgba(0, 255, 163, 0.2), rgba(3, 225, 255, 0.2));
+      border-color: var(--green-primary);
+      color: #ffffff;
+      box-shadow: 0 0 14px rgba(0, 255, 163, 0.25);
+    }
+
+    .tab-counter {
+      background: rgba(0, 0, 0, 0.45);
+      padding: 2px 7px;
+      border-radius: 6px;
+      font-size: 0.72rem;
+      font-family: var(--font-mono);
+      font-weight: 800;
+      color: var(--green-primary);
+      border: 1px solid rgba(0, 255, 163, 0.3);
+    }
+
+    /* Tables */
+    .tab-panel {
+      display: none;
+    }
+
+    .tab-panel.active {
+      display: block;
+    }
+
+    .table-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: 14px;
+      overflow: hidden;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.35);
+    }
+
+    .table-responsive {
+      overflow-x: auto;
+      width: 100%;
+      -webkit-overflow-scrolling: touch;
+    }
+
+    table.data-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.82rem;
+      text-align: left;
+    }
+
+    table.data-table th {
+      background: rgba(7, 13, 24, 0.95);
+      color: var(--text-dim);
+      font-weight: 800;
+      text-transform: uppercase;
+      font-size: 0.68rem;
+      letter-spacing: 0.5px;
+      padding: 12px 14px;
+      border-bottom: 1px solid var(--border-color);
+      white-space: nowrap;
+    }
+
+    table.data-table td {
+      padding: 11px 14px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+      white-space: nowrap;
+      font-family: var(--font-mono);
+    }
+
+    table.data-table tr:hover {
+      background: rgba(255, 255, 255, 0.02);
+    }
+
+    .badge-buy {
+      background: rgba(0, 255, 163, 0.15);
+      border: 1px solid var(--green-primary);
+      color: var(--green-primary);
+      font-weight: 800;
+      font-size: 0.7rem;
+      padding: 2px 7px;
+      border-radius: 4px;
+    }
+
+    .badge-sell {
+      background: rgba(244, 63, 94, 0.15);
+      border: 1px solid var(--red-primary);
+      color: var(--red-primary);
+      font-weight: 800;
+      font-size: 0.7rem;
+      padding: 2px 7px;
+      border-radius: 4px;
+    }
+
+    /* Mobile Responsive Optimizations */
+    @media (max-width: 900px) {
+      .hero-metrics-grid {
+        grid-template-columns: repeat(2, 1fr);
+      }
+      .financial-kpi-grid {
+        grid-template-columns: 1fr;
+      }
+      .hero-value {
+        font-size: 1.7rem;
+      }
+      .kpi-box-primary {
+        font-size: 1.85rem;
+      }
+    }
+
+    @media (max-width: 580px) {
+      .container {
+        padding: 8px 10px;
+      }
+      header.brand-header {
+        padding: 10px 12px;
+      }
+      .brand-title {
+        font-size: 1.15rem;
+      }
+      .hero-metrics-grid {
+        grid-template-columns: 1fr;
+        gap: 8px;
+      }
+      .hero-card {
+        padding: 12px 14px;
+      }
+      .hero-value {
+        font-size: 1.6rem;
+      }
+      .kpi-box {
+        padding: 14px 16px;
+      }
+      .kpi-box-primary {
+        font-size: 1.65rem;
+      }
+      .tabs-bar {
+        overflow-x: auto;
+      }
+      .tab-button {
+        padding: 8px 14px;
+        font-size: 0.8rem;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <div class="container">
+
+    <!-- 1. Header: SUBH MONEY Branding (Clean Read-Only) -->
+    <header class="brand-header">
+      <div class="brand-wrap">
+        <!-- SVG Golden-Emerald Logo -->
+        <svg class="brand-logo-svg" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <defs>
+            <linearGradient id="logoGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" stop-color="#fbbf24"/>
+              <stop offset="50%" stop-color="#10b981"/>
+              <stop offset="100%" stop-color="#00ffa3"/>
+            </linearGradient>
+            <filter id="glowFilter" x="-20%" y="-20%" width="140%" height="140%">
+              <feGaussianBlur stdDeviation="3" result="blur"/>
+              <feComposite in="SourceGraphic" in2="blur" operator="over"/>
+            </filter>
+          </defs>
+          <polygon points="50,6 88,28 88,72 50,94 12,72 12,28" stroke="url(#logoGrad)" stroke-width="4.5" fill="#070d18"/>
+          <polygon points="50,16 78,32 78,68 50,84 22,68 22,32" stroke="rgba(251, 191, 36, 0.4)" stroke-width="1.5" fill="rgba(16, 185, 129, 0.08)"/>
+          <!-- Styled "S" + "₹" Monogram -->
+          <text x="50" y="65" font-size="44" font-family="-apple-system, system-ui, sans-serif" font-weight="900" fill="url(#logoGrad)" text-anchor="middle" filter="url(#glowFilter)">S</text>
+        </svg>
+
+        <div>
+          <div class="brand-title">
+            <span>SUBH MONEY</span>
+            <span class="brand-badge">SOLANA DESK</span>
+          </div>
+          <div class="brand-subtitle">Automated Hedged Grid Engine · Live Mudrex Sync</div>
+        </div>
+      </div>
+
+      <div class="header-live-pill">
+        <span class="live-dot"></span>
+        <span id="liveClockText">LIVE SYNC</span>
+      </div>
+    </header>
+
+    <!-- 2. Hero Metric Row (Bade Text Me — All 4 Rows) -->
+    <section class="hero-metrics-grid">
+      <!-- Metric 1: SOLUSDT Live Rate -->
+      <div class="hero-card card-rate">
+        <div class="hero-label">
+          <span>🟣 SOLUSDT SOLANA LIVE RATE</span>
+        </div>
+        <div class="hero-value val-cyan" id="heroLivePrice">$0.00</div>
+        <div class="hero-sub" id="heroRateSub">Mark: $0.00 | USD/INR: ₹102.00</div>
+      </div>
+
+      <!-- Metric 2: Active BUY Target -->
+      <div class="hero-card card-buy">
+        <div class="hero-label" id="heroBuyLabel">
+          <span>🎯 ACTIVE BUY TARGET</span>
+        </div>
+        <div class="hero-value val-green" id="heroBuyTarget">$0.00</div>
+        <div class="hero-sub" id="heroBuyDist" style="color: var(--green-primary);">Distance: --</div>
+      </div>
+
+      <!-- Metric 3: Active SELL Target -->
+      <div class="hero-card card-sell">
+        <div class="hero-label" id="heroSellLabel">
+          <span>🎯 ACTIVE SELL TARGET</span>
+        </div>
+        <div class="hero-value val-red" id="heroSellTarget">$0.00</div>
+        <div class="hero-sub" id="heroSellDist" style="color: var(--red-primary);">Distance: --</div>
+      </div>
+
+      <!-- Metric 4: Total Active Pairs -->
+      <div class="hero-card card-pairs">
+        <div class="hero-label">
+          <span>⚡ TOTAL ACTIVE PAIRS</span>
+        </div>
+        <div class="hero-value val-gold" id="heroActivePairs">0 PAIRS</div>
+        <div class="hero-sub" id="heroPairsSub">0 BUY / 0 SELL · 3.0 SOL 5x</div>
+      </div>
+    </section>
+
+    <!-- 3. Financial KPI Row (ONLY 2 Clean Cards as requested: Available Margin + Realized Net Profit) -->
+    <section class="financial-kpi-grid">
+      <!-- Card 1: Mudrex Available Margin -->
+      <div class="kpi-box box-margin">
+        <div class="kpi-box-header">
+          <span class="kpi-box-title">💼 Mudrex Available Margin</span>
+          <span class="kpi-box-tag tag-margin">AVAILABLE WALLET</span>
+        </div>
+        <div class="kpi-box-primary val-green" id="kpiAvailableMarginINR">₹0.00</div>
+        <div class="kpi-box-secondary" id="kpiAvailableMarginUSD">$0.00 Available Margin</div>
+      </div>
+
+      <!-- Card 2: Realized Net Profit -->
+      <div class="kpi-box box-profit">
+        <div class="kpi-box-header">
+          <span class="kpi-box-title">🏆 Realized Net Profit</span>
+          <span class="kpi-box-tag tag-profit" id="kpiClosedTradesTag">0 TRADES CLOSED</span>
+        </div>
+        <div class="kpi-box-primary val-gold" id="kpiRealizedNetINR">+₹0.00</div>
+        <div class="kpi-box-secondary" id="kpiRealizedNetUSD">+$0.00 Net Realized Profit</div>
+      </div>
+    </section>
+
+    <!-- 4. Tab Navigation (Only 2 Tabs: Active Positions + Closed Trades History) -->
+    <div class="tabs-bar">
+      <button type="button" class="tab-button active" id="tabBtnActive" onclick="switchDeskTab('active')">
+        <span>⚡ Active BUY/Sell Positions</span>
+        <span class="tab-counter" id="tabCountActive">0</span>
+      </button>
+      <button type="button" class="tab-button" id="tabBtnClosed" onclick="switchDeskTab('closed')">
+        <span>📜 Closed Trades History</span>
+        <span class="tab-counter" id="tabCountClosed">0</span>
+      </button>
+    </div>
+
+    <!-- Tab Panel 1: Active BUY/Sell Positions -->
+    <div class="tab-panel active" id="panelActive">
+      <div class="table-card">
+        <div class="table-responsive">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>Side</th>
+                <th>Position ID</th>
+                <th>Entry Price</th>
+                <th>Target Exit</th>
+                <th>Current Dist</th>
+                <th>Quantity</th>
+                <th>Floating PnL (₹)</th>
+              </tr>
+            </thead>
+            <tbody id="tbodyActivePositions">
+              <tr>
+                <td colspan="8" style="text-align: center; color: var(--text-dim); padding: 24px;">Loading active positions...</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- Tab Panel 2: Closed Trades History -->
+    <div class="tab-panel" id="panelClosed">
+      <div class="table-card">
+        <div class="table-responsive">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>Exit Time</th>
+                <th>Side</th>
+                <th>Entry Price</th>
+                <th>Exit Price</th>
+                <th>Gross Profit</th>
+                <th>Total Charges</th>
+                <th>Net Profit (₹ / $)</th>
+                <th>Exit Reason</th>
+              </tr>
+            </thead>
+            <tbody id="tbodyClosedHistory">
+              <tr>
+                <td colspan="9" style="text-align: center; color: var(--text-dim); padding: 24px;">No closed trades recorded yet.</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <script>
+    let currentDeskTab = 'active';
+
+    function switchDeskTab(tab) {
+      currentDeskTab = tab;
+      const btnActive = document.getElementById('tabBtnActive');
+      const btnClosed = document.getElementById('tabBtnClosed');
+      const panelActive = document.getElementById('panelActive');
+      const panelClosed = document.getElementById('panelClosed');
+
+      if (tab === 'active') {
+        btnActive.classList.add('active');
+        btnClosed.classList.remove('active');
+        panelActive.classList.add('active');
+        panelClosed.classList.remove('active');
+      } else {
+        btnActive.classList.remove('active');
+        btnClosed.classList.add('active');
+        panelActive.classList.remove('active');
+        panelClosed.classList.add('active');
+      }
+    }
+
+    async function fetchSubhMoneyData() {
+      try {
+        const res = await fetch('/api/solana-live-mudrex/data');
+        if (!res.ok) return;
+        const data = await res.json();
+        if (data && data.success) {
+          renderSubhMoneyUI(data);
+        }
+      } catch (e) {
+        console.warn('[Subh Money] Live Poll Error:', e.message);
+      }
+    }
+
+    function renderSubhMoneyUI(data) {
+      const rate = data.rate || {};
+      const wallet = data.wallet || {};
+      const engine = data.engine || {};
+      const pnl = data.pnl || {};
+      const closed = data.closedPositions || [];
+      const pairs = engine.pairs || [];
+
+      const livePrice = Number(rate.price || 104.50);
+      const usdInr = Number(rate.usdInrRate || 102.00);
+
+      // Live Clock
+      const now = new Date();
+      document.getElementById('liveClockText').innerText = `SYNC: ${now.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true })} IST`;
+
+      // 1. Hero Metric 1: Rate
+      document.getElementById('heroLivePrice').innerText = `$${livePrice.toFixed(2)}`;
+      const markStr = rate.markPrice ? `Mark: $${Number(rate.markPrice).toFixed(2)} | ` : '';
+      document.getElementById('heroRateSub').innerText = `${markStr}USD/INR: ₹${usdInr.toFixed(2)} · ${engine.contractQuantity || 3.0} SOL`;
+
+      // Active Buy & Sell Lists
+      const activeBuys = pairs.filter(p => p.buy && p.buy.status === 'OPEN').map(p => p.buy);
+      const activeSells = pairs.filter(p => p.sell && p.sell.status === 'OPEN').map(p => p.sell);
+
+      // 2. Hero Metric 2: Active BUY Target
+      const targetMove = engine.profitTargetMove || 0.45;
+      if (activeBuys.length > 0) {
+        const nearestBuy = [...activeBuys].sort((a, b) => Math.abs(a.targetPrice - livePrice) - Math.abs(b.targetPrice - livePrice))[0];
+        document.getElementById('heroBuyTarget').innerText = `$${nearestBuy.targetPrice.toFixed(2)}`;
+        const dist = nearestBuy.targetPrice - livePrice;
+        const sign = dist >= 0 ? '+' : '';
+        document.getElementById('heroBuyDist').innerText = `Distance: ${sign}$${dist.toFixed(2)} (${sign}₹${(dist * usdInr).toFixed(2)})`;
+        document.getElementById('heroBuyLabel').innerHTML = `<span>🎯 ACTIVE BUY TARGET (${nearestBuy.positionId})</span>`;
+      } else {
+        const estBuy = livePrice + targetMove;
+        document.getElementById('heroBuyTarget').innerText = `$${estBuy.toFixed(2)}`;
+        document.getElementById('heroBuyDist').innerText = `Target Move: +$${targetMove.toFixed(2)}`;
+        document.getElementById('heroBuyLabel').innerHTML = `<span>🎯 ACTIVE BUY TARGET (+$${targetMove.toFixed(2)})</span>`;
+      }
+
+      // 3. Hero Metric 3: Active SELL Target
+      if (activeSells.length > 0) {
+        const nearestSell = [...activeSells].sort((a, b) => Math.abs(livePrice - a.targetPrice) - Math.abs(livePrice - b.targetPrice))[0];
+        document.getElementById('heroSellTarget').innerText = `$${nearestSell.targetPrice.toFixed(2)}`;
+        const dist = livePrice - nearestSell.targetPrice;
+        const sign = dist >= 0 ? '+' : '';
+        document.getElementById('heroSellDist').innerText = `Distance: ${sign}$${dist.toFixed(2)} (${sign}₹${(dist * usdInr).toFixed(2)})`;
+        document.getElementById('heroSellLabel').innerHTML = `<span>🎯 ACTIVE SELL TARGET (${nearestSell.positionId})</span>`;
+      } else {
+        const estSell = livePrice - targetMove;
+        document.getElementById('heroSellTarget').innerText = `$${estSell.toFixed(2)}`;
+        document.getElementById('heroSellDist').innerText = `Target Move: -$${targetMove.toFixed(2)}`;
+        document.getElementById('heroSellLabel').innerHTML = `<span>🎯 ACTIVE SELL TARGET (-$${targetMove.toFixed(2)})</span>`;
+      }
+
+      // 4. Hero Metric 4: Total Active Pairs
+      document.getElementById('heroActivePairs').innerText = `${pairs.length} PAIRS`;
+      document.getElementById('heroPairsSub').innerText = `${engine.activeBuyCount || 0} BUY / ${engine.activeSellCount || 0} SELL · ${engine.contractQuantity || 3.0} SOL 5x`;
+
+      // 5. Financial KPI 1: Mudrex Available Margin (₹ and $)
+      const availINR = Number(wallet.availableMarginINR || 0);
+      const availUSD = Number(wallet.availableMarginUSD || (availINR / usdInr));
+      document.getElementById('kpiAvailableMarginINR').innerText = `₹${availINR.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+      document.getElementById('kpiAvailableMarginUSD').innerText = `$${availUSD.toFixed(2)} Available Margin`;
+
+      // 6. Financial KPI 2: Realized Net Profit (₹ and $)
+      const realINR = Number(pnl.totalRealizedINR !== undefined ? pnl.totalRealizedINR : (pnl.realizedNetINR || 0));
+      const realUSD = Number(pnl.totalRealizedUSD !== undefined ? pnl.totalRealizedUSD : (pnl.realizedNetUSD || (realINR / usdInr)));
+      const realSign = realINR >= 0 ? '+' : '';
+      const closedTradesCount = Number(pnl.totalClosedTrades || pnl.closedTradesCount || closed.length || 0);
+      document.getElementById('kpiRealizedNetINR').innerText = `${realSign}₹${realINR.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+      document.getElementById('kpiRealizedNetUSD').innerText = `${realSign}$${realUSD.toFixed(2)} Net (${closedTradesCount} Closed Trades)`;
+      document.getElementById('kpiClosedTradesTag').innerText = `${closedTradesCount} TRADES CLOSED`;
+
+      // Tab Counters
+      document.getElementById('tabCountActive').innerText = `${activeBuys.length + activeSells.length}`;
+      document.getElementById('tabCountClosed').innerText = `${closedTradesCount}`;
+
+      // 7. Render Active Positions Table
+      const allActivePos = [];
+      pairs.forEach(p => {
+        if (p.buy && p.buy.status === 'OPEN') allActivePos.push(p.buy);
+        if (p.sell && p.sell.status === 'OPEN') allActivePos.push(p.sell);
+      });
+
+      const tbodyActive = document.getElementById('tbodyActivePositions');
+      if (allActivePos.length === 0) {
+        tbodyActive.innerHTML = `<tr><td colspan="8" style="text-align: center; color: var(--text-dim); padding: 24px;">No active positions open right now. Waiting for next market rate tick...</td></tr>`;
+      } else {
+        tbodyActive.innerHTML = allActivePos.map((pos, idx) => {
+          const isBuy = pos.direction === 'BUY';
+          const dist = isBuy ? (pos.targetPrice - livePrice) : (livePrice - pos.targetPrice);
+          const distSign = dist >= 0 ? '+' : '';
+          const pnlINR = Number(pos.floatingPnlINR || 0);
+          const pnlColor = pnlINR >= 0 ? 'var(--green-primary)' : 'var(--red-primary)';
+          const pnlSign = pnlINR >= 0 ? '+' : '';
+
+          return `
+            <tr>
+              <td style="color: var(--text-dim); font-weight: 700;">#${idx + 1}</td>
+              <td><span class="${isBuy ? 'badge-buy' : 'badge-sell'}">${pos.direction}</span></td>
+              <td style="color: var(--text-main); font-weight: 700;">${pos.positionId}</td>
+              <td style="color: #cbd5e1;">$${Number(pos.entryPrice).toFixed(2)}</td>
+              <td style="color: ${isBuy ? 'var(--green-primary)' : 'var(--red-primary)'}; font-weight: 800;">$${Number(pos.targetPrice).toFixed(2)}</td>
+              <td style="color: #94a3b8;">${distSign}$${dist.toFixed(2)}</td>
+              <td style="color: var(--cyan-primary); font-weight: 700;">${pos.quantity || 3.0} SOL</td>
+              <td style="color: ${pnlColor}; font-weight: 800;">${pnlSign}₹${pnlINR.toFixed(2)}</td>
+            </tr>
+          `;
+        }).join('');
+      }
+
+      // 8. Render Closed Trades History Table
+      const tbodyClosed = document.getElementById('tbodyClosedHistory');
+      if (closed.length === 0) {
+        tbodyClosed.innerHTML = `<tr><td colspan="9" style="text-align: center; color: var(--text-dim); padding: 24px;">No closed trades recorded yet.</td></tr>`;
+      } else {
+        tbodyClosed.innerHTML = closed.slice(0, 80).map((t, idx) => {
+          const isBuy = t.direction === 'BUY';
+          const netINR = Number(t.netProfitINR || 0);
+          const netUSD = Number(t.netProfitUSD || (netINR / usdInr));
+          const netSign = netINR >= 0 ? '+' : '';
+          const netColor = netINR >= 0 ? 'var(--green-primary)' : 'var(--red-primary)';
+          const timeStr = t.exitTime ? new Date(t.exitTime).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true }) : '--';
+
+          return `
+            <tr>
+              <td style="color: var(--text-dim); font-weight: 700;">#${idx + 1}</td>
+              <td style="color: #94a3b8;">${timeStr}</td>
+              <td><span class="${isBuy ? 'badge-buy' : 'badge-sell'}">${t.direction}</span></td>
+              <td style="color: #cbd5e1;">$${Number(t.entryPrice).toFixed(2)}</td>
+              <td style="color: #ffffff; font-weight: 800;">$${Number(t.exitPrice).toFixed(2)}</td>
+              <td style="color: #38bdf8;">+₹${Number(t.grossProfitINR || 0).toFixed(2)}</td>
+              <td style="color: #f87171;">-₹${Number(t.totalChargesINR || 0).toFixed(2)}</td>
+              <td style="color: ${netColor}; font-weight: 900;">${netSign}₹${netINR.toFixed(2)} <span style="font-size: 0.72rem; color: #94a3b8;">(${netSign}$${netUSD.toFixed(2)})</span></td>
+              <td style="color: var(--text-dim); font-size: 0.72rem;">${t.exitReason || 'TARGET HIT'}</td>
+            </tr>
+          `;
+        }).join('');
+      }
+    }
+
+    // Initial Load & High-Frequency Polling (every 1 second)
+    fetchSubhMoneyData();
+    setInterval(fetchSubhMoneyData, 1000);
+  </script>
+</body>
+</html>

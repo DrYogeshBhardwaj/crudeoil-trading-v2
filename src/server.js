@@ -66,6 +66,16 @@ app.get(['/mudrex-crude-live', '/mudrex_crude_live', '/mudrex_crude_live.html', 
 app.get(['/crude-live-mudrex', '/crude_live_mudrex', '/Crude-Live-Mudrex', '/crude-live-mudrex.html', '/crude_live_mudrex.html'], (req, res) => res.redirect(301, '/Crude-Live-Mudrex-Pro'));
 app.get(['/crude-live-mudrex-pro', '/crude_live_mudrex_pro', '/Crude-Live-Mudrex-Pro', '/crude-live-mudrex-pro.html', '/crude_live_mudrex_pro.html'], (req, res) => res.sendFile(path.join(__dirname, '../public/crude_live_mudrex_pro.html')));
 app.get([
+  '/subh-money',
+  '/Subh-Money',
+  '/subh-money-solana',
+  '/Subh-Money-Solana',
+  '/subh_money_solana',
+  '/subhmoney',
+  '/SubhMoney'
+], (req, res) => res.sendFile(path.join(__dirname, '../public/subh_money_solana.html')));
+
+app.get([
   '/solana-live-mudrex',
   '/Solana-Live-Mudrex',
   '/solana-live-mudrex-pro',
@@ -908,8 +918,8 @@ app.post(['/api/crude-live-mudrex/action', '/api/crude-live-mudrex-pro/action'],
   }
 });
 
-// Dedicated Clean Endpoint for Solana-Live-Mudrex (Simulator ₹3.5 Lakh, 5x Leverage, 5.0 SOL)
-app.get(['/api/solana-live-mudrex/data', '/api/crude-live-mudrex-solana/data', '/api/solana/data'], async (req, res) => {
+// Dedicated Clean Endpoint for Solana-Live-Mudrex and Subh-Money-Solana
+app.get(['/api/solana-live-mudrex/data', '/api/subh-money-solana/data', '/api/subh-money/data', '/api/crude-live-mudrex-solana/data', '/api/solana/data'], async (req, res) => {
   try {
     const solanaEngine = require('./engine/solanaEngine');
     const data = solanaEngine.getDashboardMetrics();
