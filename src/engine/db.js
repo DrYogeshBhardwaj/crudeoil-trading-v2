@@ -140,20 +140,29 @@ class DatabaseManager {
       const isTestEnv = process.env.IS_TEST === 'true' || process.env.NODE_ENV === 'test';
       let finalState = dbState || jsonBackupState || seedState || {};
 
-      // Safeguard: Ensure authoritative 33 closed benchmark trades are ALWAYS restored and preserved in production
-      try {
-        const legacyBackup = require('../../backups/legacy_closed_trades_backup.json');
-        if (legacyBackup && Array.isArray(legacyBackup.trades)) {
-          if (!Array.isArray(finalState.closedPositions)) finalState.closedPositions = [];
-          const existingIds = new Set(finalState.closedPositions.map(c => c.positionId));
-          for (const t of legacyBackup.trades) {
-            if (!existingIds.has(t.positionId)) {
-              finalState.closedPositions.push(t);
-              existingIds.add(t.positionId);
-            }
+      // Safeguard: Ensure authoritative closed trades from seedState are ALWAYS merged and preserved in production
+      if (seedState && Array.isArray(seedState.closedPositions)) {
+        if (!Array.isArray(finalState.closedPositions)) finalState.closedPositions = [];
+        const existingIds = new Set(finalState.closedPositions.map(c => c.positionId));
+        for (const t of seedState.closedPositions) {
+          if (!existingIds.has(t.positionId)) {
+            finalState.closedPositions.push(t);
+            existingIds.add(t.positionId);
           }
         }
-      } catch (e) {}
+      }
+
+      // Sort closedPositions chronologically and assign persistent slNo (#1 to #N)
+      if (Array.isArray(finalState.closedPositions)) {
+        finalState.closedPositions.sort((a, b) => {
+          const tA = new Date(a.exitTime || a.closedTimestamp || 0).getTime();
+          const tB = new Date(b.exitTime || b.closedTimestamp || 0).getTime();
+          return tA - tB;
+        });
+        finalState.closedPositions.forEach((t, idx) => {
+          t.slNo = idx + 1;
+        });
+      }
 
       // Safeguard: Ensure active pairs from seedState are preserved in production if current state has none or fewer
       if (!isTestEnv && seedState && Array.isArray(seedState.pairs)) {
@@ -179,8 +188,8 @@ class DatabaseManager {
       }
 
 
-      // Filter out legacy 1.0B benchmark pairs from active pairs (only 2.0B pairs with entry >= 93.60 are current)
-      if (Array.isArray(finalState.pairs)) {
+      // Filter out legacy 1.0B benchmark pairs from active pairs in production (only 2.0B pairs with entry >= 93.60 are current)
+      if (!isTestEnv && Array.isArray(finalState.pairs)) {
         finalState.pairs = finalState.pairs.filter(p => {
           const qty = p.buyPosition?.quantity || p.sellPosition?.quantity || 1.0;
           const rate = p.entryRate || p.buyPosition?.entryPrice || p.sellPosition?.entryPrice || 0;
@@ -191,6 +200,13 @@ class DatabaseManager {
       // Preserve verified Real Mudrex Closed Trades if present in seed
       if (seedState && Array.isArray(seedState.realMudrexClosedTrades)) {
         finalState.realMudrexClosedTrades = seedState.realMudrexClosedTrades;
+      }
+
+      if (finalState.punarjanmCount === undefined && seedState && seedState.punarjanmCount !== undefined) {
+        finalState.punarjanmCount = seedState.punarjanmCount;
+      }
+      if (!finalState.lastPunarjanmSummary && seedState && seedState.lastPunarjanmSummary) {
+        finalState.lastPunarjanmSummary = seedState.lastPunarjanmSummary;
       }
 
       if (finalState) {

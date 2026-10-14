@@ -573,7 +573,7 @@ app.get('/api/crude-live-mudrex/data', async (req, res) => {
     });
 
     // 4. Closed Positions History & Realized P/L (Preserving all historical trades)
-    let closedTrades = (paperEngine.closedPositions || []).slice(-150);
+    let closedTrades = (paperEngine.closedPositions || []).slice(-500);
     let totalRealizedINR = 2330.04;
     let totalRealizedUSD = 24.29;
     let winCount = 35, lossCount = 2;
@@ -632,7 +632,7 @@ app.get('/api/crude-live-mudrex/data', async (req, res) => {
         count: paperEngine.punarjanmCount || 0,
         currentCycleName: `Punarjanm${(paperEngine.punarjanmCount || 0) + 1}`,
         lastCycleName: paperEngine.punarjanmCount ? `Punarjanm${paperEngine.punarjanmCount}` : 'None',
-        basketTargetINR: paperEngine.settings.basketProfitTargetINR || 100,
+        basketTargetINR: paperEngine.settings.basketProfitTargetINR || 250,
         autoEnabled: paperEngine.settings.autoPunarjanmEnabled !== false,
         lastSummary: paperEngine.lastPunarjanmSummary || null
       },
@@ -719,6 +719,22 @@ app.post('/api/crude-live-mudrex/action', async (req, res) => {
         });
       }
       return res.status(400).json({ success: false, error: 'Invalid sessionScheduler configuration payload.' });
+    } else if (action === 'syncClosedTrades') {
+      const { closedPositions } = req.body;
+      if (Array.isArray(closedPositions)) {
+        const existingIds = new Set((paperEngine.closedPositions || []).map(c => c.positionId));
+        for (const cp of closedPositions) {
+          if (!existingIds.has(cp.positionId)) {
+            paperEngine.closedPositions.push(cp);
+            existingIds.add(cp.positionId);
+          }
+        }
+        paperEngine.closedPositions.sort((a, b) => new Date(a.exitTime || 0) - new Date(b.exitTime || 0));
+        paperEngine.closedPositions.forEach((cp, idx) => { cp.slNo = idx + 1; });
+        paperEngine.saveState();
+        return res.json({ success: true, message: `Synced ${closedPositions.length} closed trades. Total now: ${paperEngine.closedPositions.length}`, count: paperEngine.closedPositions.length });
+      }
+      return res.status(400).json({ success: false, error: 'closedPositions array required.' });
     }
 
     return res.status(400).json({ success: false, error: 'Unknown action.' });
