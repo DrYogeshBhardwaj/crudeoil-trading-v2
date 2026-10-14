@@ -215,6 +215,14 @@
       margin-bottom: 4px;
     }
 
+    .card-rate .hero-value {
+      font-size: 2.85rem;
+      letter-spacing: -1px;
+      line-height: 1.05;
+      margin-top: 4px;
+      margin-bottom: 2px;
+    }
+
     .val-cyan { color: var(--cyan-primary); text-shadow: 0 0 16px rgba(3, 225, 255, 0.25); }
     .val-green { color: var(--green-primary); text-shadow: 0 0 16px rgba(0, 255, 163, 0.25); }
     .val-red { color: var(--red-primary); text-shadow: 0 0 16px rgba(244, 63, 94, 0.25); }
@@ -707,7 +715,6 @@
           <span>🟣 SOLUSDT SOLANA LIVE RATE</span>
         </div>
         <div class="hero-value val-cyan" id="heroLivePrice">$0.00</div>
-        <div class="hero-sub" id="heroRateSub">Mark: $0.00 | USD/INR: ₹102.00</div>
       </div>
 
       <!-- Metric 2: Active BUY Target -->
@@ -920,10 +927,8 @@
       const now = new Date();
       document.getElementById('liveClockText').innerText = `SYNC: ${now.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true })} IST`;
 
-      // 1. Hero Metric 1: Rate
+      // 1. Hero Metric 1: Rate (Bada Text)
       document.getElementById('heroLivePrice').innerText = `$${livePrice.toFixed(2)}`;
-      const markStr = rate.markPrice ? `Mark: $${Number(rate.markPrice).toFixed(2)} | ` : '';
-      document.getElementById('heroRateSub').innerText = `${markStr}USD/INR: ₹${usdInr.toFixed(2)} · ${engine.contractQuantity || 3.0} SOL`;
 
       // Active Buy & Sell Lists
       const activeBuys = pairs.filter(p => p.buy && p.buy.status === 'OPEN').map(p => p.buy);
