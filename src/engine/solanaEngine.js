@@ -12,11 +12,11 @@ class SolanaEngine {
       profitTargetMove: 0.45, // $0.45 Target Move for Solana
       buyTargetMove: 0.45,
       sellTargetMove: 0.45,
-      gridSpacing: 0.02, // $0.02 price difference triggers a new pair (responsive to 2-cent movements)
+      gridSpacing: 0.005, // 0.005 tolerance: every distinct cent movement creates a new pair
       basketProfitTargetINR: 250, // ₹250 Punarjanm Basket Profit Threshold
       autoPunarjanmEnabled: false, // Auto-harvest disabled per user request
       autoAddNewPairs: true, // Automatic pair creation on rate change enabled!
-      maxActivePairs: 12, // Safe active pairs limit for ₹1.80L margin
+      maxActivePairs: 25, // Safe active pairs limit for ₹2.60L margin
       takerFeeRate: 0.00075, // 0.075% Mudrex taker fee
       gstRate: 0.18, // 18% GST
       conservativeFeeMultiplier: 1.40, // 1.4x conservative buffer
@@ -166,7 +166,7 @@ class SolanaEngine {
     }
 
     const usdInrRate = Number(this.settings.usdInrRate || 102.00);
-    const qty = Number(this.settings.contractQuantity || 5.0);
+    const qty = Number(this.settings.contractQuantity || 3.0);
     const leverage = Number(this.settings.leverage || 5);
 
     // 2. Check for missing legs on existing active pairs
@@ -194,8 +194,8 @@ class SolanaEngine {
       }
     }
 
-    // 3. Check if a full active pair (both legs OPEN) already exists within gridSpacing
-    const gridSpacing = Number(this.settings.gridSpacing || 0.02);
+    // 3. Skip only if a pair already exists at this exact rounded cent (0.005 tolerance)
+    const gridSpacing = Number(this.settings.gridSpacing || 0.005);
     const existingBothOpenPairAtRate = this.pairs.find(p => {
       if (p.status !== 'OPEN') return false;
       const bOpen = p.buyPosition && p.buyPosition.status === 'OPEN';
@@ -210,7 +210,7 @@ class SolanaEngine {
 
     // 4. Check active pairs cap
     const activePairsCount = this.pairs.filter(p => p.status === 'OPEN').length;
-    if (activePairsCount >= (this.settings.maxActivePairs || 12)) {
+    if (activePairsCount >= (this.settings.maxActivePairs || 25)) {
       return;
     }
 
