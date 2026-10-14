@@ -16,7 +16,7 @@ class SolanaEngine {
       basketProfitTargetINR: 500, // ₹500 Punarjanm Basket Profit Threshold
       autoPunarjanmEnabled: true, // Auto-harvest enabled at ₹500 target!
       autoAddNewPairs: true, // Automatic pair creation on rate change enabled!
-      maxActivePairs: 50, // Safe active pairs limit for available margin (₹2.15L+)
+      maxActivePairs: 500, // 500 Pairs Cap - Main stop is Available Margin exhaustion
       takerFeeRate: 0.00075, // 0.075% Mudrex taker fee
       gstRate: 0.18, // 18% GST
       conservativeFeeMultiplier: 1.40, // 1.4x conservative buffer
@@ -84,7 +84,7 @@ class SolanaEngine {
           this.settings.realOrdersDisabled = false;
           this.settings.autoAddNewPairs = true;
           this.settings.gridSpacing = 0.005;
-          this.settings.maxActivePairs = 50;
+          this.settings.maxActivePairs = 500;
           this.settings.basketProfitTargetINR = 500;
           this.settings.autoPunarjanmEnabled = true;
           if (Array.isArray(data.processedRates)) this.processedRates = new Set(data.processedRates);
@@ -210,17 +210,19 @@ class SolanaEngine {
       return;
     }
 
-    // 4. Check active pairs cap
+    // 4. Check active pairs cap (500 pairs max)
     const activePairsCount = this.pairs.filter(p => p.status === 'OPEN').length;
-    if (activePairsCount >= (this.settings.maxActivePairs || 25)) {
+    const maxPairs = Number(this.settings.maxActivePairs || 500);
+    if (activePairsCount >= maxPairs) {
+      console.log(`[Solana Engine] Active pairs cap reached (${activePairsCount}/${maxPairs}). Waiting for exits/margin.`);
       return;
     }
 
-    // 5. Margin check for 1 pair (BUY + SELL at 5x leverage)
+    // 5. Margin check for 1 pair (BUY + SELL at 5x leverage) - MAIN STOPPING CONDITION!
     const reqMarginPairINR = ((roundedPrice * qty * usdInrRate) / leverage) * 2;
     const metrics = this.getDashboardMetrics();
     if (metrics.wallet.availableMarginINR < reqMarginPairINR) {
-      console.warn(`[Solana Engine] Margin exhausted. Needed: ₹${reqMarginPairINR.toFixed(2)}, Available: ₹${metrics.wallet.availableMarginINR}`);
+      console.warn(`[Solana Engine] Available margin exhausted! Needed: ₹${reqMarginPairINR.toFixed(2)}, Available: ₹${metrics.wallet.availableMarginINR}`);
       return;
     }
 

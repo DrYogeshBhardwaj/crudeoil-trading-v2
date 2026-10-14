@@ -12,7 +12,7 @@
                      "basketProfitTargetINR":  500,
                      "autoPunarjanmEnabled":  true,
                      "autoAddNewPairs":  true,
-                     "maxActivePairs":  50,
+                     "maxActivePairs":  500,
                      "takerFeeRate":  0.00075,
                      "gstRate":  0.18,
                      "conservativeFeeMultiplier":  1.4,
