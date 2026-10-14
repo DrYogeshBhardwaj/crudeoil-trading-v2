@@ -437,7 +437,7 @@ class SolanaEngine {
 
     for (const pair of this.pairs) {
       if (pair.status === 'CLOSED') continue;
-      const qty = pair.quantity || this.settings.contractQuantity || 5.0;
+      const qty = pair.quantity || this.settings.contractQuantity || 3.0;
 
       // Buy
       if (pair.buyPosition && pair.buyPosition.status === 'OPEN') {

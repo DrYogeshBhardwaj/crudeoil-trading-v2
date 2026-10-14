@@ -1430,6 +1430,81 @@
       </div>
     </section>
 
+    <!-- MANUAL SIMULATOR CUSTOMIZATION & LIVE RESET LAUNCHPAD -->
+    <section class="manual-simulator-box" id="manualSimLaunchpad" style="margin-bottom: 20px; background: linear-gradient(135deg, rgba(13, 22, 38, 0.95), rgba(20, 30, 48, 0.95)); border: 1.5px solid rgba(0, 255, 163, 0.45); border-radius: 14px; padding: 18px 24px; box-shadow: 0 10px 30px rgba(0, 255, 163, 0.12); display: flex; justify-content: space-between; align-items: center; gap: 20px; flex-wrap: wrap;">
+      
+      <!-- Left: Title & Explanatory Tag -->
+      <div style="display: flex; align-items: center; gap: 14px; min-width: 250px;">
+        <div style="width: 46px; height: 46px; border-radius: 10px; background: linear-gradient(135deg, rgba(0, 255, 163, 0.2), rgba(3, 225, 255, 0.2)); border: 1px solid #00ffa3; display: flex; align-items: center; justify-content: center; font-size: 1.5rem; flex-shrink: 0;">
+          ⚡
+        </div>
+        <div>
+          <div style="font-size: 0.95rem; font-weight: 800; color: #ffffff; letter-spacing: 0.5px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+            <span>CUSTOM SIMULATOR LAUNCHPAD</span>
+            <span style="background: rgba(0, 255, 163, 0.2); border: 1px solid #00ffa3; color: #00ffa3; font-size: 0.68rem; font-weight: 800; padding: 2px 7px; border-radius: 4px;">MANUAL SETUP</span>
+          </div>
+          <div style="font-size: 0.75rem; color: #94a3b8; margin-top: 3px; font-family: var(--font-sans);">
+            Apna Total Amount (₹) aur No. of SOL set karein aur Live Data ke saath simulator ko instantly restart karein.
+          </div>
+        </div>
+      </div>
+
+      <!-- Middle: Input Boxes & Capacity Preview -->
+      <div style="display: flex; align-items: center; gap: 18px; flex-wrap: wrap;">
+        
+        <!-- Input 1: Total Amount (INR ₹) -->
+        <div style="display: flex; flex-direction: column; gap: 4px;">
+          <label for="manualSimAmount" style="font-size: 0.72rem; text-transform: uppercase; font-weight: 800; color: #00ffa3; letter-spacing: 0.6px; display: flex; align-items: center; gap: 4px;">
+            <span>💰 TOTAL AMOUNT (INR ₹)</span>
+          </label>
+          <div style="position: relative; display: flex; align-items: center;">
+            <span style="position: absolute; left: 10px; color: #00ffa3; font-weight: 800; font-size: 0.95rem;">₹</span>
+            <input type="number" id="manualSimAmount" value="300000" step="10000" min="10000" 
+              style="background: rgba(0, 0, 0, 0.65); border: 1.5px solid rgba(0, 255, 163, 0.45); border-radius: 8px; color: #ffffff; font-size: 0.95rem; font-weight: 800; font-family: var(--font-mono); padding: 8px 12px 8px 26px; width: 155px; outline: none; transition: all 0.2s;"
+              onfocus="this.style.borderColor='#00ffa3'; this.style.boxShadow='0 0 12px rgba(0, 255, 163, 0.4)';" 
+              onblur="this.style.borderColor='rgba(0, 255, 163, 0.45)'; this.style.boxShadow='none';"
+              oninput="manualSimInputsModified = true; updateManualSimPreview();" />
+          </div>
+        </div>
+
+        <!-- Input 2: No of SOL (Lot Size) -->
+        <div style="display: flex; flex-direction: column; gap: 4px;">
+          <label for="manualSimSolQty" style="font-size: 0.72rem; text-transform: uppercase; font-weight: 800; color: #03e1ff; letter-spacing: 0.6px; display: flex; align-items: center; gap: 4px;">
+            <span>⚡ NO. OF SOL (LOT SIZE)</span>
+          </label>
+          <div style="position: relative; display: flex; align-items: center;">
+            <input type="number" id="manualSimSolQty" value="3.0" step="0.5" min="0.5" max="50"
+              style="background: rgba(0, 0, 0, 0.65); border: 1.5px solid rgba(3, 225, 255, 0.45); border-radius: 8px; color: #ffffff; font-size: 0.95rem; font-weight: 800; font-family: var(--font-mono); padding: 8px 45px 8px 12px; width: 125px; outline: none; transition: all 0.2s;"
+              onfocus="this.style.borderColor='#03e1ff'; this.style.boxShadow='0 0 12px rgba(3, 225, 255, 0.4)';" 
+              onblur="this.style.borderColor='rgba(3, 225, 255, 0.45)'; this.style.boxShadow='none';"
+              oninput="manualSimInputsModified = true; updateManualSimPreview();" />
+            <span style="position: absolute; right: 10px; color: #03e1ff; font-weight: 800; font-size: 0.78rem;">SOL</span>
+          </div>
+        </div>
+
+        <!-- Live Calculation Preview Card -->
+        <div style="display: flex; flex-direction: column; gap: 3px; background: rgba(0, 0, 0, 0.45); border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; padding: 7px 14px; min-width: 180px;">
+          <div style="font-size: 0.68rem; color: #94a3b8; text-transform: uppercase; font-weight: 700; letter-spacing: 0.4px;">Margin &amp; Capacity (5x)</div>
+          <div style="font-size: 0.8rem; color: #f1f5f9; font-family: var(--font-mono);" id="manualSimPreviewText">
+            Margin: ~₹12.8k/pair · <strong style="color: #00ffa3;">~23 Pairs Max</strong>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Right: Action Reset Button with Live Data -->
+      <div>
+        <button type="button" id="btnManualResetSim" onclick="executeManualSimReset()"
+          style="background: linear-gradient(135deg, #10b981, #059669); border: 1.5px solid #34d399; color: #ffffff; font-size: 0.88rem; font-weight: 800; padding: 12px 22px; border-radius: 10px; cursor: pointer; display: inline-flex; align-items: center; gap: 8px; box-shadow: 0 0 20px rgba(16, 185, 129, 0.45); transition: all 0.2s; white-space: nowrap;"
+          onmouseover="this.style.transform='translateY(-1px)'; this.style.boxShadow='0 0 26px rgba(16, 185, 129, 0.65)';"
+          onmouseout="this.style.transform='none'; this.style.boxShadow='0 0 20px rgba(16, 185, 129, 0.45)';">
+          <span style="font-size: 1.15rem;">🔄</span>
+          <span>RESET SIMULATOR WITH LIVE DATA</span>
+        </button>
+      </div>
+
+    </section>
+
     <!-- Market Session Auto-Scheduler Control Strip -->
     <section class="session-scheduler-banner" id="sessionSchedulerBanner" style="margin-bottom: 20px; background: linear-gradient(135deg, rgba(15, 23, 42, 0.95), rgba(30, 41, 59, 0.85)); border: 1px solid rgba(147, 51, 234, 0.45); border-radius: 14px; padding: 14px 20px; display: flex; justify-content: space-between; align-items: center; gap: 16px; flex-wrap: wrap; box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);">
       <!-- Left: Active Session Info & Clock -->
@@ -2201,6 +2276,79 @@
       await quickSetLotSize(num);
     }
 
+    let manualSimInputsModified = false;
+
+    async function executeManualSimReset() {
+      const amountEl = document.getElementById('manualSimAmount');
+      const solQtyEl = document.getElementById('manualSimSolQty');
+      const amount = amountEl ? parseFloat(amountEl.value) : 300000;
+      const solQty = solQtyEl ? parseFloat(solQtyEl.value) : 3.0;
+
+      if (isNaN(amount) || amount <= 0) {
+        alert('Please enter a valid Total Amount (e.g. ₹300,000)');
+        return;
+      }
+      if (isNaN(solQty) || solQty <= 0) {
+        alert('Please enter a valid No. of SOL (e.g. 1, 2, 3, 5)');
+        return;
+      }
+
+      const pin = prompt(`⚠️ RESET SOLANA SIMULATOR WITH LIVE DATA\n\n💰 Total Amount: ₹${amount.toLocaleString('en-IN')} INR\n⚡ No. of SOL: ${solQty} SOL/Leg\n\nEnter Admin PIN (340556) to confirm:`);
+      if (!pin) return;
+
+      const btn = document.getElementById('btnManualResetSim');
+      const originalText = btn ? btn.innerHTML : '';
+      if (btn) {
+        btn.innerHTML = '<span>⏳ RESETTING WITH LIVE DATA...</span>';
+        btn.disabled = true;
+      }
+
+      try {
+        const res = await fetch('/api/solana-live-mudrex/action', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            action: 'resetSimulator',
+            capitalINR: amount,
+            quantity: solQty,
+            password: pin
+          })
+        });
+        const json = await res.json();
+        if (json.success) {
+          alert(`✅ SOLANA SIMULATOR RESET COMPLETE!\n\n${json.message || `Capital set to ₹${amount.toLocaleString('en-IN')} with ${solQty} SOL.`}\n\nLive pairs started with current market price.`);
+          await fetchTerminalData();
+        } else {
+          alert('Reset Failed: ' + (json.error || 'Incorrect PIN or server error'));
+        }
+      } catch (err) {
+        alert('Error: ' + err.message);
+      } finally {
+        if (btn) {
+          btn.innerHTML = originalText;
+          btn.disabled = false;
+        }
+      }
+    }
+
+    function updateManualSimPreview() {
+      const amountEl = document.getElementById('manualSimAmount');
+      const solQtyEl = document.getElementById('manualSimSolQty');
+      const previewEl = document.getElementById('manualSimPreviewText');
+      if (!previewEl) return;
+
+      const amount = amountEl ? parseFloat(amountEl.value) || 0 : 300000;
+      const solQty = solQtyEl ? parseFloat(solQtyEl.value) || 0 : 3.0;
+      
+      const livePrice = (cachedData && cachedData.rate && cachedData.rate.price) || 104.70;
+      const usdInr = (cachedData && cachedData.rate && cachedData.rate.usdInrRate) || 102.00;
+      
+      const pairMargin = ((livePrice * solQty * usdInr) / 5) * 2;
+      const maxPairs = pairMargin > 0 ? Math.floor(amount / pairMargin) : 0;
+      
+      previewEl.innerHTML = `Margin: ~₹${(pairMargin/1000).toFixed(1)}k/pair · <strong style="color: #00ffa3;">~${maxPairs} Pairs Max</strong>`;
+    }
+
     async function quickSetBasketTarget(targetINR) {
       const pin = prompt(`Enter Admin PIN (340556) to set Punarjanm Target to ₹${targetINR} INR:`);
       if (!pin) return;
@@ -2436,6 +2584,20 @@
         const maxPairs = Math.floor(300000 / (pairMargin || 1));
         lotInfoEl.innerHTML = `Current: <strong style="color: #00ffa3;">${curContractLot.toFixed(1)} SOL</strong> · Margin: ~₹${(pairMargin/1000).toFixed(1)}k/pair (max ~${maxPairs} pairs on ₹3.0L)`;
       }
+
+      // Sync Manual Simulator Launchpad Preview
+      if (!manualSimInputsModified) {
+        const amtEl = document.getElementById('manualSimAmount');
+        const qtyEl = document.getElementById('manualSimSolQty');
+        if (amtEl && !amtEl.matches(':focus') && (!amtEl.value || amtEl.value === '300000')) {
+          const cap = (engine && engine.startingCapitalINR) || (wallet && wallet.equityINR) || 300000;
+          amtEl.value = Math.round(cap);
+        }
+        if (qtyEl && !qtyEl.matches(':focus') && (!qtyEl.value || qtyEl.value === '3' || qtyEl.value === '3.0')) {
+          qtyEl.value = (engine && engine.contractQuantity) || 3.0;
+        }
+      }
+      updateManualSimPreview();
 
       // 2. Ticker Hero
       const crudeEl = document.getElementById('liveCrudePrice');
