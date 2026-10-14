@@ -943,6 +943,25 @@ app.post(['/api/solana-live-mudrex/action', '/api/crude-live-mudrex-solana/actio
 
     const solanaEngine = require('./engine/solanaEngine');
     const rateFeed = require('./engine/rateFeed');
+    const mudrexLive = require('./engine/mudrexLiveAdapter');
+
+    if (action === 'probeMudrexSolana') {
+      const probe1 = await mudrexLive.request('GET', `${mudrexLive.baseUrl}/futures/SOLUSDT/depth?trade_currency=INR`);
+      const probe2 = await mudrexLive.request('GET', `${mudrexLive.baseUrl}/futures/SOL-USDT/depth?trade_currency=INR`);
+      const probe3 = await mudrexLive.request('GET', `${mudrexLive.baseUrl}/futures/positions?trade_currency=INR`);
+      const probe4 = await mudrexLive.request('GET', `${mudrexLive.baseUrl}/futures/open_orders?trade_currency=INR`);
+      const probe5 = await mudrexLive.request('GET', `${mudrexLive.baseUrl}/futures/symbols`);
+      return res.json({
+        success: true,
+        probes: {
+          solusdt_depth: probe1,
+          sol_usdt_depth: probe2,
+          positions: probe3,
+          open_orders: probe4,
+          symbols: probe5
+        }
+      });
+    }
 
     if (action === 'startEngine') {
       solanaEngine.engineStatus = 'RUNNING';
