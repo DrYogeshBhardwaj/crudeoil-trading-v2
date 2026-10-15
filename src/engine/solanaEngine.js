@@ -975,6 +975,10 @@ class SolanaEngine {
         equityUSD: Number((equityINR / usdInr).toFixed(2)),
         spotBalanceINR,
         spotBalanceUSD: Number((spotBalanceINR / usdInr).toFixed(2)),
+        totalPortfolioINR: Number((equityINR + spotBalanceINR).toFixed(2)),
+        totalPortfolioUSD: Number(((equityINR + spotBalanceINR) / usdInr).toFixed(2)),
+        totalAvailableINR: Number((availableMarginINR + spotBalanceINR).toFixed(2)),
+        totalAvailableUSD: Number(((availableMarginINR + spotBalanceINR) / usdInr).toFixed(2)),
         usdInrRate: usdInr,
         isRealMudrexExchangeWallet: realMudrexAvailINR !== null
       },

@@ -1392,6 +1392,10 @@
         </div>
         <div class="kpi-box-primary val-green" id="kpiAvailableMarginINR">₹0.00</div>
         <div class="kpi-box-secondary" id="kpiAvailableMarginUSD">$0.00 Available Margin</div>
+        <div id="kpiSpotNotice" style="display: none; margin-top: 8px; font-size: 0.74rem; color: #fbbf24; background: rgba(251, 191, 36, 0.12); border: 1px solid rgba(251, 191, 36, 0.35); border-radius: 6px; padding: 5px 9px; line-height: 1.35;">
+          💰 <strong>Main/Spot Wallet:</strong> <span id="kpiSpotBalanceText" style="color: #fff; font-weight: 800;">₹0.00</span><br>
+          <span style="color: #94a3b8; font-size: 0.70rem;">Mudrex App me <em>Wallet ➔ Transfer ➔ "Main to Futures"</em> karein taaki trading me use ho sake.</span>
+        </div>
       </div>
 
       <!-- Card 3: Lot P/L & End SOL (Click to inspect Lot-wise Running P/L and End lots selectively) -->
@@ -2243,8 +2247,21 @@
         // 5. Financial KPI 1: Mudrex Available Margin (₹ and $)
         const availINR = Number(wallet.availableMarginINR || 0);
         const availUSD = Number(wallet.availableMarginUSD || (availINR / usdInr));
+        const spotINR = Number(wallet.spotBalanceINR || 0);
         document.getElementById('kpiAvailableMarginINR').innerText = `₹${availINR.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-        document.getElementById('kpiAvailableMarginUSD').innerText = `$${availUSD.toFixed(2)} Available Margin`;
+        
+        if (spotINR > 500) {
+          document.getElementById('kpiAvailableMarginUSD').innerText = `$${availUSD.toFixed(2)} Futures · Main Wallet: ₹${spotINR.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+          const noticeEl = document.getElementById('kpiSpotNotice');
+          if (noticeEl) {
+            noticeEl.style.display = 'block';
+            document.getElementById('kpiSpotBalanceText').innerText = `₹${spotINR.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+          }
+        } else {
+          document.getElementById('kpiAvailableMarginUSD').innerText = `$${availUSD.toFixed(2)} Available Margin`;
+          const noticeEl = document.getElementById('kpiSpotNotice');
+          if (noticeEl) noticeEl.style.display = 'none';
+        }
 
         // 6. Financial KPI 2: Realized Net Profit (Current Run / Since Engine Start / Reset)
         const engineStartedAt = (engine && (engine.engineStartedAt || engine.lastResetTime)) || (openPairs && openPairs[0] && openPairs[0].createdAt) || (engine && engine.pairs && engine.pairs[0] && engine.pairs[0].createdAt) || null;
