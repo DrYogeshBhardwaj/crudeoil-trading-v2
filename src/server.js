@@ -941,7 +941,7 @@ app.get(['/api/solana-live-mudrex/data', '/api/subh-mani-solana/data', '/api/sub
 });
 
 // Dedicated Action Endpoint for Solana Simulator with Admin PIN Protection (340556)
-app.post(['/api/solana-live-mudrex/action', '/api/crude-live-mudrex-solana/action', '/api/solana/action'], async (req, res) => {
+app.post(['/api/solana-live-mudrex/action', '/api/subh-mani-solana/action', '/api/subh-mani/action', '/api/subh-money-solana/action', '/api/subh-money/action', '/api/crude-live-mudrex-solana/action', '/api/solana/action'], async (req, res) => {
   try {
     const { action, password } = req.body || {};
     if (password !== '340556') {
