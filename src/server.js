@@ -992,6 +992,9 @@ app.post(['/api/solana-live-mudrex/action', '/api/subh-mani-solana/action', '/ap
       const usdInrRate = cur ? (cur.usdInrRate || 102.00) : 102.00;
       
       const pair = solanaEngine.createNewPair('SOLUSDT', price, Date.now(), usdInrRate);
+      if (!pair) {
+        return res.status(400).json({ success: false, error: `Price level $${price.toFixed(2)} is permanently locked or reserved by an active target.` });
+      }
       return res.json({ success: true, message: `New Solana Pair created at $${price.toFixed(2)}.`, pair });
     } else if (action === 'punarjanm') {
       const cur = rateFeed.getCurrentRate('SOLUSDT');

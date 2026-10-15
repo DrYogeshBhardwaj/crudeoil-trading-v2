@@ -167,10 +167,11 @@
       background: var(--bg-card);
       border: 1px solid var(--border-color);
       border-radius: 14px;
-      padding: 16px 18px;
+      padding: 12px 18px 14px;
       display: flex;
       flex-direction: column;
-      justify-content: space-between;
+      justify-content: flex-start;
+      gap: 5px;
       position: relative;
       overflow: hidden;
       box-shadow: 0 4px 18px rgba(0, 0, 0, 0.35);
@@ -197,7 +198,7 @@
       text-transform: uppercase;
       letter-spacing: 0.6px;
       color: var(--text-dim);
-      margin-bottom: 6px;
+      margin-bottom: 2px;
       display: flex;
       align-items: center;
       gap: 5px;
@@ -207,20 +208,19 @@
     }
 
     .hero-value {
-      font-size: 2.1rem;
+      font-size: 2.15rem;
       font-weight: 900;
       font-family: var(--font-mono);
       letter-spacing: -0.5px;
       line-height: 1.1;
-      margin-bottom: 4px;
+      margin: 0;
     }
 
     .card-rate .hero-value {
-      font-size: 2.85rem;
-      letter-spacing: -1px;
-      line-height: 1.05;
-      margin-top: 4px;
-      margin-bottom: 2px;
+      font-size: 2.15rem;
+      letter-spacing: -0.5px;
+      line-height: 1.1;
+      margin: 0;
     }
 
     .val-cyan { color: var(--cyan-primary); text-shadow: 0 0 16px rgba(3, 225, 255, 0.25); }
@@ -233,6 +233,7 @@
       color: var(--text-muted);
       font-family: var(--font-mono);
       font-weight: 600;
+      margin-top: auto;
     }
 
     /* 3. Financial KPI Row (3 Cards: Available Margin + Realized Net Profit + Lot P/L & End SOL) */
@@ -1447,6 +1448,7 @@
           <span>🟣 SOLUSDT SOLANA LIVE RATE</span>
         </div>
         <div class="hero-value val-cyan" id="heroLivePrice">$0.00</div>
+        <div class="hero-sub" id="heroLiveRateSub" style="color: var(--cyan-primary);">USD/INR: ₹102.00 · 5.0 SOL Lot</div>
       </div>
 
       <!-- Metric 2: Active BUY Target -->
@@ -2262,6 +2264,10 @@
 
         // 1. Hero Metric 1: Rate (Bada Text)
         document.getElementById('heroLivePrice').innerText = `$${livePrice.toFixed(2)}`;
+        const liveSubEl = document.getElementById('heroLiveRateSub');
+        if (liveSubEl) {
+          liveSubEl.innerText = `₹${(livePrice * usdInr).toFixed(2)} INR · 5.0 SOL Lot`;
+        }
 
         // Active Buy & Sell Lists with defensive normalization
         let activeBuys = pairs.filter(p => p.buy && p.buy.status === 'OPEN').map((p, idx) => {

@@ -7,7 +7,7 @@
     "start": "node src/server.js",
     "pair-add": "node scripts/localPairAddServer.js",
     "local:pair-add": "node scripts/localPairAddServer.js",
-    "test": "node tests/runTests.js && node tests/audit_safeguards.test.js"
+    "test": "node tests/runTests.js && node tests/audit_safeguards.test.js && node tests/price_level_uniqueness.test.js"
   },
   "dependencies": {
     "cors": "^2.8.5",

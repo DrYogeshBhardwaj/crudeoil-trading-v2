@@ -6,13 +6,14 @@ class SolanaEngine {
   constructor() {
     this.settings = {
       startingCapitalINR: 186682.39, // Mudrex Futures Wallet Available Cash
-      contractQuantity: 1.0, // Conservative 1.0 SOL default lot size for testing/safety
+      contractQuantity: 5.0, // Pair Size: 5 SOL (MUST REMAIN UNCHANGED)
       leverage: 5,
       instrument: 'SOLUSDT',
-      profitTargetMove: 0.45, // $0.45 Target Move for Solana
+      profitTargetMove: 0.45, // $0.45 Target Move for Solana (MUST REMAIN UNCHANGED)
       buyTargetMove: 0.45,
       sellTargetMove: 0.45,
       gridSpacing: 0.50, // Conservative $0.50 grid spacing (replaces dangerous $0.005 micro-grid)
+      priceBucketSize: 0.50, // Normalized grid bucket size for permanent rate locks
       basketProfitTargetINR: 500, // ₹500 Punarjanm Basket Profit Threshold
       autoPunarjanmEnabled: false, // Auto-harvest DISABLED
       autoAddNewPairs: false, // Default FALSE: prevent uncontrolled automated pair creation
@@ -20,7 +21,7 @@ class SolanaEngine {
       autoCleanKachraEnabled: true, // Auto-flush stale floating legs
       maxFloatingLossThresholdINR: 20000,
       maxOneSidedLegs: 5, // Strict 5 leg imbalance cap (replaces 80)
-      dailyFeeBudgetINR: 1000, // Daily ₹1,000 fee budget circuit breaker
+      dailyFeeBudgetINR: 1000, // Daily ₹1,00,0 fee budget circuit breaker
       maxDailyOrders: 50, // Max 50 orders/day limit
       priceCooldownMinutes: 30, // 30-minute lock per price level
       takerFeeRate: 0.00075, // 0.075% Mudrex taker fee
@@ -47,6 +48,9 @@ class SolanaEngine {
     // Per-price cooldown tracking (priceKey -> timestamp)
     this.priceLevelLocks = new Map();
 
+    // Permanent Price Level Locks (Set of normalized bucket keys e.g. "105.5000")
+    this.lockedPriceLevels = new Set();
+
     this.isEngineRunning = false;
     this.engineStatus = 'PAUSED';
     this.pauseReason = 'Safe state: Trading engine initialized in PAUSED mode with real orders disabled.';
@@ -58,6 +62,7 @@ class SolanaEngine {
     this.backupPath = path.join('/tmp', 'solana_engine_state_backup.json');
 
     this.initFromStorage();
+    this.syncLockedPriceLevels();
 
     // Subscribe to real-time market rates
     rateFeed.subscribe((type, data) => this.handleRateEvent(type, data));
@@ -108,9 +113,11 @@ class SolanaEngine {
           this.settings.realOrdersDisabled = true;
           this.settings.autoAddNewPairs = false;
           if (!this.settings.gridSpacing || this.settings.gridSpacing < 0.20) this.settings.gridSpacing = 0.50;
+          if (!this.settings.priceBucketSize) this.settings.priceBucketSize = 0.50;
           if (!this.settings.maxActivePairs || this.settings.maxActivePairs > 20) this.settings.maxActivePairs = 10;
           if (!this.settings.maxOneSidedLegs || this.settings.maxOneSidedLegs > 10) this.settings.maxOneSidedLegs = 5;
-          if (!this.settings.contractQuantity) this.settings.contractQuantity = 1.0;
+          if (!this.settings.contractQuantity) this.settings.contractQuantity = 5.0; // Pair Size: 5 SOL (MUST REMAIN UNCHANGED)
+          if (!this.settings.profitTargetMove) this.settings.profitTargetMove = 0.45; // Default Target Move: $0.45 (MUST REMAIN UNCHANGED)
           this.isEngineRunning = false;
           this.engineStatus = 'PAUSED';
           this.pauseReason = 'Engine restored in safe PAUSED state. Operator action required to activate.';
@@ -251,6 +258,125 @@ class SolanaEngine {
     }
   }
 
+  // --- PERMANENT PRICE-LEVEL REGISTRY & LOCKING ---
+
+  syncLockedPriceLevels() {
+    try {
+      const db = require('./db');
+      if (db && typeof db.getAllLockedPriceLevels === 'function') {
+        const lockedRows = db.getAllLockedPriceLevels('SOLUSDT');
+        if (Array.isArray(lockedRows)) {
+          for (const row of lockedRows) {
+            if (row.bucket_key) this.lockedPriceLevels.add(row.bucket_key);
+            if (row.normalized_price !== undefined) {
+              this.lockedPriceLevels.add(Number(row.normalized_price).toFixed(4));
+            }
+          }
+        }
+      }
+      // Seed existing pairs and closed positions if not already in DB
+      if (db && typeof db.seedExistingPriceLevels === 'function') {
+        const bucket = Number(this.settings.priceBucketSize || this.settings.gridSpacing || 0.50);
+        if (Array.isArray(this.pairs) && this.pairs.length > 0) {
+          db.seedExistingPriceLevels(this.pairs, 'SOLUSDT', bucket);
+        }
+        if (Array.isArray(this.closedPositions) && this.closedPositions.length > 0) {
+          db.seedExistingPriceLevels(this.closedPositions, 'SOLUSDT', bucket);
+        }
+        // Refresh cache
+        const refreshed = db.getAllLockedPriceLevels('SOLUSDT');
+        if (Array.isArray(refreshed)) {
+          for (const row of refreshed) {
+            if (row.bucket_key) this.lockedPriceLevels.add(row.bucket_key);
+            if (row.normalized_price !== undefined) {
+              this.lockedPriceLevels.add(Number(row.normalized_price).toFixed(4));
+            }
+          }
+        }
+      }
+      console.log(`[Solana Engine] Permanent Price Locks initialized: ${this.lockedPriceLevels.size} price buckets permanently locked.`);
+    } catch (e) {
+      console.warn('[Solana Engine] Notice initializing locked price levels:', e.message);
+    }
+  }
+
+  getNormalizedPriceBucket(price, bucketSize = this.settings.priceBucketSize || this.settings.gridSpacing || 0.50) {
+    const db = require('./db');
+    return db.normalizePriceBucket(price, bucketSize);
+  }
+
+  isPriceLevelLocked(price, bucketSize = this.settings.priceBucketSize || this.settings.gridSpacing || 0.50) {
+    const norm = this.getNormalizedPriceBucket(price, bucketSize);
+    if (!norm) return false;
+
+    // Check fast in-memory set
+    if (this.lockedPriceLevels.has(norm.bucketKey) || this.lockedPriceLevels.has(norm.normalizedPrice.toFixed(4))) {
+      return true;
+    }
+
+    // Check persistent SQLite database
+    const db = require('./db');
+    if (db && typeof db.isPriceLevelLocked === 'function') {
+      const isLocked = db.isPriceLevelLocked('SOLUSDT', price, bucketSize);
+      if (isLocked) {
+        this.lockedPriceLevels.add(norm.bucketKey);
+        this.lockedPriceLevels.add(norm.normalizedPrice.toFixed(4));
+        return true;
+      }
+    }
+
+    // Cross-check all existing pairs (open or closed) in memory
+    for (const p of this.pairs) {
+      if (!p.entryPrice) continue;
+      const pNorm = this.getNormalizedPriceBucket(p.entryPrice, bucketSize);
+      if (pNorm && pNorm.bucketKey === norm.bucketKey) {
+        this.lockedPriceLevels.add(norm.bucketKey);
+        return true;
+      }
+    }
+
+    // Cross-check all closed positions in memory
+    for (const cp of this.closedPositions) {
+      if (!cp.entryPrice) continue;
+      const cpNorm = this.getNormalizedPriceBucket(cp.entryPrice, bucketSize);
+      if (cpNorm && cpNorm.bucketKey === norm.bucketKey) {
+        this.lockedPriceLevels.add(norm.bucketKey);
+        return true;
+      }
+    }
+
+    return false;
+  }
+
+  isPriceReservedByActiveTarget(price, tolerance = null) {
+    const p = Number(price);
+    if (!p || isNaN(p) || p <= 0) return { reserved: false };
+    const tol = tolerance !== null ? Number(tolerance) : (this.settings.gridSpacing || 0.50) * 0.40;
+
+    for (const pair of this.pairs) {
+      if (pair.status === 'CLOSED') continue;
+      const bOpen = pair.buyPosition && pair.buyPosition.status === 'OPEN';
+      const sOpen = pair.sellPosition && pair.sellPosition.status === 'OPEN';
+      if (bOpen && pair.buyTarget && Math.abs(pair.buyTarget - p) <= tol) {
+        return { reserved: true, pairId: pair.pairId, type: 'BUY_TARGET', targetPrice: pair.buyTarget };
+      }
+      if (sOpen && pair.sellTarget && Math.abs(pair.sellTarget - p) <= tol) {
+        return { reserved: true, pairId: pair.pairId, type: 'SELL_TARGET', targetPrice: pair.sellTarget };
+      }
+    }
+    return { reserved: false };
+  }
+
+  reservePriceLevel(rawPrice, pairId = null, reason = 'PAIR_ENTRY', bucketSize = this.settings.priceBucketSize || this.settings.gridSpacing || 0.50, direction = 'BOTH') {
+    const db = require('./db');
+    const res = db.reservePriceLevel('SOLUSDT', rawPrice, pairId, reason, bucketSize, direction);
+    if (res.success && res.bucketKey) {
+      this.lockedPriceLevels.add(res.bucketKey);
+      this.lockedPriceLevels.add(res.normalizedPrice.toFixed(4));
+    }
+    return res;
+  }
+
   evaluateRateForNewPair(price) {
     // 0. Fail-Closed check: Engine must be actively RUNNING and autoAddNewPairs must be explicitly true
     if (!this.isEngineRunning || !this.settings.autoAddNewPairs) {
@@ -261,11 +387,25 @@ class SolanaEngine {
     if (!roundedPrice || isNaN(roundedPrice) || roundedPrice <= 0) return;
 
     const usdInrRate = Number(this.settings.usdInrRate || 102.00);
-    const qty = Number(this.settings.contractQuantity || 1.0);
+    const qty = Number(this.settings.contractQuantity || 5.0); // 5 SOL lot size
     const leverage = Number(this.settings.leverage || 5);
     const gridSpacing = Number(this.settings.gridSpacing || 0.50);
+    const bucketSize = Number(this.settings.priceBucketSize || gridSpacing || 0.50);
 
-    // 1. Circuit Breaker Check (Fee Budget & Max Daily Orders)
+    // 1. Permanent Price Lock Check (Database + Memory)
+    if (this.isPriceLevelLocked(roundedPrice, bucketSize)) {
+      this.lastSkippedRate = roundedPrice;
+      return;
+    }
+
+    // 2. Active Target/Exit Price Reservation Check
+    const targetCheck = this.isPriceReservedByActiveTarget(roundedPrice);
+    if (targetCheck.reserved) {
+      this.lastSkippedRate = roundedPrice;
+      return;
+    }
+
+    // 3. Circuit Breaker Check (Fee Budget & Max Daily Orders)
     try {
       const mudrexAdapter = require('./mudrexLiveAdapter');
       if (mudrexAdapter && typeof mudrexAdapter.checkCircuitBreakers === 'function') {
@@ -278,7 +418,7 @@ class SolanaEngine {
       }
     } catch (e) {}
 
-    // 2. Per-Price Level Cooldown Lock Check (Prevents rapid orders at same grid level)
+    // 4. Per-Price Level Cooldown Lock Check (Prevents rapid orders at same grid level)
     const priceKey = (Math.round(roundedPrice / gridSpacing) * gridSpacing).toFixed(2);
     const cooldownMs = (this.settings.priceCooldownMinutes || 30) * 60 * 1000;
     if (this.priceLevelLocks && this.priceLevelLocks.has(priceKey)) {
@@ -289,13 +429,13 @@ class SolanaEngine {
       }
     }
 
-    // 3. Skip consecutive identical tick
+    // 5. Skip consecutive identical tick
     if (this.lastProcessedRate === roundedPrice) {
       this.lastSkippedRate = roundedPrice;
       return;
     }
 
-    // 4. Check active pairs cap (Conservative 10 pairs cap)
+    // 6. Check active pairs cap (Conservative 10 pairs cap)
     const activePairsCount = this.pairs.filter(p => p.status === 'OPEN').length;
     const maxPairs = Number(this.settings.maxActivePairs || 10);
     if (activePairsCount >= maxPairs) {
@@ -303,50 +443,16 @@ class SolanaEngine {
       return;
     }
 
-    // 5. If zero active pairs are currently open, spawn a fresh pair at live rate
+    // 7. If zero active pairs are currently open, spawn a fresh pair at live rate (if not locked)
     if (activePairsCount === 0) {
-      this.createNewPair('SOLUSDT', roundedPrice, Date.now(), usdInrRate);
-      this.lastProcessedRate = roundedPrice;
-      if (this.priceLevelLocks) this.priceLevelLocks.set(priceKey, Date.now());
-      console.log(`[Solana Engine] Zero active pairs detected. Auto-spawned fresh seed pair at $${roundedPrice.toFixed(2)}.`);
-      return;
-    }
-
-    // 6. Check for missing legs on existing active pairs
-    for (const pair of this.pairs) {
-      if (pair.status === 'CLOSED') continue;
-      const bOpen = pair.buyPosition && pair.buyPosition.status === 'OPEN';
-      const sOpen = pair.sellPosition && pair.sellPosition.status === 'OPEN';
-
-      if (bOpen && sOpen) continue; // Both legs already open
-
-      const tolerance = gridSpacing * 0.25; // Adaptive tolerance based on grid spacing
-
-      // Case 1: BUY is OPEN, SELL was closed, price came back to pair entry price
-      if (bOpen && !sOpen && Math.abs(roundedPrice - pair.entryPrice) <= tolerance) {
-        this.reopenMissingLeg(pair, 'SELL', roundedPrice, Date.now(), usdInrRate);
+      const freshPair = this.createNewPair('SOLUSDT', roundedPrice, Date.now(), usdInrRate);
+      if (freshPair) {
         this.lastProcessedRate = roundedPrice;
-        return;
+        if (this.priceLevelLocks) this.priceLevelLocks.set(priceKey, Date.now());
+        console.log(`[Solana Engine] Zero active pairs detected. Auto-spawned fresh seed pair at $${roundedPrice.toFixed(2)}.`);
+      } else {
+        this.lastSkippedRate = roundedPrice;
       }
-
-      // Case 2: SELL is OPEN, BUY was closed, price came back to pair entry price
-      if (sOpen && !bOpen && Math.abs(roundedPrice - pair.entryPrice) <= tolerance) {
-        this.reopenMissingLeg(pair, 'BUY', roundedPrice, Date.now(), usdInrRate);
-        this.lastProcessedRate = roundedPrice;
-        return;
-      }
-    }
-
-    // 7. Skip if a pair already exists within grid spacing tolerance
-    const existingBothOpenPairAtRate = this.pairs.find(p => {
-      if (p.status !== 'OPEN') return false;
-      const bOpen = p.buyPosition && p.buyPosition.status === 'OPEN';
-      const sOpen = p.sellPosition && p.sellPosition.status === 'OPEN';
-      return bOpen && sOpen && Math.abs(p.entryPrice - roundedPrice) < gridSpacing;
-    });
-
-    if (existingBothOpenPairAtRate) {
-      this.lastSkippedRate = roundedPrice;
       return;
     }
 
@@ -375,7 +481,7 @@ class SolanaEngine {
       }
     }
 
-    // 10. Authoritative Margin check for 1 pair (5x leverage)
+    // 10. Authoritative Margin check for 1 pair (5x leverage with 5 SOL)
     const reqMarginPairINR = (roundedPrice * qty * usdInrRate) / leverage;
     const metrics = this.getDashboardMetrics();
     const availMargin = Math.max(
@@ -388,75 +494,57 @@ class SolanaEngine {
     }
 
     // 11. Create brand new pair at this rate and lock price level
-    this.createNewPair('SOLUSDT', roundedPrice, Date.now(), usdInrRate);
-    this.lastProcessedRate = roundedPrice;
-    if (this.priceLevelLocks) this.priceLevelLocks.set(priceKey, Date.now());
-    console.log(`[Solana Engine] New rate $${roundedPrice.toFixed(2)} accepted! Created pair ${this.pairCounter - 1}. Active pairs: ${activePairsCount + 1}`);
-  }
-
-  reopenMissingLeg(pair, direction, entryPrice, timestamp = Date.now(), usdInrRate = 102.00) {
-    const qty = pair.quantity || this.settings.contractQuantity || 4.0;
-    const targetMove = pair.targetMove || this.settings.profitTargetMove || 0.50;
-    const seq = pair.pairId.replace('PAIR-SOL-', '');
-    const legId = `P-PAIR-SOL-${seq}-${direction}-${Date.now().toString().slice(-4)}`;
-
-    const isLive = this.settings.tradingMode === 'LIVE' && !this.settings.realOrdersDisabled;
-
-    if (direction === 'BUY') {
-      const buyTarget = Number((entryPrice + targetMove).toFixed(2));
-      pair.buyPosition = {
-        pairId: pair.pairId,
-        positionId: legId,
-        direction: 'BUY',
-        symbol: 'SOLUSDT',
-        entryTime: new Date(timestamp).toISOString(),
-        entryTimestamp: timestamp,
-        entryPrice,
-        targetExitPrice: buyTarget,
-        quantity: qty,
-        status: 'OPEN',
-        ledger: isLive ? 'LIVE' : 'PAPER',
-        source: isLive ? 'MUDREX_EXCHANGE' : 'SOLANA_SIMULATOR',
-        apiStatus: isLive ? 'PENDING_TRANSMISSION' : null
-      };
-      console.log(`[Solana Engine] Reopened missing BUY leg for ${pair.pairId} at $${entryPrice.toFixed(2)}`);
+    const newPair = this.createNewPair('SOLUSDT', roundedPrice, Date.now(), usdInrRate);
+    if (newPair) {
+      this.lastProcessedRate = roundedPrice;
+      if (this.priceLevelLocks) this.priceLevelLocks.set(priceKey, Date.now());
+      console.log(`[Solana Engine] New rate $${roundedPrice.toFixed(2)} accepted! Created pair ${this.pairCounter - 1}. Active pairs: ${activePairsCount + 1}`);
     } else {
-      const sellTarget = Number((entryPrice - targetMove).toFixed(2));
-      pair.sellPosition = {
-        pairId: pair.pairId,
-        positionId: legId,
-        direction: 'SELL',
-        symbol: 'SOLUSDT',
-        entryTime: new Date(timestamp).toISOString(),
-        entryTimestamp: timestamp,
-        entryPrice,
-        targetExitPrice: sellTarget,
-        quantity: qty,
-        status: 'OPEN',
-        ledger: isLive ? 'LIVE' : 'PAPER',
-        source: isLive ? 'MUDREX_EXCHANGE' : 'SOLANA_SIMULATOR',
-        apiStatus: isLive ? 'PENDING_TRANSMISSION' : null
-      };
-      console.log(`[Solana Engine] Reopened missing SELL leg for ${pair.pairId} at $${entryPrice.toFixed(2)}`);
+      this.lastSkippedRate = roundedPrice;
     }
-
-    pair.status = 'OPEN';
-    if (isLive) {
-      this.dispatchPairOrders(pair).catch(err => {
-        console.error('[Solana Live] Error dispatching reopened leg order:', err.message);
-      });
-    }
-    this.saveState();
   }
 
   createNewPair(symbol, price, timestamp = Date.now(), usdInrRate = 102.00, customQty = null, customTarget = null) {
-    const qty = customQty !== null ? Number(customQty) : Number(this.settings.contractQuantity || 4.0);
-    const targetMove = customTarget !== null ? Number(customTarget) : Number(this.settings.profitTargetMove || 0.50);
+    const numPrice = Number(price);
+    if (!numPrice || isNaN(numPrice) || numPrice <= 0) {
+      console.warn(`[Solana Engine] createNewPair rejected: Invalid price ${price}`);
+      return null;
+    }
+
+    const bucketSize = Number(this.settings.priceBucketSize || this.settings.gridSpacing || 0.50);
+
+    // 1. Permanent Price Lock Check
+    if (this.isPriceLevelLocked(numPrice, bucketSize)) {
+      const norm = this.getNormalizedPriceBucket(numPrice, bucketSize);
+      console.warn(`[Solana Engine] createNewPair BLOCKED: Price level $${numPrice.toFixed(2)} (bucket ${norm ? norm.bucketKey : 'N/A'}) is PERMANENTLY LOCKED.`);
+      return null;
+    }
+
+    // 2. Active Target/Exit Price Reservation Check
+    const targetCheck = this.isPriceReservedByActiveTarget(numPrice);
+    if (targetCheck.reserved) {
+      console.warn(`[Solana Engine] createNewPair BLOCKED: Price $${numPrice.toFixed(2)} is reserved by active ${targetCheck.type} for ${targetCheck.pairId} ($${targetCheck.targetPrice}).`);
+      return null;
+    }
+
     const pairId = `PAIR-SOL-${this.pairCounter.toString().padStart(4, '0')}`;
+
+    // 3. Atomic Database Price Lock Reservation
+    const reserveRes = this.reservePriceLevel(numPrice, pairId, 'PAIR_ENTRY', bucketSize, 'BOTH');
+    if (!reserveRes.success) {
+      console.warn(`[Solana Engine] createNewPair BLOCKED: Atomic DB reservation failed for $${numPrice.toFixed(2)} (${reserveRes.reason})`);
+      return null;
+    }
+
     this.pairCounter++;
 
-    const buyTarget = Number((price + targetMove).toFixed(2));
-    const sellTarget = Number((price - targetMove).toFixed(2));
+    // Pair Size: 5 SOL (MUST REMAIN UNCHANGED)
+    const qty = customQty !== null ? Number(customQty) : Number(this.settings.contractQuantity || 5.0);
+    // Target Move: $0.45 (MUST REMAIN UNCHANGED)
+    const targetMove = customTarget !== null ? Number(customTarget) : Number(this.settings.profitTargetMove || 0.45);
+
+    const buyTarget = Number((numPrice + targetMove).toFixed(2));
+    const sellTarget = Number((numPrice - targetMove).toFixed(2));
 
     const buyPos = {
       pairId,
@@ -465,7 +553,7 @@ class SolanaEngine {
       symbol: 'SOLUSDT',
       entryTime: new Date(timestamp).toISOString(),
       entryTimestamp: timestamp,
-      entryPrice: price,
+      entryPrice: numPrice,
       targetExitPrice: buyTarget,
       quantity: qty,
       status: 'OPEN',
@@ -480,7 +568,7 @@ class SolanaEngine {
       symbol: 'SOLUSDT',
       entryTime: new Date(timestamp).toISOString(),
       entryTimestamp: timestamp,
-      entryPrice: price,
+      entryPrice: numPrice,
       targetExitPrice: sellTarget,
       quantity: qty,
       status: 'OPEN',
@@ -491,7 +579,7 @@ class SolanaEngine {
     const pair = {
       pairId,
       symbol: 'SOLUSDT',
-      entryPrice: price,
+      entryPrice: numPrice,
       createdAt: new Date(timestamp).toISOString(),
       createdTimestamp: timestamp,
       buyTarget,
@@ -504,8 +592,8 @@ class SolanaEngine {
     };
 
     this.pairs.push(pair);
-    this.processedRates.add(price);
-    this.lastProcessedRate = price;
+    this.processedRates.add(numPrice);
+    this.lastProcessedRate = numPrice;
 
     // Real Live Mudrex Order Dispatch
     if (this.settings.tradingMode === 'LIVE' && !this.settings.realOrdersDisabled) {
@@ -1252,14 +1340,14 @@ class SolanaEngine {
     if (newQty && !isNaN(newQty) && Number(newQty) > 0) {
       this.settings.contractQuantity = Number(newQty);
     } else {
-      this.settings.contractQuantity = 1.0;
+      this.settings.contractQuantity = 5.0; // Pair Size: 5 SOL (MUST REMAIN UNCHANGED)
     }
     if (newTargetMove && !isNaN(newTargetMove) && Number(newTargetMove) > 0) {
       this.settings.profitTargetMove = Number(newTargetMove);
       this.settings.buyTargetMove = Number(newTargetMove);
       this.settings.sellTargetMove = Number(newTargetMove);
     } else {
-      this.settings.profitTargetMove = 0.45;
+      this.settings.profitTargetMove = 0.45; // Default Target Move: $0.45 (MUST REMAIN UNCHANGED)
       this.settings.buyTargetMove = 0.45;
       this.settings.sellTargetMove = 0.45;
     }
