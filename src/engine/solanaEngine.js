@@ -133,6 +133,33 @@ class SolanaEngine {
           }
         } catch (e) {}
       }
+
+      // Safeguard: Ensure authoritative closed trades from seedFile are ALWAYS merged and preserved
+      if (fs.existsSync(seedFile)) {
+        try {
+          const seedData = JSON.parse(fs.readFileSync(seedFile, 'utf8'));
+          if (seedData && Array.isArray(seedData.closedPositions)) {
+            const existingIds = new Set(this.closedPositions.map(c => c.positionId));
+            let mergedCount = 0;
+            for (const t of seedData.closedPositions) {
+              if (t.positionId && !existingIds.has(t.positionId)) {
+                this.closedPositions.push(t);
+                existingIds.add(t.positionId);
+                mergedCount++;
+              }
+            }
+            if (mergedCount > 0) {
+              // Sort descending by exit timestamp
+              this.closedPositions.sort((a, b) => {
+                const tA = new Date(a.exitTime || a.exitTimestamp || 0).getTime();
+                const tB = new Date(b.exitTime || b.exitTimestamp || 0).getTime();
+                return tB - tA;
+              });
+              console.log(`[Solana Engine] Safeguard merged ${mergedCount} authoritative closed trades from seed. Total closed: ${this.closedPositions.length}`);
+            }
+          }
+        } catch (e) {}
+      }
     } catch (e) {
       console.warn('[Solana Engine] Error initializing from storage:', e.message);
     }
@@ -166,6 +193,10 @@ class SolanaEngine {
       fs.writeFileSync(this.storagePath, jsonStr, 'utf8');
       try {
         fs.writeFileSync(this.backupPath, jsonStr, 'utf8');
+      } catch (err) {}
+      try {
+        const seedFile = path.join(__dirname, 'solana_state_seed.json');
+        fs.writeFileSync(seedFile, jsonStr, 'utf8');
       } catch (err) {}
     } catch (e) {
       console.warn('[Solana Engine] Error saving state:', e.message);
