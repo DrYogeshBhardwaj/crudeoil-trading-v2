@@ -310,7 +310,6 @@ class SolanaEngine {
     }
 
     // 4. Check active pairs cap (500 pairs max)
-    const activePairsCount = this.pairs.filter(p => p.status === 'OPEN').length;
     const maxPairs = Number(this.settings.maxActivePairs || 500);
     if (activePairsCount >= maxPairs) {
       console.log(`[Solana Engine] Active pairs cap reached (${activePairsCount}/${maxPairs}). Waiting for exits/margin.`);
