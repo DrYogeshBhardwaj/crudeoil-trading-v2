@@ -1317,6 +1317,9 @@
       </div>
 
       <div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap; justify-content: flex-end;">
+        <button type="button" onclick="promptAddNewPair()" style="display: inline-flex; align-items: center; gap: 6px; background: linear-gradient(135deg, rgba(16, 185, 129, 0.35), rgba(5, 150, 105, 0.45)); border: 1.5px solid #10b981; color: #a7f3d0; padding: 6px 15px; border-radius: 999px; font-size: 0.8rem; font-weight: 900; cursor: pointer; box-shadow: 0 0 14px rgba(16, 185, 129, 0.35); transition: all 0.2s;" onmouseover="this.style.transform='translateY(-1px)'" onmouseout="this.style.transform='none'">
+          <span>➕ Naya Pair Kharidein</span>
+        </button>
         <div id="uptimePill" style="display: inline-flex; align-items: center; gap: 5px; background: rgba(56, 189, 248, 0.12); border: 1px solid rgba(56, 189, 248, 0.35); padding: 5px 12px; border-radius: 999px; font-size: 0.78rem; color: #38bdf8; font-weight: 800; font-family: var(--font-mono); letter-spacing: 0.5px;">
           <span>⏱️ RUNNING:</span>
           <span id="headerUptimeText">-- hrs</span>
@@ -1476,6 +1479,9 @@
         </div>
       </div>
       <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
+        <button type="button" onclick="promptAddNewPair()" style="background: linear-gradient(135deg, rgba(16, 185, 129, 0.35), rgba(5, 150, 105, 0.45)); border: 1.5px solid #10b981; color: #a7f3d0; padding: 8px 18px; border-radius: 8px; font-weight: 900; font-size: 0.82rem; cursor: pointer; display: flex; align-items: center; gap: 6px; box-shadow: 0 0 14px rgba(16, 185, 129, 0.35); transition: all 0.2s;" onmouseover="this.style.transform='translateY(-1px)'" onmouseout="this.style.transform='none'">
+          <span>➕ Naya Pair Kharidein (Buy Pair)</span>
+        </button>
         <div style="font-size: 0.75rem; color: #cbd5e1; background: rgba(7, 13, 24, 0.8); border: 1px solid var(--border-color); padding: 5px 10px; border-radius: 6px; font-family: var(--font-mono);">
           <span>Auto-Clean: </span><strong style="color: var(--gold-primary);">≤ -₹20,000</strong>
         </div>
@@ -2896,6 +2902,39 @@
           fetchSubhMoneyData();
         } else {
           alert(`❌ Error: ${data.error || 'Failed to clean kachra'}`);
+        }
+      } catch (err) {
+        alert(`❌ Network Error: ${err.message}`);
+      }
+    }
+
+    async function promptAddNewPair() {
+      const pin = prompt(
+        `➕ NAYA PAIR KHARIDEIN (BUY NEW HEDGED PAIR):\n\n` +
+        `Current live market rate par ek fresh 4.0 SOL hedged pair (BUY + SELL) turant open hoga.\n\n` +
+        `Admin Password (340556) enter karein:`
+      );
+      if (!pin) return;
+      if (pin !== '340556') {
+        alert('❌ Galat password! Action cancelled.');
+        return;
+      }
+
+      try {
+        const res = await fetch('/api/subh-money-solana/action', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            action: 'addNewPair',
+            password: pin
+          })
+        });
+        const data = await res.json();
+        if (data.success) {
+          alert(`✅ ${data.message || 'Naya pair safaltapoorvak open ho gaya!'}`);
+          fetchSubhMoneyData();
+        } else {
+          alert(`❌ Error: ${data.error || 'Failed to add new pair'}`);
         }
       } catch (err) {
         alert(`❌ Network Error: ${err.message}`);
