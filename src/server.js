@@ -930,7 +930,7 @@ app.get(['/api/solana-live-mudrex/data', '/api/subh-mani-solana/data', '/api/sub
   try {
     const solanaEngine = require('./engine/solanaEngine');
     const mudrexLive = require('./engine/mudrexLiveAdapter');
-    if (!mudrexLive.lastAuthCheckRes && (process.env.MUDREX_API_KEY || mudrexLive.mudrexApiKey)) {
+    if (process.env.MUDREX_API_KEY || mudrexLive.mudrexApiKey) {
       mudrexLive.testAuthentication().catch(() => {});
     }
     const data = solanaEngine.getDashboardMetrics();

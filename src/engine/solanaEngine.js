@@ -62,6 +62,16 @@ class SolanaEngine {
         this.transmitPendingSolanaOrders();
       }
     }, 7000);
+
+    // Periodic background Mudrex wallet balance sync (keeps available margin fresh)
+    setInterval(() => {
+      try {
+        const mudrexAdapter = require('./mudrexLiveAdapter');
+        if (mudrexAdapter && typeof mudrexAdapter.testAuthentication === 'function') {
+          mudrexAdapter.testAuthentication().catch(() => {});
+        }
+      } catch (e) {}
+    }, 15000);
   }
 
   initFromStorage() {
@@ -241,15 +251,24 @@ class SolanaEngine {
     const roundedPrice = Number(price.toFixed(2));
     if (!roundedPrice || isNaN(roundedPrice) || roundedPrice <= 0) return;
 
+    const usdInrRate = Number(this.settings.usdInrRate || 102.00);
+    const qty = Number(this.settings.contractQuantity || 5.0);
+    const leverage = Number(this.settings.leverage || 5);
+
+    // 0. If zero active pairs are currently open, immediately spawn a fresh hedged pair at live rate!
+    const activePairsCount = this.pairs.filter(p => p.status === 'OPEN').length;
+    if (activePairsCount === 0) {
+      this.createNewPair('SOLUSDT', roundedPrice, Date.now(), usdInrRate);
+      this.lastProcessedRate = roundedPrice;
+      console.log(`[Solana Engine] Zero active pairs detected. Auto-spawned fresh seed pair at $${roundedPrice.toFixed(2)}.`);
+      return;
+    }
+
     // 1. Skip consecutive identical tick
     if (this.lastProcessedRate === roundedPrice) {
       this.lastSkippedRate = roundedPrice;
       return;
     }
-
-    const usdInrRate = Number(this.settings.usdInrRate || 102.00);
-    const qty = Number(this.settings.contractQuantity || 4.0);
-    const leverage = Number(this.settings.leverage || 5);
 
     // 2. Check for missing legs on existing active pairs
     for (const pair of this.pairs) {
@@ -323,11 +342,15 @@ class SolanaEngine {
       }
     }
 
-    // 5. Margin check for 1 pair (BUY + SELL at 5x leverage) - MAIN STOPPING CONDITION!
-    const reqMarginPairINR = ((roundedPrice * qty * usdInrRate) / leverage) * 2;
+    // 5. Margin check for 1 pair (5x leverage) - MAIN STOPPING CONDITION!
+    const reqMarginPairINR = (roundedPrice * qty * usdInrRate) / leverage;
     const metrics = this.getDashboardMetrics();
-    if (metrics.wallet.availableMarginINR < reqMarginPairINR) {
-      console.warn(`[Solana Engine] Available margin exhausted! Needed: ₹${reqMarginPairINR.toFixed(2)}, Available: ₹${metrics.wallet.availableMarginINR}`);
+    const availMargin = Math.max(
+      metrics.wallet.availableMarginINR || 0,
+      metrics.wallet.totalAvailableINR || 0
+    );
+    if (availMargin < reqMarginPairINR) {
+      console.warn(`[Solana Engine] Available margin exhausted! Needed: ₹${reqMarginPairINR.toFixed(2)}, Available: ₹${availMargin}`);
       return;
     }
 
@@ -851,6 +874,10 @@ class SolanaEngine {
         realMudrexLockedINR = Number(mudrexAdapter.lastAuthCheckRes.raw?.futures?.data?.locked_amount || 0);
         realMudrexSpotINR = Number(mudrexAdapter.lastAuthCheckRes.spotBalance || 0);
       }
+    }
+    // Background refresh trigger if stale (> 15 seconds)
+    if (mudrexAdapter && (!mudrexAdapter.lastAuthCheckTime || (Date.now() - mudrexAdapter.lastAuthCheckTime > 15000))) {
+      mudrexAdapter.testAuthentication().catch(() => {});
     }
 
     const startingCapitalINR = this.settings.startingCapitalINR || 300000.00;
