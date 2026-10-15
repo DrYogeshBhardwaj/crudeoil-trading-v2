@@ -1636,7 +1636,7 @@
           <table class="data-table">
             <thead>
               <tr>
-                <th class="sortable-th" onclick="setTableSort('closed', 'direction')" style="width: 52px; text-align: center;">B/S <span class="sort-icon" id="sortIcon_closed_direction">↕</span></th>
+                <th class="sortable-th" onclick="setTableSort('closed', 'direction')" style="width: 58px; text-align: center;">B/S <span class="sort-icon" id="sortIcon_closed_direction">↕</span></th>
                 <th class="sortable-th" onclick="setTableSort('closed', 'exitTime')" style="color: #38bdf8; font-weight: 800;">⏱️ Exit Time (IST) <span class="sort-icon" id="sortIcon_closed_exitTime">▼</span></th>
                 <th class="sortable-th" onclick="setTableSort('closed', 'netProfitINR')" style="color: var(--green-primary); font-weight: 800;">Net Profit (₹ / $) <span class="sort-icon" id="sortIcon_closed_netProfitINR">↕</span></th>
                 <th class="sortable-th" onclick="setTableSort('closed', 'entryPrice')">Entry Price <span class="sort-icon" id="sortIcon_closed_entryPrice">↕</span></th>
@@ -1725,7 +1725,7 @@
           <table class="data-table">
             <thead>
               <tr>
-                <th class="sortable-th" onclick="setTableSort('closed', 'direction')" style="width: 52px; text-align: center;">B/S <span class="sort-icon" id="sortIcon_study_direction">↕</span></th>
+                <th class="sortable-th" onclick="setTableSort('closed', 'direction')" style="width: 58px; text-align: center;">B/S <span class="sort-icon" id="sortIcon_study_direction">↕</span></th>
                 <th class="sortable-th" onclick="setTableSort('closed', 'exitTime')" style="color: #38bdf8; font-weight: 800;">⏱️ Exit Time (IST) <span class="sort-icon" id="sortIcon_study_exitTime">▼</span></th>
                 <th class="sortable-th" onclick="setTableSort('closed', 'netProfitINR')" style="color: var(--green-primary); font-weight: 800;">Net Profit (₹ / $) <span class="sort-icon" id="sortIcon_study_netProfitINR">↕</span></th>
                 <th class="sortable-th" onclick="setTableSort('closed', 'entryPrice')">Entry Price <span class="sort-icon" id="sortIcon_study_entryPrice">↕</span></th>
@@ -1972,8 +1972,15 @@
           valA = Number(a.tradeNumber || a.originalIndex || 0);
           valB = Number(b.tradeNumber || b.originalIndex || 0);
         } else if (col === 'direction') {
-          valA = (a.direction === 'BUY' || (a.positionId && a.positionId.includes('BUY'))) ? 1 : 2;
-          valB = (b.direction === 'BUY' || (b.positionId && b.positionId.includes('BUY'))) ? 1 : 2;
+          const dirA = (a.direction === 'BUY' || (a.positionId && a.positionId.includes('BUY'))) ? 1 : 2;
+          const dirB = (b.direction === 'BUY' || (b.positionId && b.positionId.includes('BUY'))) ? 1 : 2;
+          if (dirA !== dirB) {
+            valA = dirA;
+            valB = dirB;
+          } else {
+            valA = Number(a.quantity || 3);
+            valB = Number(b.quantity || 3);
+          }
         } else if (col === 'exitTime' || col === 'date') {
           valA = Number(a.exitTimestamp || (a.exitTime ? new Date(a.exitTime).getTime() : 0));
           valB = Number(b.exitTimestamp || (b.exitTime ? new Date(b.exitTime).getTime() : 0));
@@ -2529,9 +2536,12 @@
             const exitTimeIST = formatISTTime(t.exitTime || t.exitTimestamp);
             const dateDDMMMYY = formatISTDateDDMMMYY(t.exitTime || t.exitTimestamp);
             const isBuy = (t.direction === 'BUY' || (t.positionId && t.positionId.includes('BUY')));
+            const qtyNum = Number(t.quantity || 3);
+            const qtyStr = (qtyNum % 1 === 0) ? String(qtyNum) : qtyNum.toFixed(1);
+            const label = (isBuy ? 'B' : 'S') + qtyStr;
             const sideBadge = isBuy 
-              ? `<span style="display: inline-flex; align-items: center; justify-content: center; width: 30px; height: 24px; border-radius: 5px; font-weight: 900; font-family: var(--font-mono); font-size: 0.82rem; background: rgba(0, 255, 163, 0.16); color: var(--green-primary); border: 1px solid rgba(0, 255, 163, 0.45); box-shadow: 0 0 8px rgba(0, 255, 163, 0.2);" title="Trade #${t.tradeNumber || t.originalIndex} - BUY Position">B</span>`
-              : `<span style="display: inline-flex; align-items: center; justify-content: center; width: 30px; height: 24px; border-radius: 5px; font-weight: 900; font-family: var(--font-mono); font-size: 0.82rem; background: rgba(255, 77, 106, 0.16); color: var(--red-primary); border: 1px solid rgba(255, 77, 106, 0.45); box-shadow: 0 0 8px rgba(255, 77, 106, 0.2);" title="Trade #${t.tradeNumber || t.originalIndex} - SELL Position">S</span>`;
+              ? `<span style="display: inline-flex; align-items: center; justify-content: center; min-width: 34px; height: 24px; padding: 0 5px; border-radius: 5px; font-weight: 900; font-family: var(--font-mono); font-size: 0.82rem; background: rgba(0, 255, 163, 0.16); color: var(--green-primary); border: 1px solid rgba(0, 255, 163, 0.45); box-shadow: 0 0 8px rgba(0, 255, 163, 0.2);" title="Trade #${t.tradeNumber || t.originalIndex || ''} - BUY ${qtyStr} SOL">${label}</span>`
+              : `<span style="display: inline-flex; align-items: center; justify-content: center; min-width: 34px; height: 24px; padding: 0 5px; border-radius: 5px; font-weight: 900; font-family: var(--font-mono); font-size: 0.82rem; background: rgba(255, 77, 106, 0.16); color: var(--red-primary); border: 1px solid rgba(255, 77, 106, 0.45); box-shadow: 0 0 8px rgba(255, 77, 106, 0.2);" title="Trade #${t.tradeNumber || t.originalIndex || ''} - SELL ${qtyStr} SOL">${label}</span>`;
 
             return `
               <tr>
