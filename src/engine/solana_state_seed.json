@@ -10,7 +10,7 @@
     "sellTargetMove": 0.45,
     "gridSpacing": 0.005,
     "basketProfitTargetINR": 500,
-    "autoPunarjanmEnabled": true,
+    "autoPunarjanmEnabled": false,
     "autoAddNewPairs": true,
     "maxActivePairs": 500,
     "takerFeeRate": 0.00075,
