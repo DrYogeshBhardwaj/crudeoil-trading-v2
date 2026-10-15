@@ -14,6 +14,20 @@ app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
+// Primary Official Portal for SUBH-MANI (subhmani.in)
+app.get([
+  '/',
+  '/subhmani',
+  '/subh-mani',
+  '/Subh-Mani',
+  '/SubhMani',
+  '/subhmani.in',
+  '/subh-mani.in',
+  '/subhmani.html'
+], (req, res) => {
+  res.sendFile(path.join(__dirname, '../public/subhmani.html'));
+});
+
 app.use(express.static(path.join(__dirname, '../public'), {
   etag: false,
   maxAge: 0,
@@ -65,21 +79,20 @@ app.get(['/mudrex-live', '/mudrex_live', '/mudrex_live.html', '/mudrex-live.html
 app.get(['/mudrex-crude-live', '/mudrex_crude_live', '/mudrex_crude_live.html', '/mudrex-crude-live.html'], (req, res) => res.sendFile(path.join(__dirname, '../public/mudrex_crude_live.html')));
 app.get(['/crude-live-mudrex', '/crude_live_mudrex', '/Crude-Live-Mudrex', '/crude-live-mudrex.html', '/crude_live_mudrex.html'], (req, res) => res.redirect(301, '/Crude-Live-Mudrex-Pro'));
 app.get(['/crude-live-mudrex-pro', '/crude_live_mudrex_pro', '/Crude-Live-Mudrex-Pro', '/crude-live-mudrex-pro.html', '/crude_live_mudrex_pro.html'], (req, res) => res.sendFile(path.join(__dirname, '../public/crude_live_mudrex_pro.html')));
+// Dedicated Solana Live Trading Desk Terminal
 app.get([
-  '/subh-mani',
-  '/Subh-Mani',
   '/subh-mani-solana',
   '/Subh-Mani-Solana',
   '/subh_mani_solana',
-  '/subh-money',
-  '/Subh-Money',
   '/subh-money-solana',
   '/Subh-Money-Solana',
   '/subh_money_solana',
+  '/subh-money',
+  '/Subh-Money',
   '/subhmoney',
   '/SubhMoney',
-  '/subhmani',
-  '/SubhMani'
+  '/desk',
+  '/terminal'
 ], (req, res) => res.sendFile(path.join(__dirname, '../public/subh_money_solana.html')));
 
 app.get([
