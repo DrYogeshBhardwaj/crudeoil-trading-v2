@@ -19,7 +19,7 @@ class SolanaEngine {
       maxActivePairs: 500, // 500 Pairs Cap - Main stop is Available Margin exhaustion
       autoCleanKachraEnabled: true, // Auto-flush stale floating legs to prevent accumulation
       maxFloatingLossThresholdINR: 20000, // ₹20,000 threshold to auto-clean kachra
-      maxOneSidedLegs: 6, // Max 6 one-sided legs imbalance - stops piling up 100+ BUYs
+      maxOneSidedLegs: 80, // Up to 80 one-sided leg imbalance allowance for ₹4.3L+ capital
       takerFeeRate: 0.00075, // 0.075% Mudrex taker fee
       gstRate: 0.18, // 18% GST
       conservativeFeeMultiplier: 1.40, // 1.4x conservative buffer
@@ -98,6 +98,7 @@ class SolanaEngine {
           this.settings.autoAddNewPairs = true;
           this.settings.gridSpacing = 0.005;
           this.settings.maxActivePairs = 500;
+          this.settings.maxOneSidedLegs = 80;
           this.settings.basketProfitTargetINR = 500;
           this.settings.autoPunarjanmEnabled = false; // Harvest disabled per user instruction
           if (data.engineStartedAt) {
@@ -298,7 +299,7 @@ class SolanaEngine {
     }
 
     // 4.1 Prevent excessive one-sided leg imbalance ("ya bane hi nahi")
-    const maxImbalance = Number(this.settings.maxOneSidedLegs || 6);
+    const maxImbalance = Number(this.settings.maxOneSidedLegs || 80);
     let openBuys = 0, openSells = 0;
     for (const p of this.pairs) {
       if (p.status !== 'OPEN') continue;
@@ -306,6 +307,7 @@ class SolanaEngine {
       if (p.sellPosition && p.sellPosition.status === 'OPEN') openSells++;
     }
     if (Math.abs(openBuys - openSells) >= maxImbalance) {
+      console.log(`[Solana Engine] One-sided leg imbalance limit reached: Buys=${openBuys}, Sells=${openSells}, Diff=${Math.abs(openBuys - openSells)}/${maxImbalance}`);
       this.lastSkippedRate = roundedPrice;
       return; // Do not pile up more one-sided legs!
     }

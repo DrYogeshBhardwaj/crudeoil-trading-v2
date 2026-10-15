@@ -274,6 +274,81 @@
       transform: translateY(-2px);
     }
 
+    /* Modal: Engine Settings & Configuration (PIN 340556) */
+    .settings-modal-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.85);
+      backdrop-filter: blur(10px);
+      z-index: 10000;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 16px;
+    }
+    .settings-modal-overlay.active {
+      display: flex;
+    }
+    .settings-modal-card {
+      background: #0b1323;
+      border: 1.5px solid rgba(251, 191, 36, 0.45);
+      border-radius: 16px;
+      width: 100%;
+      max-width: 700px;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.85), 0 0 35px rgba(251, 191, 36, 0.2);
+      overflow: hidden;
+      animation: modalFadeIn 0.2s ease-out;
+    }
+    .settings-modal-header {
+      padding: 16px 22px;
+      background: rgba(14, 28, 48, 0.95);
+      border-bottom: 1px solid rgba(251, 191, 36, 0.3);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .settings-modal-title {
+      font-size: 1.05rem;
+      font-weight: 900;
+      color: #fbbf24;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .settings-modal-badge {
+      background: rgba(251, 191, 36, 0.15);
+      color: #fbbf24;
+      border: 1px solid rgba(251, 191, 36, 0.4);
+      padding: 2px 8px;
+      border-radius: 4px;
+      font-size: 0.68rem;
+      font-weight: 800;
+      letter-spacing: 0.4px;
+    }
+    .settings-modal-close {
+      background: transparent;
+      border: none;
+      color: #94a3b8;
+      font-size: 1.4rem;
+      cursor: pointer;
+      line-height: 1;
+      padding: 4px 8px;
+      border-radius: 6px;
+      transition: all 0.2s;
+    }
+    .settings-modal-close:hover {
+      color: #fff;
+      background: rgba(255, 255, 255, 0.1);
+    }
+    .settings-modal-body {
+      padding: 22px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      max-height: 80vh;
+      overflow-y: auto;
+    }
+
     /* Modal: Lot P/L & End SOL */
     .lot-modal-overlay {
       position: fixed;
@@ -1349,9 +1424,6 @@
       </div>
 
       <div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap; justify-content: flex-end;">
-        <button type="button" onclick="promptAddNewPair()" style="display: inline-flex; align-items: center; gap: 6px; background: linear-gradient(135deg, rgba(16, 185, 129, 0.35), rgba(5, 150, 105, 0.45)); border: 1.5px solid #10b981; color: #a7f3d0; padding: 6px 15px; border-radius: 999px; font-size: 0.8rem; font-weight: 900; cursor: pointer; box-shadow: 0 0 14px rgba(16, 185, 129, 0.35); transition: all 0.2s;" onmouseover="this.style.transform='translateY(-1px)'" onmouseout="this.style.transform='none'">
-          <span>➕ Naya Pair Kharidein</span>
-        </button>
         <div id="uptimePill" style="display: inline-flex; align-items: center; gap: 5px; background: rgba(56, 189, 248, 0.12); border: 1px solid rgba(56, 189, 248, 0.35); padding: 5px 12px; border-radius: 999px; font-size: 0.78rem; color: #38bdf8; font-weight: 800; font-family: var(--font-mono); letter-spacing: 0.5px;">
           <span>⏱️ RUNNING:</span>
           <span id="headerUptimeText">-- hrs</span>
@@ -1360,6 +1432,10 @@
           <span class="live-dot"></span>
           <span id="liveClockText">LIVE SYNC</span>
         </div>
+        <button type="button" onclick="openSettingsModal()" id="btnHeaderSettings" style="display: inline-flex; align-items: center; gap: 6px; background: linear-gradient(135deg, rgba(251, 191, 36, 0.18), rgba(217, 119, 6, 0.28)); border: 1.5px solid rgba(251, 191, 36, 0.45); color: #fef08a; padding: 6px 15px; border-radius: 999px; font-size: 0.8rem; font-weight: 900; cursor: pointer; box-shadow: 0 0 14px rgba(251, 191, 36, 0.25); transition: all 0.2s;" onmouseover="this.style.transform='translateY(-1px)'; this.style.borderColor='#fbbf24';" onmouseout="this.style.transform='none'; this.style.borderColor='rgba(251, 191, 36, 0.45)';">
+          <span style="font-size: 0.95rem;">⚙️</span>
+          <span>Settings</span>
+        </button>
       </div>
     </header>
 
@@ -1446,61 +1522,7 @@
       </div>
     </section>
 
-    <!-- 3.5 Quick Strategy & Execution Controls (SOL Lot Size, Exit Target Move & Strategy Guide) -->
-    <section class="quick-config-bar">
-      <!-- Strategy Note & Best Exit Insight Strip -->
-      <div class="quick-config-note">
-        <span class="note-icon">💡</span>
-        <span class="note-title">Best Exit Guide:</span>
-        <span class="note-pill pill-best" title="Best Sweet-Spot: Fast hits and ~₹80 in-hand net profit">⭐ $0.45 Move ➔ ~₹80 Net/Bid (Best Sweet-Spot)</span>
-        <span class="note-pill pill-high" title="Maximum profit: ~₹100 clean net per bid">🚀 $0.50 Move ➔ ~₹100 Net/Bid (Max Profit)</span>
-        <span class="note-pill pill-fast" title="Fastest turnover, moderate net profit">⚡ $0.35 Move ➔ ~₹50 Net/Bid (Fast Exits)</span>
-      </div>
 
-      <!-- Controls Row: SOL Lot Size + Exit Target Move -->
-      <div class="quick-config-controls">
-        <!-- Control 1: SOL Lot Size -->
-        <div class="config-control-group">
-          <div class="config-label">
-            <span>⚡ Naye Pairs Ka Lot Size:</span>
-            <span class="current-val-tag" id="currentLotTag">5.0 SOL</span>
-          </div>
-          <div class="config-input-row">
-            <div class="quick-presets">
-              <button type="button" class="preset-pill preset-lot" data-val="3.0" onclick="setLotInput(3.0)">3 SOL</button>
-              <button type="button" class="preset-pill preset-lot" data-val="4.0" onclick="setLotInput(4.0)" id="presetLot4">4 SOL</button>
-              <button type="button" class="preset-pill preset-lot active" data-val="5.0" onclick="setLotInput(5.0)" id="presetLot5">5 SOL</button>
-            </div>
-            <div class="input-with-btn">
-              <input type="number" id="inputLotSize" value="5.0" step="0.5" min="1" max="25" class="config-input">
-              <span class="input-unit">SOL</span>
-              <button type="button" class="btn-apply-ok" id="btnApplyLot" onclick="applyLotSize()">OK</button>
-            </div>
-          </div>
-        </div>
-
-        <!-- Control 2: Exit Profit / Target Move ($) -->
-        <div class="config-control-group">
-          <div class="config-label">
-            <span>🎯 Exit Profit Move ($):</span>
-            <span class="current-val-tag" id="currentMoveTag">$0.45</span>
-          </div>
-          <div class="config-input-row">
-            <div class="quick-presets">
-              <button type="button" class="preset-pill preset-move" data-val="0.35" onclick="setMoveInput(0.35)">.35</button>
-              <button type="button" class="preset-pill preset-move active" data-val="0.45" onclick="setMoveInput(0.45)" id="presetMove45">.45</button>
-              <button type="button" class="preset-pill preset-move" data-val="0.50" onclick="setMoveInput(0.50)" id="presetMove50">.50</button>
-              <button type="button" class="preset-pill preset-move" data-val="0.60" onclick="setMoveInput(0.60)">.60</button>
-            </div>
-            <div class="input-with-btn">
-              <span class="input-prefix">$</span>
-              <input type="number" id="inputTargetMove" value="0.45" step="0.05" min="0.10" max="5.00" class="config-input">
-              <button type="button" class="btn-apply-ok" id="btnApplyMove" onclick="applyTargetMove()">OK</button>
-            </div>
-          </div>
-        </div>
-      </div>
-    </section>
 
 
 
@@ -1816,6 +1838,93 @@
         </div>
         <div id="lotModalCardsContainer" style="display: flex; flex-direction: column; gap: 12px; margin-top: 6px;">
           <!-- Dynamically populated per lot size (3.0 SOL, 4.0 SOL, etc.) -->
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: Engine Settings & Configuration (PIN Protected: 340556) -->
+  <div class="settings-modal-overlay" id="modalEngineSettings" onclick="handleSettingsModalBackdrop(event)">
+    <div class="settings-modal-card">
+      <div class="settings-modal-header">
+        <div class="settings-modal-title">
+          <span style="font-size: 1.2rem;">⚙️</span>
+          <span>ENGINE SETTINGS &amp; CONFIGURATION</span>
+          <span class="settings-modal-badge">100% AUTO ENGINE</span>
+        </div>
+        <button type="button" class="settings-modal-close" onclick="closeSettingsModal()">✕</button>
+      </div>
+      <div class="settings-modal-body">
+        <div style="font-size: 0.82rem; color: #94a3b8; line-height: 1.45; background: rgba(56, 189, 248, 0.08); border: 1px solid rgba(56, 189, 248, 0.25); padding: 10px 14px; border-radius: 8px;">
+          🤖 <strong>100% Automated Trading Active</strong>: Engine market rate movements ke mutabiq automatic hedged pairs create karta hai aur targets par net profit secure karta hai. Yahan aap configuration parameters adjust kar sakte hain.
+        </div>
+
+        <!-- Section 1: Best Exit Guide -->
+        <div style="display: flex; flex-direction: column; gap: 6px;">
+          <div style="font-size: 0.82rem; font-weight: 800; color: #38bdf8; display: flex; align-items: gap: 6px;">
+            <span>💡</span>
+            <span>BEST EXIT GUIDE (NET PROFIT REFERENCE)</span>
+          </div>
+          <div class="quick-config-note" style="margin: 0;">
+            <span class="note-pill pill-best" title="Best Sweet-Spot: Fast hits and ~₹80 in-hand net profit">⭐ $0.45 Move ➔ ~₹80 Net/Bid (Best Sweet-Spot)</span>
+            <span class="note-pill pill-high" title="Maximum profit: ~₹100 clean net per bid">🚀 $0.50 Move ➔ ~₹100 Net/Bid (Max Profit)</span>
+            <span class="note-pill pill-fast" title="Fastest turnover, moderate net profit">⚡ $0.35 Move ➔ ~₹50 Net/Bid (Fast Exits)</span>
+          </div>
+        </div>
+
+        <!-- Section 2: Strategy Controls (Lot Size & Target Move) -->
+        <div class="quick-config-controls" style="margin: 0;">
+          <!-- Control 1: SOL Lot Size -->
+          <div class="config-control-group">
+            <div class="config-label">
+              <span>⚡ Naye Pairs Ka Lot Size:</span>
+              <span class="current-val-tag" id="currentLotTag">5.0 SOL</span>
+            </div>
+            <div class="config-input-row">
+              <div class="quick-presets">
+                <button type="button" class="preset-pill preset-lot" data-val="3.0" onclick="setLotInput(3.0)">3 SOL</button>
+                <button type="button" class="preset-pill preset-lot" data-val="4.0" onclick="setLotInput(4.0)" id="presetLot4">4 SOL</button>
+                <button type="button" class="preset-pill preset-lot active" data-val="5.0" onclick="setLotInput(5.0)" id="presetLot5">5 SOL</button>
+              </div>
+              <div class="input-with-btn">
+                <input type="number" id="inputLotSize" value="5.0" step="0.5" min="1" max="25" class="config-input">
+                <span class="input-unit">SOL</span>
+                <button type="button" class="btn-apply-ok" id="btnApplyLot" onclick="applyLotSize()">OK</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Control 2: Exit Profit / Target Move ($) -->
+          <div class="config-control-group">
+            <div class="config-label">
+              <span>🎯 Exit Profit Move ($):</span>
+              <span class="current-val-tag" id="currentMoveTag">$0.45</span>
+            </div>
+            <div class="config-input-row">
+              <div class="quick-presets">
+                <button type="button" class="preset-pill preset-move" data-val="0.35" onclick="setMoveInput(0.35)">.35</button>
+                <button type="button" class="preset-pill preset-move active" data-val="0.45" onclick="setMoveInput(0.45)" id="presetMove45">.45</button>
+                <button type="button" class="preset-pill preset-move" data-val="0.50" onclick="setMoveInput(0.50)" id="presetMove50">.50</button>
+                <button type="button" class="preset-pill preset-move" data-val="0.60" onclick="setMoveInput(0.60)">.60</button>
+              </div>
+              <div class="input-with-btn">
+                <span class="input-prefix">$</span>
+                <input type="number" id="inputTargetMove" value="0.45" step="0.05" min="0.10" max="5.00" class="config-input">
+                <button type="button" class="btn-apply-ok" id="btnApplyMove" onclick="applyTargetMove()">OK</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Section 3: Manual Pair Action inside Settings -->
+        <div style="background: rgba(13, 22, 38, 0.7); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 10px; padding: 12px 16px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
+          <div>
+            <div style="font-size: 0.85rem; font-weight: 800; color: #fff;">Manual Pair Spawn</div>
+            <div style="font-size: 0.72rem; color: #94a3b8;">Agar zarurat ho toh live price par naya hedged BUY/SELL pair manually add karein.</div>
+          </div>
+          <button type="button" onclick="promptAddNewPair()" style="background: linear-gradient(135deg, rgba(16, 185, 129, 0.35), rgba(5, 150, 105, 0.45)); border: 1.5px solid #10b981; color: #a7f3d0; padding: 8px 18px; border-radius: 8px; font-weight: 900; font-size: 0.82rem; cursor: pointer; display: flex; align-items: center; gap: 6px; box-shadow: 0 0 12px rgba(16, 185, 129, 0.35);">
+            <span>➕ Naya Pair Kharidein</span>
+          </button>
         </div>
       </div>
     </div>
@@ -2798,6 +2907,35 @@
         alert('Network Error: ' + err.message);
         btn.innerText = origText;
         btn.disabled = false;
+      }
+    }
+
+    // Settings Modal Functions (Admin PIN: 340556)
+    function openSettingsModal() {
+      const savedAuth = sessionStorage.getItem('adminAuth_340556');
+      if (savedAuth === 'true') {
+        const modal = document.getElementById('modalEngineSettings');
+        if (modal) modal.classList.add('active');
+        return;
+      }
+      const pin = prompt('🔒 SUBH-MANI ADMIN SECURITY\n\nEnter Admin Password (340556) to open Settings:');
+      if (pin === '340556') {
+        sessionStorage.setItem('adminAuth_340556', 'true');
+        const modal = document.getElementById('modalEngineSettings');
+        if (modal) modal.classList.add('active');
+      } else if (pin !== null) {
+        alert('❌ Ghalat Password! Settings access denied.');
+      }
+    }
+
+    function closeSettingsModal() {
+      const modal = document.getElementById('modalEngineSettings');
+      if (modal) modal.classList.remove('active');
+    }
+
+    function handleSettingsModalBackdrop(e) {
+      if (e.target && e.target.id === 'modalEngineSettings') {
+        closeSettingsModal();
       }
     }
 
