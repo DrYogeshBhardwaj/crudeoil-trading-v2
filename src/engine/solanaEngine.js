@@ -41,6 +41,8 @@ class SolanaEngine {
     this.isEngineRunning = true;
     this.engineStatus = 'RUNNING';
     this.pauseReason = '';
+    this.engineStartedAt = null;
+    this.lastResetTime = null;
 
     const dataDir = process.env.RAILWAY_VOLUME_MOUNT_PATH || process.env.DATA_DIR || path.join(__dirname, '../../data');
     this.storagePath = path.join(dataDir, 'solana_engine_state.json');
@@ -94,8 +96,16 @@ class SolanaEngine {
           this.settings.maxActivePairs = 500;
           this.settings.basketProfitTargetINR = 500;
           this.settings.autoPunarjanmEnabled = false; // Harvest disabled per user instruction
+          if (data.engineStartedAt) {
+            this.engineStartedAt = data.engineStartedAt;
+          } else if (Array.isArray(this.pairs) && this.pairs.length > 0 && this.pairs[0].createdAt) {
+            this.engineStartedAt = this.pairs[0].createdAt;
+          } else {
+            this.engineStartedAt = new Date().toISOString();
+          }
+          if (data.lastResetTime) this.lastResetTime = data.lastResetTime;
           if (Array.isArray(data.processedRates)) this.processedRates = new Set(data.processedRates);
-          console.log(`[Solana Engine] Restored state from storage: ${this.pairs.length} pairs, ${this.closedPositions.length} closed trades.`);
+          console.log(`[Solana Engine] Restored state from storage: ${this.pairs.length} pairs, ${this.closedPositions.length} closed trades. StartedAt: ${this.engineStartedAt}`);
         }
       }
 
@@ -113,6 +123,9 @@ class SolanaEngine {
             if (Array.isArray(seedData.processedRates)) {
               seedData.processedRates.forEach(r => this.processedRates.add(r));
             }
+            if (this.pairs[0] && this.pairs[0].createdAt) {
+              this.engineStartedAt = this.pairs[0].createdAt;
+            }
             console.log(`[Solana Engine] Seeded ${this.pairs.length} pairs from solana_state_seed.json.`);
           }
         } catch (e) {}
@@ -122,6 +135,14 @@ class SolanaEngine {
     }
   }
 
+  formatUptime(ms) {
+    if (!ms || isNaN(ms) || ms < 0) return '0h 0m';
+    const totalSecs = Math.floor(ms / 1000);
+    const hours = Math.floor(totalSecs / 3600);
+    const minutes = Math.floor((totalSecs % 3600) / 60);
+    return `${hours}h ${minutes}m`;
+  }
+
   saveState() {
     try {
       const dir = path.dirname(this.storagePath);
@@ -129,6 +150,8 @@ class SolanaEngine {
       const payload = {
         timestamp: new Date().toISOString(),
         settings: this.settings,
+        engineStartedAt: this.engineStartedAt,
+        lastResetTime: this.lastResetTime,
         pairs: this.pairs,
         closedPositions: this.closedPositions.slice(0, 1000), // Keep last 1000
         punarjanmCount: this.punarjanmCount,
@@ -694,17 +717,43 @@ class SolanaEngine {
     const livePrice = Number(rateInfo.price || 106.30);
     const usdInr = this.settings.usdInrRate || 102.00;
 
-    // Realized Net Profit from closed positions
-    let realizedGrossINR = 0, realizedChargesINR = 0, realizedNetINR = 0;
-    let winCount = 0, lossCount = 0;
+    // Uptime and Session Tracking (Since Engine Start / Reset)
+    const startTs = this.engineStartedAt ? new Date(this.engineStartedAt).getTime() : (this.pairs[0] && this.pairs[0].createdAt ? new Date(this.pairs[0].createdAt).getTime() : Date.now());
+    const uptimeMs = Math.max(0, Date.now() - startTs);
+    const uptimeHours = Number((uptimeMs / (1000 * 60 * 60)).toFixed(1));
+    const uptimeFormatted = this.formatUptime(uptimeMs);
+
+    // Filter closed positions since engine start / reset
+    const sessionClosed = this.closedPositions.filter(cp => {
+      const t = cp.exitTimestamp || (cp.exitTime ? new Date(cp.exitTime).getTime() : 0);
+      return t >= (startTs - 60000); // 1-minute tolerance buffer
+    });
+
+    const positionsToSum = sessionClosed.length > 0 ? sessionClosed : this.closedPositions;
+
+    let sessionGrossINR = 0, sessionChargesINR = 0, sessionNetINR = 0;
+    let sessionWinCount = 0, sessionLossCount = 0;
+    for (const cp of positionsToSum) {
+      const g = cp.grossProfitINR || 0;
+      const c = cp.totalChargesINR || 0;
+      const n = cp.netProfitINR !== undefined ? cp.netProfitINR : (g - c);
+      sessionGrossINR += g;
+      sessionChargesINR += c;
+      sessionNetINR += n;
+      if (n >= 0) sessionWinCount++; else sessionLossCount++;
+    }
+
+    // All-Time Cumulative Realized Profit for audit & secondary metrics
+    let allTimeGrossINR = 0, allTimeChargesINR = 0, allTimeNetINR = 0;
+    let allTimeWinCount = 0, allTimeLossCount = 0;
     for (const cp of this.closedPositions) {
       const g = cp.grossProfitINR || 0;
       const c = cp.totalChargesINR || 0;
       const n = cp.netProfitINR !== undefined ? cp.netProfitINR : (g - c);
-      realizedGrossINR += g;
-      realizedChargesINR += c;
-      realizedNetINR += n;
-      if (n >= 0) winCount++; else lossCount++;
+      allTimeGrossINR += g;
+      allTimeChargesINR += c;
+      allTimeNetINR += n;
+      if (n >= 0) allTimeWinCount++; else allTimeLossCount++;
     }
 
     // Punarjanm harvests
@@ -735,7 +784,7 @@ class SolanaEngine {
 
     const startingCapitalINR = this.settings.startingCapitalINR || 300000.00;
     const lockedMarginINR = realMudrexLockedINR !== null && realMudrexLockedINR > 0 ? realMudrexLockedINR : floating.dynamicMarginUsedINR;
-    const availableMarginINR = realMudrexAvailINR !== null ? realMudrexAvailINR : Math.max(0, Number((startingCapitalINR + realizedNetINR - lockedMarginINR).toFixed(2)));
+    const availableMarginINR = realMudrexAvailINR !== null ? realMudrexAvailINR : Math.max(0, Number((startingCapitalINR + sessionNetINR - lockedMarginINR).toFixed(2)));
     const equityINR = Number((availableMarginINR + lockedMarginINR + floating.floatingNetINR).toFixed(2));
     const spotBalanceINR = realMudrexSpotINR || 0;
 
@@ -878,6 +927,11 @@ class SolanaEngine {
         leverage: this.settings.leverage,
         tradingMode: this.settings.tradingMode || 'LIVE',
         realOrdersDisabled: this.settings.realOrdersDisabled || false,
+        engineStartedAt: this.engineStartedAt || (this.pairs[0] ? this.pairs[0].createdAt : new Date().toISOString()),
+        lastResetTime: this.lastResetTime || this.engineStartedAt,
+        uptimeMs,
+        uptimeHours,
+        uptimeFormatted,
         pairs: openPairs
       },
       punarjanm: {
@@ -887,14 +941,24 @@ class SolanaEngine {
         lastHarvest: this.lastPunarjanmSummary
       },
       pnl: {
-        realizedGrossINR: Number(realizedGrossINR.toFixed(2)),
-        realizedGrossUSD: Number((realizedGrossINR / usdInr).toFixed(2)),
-        realizedChargesINR: Number(realizedChargesINR.toFixed(2)),
-        realizedChargesUSD: Number((realizedChargesINR / usdInr).toFixed(2)),
-        realizedNetINR: Number(realizedNetINR.toFixed(2)),
-        realizedNetUSD: Number((realizedNetINR / usdInr).toFixed(2)),
-        totalRealizedINR: Number(realizedNetINR.toFixed(2)),
-        totalRealizedUSD: Number((realizedNetINR / usdInr).toFixed(2)),
+        realizedGrossINR: Number(sessionGrossINR.toFixed(2)),
+        realizedGrossUSD: Number((sessionGrossINR / usdInr).toFixed(2)),
+        realizedChargesINR: Number(sessionChargesINR.toFixed(2)),
+        realizedChargesUSD: Number((sessionChargesINR / usdInr).toFixed(2)),
+        realizedNetINR: Number(sessionNetINR.toFixed(2)),
+        realizedNetUSD: Number((sessionNetINR / usdInr).toFixed(2)),
+        totalRealizedINR: Number(sessionNetINR.toFixed(2)),
+        totalRealizedUSD: Number((sessionNetINR / usdInr).toFixed(2)),
+        sessionRealizedNetINR: Number(sessionNetINR.toFixed(2)),
+        sessionRealizedNetUSD: Number((sessionNetINR / usdInr).toFixed(2)),
+        sessionClosedCount: positionsToSum.length,
+        sessionClosedTrades: positionsToSum.length,
+        sessionWinTrades: sessionWinCount,
+        sessionLossTrades: sessionLossCount,
+        sessionWinRate: positionsToSum.length > 0 ? Number(((sessionWinCount / positionsToSum.length) * 100).toFixed(1)) : 100,
+        allTimeRealizedNetINR: Number(allTimeNetINR.toFixed(2)),
+        allTimeRealizedNetUSD: Number((allTimeNetINR / usdInr).toFixed(2)),
+        allTimeClosedTrades: this.closedPositions.length,
         floatingGrossINR: floating.floatingGrossINR,
         floatingGrossUSD: floating.floatingGrossUSD,
         floatingChargesINR: floating.floatingChargesINR,
@@ -903,13 +967,13 @@ class SolanaEngine {
         floatingNetUSD: floating.floatingNetUSD,
         totalFloatingINR: floating.floatingNetINR,
         totalFloatingUSD: floating.floatingNetUSD,
-        estimatedTotalINR: Number((realizedNetINR + floating.floatingNetINR).toFixed(2)),
-        estimatedTotalUSD: Number(((realizedNetINR + floating.floatingNetINR) / usdInr).toFixed(2)),
-        winTrades: winCount,
-        lossTrades: lossCount,
-        totalClosedTrades: this.closedPositions.length,
-        closedTradesCount: this.closedPositions.length,
-        winRate: this.closedPositions.length > 0 ? Number(((winCount / this.closedPositions.length) * 100).toFixed(1)) : 0
+        estimatedTotalINR: Number((sessionNetINR + floating.floatingNetINR).toFixed(2)),
+        estimatedTotalUSD: Number(((sessionNetINR + floating.floatingNetINR) / usdInr).toFixed(2)),
+        winTrades: sessionWinCount,
+        lossTrades: sessionLossCount,
+        totalClosedTrades: positionsToSum.length,
+        closedTradesCount: positionsToSum.length,
+        winRate: positionsToSum.length > 0 ? Number(((sessionWinCount / positionsToSum.length) * 100).toFixed(1)) : 100
       },
       closedPositions: this.closedPositions.slice(0, 100)
     };
@@ -991,6 +1055,8 @@ class SolanaEngine {
     this.pairCounter = 1;
     this.isEngineRunning = true;
     this.engineStatus = 'RUNNING';
+    this.engineStartedAt = new Date().toISOString();
+    this.lastResetTime = this.engineStartedAt;
 
     // Auto-create initial fresh pair with current lot size if live rate is present
     try {

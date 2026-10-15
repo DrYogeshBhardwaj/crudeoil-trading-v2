@@ -1316,9 +1316,15 @@
         </div>
       </div>
 
-      <div class="header-live-pill">
-        <span class="live-dot"></span>
-        <span id="liveClockText">LIVE SYNC</span>
+      <div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap; justify-content: flex-end;">
+        <div id="uptimePill" style="display: inline-flex; align-items: center; gap: 5px; background: rgba(56, 189, 248, 0.12); border: 1px solid rgba(56, 189, 248, 0.35); padding: 5px 12px; border-radius: 999px; font-size: 0.78rem; color: #38bdf8; font-weight: 800; font-family: var(--font-mono); letter-spacing: 0.5px;">
+          <span>⏱️ RUNNING:</span>
+          <span id="headerUptimeText">-- hrs</span>
+        </div>
+        <div class="header-live-pill">
+          <span class="live-dot"></span>
+          <span id="liveClockText">LIVE SYNC</span>
+        </div>
       </div>
     </header>
 
@@ -1365,14 +1371,14 @@
 
     <!-- 3. Financial KPI Row (Realized Net Profit First, Available Margin in Middle, Lot P/L & End SOL Third) -->
     <section class="financial-kpi-grid">
-      <!-- Card 1: Realized Net Profit -->
+      <!-- Card 1: Realized Net Profit (Current Run / Since Reset) -->
       <div class="kpi-box box-profit">
         <div class="kpi-box-header">
-          <span class="kpi-box-title">🏆 Realized Net Profit</span>
+          <span class="kpi-box-title" id="kpiProfitTitle">🏆 Net Profit (Current Run)</span>
           <span class="kpi-box-tag tag-profit" id="kpiClosedTradesTag">0 TRADES CLOSED</span>
         </div>
         <div class="kpi-box-primary val-gold" id="kpiRealizedNetINR">+₹0.00</div>
-        <div class="kpi-box-secondary" id="kpiRealizedNetUSD">+$0.00 Net Realized Profit</div>
+        <div class="kpi-box-secondary" id="kpiRealizedNetUSD">+$0.00 Net (Since Reset)</div>
       </div>
 
       <!-- Card 2: Mudrex Available Margin -->
@@ -2198,20 +2204,43 @@
         document.getElementById('kpiAvailableMarginINR').innerText = `₹${availINR.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
         document.getElementById('kpiAvailableMarginUSD').innerText = `$${availUSD.toFixed(2)} Available Margin`;
 
-        // 6. Financial KPI 2: Realized Net Profit (₹ and $)
-        let realINR = Number(pnl.totalRealizedINR !== undefined ? pnl.totalRealizedINR : (pnl.realizedNetINR || 0));
-        let realUSD = Number(pnl.totalRealizedUSD !== undefined ? pnl.totalRealizedUSD : (pnl.realizedNetUSD || (realINR / usdInr)));
+        // 6. Financial KPI 2: Realized Net Profit (Current Run / Since Engine Start / Reset)
+        const engineStartedAt = (engine && (engine.engineStartedAt || engine.lastResetTime)) || (openPairs && openPairs[0] && openPairs[0].createdAt) || (engine && engine.pairs && engine.pairs[0] && engine.pairs[0].createdAt) || null;
+        const startTs = engineStartedAt ? new Date(engineStartedAt).getTime() : 0;
         
-        if (realINR === 0 && closed.length > 0) {
-          realINR = closed.reduce((acc, t) => acc + Number(t.netProfitINR || 0), 0);
-          realUSD = realINR / usdInr;
+        let uptimeHours = (engine && typeof engine.uptimeHours === 'number') ? engine.uptimeHours : (startTs > 0 ? ((Date.now() - startTs) / (1000 * 60 * 60)) : 0);
+        let uptimeFormatted = (engine && engine.uptimeFormatted) ? engine.uptimeFormatted : (uptimeHours > 0 ? `${Math.floor(uptimeHours)}h ${Math.round((uptimeHours % 1) * 60)}m` : '-- hrs');
+        
+        const headerUptimeEl = document.getElementById('headerUptimeText');
+        if (headerUptimeEl) headerUptimeEl.innerText = `${uptimeFormatted} (${Number(uptimeHours).toFixed(1)} hrs)`;
+
+        let sessionINR = 0;
+        let sessionUSD = 0;
+        let sessionTradesCount = 0;
+
+        if (pnl.sessionRealizedNetINR !== undefined) {
+          sessionINR = Number(pnl.sessionRealizedNetINR);
+          sessionUSD = Number(pnl.sessionRealizedNetUSD !== undefined ? pnl.sessionRealizedNetUSD : (sessionINR / usdInr));
+          sessionTradesCount = Number(pnl.sessionClosedCount !== undefined ? pnl.sessionClosedCount : (pnl.closedTradesCount || closed.length));
+        } else if (closed.length > 0) {
+          const currentRunTrades = startTs > 0 ? closed.filter(t => {
+            const tExit = t.exitTimestamp || (t.exitTime ? new Date(t.exitTime).getTime() : 0);
+            return tExit >= (startTs - 60000);
+          }) : closed;
+          const tradesToUse = currentRunTrades.length > 0 ? currentRunTrades : closed;
+          sessionINR = tradesToUse.reduce((acc, t) => acc + Number(t.netProfitINR || 0), 0);
+          sessionUSD = sessionINR / usdInr;
+          sessionTradesCount = tradesToUse.length;
+        } else {
+          sessionINR = Number(pnl.totalRealizedINR !== undefined ? pnl.totalRealizedINR : (pnl.realizedNetINR || 0));
+          sessionUSD = Number(pnl.totalRealizedUSD !== undefined ? pnl.totalRealizedUSD : (sessionINR / usdInr));
+          sessionTradesCount = Number(pnl.totalClosedTrades || pnl.closedTradesCount || 0);
         }
 
-        const realSign = realINR >= 0 ? '+' : '';
-        const closedTradesCount = Math.max(Number(pnl.totalClosedTrades || pnl.closedTradesCount || 0), closed.length);
-        document.getElementById('kpiRealizedNetINR').innerText = `${realSign}₹${realINR.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-        document.getElementById('kpiRealizedNetUSD').innerText = `${realSign}$${realUSD.toFixed(2)} Net (${closedTradesCount} Closed Trades)`;
-        document.getElementById('kpiClosedTradesTag').innerText = `${closedTradesCount} TRADES CLOSED`;
+        const realSign = sessionINR >= 0 ? '+' : '';
+        document.getElementById('kpiRealizedNetINR').innerText = `${realSign}₹${sessionINR.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+        document.getElementById('kpiRealizedNetUSD').innerHTML = `${realSign}$${sessionUSD.toFixed(2)} Net &nbsp;·&nbsp; <span style="color: #38bdf8; font-weight: 800;">⏱️ ${Number(uptimeHours).toFixed(1)} Hrs Active</span> &nbsp;·&nbsp; ${sessionTradesCount} Bids`;
+        document.getElementById('kpiClosedTradesTag').innerText = `⏱️ ${uptimeFormatted} · ${sessionTradesCount} CLOSED`;
 
         // 6.5. Compute Lot-Wise Live Running Floating P/L & Locked Margin
         const lotStats = {};
