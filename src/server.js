@@ -14,9 +14,16 @@ app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// Primary Official Portal for SUBH-MANI (subhmani.in)
+// Primary Official Portal for SHUBH-MANI (shubhmani.com & subhmani.in)
 app.get([
   '/',
+  '/shubhmani',
+  '/shubh-mani',
+  '/Shubh-Mani',
+  '/ShubhMani',
+  '/shubhmani.com',
+  '/shubhmani.in',
+  '/shubhmani.html',
   '/subhmani',
   '/subh-mani',
   '/Subh-Mani',
@@ -25,7 +32,7 @@ app.get([
   '/subh-mani.in',
   '/subhmani.html'
 ], (req, res) => {
-  res.sendFile(path.join(__dirname, '../public/subhmani.html'));
+  res.sendFile(path.join(__dirname, '../public/shubhmani.html'));
 });
 
 app.use(express.static(path.join(__dirname, '../public'), {
