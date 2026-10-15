@@ -1,17 +1,17 @@
 /**
- * SUBH-MANI SOLANA PAIR ENGINE: PERMANENT PRICE-LEVEL UNIQUENESS TEST SUITE
+ * SUBH-MANI SOLANA PAIR ENGINE: ACTIVE PRICE-LEVEL UNIQUENESS TEST SUITE
  * 
- * Verifies the 10 mandated requirements:
- * 1. Duplicate BUY entry price is rejected.
- * 2. Duplicate SELL entry price is rejected.
- * 3. BUY and SELL share the same used-price registry (cross-side exclusion).
- * 4. Closing either leg does not release the price.
- * 5. Closing both legs does not release the price.
- * 6. Restart and redeployment preserve used-price locks.
- * 7. Reset and archive preserve used-price locks.
- * 8. Concurrent requests cannot create duplicate pairs at one price.
- * 9. An exit price cannot be reused as a new entry if its normalized level is already USED or reserved by active target.
- * 10. Pair size remains 5 SOL and exit target remains $0.45.
+ * Verifies active-price-level uniqueness rules:
+ * 1. Same price + active BUY/SELL exists → reject duplicate pair.
+ * 2. Same price + one leg remains active → reject duplicate pair.
+ * 3. Same price + both legs fully closed → allow a new pair (PROOF OF REUSE!).
+ * 4. Different unused price + no active conflict → allow a new pair.
+ * 5. Repeated ticks or concurrent requests → only one pair created atomically.
+ * 6. Restart preserves active locks from actual active positions.
+ * 7. Fully closed historical prices do NOT remain permanently blocked.
+ * 8. Partial closure does not release the level while residual quantity is open.
+ * 9. Pair size remains 5 SOL and exit target remains $0.45.
+ * 10. Active target reservation prevents entering new pair directly on an active target.
  */
 
 const assert = require('assert');
@@ -23,7 +23,7 @@ const db = require('../src/engine/db');
 
 async function runTests() {
   console.log('================================================================');
-  console.log('   SUBH-MANI SOLANA ENGINE — 10 PRICE-LEVEL UNIQUENESS TESTS    ');
+  console.log('   SUBH-MANI SOLANA ENGINE — ACTIVE PRICE-LEVEL UNIQUENESS TESTS');
   console.log('================================================================\n');
 
   let passed = 0;
@@ -53,7 +53,8 @@ async function runTests() {
     }
   }
 
-  // Ensure safe mode
+
+  // Ensure safe mode & clean test environment
   solanaEngine.isEngineRunning = false;
   solanaEngine.settings.tradingMode = 'PAPER';
   solanaEngine.settings.realOrdersDisabled = true;
@@ -61,136 +62,85 @@ async function runTests() {
   solanaEngine.settings.profitTargetMove = 0.45;
   solanaEngine.settings.priceBucketSize = 0.50;
 
-  const runOffset = (Math.floor(Date.now() / 1000) % 10000) * 100;
-  const testPrice1 = 10000.00 + runOffset;
-  const testPrice2 = 10010.00 + runOffset;
-  const testPrice3 = 10020.00 + runOffset;
-  const testPrice4 = 10030.00 + runOffset;
-  const testPrice5 = 10040.00 + runOffset;
-  const testPrice6 = 10050.00 + runOffset;
-  const testPrice7 = 10060.00 + runOffset;
+  // Clean paper pairs for test run
+  solanaEngine.pairs = [];
+  solanaEngine.syncActivePriceLevels();
 
-  // TEST 1: Duplicate BUY entry price is rejected
-  test('Duplicate BUY entry price is rejected', () => {
-    // First creation should succeed
+  const testPrice1 = 107.25;
+
+  // TEST 1: Same price + active BUY/SELL exists → reject duplicate pair
+  test('Same price + active BUY/SELL exists → reject duplicate pair', () => {
+    // 1. First creation at 107.25 must succeed
     const pair1 = solanaEngine.createNewPair('SOLUSDT', testPrice1);
-    assert(pair1 !== null, `First pair at ${testPrice1} must succeed`);
-    assert.strictEqual(pair1.buyPosition.entryPrice, testPrice1);
+    assert(pair1 !== null, 'First pair at 107.25 must succeed');
+    assert.strictEqual(pair1.buyPosition.status, 'OPEN');
+    assert.strictEqual(pair1.sellPosition.status, 'OPEN');
 
-    // Second creation at exact same price must fail
-    const pair2 = solanaEngine.createNewPair('SOLUSDT', testPrice1);
-    assert.strictEqual(pair2, null, `Second pair at ${testPrice1} must be rejected`);
+    // 2. Exact same price must be rejected
+    const pairDup = solanaEngine.createNewPair('SOLUSDT', testPrice1);
+    assert.strictEqual(pairDup, null, 'Duplicate pair at 107.25 must be rejected while active');
 
-    // Also test near-tick in same bucket (e.g. testPrice1 + 0.02 when bucketSize is 0.50)
-    const pair3 = solanaEngine.createNewPair('SOLUSDT', testPrice1 + 0.02);
-    assert.strictEqual(pair3, null, 'Tick in same normalized bucket must be rejected');
+    // 3. Near-tick in same 0.50 bucket (e.g. 107.27) must be rejected
+    const pairNear = solanaEngine.createNewPair('SOLUSDT', 107.27);
+    assert.strictEqual(pairNear, null, 'Tick in same active bucket must be rejected');
   });
 
-  // TEST 2: Duplicate SELL entry price is rejected
-  test('Duplicate SELL entry price is rejected', () => {
-    // The pair already created at testPrice1 had a SELL leg at testPrice1
-    // Verify that checking if a SELL can enter at testPrice1 is blocked
-    const isLocked = solanaEngine.isPriceLevelLocked(testPrice1);
-    assert.strictEqual(isLocked, true, `Price level ${testPrice1} must be reported locked for SELL`);
+  // TEST 2: Same price + one leg remains active → reject duplicate pair
+  test('Same price + one leg remains active → reject duplicate pair', () => {
+    const pair = solanaEngine.pairs.find(p => p.entryPrice === testPrice1);
+    assert(pair !== null, 'Active pair must exist');
 
-    const duplicateAttempt = solanaEngine.createNewPair('SOLUSDT', testPrice1);
-    assert.strictEqual(duplicateAttempt, null, 'SELL entry at used price must be blocked');
-  });
-
-  // TEST 3: BUY and SELL share the same used-price registry (cross-side exclusion)
-  test('BUY and SELL share the same used-price registry', () => {
-    // Reserve for BUY
-    const pair = solanaEngine.createNewPair('SOLUSDT', testPrice2);
-    assert(pair !== null, `Pair at ${testPrice2} must succeed`);
-
-    // Cross-side check: Can another entry enter at testPrice2 from either side?
-    const isLockedBuy = solanaEngine.isPriceLevelLocked(testPrice2);
-    assert.strictEqual(isLockedBuy, true, 'Price must be locked for BUY');
-    const isLockedSell = solanaEngine.isPriceLevelLocked(testPrice2);
-    assert.strictEqual(isLockedSell, true, 'Price must be locked for SELL');
-
-    const crossSideAttempt = solanaEngine.createNewPair('SOLUSDT', testPrice2);
-    assert.strictEqual(crossSideAttempt, null, 'Cross-side entry must be rejected');
-  });
-
-  // TEST 4: Closing either leg does not release the price
-  test('Closing either leg does not release the price', () => {
-    const pair = solanaEngine.createNewPair('SOLUSDT', testPrice3);
-    assert(pair !== null, `Pair at ${testPrice3} must succeed`);
-
-    // Simulate BUY leg target hit and closure
-    const buyTarget = pair.buyTarget;
-    solanaEngine.closePositionLeg(pair.buyPosition, buyTarget, Date.now(), 'BUY TARGET HIT');
+    // Simulate BUY leg target hit and closure ($107.70)
+    solanaEngine.closePositionLeg(pair.buyPosition, pair.buyTarget, Date.now(), 'BUY TARGET HIT');
     assert.strictEqual(pair.buyPosition.status, 'CLOSED', 'BUY leg must be closed');
     assert.strictEqual(pair.sellPosition.status, 'OPEN', 'SELL leg must remain open');
 
-    // Price returns to testPrice3 - MUST REMAIN LOCKED
-    const isLocked = solanaEngine.isPriceLevelLocked(testPrice3);
-    assert.strictEqual(isLocked, true, `Price ${testPrice3} must remain locked after BUY leg exit`);
+    // Level must remain occupied because SELL leg is active
+    const isOccupied = solanaEngine.isPriceLevelOccupied(testPrice1);
+    assert.strictEqual(isOccupied, true, 'Price 107.25 must remain occupied while one leg is active');
 
-    const reEntryAttempt = solanaEngine.createNewPair('SOLUSDT', testPrice3);
-    assert.strictEqual(reEntryAttempt, null, `Re-entry at ${testPrice3} after one leg closed must be rejected`);
+    const reEntryAttempt = solanaEngine.createNewPair('SOLUSDT', testPrice1);
+    assert.strictEqual(reEntryAttempt, null, 'Re-entry at 107.25 must be rejected while one leg remains active');
   });
 
-  // TEST 5: Closing both legs does not release the price
-  test('Closing both legs does not release the price', () => {
-    const pair = solanaEngine.createNewPair('SOLUSDT', testPrice4);
-    assert(pair !== null, `Pair at ${testPrice4} must succeed`);
+  // TEST 3: Same price + both legs fully closed → allow a new pair (PROOF OF REUSE!)
+  test('Same price + both legs fully closed → allow a new pair (REUSE PROOF)', () => {
+    const pair = solanaEngine.pairs.find(p => p.entryPrice === testPrice1);
+    assert(pair !== null, 'Pair must exist');
 
-    // Close BUY leg
-    solanaEngine.closePositionLeg(pair.buyPosition, testPrice4 + 0.45, Date.now(), 'BUY TARGET HIT');
-    // Close SELL leg
-    solanaEngine.closePositionLeg(pair.sellPosition, testPrice4 - 0.45, Date.now(), 'SELL TARGET HIT');
-    pair.status = 'CLOSED';
+    // Now close the SELL leg ($106.80)
+    solanaEngine.closePositionLeg(pair.sellPosition, pair.sellTarget, Date.now(), 'SELL TARGET HIT');
+    assert.strictEqual(pair.sellPosition.status, 'CLOSED', 'SELL leg must be closed');
+    assert.strictEqual(pair.status, 'CLOSED', 'Pair status must be CLOSED');
 
-    assert.strictEqual(pair.buyPosition.status, 'CLOSED');
-    assert.strictEqual(pair.sellPosition.status, 'CLOSED');
-    assert.strictEqual(pair.status, 'CLOSED');
+    // Price level MUST BE RELEASED!
+    const isOccupied = solanaEngine.isPriceLevelOccupied(testPrice1);
+    assert.strictEqual(isOccupied, false, 'Price 107.25 MUST be released and free for reuse after both legs close');
 
-    // Price returns to testPrice4 - MUST REMAIN PERMANENTLY LOCKED
-    const isLocked = solanaEngine.isPriceLevelLocked(testPrice4);
-    assert.strictEqual(isLocked, true, `Price ${testPrice4} must remain locked after BOTH legs closed`);
+    const inDb = db.isActivePriceOccupied('SOLUSDT', testPrice1);
+    assert.strictEqual(inDb, false, 'Database active reservation MUST be released');
 
-    const postCloseAttempt = solanaEngine.createNewPair('SOLUSDT', testPrice4);
-    assert.strictEqual(postCloseAttempt, null, `Re-entry at ${testPrice4} after both legs closed must be rejected`);
+    // Re-creating a pair at 107.25 MUST NOW SUCCEED!
+    const freshPair = solanaEngine.createNewPair('SOLUSDT', testPrice1);
+    assert(freshPair !== null, 'Creating a new pair at fully closed rate 107.25 MUST SUCCEED!');
+    assert.strictEqual(freshPair.status, 'OPEN');
+    assert.strictEqual(freshPair.buyPosition.status, 'OPEN');
+    assert.strictEqual(freshPair.sellPosition.status, 'OPEN');
   });
 
-  // TEST 6: Restart and redeployment preserve used-price locks
-  test('Restart and redeployment preserve used-price locks', () => {
-    // testPrice1 and testPrice4 were locked in SQLite
-    // Simulate engine restart by creating a new instance
-    const SolanaEngineClass = solanaEngine.constructor;
-    const freshEngine = new SolanaEngineClass();
+  // TEST 4: Different unused price + no active conflict → allow a new pair
+  test('Different unused price + no active conflict → allow a new pair', () => {
+    const freshPrice = 115.00;
+    assert.strictEqual(solanaEngine.isPriceLevelOccupied(freshPrice), false, '115.00 must be unoccupied');
 
-    assert.strictEqual(freshEngine.isPriceLevelLocked(testPrice1), true, `Restarted engine must retain ${testPrice1} lock from SQLite`);
-    assert.strictEqual(freshEngine.isPriceLevelLocked(testPrice4), true, `Restarted engine must retain ${testPrice4} lock from SQLite`);
-
-    const restartAttempt = freshEngine.createNewPair('SOLUSDT', testPrice1);
-    assert.strictEqual(restartAttempt, null, 'Creation of previously locked price on restarted engine must be rejected');
+    const pair = solanaEngine.createNewPair('SOLUSDT', freshPrice);
+    assert(pair !== null, 'Pair creation at 115.00 must succeed');
+    assert.strictEqual(solanaEngine.isPriceLevelOccupied(freshPrice), true, '115.00 must now be occupied');
   });
 
-  // TEST 7: Reset and archive preserve used-price locks
-  test('Reset and archive preserve used-price locks', () => {
-    // Call resetData
-    solanaEngine.resetData(5.0, 186682.39, 0.45);
-    // Call db resetAll
-    db.resetAll();
-
-    // Verify testPrice1 is STILL locked in SQLite
-    const lockedInDb = db.isPriceLevelLocked('SOLUSDT', testPrice1);
-    assert.strictEqual(lockedInDb, true, 'Reset & archive must NEVER clear used_price_levels table');
-
-    // In engine
-    const isLocked = solanaEngine.isPriceLevelLocked(testPrice1);
-    assert.strictEqual(isLocked, true, `Engine must report ${testPrice1} locked after reset`);
-
-    const resetAttempt = solanaEngine.createNewPair('SOLUSDT', testPrice1);
-    assert.strictEqual(resetAttempt, null, `Cannot re-create pair at ${testPrice1} after reset`);
-  });
-
-  // TEST 8: Concurrent requests cannot create duplicate pairs at one price
-  await testAsync('Concurrent requests cannot create duplicate pairs at one price', async () => {
-    const concurrentPrice = testPrice5;
+  // TEST 5: Repeated ticks or concurrent requests → only one pair
+  await testAsync('Repeated ticks or concurrent requests → only one pair', async () => {
+    const concurrentPrice = 120.00;
     
     // Dispatch 10 concurrent requests at the exact same price
     const promises = [];
@@ -206,41 +156,93 @@ async function runTests() {
     assert.strictEqual(rejectedPairs.length, 9, 'All 9 concurrent duplicate attempts must be rejected');
   });
 
-  // TEST 9: An exit price cannot be reused as a new entry if its normalized level is already USED
-  test('Exit price cannot be reused as a new entry if reserved by active target', () => {
-    const pair = solanaEngine.createNewPair('SOLUSDT', testPrice6);
-    assert(pair !== null, `Pair at ${testPrice6} must succeed`);
-    const target = pair.buyTarget;
+  // TEST 6: Restart preserves active locks from actual active positions
+  test('Restart preserves active locks from actual active positions', () => {
+    // Pair at 115.00 and 120.00 are active
+    const SolanaEngineClass = solanaEngine.constructor;
+    const freshEngine = new SolanaEngineClass();
 
-    // Check if target price is reserved
-    const targetCheck = solanaEngine.isPriceReservedByActiveTarget(target);
-    assert.strictEqual(targetCheck.reserved, true, 'Active target price must be reported as reserved');
+    assert.strictEqual(freshEngine.isPriceLevelOccupied(115.00), true, 'Restarted engine must recognize 115.00 is active');
+    assert.strictEqual(freshEngine.isPriceLevelOccupied(120.00), true, 'Restarted engine must recognize 120.00 is active');
 
-    // Attempt to open a new pair at the target price
-    const targetEntryAttempt = solanaEngine.createNewPair('SOLUSDT', target);
-    assert.strictEqual(targetEntryAttempt, null, 'Opening a new pair at an active target price must be blocked');
+    const restartDup = freshEngine.createNewPair('SOLUSDT', 115.00);
+    assert.strictEqual(restartDup, null, 'Restarted engine must reject duplicate pair at active 115.00');
   });
 
-  // TEST 10: Pair size remains 5 SOL and exit target remains $0.45
+  // TEST 7: Fully closed historical prices do NOT remain permanently blocked
+  test('Fully closed historical prices do not remain permanently blocked', () => {
+    const historicalPrice = 130.00;
+    // Add a closed position in history
+    solanaEngine.closedPositions.push({
+      positionId: 'HISTORICAL-POS-001',
+      pairId: 'HISTORICAL-PAIR-001',
+      entryPrice: historicalPrice,
+      exitPrice: historicalPrice + 0.45,
+      status: 'CLOSED',
+      netProfitINR: 18.50
+    });
+
+    // Check that historical closed position does NOT block the price level
+    const isOccupied = solanaEngine.isPriceLevelOccupied(historicalPrice);
+    assert.strictEqual(isOccupied, false, 'Historical closed trade must NOT block 130.00');
+
+    const freshPair = solanaEngine.createNewPair('SOLUSDT', historicalPrice);
+    assert(freshPair !== null, 'Creating pair at previously closed historical price must succeed');
+  });
+
+  // TEST 8: Partial closure does not release the level
+  test('Partial closure does not release the level', () => {
+    const partialPrice = 140.00;
+    const pair = solanaEngine.createNewPair('SOLUSDT', partialPrice);
+    assert(pair !== null, 'Pair at 140.00 must succeed');
+
+    // Partial closure: 2.5 SOL filled out of 5.0 SOL
+    const res = solanaEngine.closePositionLeg(pair.buyPosition, partialPrice + 0.45, Date.now(), 'PARTIAL TARGET HIT', 102.00, 0.00075, 0.18, 2.5);
+    assert(res.residualPosition !== null, 'Residual position must exist');
+    assert.strictEqual(res.residualPosition.quantity, 2.5, 'Residual quantity must be 2.5 SOL');
+
+    // Level must remain occupied!
+    const isOccupied = solanaEngine.isPriceLevelOccupied(partialPrice);
+    assert.strictEqual(isOccupied, true, 'Partial closure must NOT release the price level');
+
+    const attempt = solanaEngine.createNewPair('SOLUSDT', partialPrice);
+    assert.strictEqual(attempt, null, 'Duplicate pair must be rejected while residual leg is open');
+  });
+
+  // TEST 9: Pair size remains 5 SOL and exit target remains $0.45
   test('Pair size remains 5 SOL and exit target remains $0.45', () => {
     assert.strictEqual(solanaEngine.settings.contractQuantity, 5.0, 'Settings contractQuantity must be 5.0 SOL');
     assert.strictEqual(solanaEngine.settings.profitTargetMove, 0.45, 'Settings profitTargetMove must be $0.45');
 
-    const pair = solanaEngine.createNewPair('SOLUSDT', testPrice7);
-    assert(pair !== null, `Pair creation at ${testPrice7} must succeed`);
+    const testPrice = 150.00;
+    const pair = solanaEngine.createNewPair('SOLUSDT', testPrice);
+    assert(pair !== null, 'Pair creation at 150.00 must succeed');
 
     assert.strictEqual(pair.quantity, 5.0, 'Pair quantity must be 5.0 SOL');
     assert.strictEqual(pair.buyPosition.quantity, 5.0, 'BUY leg quantity must be 5.0 SOL');
     assert.strictEqual(pair.sellPosition.quantity, 5.0, 'SELL leg quantity must be 5.0 SOL');
 
-    // Verify exit targets: $0.45 price movement
-    const expectedBuyTarget = Math.round((testPrice7 + 0.45) * 100) / 100;
-    const expectedSellTarget = Math.round((testPrice7 - 0.45) * 100) / 100;
-    assert.strictEqual(pair.buyTarget, expectedBuyTarget);
-    assert.strictEqual(pair.sellTarget, expectedSellTarget);
-    assert.strictEqual(pair.buyPosition.targetExitPrice, expectedBuyTarget);
-    assert.strictEqual(pair.sellPosition.targetExitPrice, expectedSellTarget);
+    // Targets: $0.45 move
+    assert.strictEqual(pair.buyTarget, 150.45, 'BUY target must be entry + $0.45');
+    assert.strictEqual(pair.sellTarget, 149.55, 'SELL target must be entry - $0.45');
   });
+
+  // TEST 10: Active target reservation shield
+  test('Active target reservation shield prevents entering on active target', () => {
+    const testPrice = 160.00;
+    const pair = solanaEngine.createNewPair('SOLUSDT', testPrice);
+    assert(pair !== null, 'Pair at 160.00 must succeed');
+    const bTarget = pair.buyTarget; // 160.45
+
+    const targetCheck = solanaEngine.isPriceReservedByActiveTarget(bTarget);
+    assert.strictEqual(targetCheck.reserved, true, 'Active target price must be reserved');
+
+    const targetEntryAttempt = solanaEngine.createNewPair('SOLUSDT', bTarget);
+    assert.strictEqual(targetEntryAttempt, null, 'New pair cannot enter at active target price');
+  });
+
+  // Clean new-engine start: Reset temporary test state, leaving real positions intact
+  solanaEngine.resetData(5.0, 186682.39, 0.45);
 
   console.log('\n================================================================');
   console.log(`   TEST RESULTS: ${passed} PASSED, ${total - passed} FAILED (TOTAL ${total})`);

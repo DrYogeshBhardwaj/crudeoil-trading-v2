@@ -9,7 +9,8 @@ const STATE_SEED_FILE = path.join(__dirname, 'state_seed.json');
 
 class DatabaseManager {
   constructor() {
-    this.usedPriceLevelsFallback = new Map();
+    this.activePriceReservationsFallback = new Map();
+    this.usedPriceLevelsFallback = this.activePriceReservationsFallback;
     this.ensureDirectory();
     this.initDatabase();
   }
@@ -83,20 +84,21 @@ class DatabaseManager {
           details TEXT NOT NULL
         );
 
-        CREATE TABLE IF NOT EXISTS used_price_levels (
+        DROP TABLE IF EXISTS used_price_levels;
+
+        CREATE TABLE IF NOT EXISTS active_price_reservations (
           instrument TEXT NOT NULL,
-          normalized_price REAL NOT NULL,
           bucket_key TEXT NOT NULL,
+          normalized_price REAL NOT NULL,
+          pair_id TEXT NOT NULL,
           raw_price REAL NOT NULL,
           bucket_size REAL NOT NULL,
-          pair_id TEXT,
           direction TEXT DEFAULT 'BOTH',
-          reason TEXT NOT NULL,
           created_at TEXT NOT NULL,
           PRIMARY KEY (instrument, bucket_key)
         );
-        CREATE UNIQUE INDEX IF NOT EXISTS idx_used_price_levels_inst_norm 
-        ON used_price_levels (instrument, normalized_price);
+        CREATE UNIQUE INDEX IF NOT EXISTS idx_active_price_reservations_norm 
+        ON active_price_reservations (instrument, normalized_price);
       `);
       console.log(`[DBMS] SQLite Database initialized successfully at ${DB_FILE}`);
     } catch (err) {
@@ -532,7 +534,9 @@ class DatabaseManager {
     return [];
   }
 
-  // --- PERMANENT PRICE-LEVEL LOCKING & NORMALIZATION ---
+  // ==========================================
+  // ACTIVE PRICE-LEVEL UNIQUENESS & RESERVATION
+  // ==========================================
 
   normalizePriceBucket(price, bucketSize = 0.50) {
     const p = Number(price);
@@ -544,7 +548,7 @@ class DatabaseManager {
     return { bucketIndex, normalizedPrice, bucketKey, bucketSize: b };
   }
 
-  isPriceLevelLocked(symbol, price, bucketSize = 0.50) {
+  isActivePriceOccupied(symbol, price, bucketSize = 0.50) {
     const norm = this.normalizePriceBucket(price, bucketSize);
     if (!norm) return false;
     const sym = symbol || 'SOLUSDT';
@@ -552,17 +556,17 @@ class DatabaseManager {
     if (this.db) {
       try {
         const row = this.db.prepare(
-          'SELECT 1 FROM used_price_levels WHERE instrument = ? AND (bucket_key = ? OR normalized_price = ?) LIMIT 1'
+          'SELECT 1 FROM active_price_reservations WHERE instrument = ? AND (bucket_key = ? OR normalized_price = ?) LIMIT 1'
         ).get(sym, norm.bucketKey, norm.normalizedPrice);
         if (row) return true;
       } catch (e) {}
     }
 
     const fallbackKey = `${sym}:${norm.bucketKey}`;
-    return this.usedPriceLevelsFallback.has(fallbackKey);
+    return this.activePriceReservationsFallback.has(fallbackKey);
   }
 
-  reservePriceLevel(symbol, rawPrice, pairId, reason = 'PAIR_ENTRY', bucketSize = 0.50, direction = 'BOTH') {
+  reserveActivePriceLevel(symbol, rawPrice, pairId, bucketSize = 0.50, direction = 'BOTH') {
     const norm = this.normalizePriceBucket(rawPrice, bucketSize);
     if (!norm) {
       return { success: false, reason: 'INVALID_PRICE', rawPrice };
@@ -571,40 +575,39 @@ class DatabaseManager {
     const fallbackKey = `${sym}:${norm.bucketKey}`;
     const now = new Date().toISOString();
 
-    // In-memory fallback check
-    if (this.usedPriceLevelsFallback.has(fallbackKey)) {
+    // Check if already active in fallback
+    if (this.activePriceReservationsFallback.has(fallbackKey)) {
       return {
         success: false,
-        reason: 'PRICE_LEVEL_ALREADY_LOCKED',
+        reason: 'PRICE_LEVEL_ACTIVE',
         instrument: sym,
         normalizedPrice: norm.normalizedPrice,
         bucketKey: norm.bucketKey,
-        existing: this.usedPriceLevelsFallback.get(fallbackKey)
+        existing: this.activePriceReservationsFallback.get(fallbackKey)
       };
     }
 
     if (this.db) {
       try {
         const stmt = this.db.prepare(`
-          INSERT INTO used_price_levels (instrument, normalized_price, bucket_key, raw_price, bucket_size, pair_id, direction, reason, created_at)
-          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+          INSERT INTO active_price_reservations (instrument, bucket_key, normalized_price, pair_id, raw_price, bucket_size, direction, created_at)
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?)
         `);
         stmt.run(
           sym,
-          norm.normalizedPrice,
           norm.bucketKey,
+          norm.normalizedPrice,
+          pairId || 'UNASSIGNED',
           Number(rawPrice),
           norm.bucketSize,
-          pairId || null,
           direction || 'BOTH',
-          reason || 'PAIR_ENTRY',
           now
         );
       } catch (err) {
         // SQLite unique constraint on primary key or index
         return {
           success: false,
-          reason: 'PRICE_LEVEL_ALREADY_LOCKED',
+          reason: 'PRICE_LEVEL_ACTIVE',
           instrument: sym,
           normalizedPrice: norm.normalizedPrice,
           bucketKey: norm.bucketKey,
@@ -615,16 +618,15 @@ class DatabaseManager {
 
     const record = {
       instrument: sym,
-      normalizedPrice: norm.normalizedPrice,
       bucketKey: norm.bucketKey,
+      normalizedPrice: norm.normalizedPrice,
+      pairId: pairId || 'UNASSIGNED',
       rawPrice: Number(rawPrice),
       bucketSize: norm.bucketSize,
-      pairId: pairId || null,
       direction: direction || 'BOTH',
-      reason: reason || 'PAIR_ENTRY',
       createdAt: now
     };
-    this.usedPriceLevelsFallback.set(fallbackKey, record);
+    this.activePriceReservationsFallback.set(fallbackKey, record);
 
     return {
       success: true,
@@ -635,32 +637,90 @@ class DatabaseManager {
     };
   }
 
-  getAllLockedPriceLevels(symbol = 'SOLUSDT') {
+  releaseActivePriceLevel(symbol, pairId, bucketKey = null) {
     const sym = symbol || 'SOLUSDT';
     if (this.db) {
       try {
-        return this.db.prepare('SELECT * FROM used_price_levels WHERE instrument = ? ORDER BY normalized_price ASC').all(sym);
+        if (bucketKey) {
+          this.db.prepare('DELETE FROM active_price_reservations WHERE instrument = ? AND (pair_id = ? OR bucket_key = ?)').run(sym, pairId || '', String(bucketKey));
+        } else if (pairId) {
+          this.db.prepare('DELETE FROM active_price_reservations WHERE instrument = ? AND pair_id = ?').run(sym, pairId);
+        }
+      } catch (e) {}
+    }
+
+    for (const [k, v] of this.activePriceReservationsFallback.entries()) {
+      if (k.startsWith(`${sym}:`)) {
+        if ((pairId && v.pairId === pairId) || (bucketKey && v.bucketKey === bucketKey)) {
+          this.activePriceReservationsFallback.delete(k);
+        }
+      }
+    }
+    return { success: true };
+  }
+
+  syncActivePriceReservations(symbol, activePairs = [], bucketSize = 0.50) {
+    const sym = symbol || 'SOLUSDT';
+    if (this.db) {
+      try {
+        this.db.prepare('DELETE FROM active_price_reservations WHERE instrument = ?').run(sym);
+      } catch (e) {}
+    }
+
+    for (const k of Array.from(this.activePriceReservationsFallback.keys())) {
+      if (k.startsWith(`${sym}:`)) {
+        this.activePriceReservationsFallback.delete(k);
+      }
+    }
+
+    if (!Array.isArray(activePairs) || activePairs.length === 0) return 0;
+
+    let synced = 0;
+    for (const pair of activePairs) {
+      // Check if pair has any open leg
+      const bOpen = pair.buyPosition && pair.buyPosition.status === 'OPEN';
+      const sOpen = pair.sellPosition && pair.sellPosition.status === 'OPEN';
+      const isOpen = pair.status === 'OPEN' || bOpen || sOpen;
+      if (!isOpen) continue;
+
+      const price = Number(pair.entryPrice || (pair.buyPosition && pair.buyPosition.entryPrice) || (pair.sellPosition && pair.sellPosition.entryPrice));
+      if (!price || isNaN(price) || price <= 0) continue;
+
+      const res = this.reserveActivePriceLevel(sym, price, pair.pairId, bucketSize, 'BOTH');
+      if (res.success) synced++;
+    }
+    return synced;
+  }
+
+  getAllActivePriceReservations(symbol = 'SOLUSDT') {
+    const sym = symbol || 'SOLUSDT';
+    if (this.db) {
+      try {
+        return this.db.prepare('SELECT * FROM active_price_reservations WHERE instrument = ? ORDER BY normalized_price ASC').all(sym);
       } catch (e) {}
     }
     const results = [];
-    for (const [k, v] of this.usedPriceLevelsFallback.entries()) {
+    for (const [k, v] of this.activePriceReservationsFallback.entries()) {
       if (k.startsWith(`${sym}:`)) results.push(v);
     }
     return results.sort((a, b) => a.normalizedPrice - b.normalizedPrice);
   }
 
+  // --- Backwards Compatibility Aliases ---
+  isPriceLevelLocked(symbol, price, bucketSize = 0.50) {
+    return this.isActivePriceOccupied(symbol, price, bucketSize);
+  }
+
+  reservePriceLevel(symbol, rawPrice, pairId, reason = 'PAIR_ENTRY', bucketSize = 0.50, direction = 'BOTH') {
+    return this.reserveActivePriceLevel(symbol, rawPrice, pairId, bucketSize, direction);
+  }
+
+  getAllLockedPriceLevels(symbol = 'SOLUSDT') {
+    return this.getAllActivePriceReservations(symbol);
+  }
+
   seedExistingPriceLevels(records, symbol = 'SOLUSDT', bucketSize = 0.50) {
-    if (!Array.isArray(records) || records.length === 0) return 0;
-    const sym = symbol || 'SOLUSDT';
-    let seeded = 0;
-    for (const r of records) {
-      const price = Number(r.entryPrice || r.price || r.entry_price || 0);
-      if (!price || isNaN(price) || price <= 0) continue;
-      const pairId = r.pairId || r.pair_id || r.positionId || null;
-      const res = this.reservePriceLevel(sym, price, pairId, 'HISTORICAL_SEED', bucketSize, r.direction || 'BOTH');
-      if (res.success) seeded++;
-    }
-    return seeded;
+    return this.syncActivePriceReservations(symbol, records, bucketSize);
   }
 }
 

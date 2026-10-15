@@ -48,8 +48,9 @@ class SolanaEngine {
     // Per-price cooldown tracking (priceKey -> timestamp)
     this.priceLevelLocks = new Map();
 
-    // Permanent Price Level Locks (Set of normalized bucket keys e.g. "105.5000")
-    this.lockedPriceLevels = new Set();
+    // Active Price Level Locks (Set of normalized bucket keys e.g. "105.5000" of currently OPEN positions)
+    this.activePriceLevels = new Set();
+    this.lockedPriceLevels = this.activePriceLevels; // alias for backwards compatibility
 
     this.isEngineRunning = false;
     this.engineStatus = 'PAUSED';
@@ -62,7 +63,7 @@ class SolanaEngine {
     this.backupPath = path.join('/tmp', 'solana_engine_state_backup.json');
 
     this.initFromStorage();
-    this.syncLockedPriceLevels();
+    this.syncActivePriceLevels();
 
     // Subscribe to real-time market rates
     rateFeed.subscribe((type, data) => this.handleRateEvent(type, data));
@@ -217,10 +218,6 @@ class SolanaEngine {
       try {
         fs.writeFileSync(this.backupPath, jsonStr, 'utf8');
       } catch (err) {}
-      try {
-        const seedFile = path.join(__dirname, 'solana_state_seed.json');
-        fs.writeFileSync(seedFile, jsonStr, 'utf8');
-      } catch (err) {}
     } catch (e) {
       console.warn('[Solana Engine] Error saving state:', e.message);
     }
@@ -258,46 +255,50 @@ class SolanaEngine {
     }
   }
 
-  // --- PERMANENT PRICE-LEVEL REGISTRY & LOCKING ---
+  // --- ACTIVE PRICE-LEVEL REGISTRY & LOCKING ---
+
+  syncActivePriceLevels() {
+    this.activePriceLevels.clear();
+    const db = require('./db');
+    const bucketSize = Number(this.settings.priceBucketSize || this.settings.gridSpacing || 0.50);
+
+    // 1. Sync from currently active pairs in memory
+    const activePairs = this.pairs.filter(p => {
+      const bOpen = p.buyPosition && p.buyPosition.status === 'OPEN';
+      const sOpen = p.sellPosition && p.sellPosition.status === 'OPEN';
+      return p.status === 'OPEN' || bOpen || sOpen;
+    });
+
+    if (db && typeof db.syncActivePriceReservations === 'function') {
+      try {
+        db.syncActivePriceReservations('SOLUSDT', activePairs, bucketSize);
+      } catch (e) {
+        console.warn('[Solana Engine] Error syncing active price reservations with DB:', e.message);
+      }
+    }
+
+    // 2. Load all active reservations into memory set
+    if (db && typeof db.getAllActivePriceReservations === 'function') {
+      try {
+        const rows = db.getAllActivePriceReservations('SOLUSDT');
+        if (Array.isArray(rows)) {
+          for (const row of rows) {
+            if (row.bucket_key) this.activePriceLevels.add(row.bucket_key);
+            if (row.normalized_price !== undefined) {
+              this.activePriceLevels.add(Number(row.normalized_price).toFixed(4));
+            }
+          }
+        }
+      } catch (e) {
+        console.warn('[Solana Engine] Notice initializing active price levels:', e.message);
+      }
+    }
+
+    console.log(`[Solana Engine] Active Price Locks initialized: ${this.activePriceLevels.size} active price buckets currently occupied.`);
+  }
 
   syncLockedPriceLevels() {
-    try {
-      const db = require('./db');
-      if (db && typeof db.getAllLockedPriceLevels === 'function') {
-        const lockedRows = db.getAllLockedPriceLevels('SOLUSDT');
-        if (Array.isArray(lockedRows)) {
-          for (const row of lockedRows) {
-            if (row.bucket_key) this.lockedPriceLevels.add(row.bucket_key);
-            if (row.normalized_price !== undefined) {
-              this.lockedPriceLevels.add(Number(row.normalized_price).toFixed(4));
-            }
-          }
-        }
-      }
-      // Seed existing pairs and closed positions if not already in DB
-      if (db && typeof db.seedExistingPriceLevels === 'function') {
-        const bucket = Number(this.settings.priceBucketSize || this.settings.gridSpacing || 0.50);
-        if (Array.isArray(this.pairs) && this.pairs.length > 0) {
-          db.seedExistingPriceLevels(this.pairs, 'SOLUSDT', bucket);
-        }
-        if (Array.isArray(this.closedPositions) && this.closedPositions.length > 0) {
-          db.seedExistingPriceLevels(this.closedPositions, 'SOLUSDT', bucket);
-        }
-        // Refresh cache
-        const refreshed = db.getAllLockedPriceLevels('SOLUSDT');
-        if (Array.isArray(refreshed)) {
-          for (const row of refreshed) {
-            if (row.bucket_key) this.lockedPriceLevels.add(row.bucket_key);
-            if (row.normalized_price !== undefined) {
-              this.lockedPriceLevels.add(Number(row.normalized_price).toFixed(4));
-            }
-          }
-        }
-      }
-      console.log(`[Solana Engine] Permanent Price Locks initialized: ${this.lockedPriceLevels.size} price buckets permanently locked.`);
-    } catch (e) {
-      console.warn('[Solana Engine] Notice initializing locked price levels:', e.message);
-    }
+    return this.syncActivePriceLevels();
   }
 
   getNormalizedPriceBucket(price, bucketSize = this.settings.priceBucketSize || this.settings.gridSpacing || 0.50) {
@@ -305,47 +306,61 @@ class SolanaEngine {
     return db.normalizePriceBucket(price, bucketSize);
   }
 
-  isPriceLevelLocked(price, bucketSize = this.settings.priceBucketSize || this.settings.gridSpacing || 0.50) {
+  isPriceLevelOccupied(price, bucketSize = this.settings.priceBucketSize || this.settings.gridSpacing || 0.50) {
     const norm = this.getNormalizedPriceBucket(price, bucketSize);
     if (!norm) return false;
 
-    // Check fast in-memory set
-    if (this.lockedPriceLevels.has(norm.bucketKey) || this.lockedPriceLevels.has(norm.normalizedPrice.toFixed(4))) {
+    // 1. Check fast in-memory active set
+    if (this.activePriceLevels.has(norm.bucketKey) || this.activePriceLevels.has(norm.normalizedPrice.toFixed(4))) {
       return true;
     }
 
-    // Check persistent SQLite database
+    // 2. Check persistent SQLite database
     const db = require('./db');
-    if (db && typeof db.isPriceLevelLocked === 'function') {
-      const isLocked = db.isPriceLevelLocked('SOLUSDT', price, bucketSize);
-      if (isLocked) {
-        this.lockedPriceLevels.add(norm.bucketKey);
-        this.lockedPriceLevels.add(norm.normalizedPrice.toFixed(4));
+    if (db && typeof db.isActivePriceOccupied === 'function') {
+      if (db.isActivePriceOccupied('SOLUSDT', price, bucketSize)) {
+        this.activePriceLevels.add(norm.bucketKey);
+        this.activePriceLevels.add(norm.normalizedPrice.toFixed(4));
         return true;
       }
     }
 
-    // Cross-check all existing pairs (open or closed) in memory
+    // 3. Cross-check active pairs in memory (only OPEN pairs or open legs)
     for (const p of this.pairs) {
+      if (p.status === 'CLOSED') continue;
+      const bOpen = p.buyPosition && p.buyPosition.status === 'OPEN';
+      const sOpen = p.sellPosition && p.sellPosition.status === 'OPEN';
+      if (!bOpen && !sOpen) continue; // Both legs closed, does NOT occupy level
+
       if (!p.entryPrice) continue;
       const pNorm = this.getNormalizedPriceBucket(p.entryPrice, bucketSize);
       if (pNorm && pNorm.bucketKey === norm.bucketKey) {
-        this.lockedPriceLevels.add(norm.bucketKey);
+        this.activePriceLevels.add(norm.bucketKey);
+        this.activePriceLevels.add(norm.normalizedPrice.toFixed(4));
         return true;
       }
     }
 
-    // Cross-check all closed positions in memory
-    for (const cp of this.closedPositions) {
-      if (!cp.entryPrice) continue;
-      const cpNorm = this.getNormalizedPriceBucket(cp.entryPrice, bucketSize);
-      if (cpNorm && cpNorm.bucketKey === norm.bucketKey) {
-        this.lockedPriceLevels.add(norm.bucketKey);
-        return true;
-      }
-    }
-
+    // Historical closed positions do NOT block any price level!
     return false;
+  }
+
+  isPriceLevelLocked(price, bucketSize = this.settings.priceBucketSize || this.settings.gridSpacing || 0.50) {
+    return this.isPriceLevelOccupied(price, bucketSize);
+  }
+
+  releaseActivePriceLevel(pair) {
+    if (!pair || !pair.entryPrice) return;
+    const bucketSize = Number(this.settings.priceBucketSize || this.settings.gridSpacing || 0.50);
+    const norm = this.getNormalizedPriceBucket(pair.entryPrice, bucketSize);
+    if (norm) {
+      this.activePriceLevels.delete(norm.bucketKey);
+      this.activePriceLevels.delete(norm.normalizedPrice.toFixed(4));
+    }
+    const db = require('./db');
+    if (db && typeof db.releaseActivePriceLevel === 'function') {
+      db.releaseActivePriceLevel('SOLUSDT', pair.pairId, norm ? norm.bucketKey : null);
+    }
   }
 
   isPriceReservedByActiveTarget(price, tolerance = null) {
@@ -369,10 +384,10 @@ class SolanaEngine {
 
   reservePriceLevel(rawPrice, pairId = null, reason = 'PAIR_ENTRY', bucketSize = this.settings.priceBucketSize || this.settings.gridSpacing || 0.50, direction = 'BOTH') {
     const db = require('./db');
-    const res = db.reservePriceLevel('SOLUSDT', rawPrice, pairId, reason, bucketSize, direction);
+    const res = db.reserveActivePriceLevel('SOLUSDT', rawPrice, pairId, bucketSize, direction);
     if (res.success && res.bucketKey) {
-      this.lockedPriceLevels.add(res.bucketKey);
-      this.lockedPriceLevels.add(res.normalizedPrice.toFixed(4));
+      this.activePriceLevels.add(res.bucketKey);
+      this.activePriceLevels.add(res.normalizedPrice.toFixed(4));
     }
     return res;
   }
@@ -513,10 +528,10 @@ class SolanaEngine {
 
     const bucketSize = Number(this.settings.priceBucketSize || this.settings.gridSpacing || 0.50);
 
-    // 1. Permanent Price Lock Check
-    if (this.isPriceLevelLocked(numPrice, bucketSize)) {
+    // 1. Active Price Occupancy Check
+    if (this.isPriceLevelOccupied(numPrice, bucketSize)) {
       const norm = this.getNormalizedPriceBucket(numPrice, bucketSize);
-      console.warn(`[Solana Engine] createNewPair BLOCKED: Price level $${numPrice.toFixed(2)} (bucket ${norm ? norm.bucketKey : 'N/A'}) is PERMANENTLY LOCKED.`);
+      console.warn(`[Solana Engine] createNewPair BLOCKED: Price level $${numPrice.toFixed(2)} (bucket ${norm ? norm.bucketKey : 'N/A'}) already has an ACTIVE position.`);
       return null;
     }
 
@@ -738,11 +753,15 @@ class SolanaEngine {
         }
       }
 
-      // If both legs closed, close pair
+      // If both legs closed, close pair and release active price level
       const bOpen = pair.buyPosition && pair.buyPosition.status === 'OPEN';
       const sOpen = pair.sellPosition && pair.sellPosition.status === 'OPEN';
       if (!bOpen && !sOpen) {
-        pair.status = 'CLOSED';
+        if (pair.status !== 'CLOSED') {
+          pair.status = 'CLOSED';
+          this.releaseActivePriceLevel(pair);
+          console.log(`[Solana Engine] PAIR ${pair.pairId} FULLY CLOSED: Price level $${pair.entryPrice} released for future reuse.`);
+        }
       }
     }
   }
@@ -823,6 +842,21 @@ class SolanaEngine {
         });
       } catch (e) {
         console.error('[Solana Live] Real Exit dispatch error:', e.message);
+      }
+    }
+
+    // Check if parent pair is now fully closed and release active price level
+    const parentPair = this.pairs.find(p => p.pairId === pos.pairId || (p.buyPosition === pos || p.sellPosition === pos));
+    if (parentPair) {
+      const isBuyClosed = !parentPair.buyPosition || parentPair.buyPosition.status === 'CLOSED';
+      const isSellClosed = !parentPair.sellPosition || parentPair.sellPosition.status === 'CLOSED';
+      const hasResidual = (parentPair.buyPosition && parentPair.buyPosition.isResidual) || (parentPair.sellPosition && parentPair.sellPosition.isResidual);
+      if (isBuyClosed && isSellClosed && !hasResidual) {
+        if (parentPair.status !== 'CLOSED') {
+          parentPair.status = 'CLOSED';
+          this.releaseActivePriceLevel(parentPair);
+          console.log(`[Solana Engine] PAIR ${parentPair.pairId} FULLY CLOSED: Price level $${parentPair.entryPrice} released for future reuse.`);
+        }
       }
     }
 
@@ -1308,24 +1342,9 @@ class SolanaEngine {
     this.pairs = realPairs;
     this.processedRates.clear();
     this.lastProcessedRate = null;
+    this.syncActivePriceLevels();
 
     this.saveState();
-    try {
-      const seedFile = path.join(__dirname, 'solana_state_seed.json');
-      const seedPayload = {
-        timestamp: new Date().toISOString(),
-        settings: this.settings,
-        engineStartedAt: this.engineStartedAt,
-        lastResetTime: this.lastResetTime,
-        pairs: this.pairs,
-        closedPositions: this.closedPositions,
-        punarjanmCount: this.punarjanmCount,
-        punarjanmCycles: this.punarjanmCycles,
-        pairCounter: this.pairCounter,
-        processedRates: Array.from(this.processedRates)
-      };
-      fs.writeFileSync(seedFile, JSON.stringify(seedPayload, null, 2), 'utf8');
-    } catch (err) {}
     console.log(`[Solana Engine] Cleaned Floating Kachra (${triggerReason}): Flushed ${flushedCount} simulated pairs. Preserved ${realPairs.length} real exchange positions. Realized Profit and Closed Trades intact.`);
     return {
       success: true,
@@ -1381,6 +1400,7 @@ class SolanaEngine {
     this.engineStartedAt = new Date().toISOString();
     this.lastResetTime = this.engineStartedAt;
 
+    this.syncActivePriceLevels();
     this.saveState();
     console.log(`[Solana Engine] Reset data: Capital set to ₹${this.settings.startingCapitalINR.toLocaleString('en-IN')} INR with ${this.settings.contractQuantity} SOL contract size in safe PAPER mode.`);
     return { 
