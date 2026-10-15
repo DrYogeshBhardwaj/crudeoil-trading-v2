@@ -74,7 +74,13 @@ class SolanaEngine {
       if (raw) {
         const data = JSON.parse(raw);
         if (data) {
-          if (Array.isArray(data.pairs) && data.pairs.length > 0) this.pairs = data.pairs;
+          if (Array.isArray(data.pairs) && data.pairs.length > 0) {
+            this.pairs = data.pairs.map(p => {
+              if (!p.buyPosition && p.buy) p.buyPosition = p.buy;
+              if (!p.sellPosition && p.sell) p.sellPosition = p.sell;
+              return p;
+            });
+          }
           if (Array.isArray(data.closedPositions)) this.closedPositions = data.closedPositions;
           if (Array.isArray(data.punarjanmCycles)) this.punarjanmCycles = data.punarjanmCycles;
           if (typeof data.punarjanmCount === 'number') this.punarjanmCount = data.punarjanmCount;
@@ -98,7 +104,11 @@ class SolanaEngine {
         try {
           const seedData = JSON.parse(fs.readFileSync(seedFile, 'utf8'));
           if (seedData && Array.isArray(seedData.pairs) && seedData.pairs.length > 0) {
-            this.pairs = seedData.pairs;
+            this.pairs = seedData.pairs.map(p => {
+              if (!p.buyPosition && p.buy) p.buyPosition = p.buy;
+              if (!p.sellPosition && p.sell) p.sellPosition = p.sell;
+              return p;
+            });
             this.pairCounter = seedData.pairCounter || (this.pairs.length + 1);
             if (Array.isArray(seedData.processedRates)) {
               seedData.processedRates.forEach(r => this.processedRates.add(r));
