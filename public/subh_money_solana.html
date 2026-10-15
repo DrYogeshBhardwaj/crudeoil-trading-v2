@@ -1363,19 +1363,9 @@
       </div>
     </section>
 
-    <!-- 3. Financial KPI Row (Available Margin + Realized Net Profit + Lot P/L & End SOL) -->
+    <!-- 3. Financial KPI Row (Realized Net Profit First, Available Margin in Middle, Lot P/L & End SOL Third) -->
     <section class="financial-kpi-grid">
-      <!-- Card 1: Mudrex Available Margin -->
-      <div class="kpi-box box-margin">
-        <div class="kpi-box-header">
-          <span class="kpi-box-title">💼 Mudrex Available Margin</span>
-          <span class="kpi-box-tag tag-margin">AVAILABLE WALLET</span>
-        </div>
-        <div class="kpi-box-primary val-green" id="kpiAvailableMarginINR">₹0.00</div>
-        <div class="kpi-box-secondary" id="kpiAvailableMarginUSD">$0.00 Available Margin</div>
-      </div>
-
-      <!-- Card 2: Realized Net Profit -->
+      <!-- Card 1: Realized Net Profit -->
       <div class="kpi-box box-profit">
         <div class="kpi-box-header">
           <span class="kpi-box-title">🏆 Realized Net Profit</span>
@@ -1383,6 +1373,16 @@
         </div>
         <div class="kpi-box-primary val-gold" id="kpiRealizedNetINR">+₹0.00</div>
         <div class="kpi-box-secondary" id="kpiRealizedNetUSD">+$0.00 Net Realized Profit</div>
+      </div>
+
+      <!-- Card 2: Mudrex Available Margin -->
+      <div class="kpi-box box-margin">
+        <div class="kpi-box-header">
+          <span class="kpi-box-title">💼 Mudrex Available Margin</span>
+          <span class="kpi-box-tag tag-margin">AVAILABLE WALLET</span>
+        </div>
+        <div class="kpi-box-primary val-green" id="kpiAvailableMarginINR">₹0.00</div>
+        <div class="kpi-box-secondary" id="kpiAvailableMarginUSD">$0.00 Available Margin</div>
       </div>
 
       <!-- Card 3: Lot P/L & End SOL (Click to inspect Lot-wise Running P/L and End lots selectively) -->
