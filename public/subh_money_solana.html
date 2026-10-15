@@ -583,6 +583,259 @@
       border-radius: 4px;
     }
 
+    /* Sortable Table Headers */
+    th.sortable-th {
+      cursor: pointer;
+      user-select: none;
+      transition: background 0.2s, color 0.2s;
+    }
+    th.sortable-th:hover {
+      background: rgba(255, 255, 255, 0.08) !important;
+      color: #ffffff !important;
+    }
+    .sort-icon {
+      display: inline-block;
+      font-size: 0.62rem;
+      margin-left: 4px;
+      opacity: 0.65;
+      vertical-align: middle;
+      color: #94a3b8;
+    }
+    .sort-icon.active {
+      color: var(--gold-primary);
+      opacity: 1;
+      font-weight: 900;
+    }
+
+    /* Study Toolbar & Preset Chips */
+    .study-toolbar-wrap {
+      background: rgba(13, 22, 38, 0.95);
+      border-bottom: 1px solid var(--border-color);
+      display: flex;
+      flex-direction: column;
+    }
+    .study-presets-bar {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 6px;
+      padding: 10px 14px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+    }
+    .study-bar-label {
+      font-size: 0.68rem;
+      font-weight: 800;
+      color: #38bdf8;
+      letter-spacing: 0.5px;
+      margin-right: 4px;
+    }
+    .study-chip {
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      color: #cbd5e1;
+      font-size: 0.7rem;
+      font-weight: 700;
+      padding: 4px 10px;
+      border-radius: 14px;
+      cursor: pointer;
+      transition: all 0.2s;
+      font-family: var(--font-mono);
+      outline: none;
+    }
+    .study-chip:hover {
+      background: rgba(56, 189, 248, 0.15);
+      border-color: #38bdf8;
+      color: #ffffff;
+      transform: translateY(-1px);
+    }
+    .study-chip.active {
+      background: rgba(251, 191, 36, 0.2);
+      border-color: var(--gold-primary);
+      color: var(--gold-primary);
+      font-weight: 900;
+      box-shadow: 0 0 10px rgba(251, 191, 36, 0.25);
+    }
+
+    /* Collapsible Custom Study Filter Form */
+    .study-custom-panel {
+      display: none;
+      background: rgba(9, 16, 29, 0.98);
+      border-bottom: 1px solid var(--border-color);
+      padding: 12px 14px;
+      gap: 10px;
+      flex-wrap: wrap;
+      align-items: flex-end;
+    }
+    .study-custom-panel.open {
+      display: flex;
+    }
+    .study-input-group {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+    .study-input-group label {
+      font-size: 0.62rem;
+      font-weight: 800;
+      color: var(--text-dim);
+      text-transform: uppercase;
+      letter-spacing: 0.4px;
+    }
+    .study-input {
+      background: rgba(13, 22, 38, 0.9);
+      border: 1px solid var(--border-color);
+      color: #f1f5f9;
+      font-size: 0.75rem;
+      padding: 6px 10px;
+      border-radius: 6px;
+      font-family: var(--font-mono);
+      outline: none;
+    }
+    .study-input:focus {
+      border-color: var(--cyan-primary);
+      box-shadow: 0 0 8px rgba(56, 189, 248, 0.3);
+    }
+    .study-btn-apply {
+      background: linear-gradient(135deg, #10b981, #00ffa3);
+      color: #070d18;
+      font-weight: 900;
+      font-size: 0.74rem;
+      padding: 7px 14px;
+      border-radius: 6px;
+      border: none;
+      cursor: pointer;
+      font-family: var(--font-sans);
+      transition: all 0.2s;
+    }
+    .study-btn-apply:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 0 12px rgba(0, 255, 163, 0.4);
+    }
+    .study-btn-reset {
+      background: rgba(255, 255, 255, 0.08);
+      color: #cbd5e1;
+      font-weight: 700;
+      font-size: 0.74rem;
+      padding: 7px 12px;
+      border-radius: 6px;
+      border: 1px solid var(--border-color);
+      cursor: pointer;
+      font-family: var(--font-sans);
+    }
+
+    /* Strategy Window Scorecard */
+    .study-scorecard-wrap {
+      background: linear-gradient(180deg, rgba(16, 28, 48, 0.7) 0%, rgba(10, 18, 32, 0.9) 100%);
+      padding: 12px 14px;
+    }
+    .study-scorecard-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 10px;
+      flex-wrap: wrap;
+      gap: 6px;
+    }
+    .study-scorecard-title {
+      font-size: 0.75rem;
+      font-weight: 800;
+      color: #38bdf8;
+      letter-spacing: 0.5px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .study-clear-btn {
+      background: rgba(244, 63, 94, 0.15);
+      border: 1px solid var(--red-primary);
+      color: var(--red-primary);
+      font-size: 0.68rem;
+      font-weight: 800;
+      padding: 3px 8px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-family: var(--font-mono);
+      transition: all 0.2s;
+    }
+    .study-clear-btn:hover {
+      background: rgba(244, 63, 94, 0.25);
+    }
+    .study-scorecard-grid {
+      display: grid;
+      grid-template-columns: repeat(6, 1fr);
+      gap: 8px;
+    }
+    .study-stat-box {
+      background: rgba(7, 13, 24, 0.75);
+      border: 1px solid rgba(255, 255, 255, 0.06);
+      border-radius: 8px;
+      padding: 8px 10px;
+    }
+    .study-stat-label {
+      font-size: 0.62rem;
+      color: var(--text-dim);
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.3px;
+    }
+    .study-stat-value {
+      font-size: 0.92rem;
+      font-weight: 900;
+      font-family: var(--font-mono);
+      margin-top: 2px;
+    }
+    .study-stat-sub {
+      font-size: 0.62rem;
+      color: var(--text-muted);
+      font-family: var(--font-mono);
+      margin-top: 1px;
+    }
+
+    /* Hourly 24-Hour Matrix Grid */
+    .hourly-cards-grid {
+      display: grid;
+      grid-template-columns: repeat(6, 1fr);
+      gap: 8px;
+      margin-bottom: 14px;
+    }
+    .hourly-card {
+      background: rgba(13, 22, 38, 0.8);
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      padding: 9px 10px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .hourly-card:hover {
+      border-color: #38bdf8;
+      background: rgba(56, 189, 248, 0.08);
+      transform: translateY(-2px);
+    }
+    .hourly-card.active {
+      border-color: var(--gold-primary);
+      background: rgba(251, 191, 36, 0.12);
+      box-shadow: 0 0 10px rgba(251, 191, 36, 0.2);
+    }
+    .hourly-card-time {
+      font-size: 0.68rem;
+      font-weight: 800;
+      color: #38bdf8;
+      font-family: var(--font-mono);
+    }
+    .hourly-card-bids {
+      font-size: 0.78rem;
+      font-weight: 800;
+      color: #f1f5f9;
+      margin-top: 3px;
+      font-family: var(--font-mono);
+    }
+    .hourly-card-pnl {
+      font-size: 0.74rem;
+      font-weight: 900;
+      font-family: var(--font-mono);
+      margin-top: 2px;
+    }
+
     /* Mobile Responsive Optimizations */
     @media (max-width: 900px) {
       .hero-metrics-grid {
@@ -597,6 +850,14 @@
       .kpi-box-primary {
         font-size: 1.85rem;
       }
+      .study-scorecard-grid {
+        grid-template-columns: repeat(3, 1fr);
+      }
+      .hourly-cards-grid {
+        grid-template-columns: repeat(4, 1fr);
+      }
+    }
+
     @media (max-width: 768px) {
       .dual-positions-wrapper {
         display: grid !important;
@@ -627,6 +888,9 @@
       table.data-table td {
         padding: 6px 3px;
         font-size: 0.72rem;
+      }
+      .hourly-cards-grid {
+        grid-template-columns: repeat(3, 1fr);
       }
     }
 
@@ -662,6 +926,12 @@
       .tab-button {
         padding: 8px 14px;
         font-size: 0.8rem;
+      }
+      .study-scorecard-grid {
+        grid-template-columns: repeat(2, 1fr);
+      }
+      .hourly-cards-grid {
+        grid-template-columns: repeat(2, 1fr);
       }
     }
   </style>
@@ -768,7 +1038,7 @@
       </div>
     </section>
 
-    <!-- 4. Tab Navigation (Only 2 Tabs: Active Positions + Closed Trades History) -->
+    <!-- 4. Tab Navigation (Active Positions, Closed Trades History, and Trade Study Analyzer) -->
     <div class="tabs-bar">
       <button type="button" class="tab-button active" id="tabBtnActive" onclick="switchDeskTab('active')">
         <span>⚡ Active BUY/Sell Positions</span>
@@ -778,9 +1048,13 @@
         <span>📜 Closed Trades History</span>
         <span class="tab-counter" id="tabCountClosed">0</span>
       </button>
+      <button type="button" class="tab-button" id="tabBtnStudy" onclick="switchDeskTab('study')">
+        <span>📊 Trade Study & Time Analyzer</span>
+        <span class="tab-counter" id="tabCountStudy" style="background: rgba(56, 189, 248, 0.2); color: #38bdf8; border: 1px solid rgba(56, 189, 248, 0.4);">0</span>
+      </button>
     </div>
 
-    <!-- Tab Panel 1: Active BUY/Sell Positions (Dual Side-by-Side Inside Dedicated Scrollboxes) -->
+    <!-- Tab Panel 1: Active BUY/Sell Positions (Dual Side-by-Side with Column Sorting) -->
     <div class="tab-panel active" id="panelActive">
       <div class="dual-positions-wrapper">
         <!-- Left: Active BUY Positions -->
@@ -796,10 +1070,10 @@
             <table class="data-table">
               <thead>
                 <tr>
-                  <th>#</th>
-                  <th>Entry</th>
-                  <th class="th-target-buy">🎯 Exit</th>
-                  <th>PnL (₹)</th>
+                  <th class="sortable-th" onclick="setTableSort('buy', 'index')"># <span class="sort-icon" id="sortIcon_buy_index">▲</span></th>
+                  <th class="sortable-th" onclick="setTableSort('buy', 'entryPrice')">Entry <span class="sort-icon" id="sortIcon_buy_entryPrice">↕</span></th>
+                  <th class="sortable-th th-target-buy" onclick="setTableSort('buy', 'targetPrice')">🎯 Exit <span class="sort-icon" id="sortIcon_buy_targetPrice">↕</span></th>
+                  <th class="sortable-th" onclick="setTableSort('buy', 'floatingPnlINR')">PnL (₹) <span class="sort-icon" id="sortIcon_buy_floatingPnlINR">↕</span></th>
                 </tr>
               </thead>
               <tbody id="tbodyActiveBuys">
@@ -824,10 +1098,10 @@
             <table class="data-table">
               <thead>
                 <tr>
-                  <th>#</th>
-                  <th>Entry</th>
-                  <th class="th-target-sell">🎯 Exit</th>
-                  <th>PnL (₹)</th>
+                  <th class="sortable-th" onclick="setTableSort('sell', 'index')"># <span class="sort-icon" id="sortIcon_sell_index">▲</span></th>
+                  <th class="sortable-th" onclick="setTableSort('sell', 'entryPrice')">Entry <span class="sort-icon" id="sortIcon_sell_entryPrice">↕</span></th>
+                  <th class="sortable-th th-target-sell" onclick="setTableSort('sell', 'targetPrice')">🎯 Exit <span class="sort-icon" id="sortIcon_sell_targetPrice">↕</span></th>
+                  <th class="sortable-th" onclick="setTableSort('sell', 'floatingPnlINR')">PnL (₹) <span class="sort-icon" id="sortIcon_sell_floatingPnlINR">↕</span></th>
                 </tr>
               </thead>
               <tbody id="tbodyActiveSells">
@@ -841,7 +1115,7 @@
       </div>
     </div>
 
-    <!-- Tab Panel 2: Closed Trades History (Inside Dedicated Scrollbox - NO Time/Date) -->
+    <!-- Tab Panel 2: Closed Trades History (Exact 8 Columns, Sorting on All, & Study Filter) -->
     <div class="tab-panel" id="panelClosed">
       <div class="table-card">
         <div class="dual-col-header" style="background: rgba(7, 13, 24, 0.95); border-bottom: 1px solid var(--border-color);">
@@ -849,26 +1123,202 @@
             <span class="indicator-dot" style="background: var(--gold-primary); box-shadow: 0 0 8px var(--gold-primary);"></span>
             <span class="dual-header-title" style="color: var(--gold-primary);">CLOSED TRADES HISTORY</span>
           </div>
-          <span class="dual-count-pill" style="background: rgba(251, 191, 36, 0.15); color: var(--gold-primary); border: 1px solid rgba(251, 191, 36, 0.3);" id="badgeClosedCount">0 TRADES</span>
+          <div style="display: flex; gap: 8px; align-items: center;">
+            <button type="button" class="study-chip" onclick="switchDeskTab('study')" style="background: rgba(56, 189, 248, 0.15); color: #38bdf8; border-color: #38bdf8;">📊 24h Hourly Matrix</button>
+            <span class="dual-count-pill" style="background: rgba(251, 191, 36, 0.15); color: var(--gold-primary); border: 1px solid rgba(251, 191, 36, 0.3);" id="badgeClosedCount">0 TRADES</span>
+          </div>
         </div>
+
+        <!-- Strategy Study & Time Filter Toolbar -->
+        <div class="study-toolbar-wrap">
+          <!-- Preset Chips -->
+          <div class="study-presets-bar">
+            <span class="study-bar-label">🔍 TIME STUDY:</span>
+            <button type="button" class="study-chip active" id="chip_ALL" onclick="setStudyPreset('ALL')">ALL BIDS (<span id="count_ALL">0</span>)</button>
+            <button type="button" class="study-chip" id="chip_0304" onclick="setStudyPreset('HOUR', 3)">⭐ 03:00 - 04:00 AM (<span id="count_0304">0</span>)</button>
+            <button type="button" class="study-chip" id="chip_0405" onclick="setStudyPreset('HOUR', 4)">⭐ 04:00 - 05:00 AM (<span id="count_0405">0</span>)</button>
+            <button type="button" class="study-chip" id="chip_0203" onclick="setStudyPreset('HOUR', 2)">⭐ 02:00 - 03:00 AM (<span id="count_0203">0</span>)</button>
+            <button type="button" class="study-chip" id="chip_0001" onclick="setStudyPreset('HOUR', 0)">⭐ 00:00 - 01:00 AM (<span id="count_0001">0</span>)</button>
+            <button type="button" class="study-chip" id="chip_TODAY" onclick="setStudyPreset('TODAY')">📅 TODAY</button>
+            <button type="button" class="study-chip" id="chip_YESTERDAY" onclick="setStudyPreset('YESTERDAY')">📅 YESTERDAY</button>
+            <button type="button" class="study-chip" id="chip_CUSTOM" onclick="toggleCustomStudyPanel()">🛠️ CUSTOM RANGE 📅</button>
+          </div>
+
+          <!-- Collapsible Custom Date & Time Picker -->
+          <div class="study-custom-panel" id="studyCustomPanel">
+            <div class="study-input-group">
+              <label>From Date</label>
+              <input type="date" class="study-input" id="studyFromDate">
+            </div>
+            <div class="study-input-group">
+              <label>Time From (IST)</label>
+              <input type="time" class="study-input" id="studyFromTime" value="03:00">
+            </div>
+            <div class="study-input-group">
+              <label>To Date</label>
+              <input type="date" class="study-input" id="studyToDate">
+            </div>
+            <div class="study-input-group">
+              <label>Time To (IST)</label>
+              <input type="time" class="study-input" id="studyToTime" value="04:00">
+            </div>
+            <div class="study-input-group" style="flex-direction: row; gap: 6px; align-items: flex-end;">
+              <button type="button" class="study-btn-apply" onclick="applyCustomStudyFilter()">🔍 Apply Window</button>
+              <button type="button" class="study-btn-reset" onclick="setStudyPreset('ALL')">🔄 Reset / Show All</button>
+            </div>
+          </div>
+
+          <!-- Strategy Window Scorecard -->
+          <div class="study-scorecard-wrap" id="studyScorecardWrap">
+            <div class="study-scorecard-header">
+              <div class="study-scorecard-title">
+                <span>📊 STRATEGY WINDOW ANALYSIS:</span>
+                <span id="studyWindowLabel" style="color: var(--gold-primary); font-family: var(--font-mono); font-weight: 900;">ALL CLOSED BIDS</span>
+              </div>
+              <button type="button" class="study-clear-btn" id="studyClearBtn" style="display: none;" onclick="setStudyPreset('ALL')">✕ Show All Bids</button>
+            </div>
+            <div class="study-scorecard-grid">
+              <div class="study-stat-box">
+                <div class="study-stat-label">Bids Ended</div>
+                <div class="study-stat-value val-cyan" id="studyBidsEnded">0</div>
+                <div class="study-stat-sub" id="studyBidsSub">Total completed</div>
+              </div>
+              <div class="study-stat-box">
+                <div class="study-stat-label">Net Profit (₹ / $)</div>
+                <div class="study-stat-value val-gold" id="studyNetProfitINR">+₹0.00</div>
+                <div class="study-stat-sub" id="studyNetProfitUSD">+$0.00 Net</div>
+              </div>
+              <div class="study-stat-box">
+                <div class="study-stat-label">Gross (₹)</div>
+                <div class="study-stat-value val-cyan" id="studyGrossProfitINR">+₹0.00</div>
+                <div class="study-stat-sub">Before charges</div>
+              </div>
+              <div class="study-stat-box">
+                <div class="study-stat-label">Charges (₹)</div>
+                <div class="study-stat-value val-red" id="studyChargesINR">-₹0.00</div>
+                <div class="study-stat-sub">Mudrex fee + GST</div>
+              </div>
+              <div class="study-stat-box">
+                <div class="study-stat-label">Win Rate</div>
+                <div class="study-stat-value val-green" id="studyWinRate">100%</div>
+                <div class="study-stat-sub" id="studyWinCount">0 Win / 0 Loss</div>
+              </div>
+              <div class="study-stat-box">
+                <div class="study-stat-label">Avg Profit / Bid</div>
+                <div class="study-stat-value val-gold" id="studyAvgProfitINR">+₹0.00</div>
+                <div class="study-stat-sub" id="studyAvgProfitUSD">Per completed trade</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 8 Columns Table with Sorting on Every Column -->
         <div class="scroll-table-box">
           <table class="data-table">
             <thead>
               <tr>
-                <th>#</th>
-                <th style="color: #38bdf8; font-weight: 800;">⏱️ Exit Time (IST)</th>
-                <th>Side</th>
-                <th>Entry Price</th>
-                <th style="color: var(--gold-primary); font-weight: 800;">🎯 Exit Price</th>
-                <th>Gross (₹)</th>
-                <th>Charges (₹)</th>
-                <th>Net Profit (₹ / $)</th>
-                <th>Exit Reason</th>
+                <th class="sortable-th" onclick="setTableSort('closed', 'index')">Slno <span class="sort-icon" id="sortIcon_closed_index">↕</span></th>
+                <th class="sortable-th" onclick="setTableSort('closed', 'exitTime')" style="color: #38bdf8; font-weight: 800;">⏱️ Exit Time (IST) <span class="sort-icon" id="sortIcon_closed_exitTime">▼</span></th>
+                <th class="sortable-th" onclick="setTableSort('closed', 'netProfitINR')" style="color: var(--green-primary); font-weight: 800;">Net Profit (₹ / $) <span class="sort-icon" id="sortIcon_closed_netProfitINR">↕</span></th>
+                <th class="sortable-th" onclick="setTableSort('closed', 'entryPrice')">Entry Price <span class="sort-icon" id="sortIcon_closed_entryPrice">↕</span></th>
+                <th class="sortable-th" onclick="setTableSort('closed', 'exitPrice')" style="color: var(--gold-primary); font-weight: 800;">Exit Price <span class="sort-icon" id="sortIcon_closed_exitPrice">↕</span></th>
+                <th class="sortable-th" onclick="setTableSort('closed', 'grossProfitINR')">Gross (₹) <span class="sort-icon" id="sortIcon_closed_grossProfitINR">↕</span></th>
+                <th class="sortable-th" onclick="setTableSort('closed', 'totalChargesINR')">Charges (₹) <span class="sort-icon" id="sortIcon_closed_totalChargesINR">↕</span></th>
+                <th class="sortable-th" onclick="setTableSort('closed', 'date')" style="color: #cbd5e1;">Date dd/mmm/yy <span class="sort-icon" id="sortIcon_closed_date">↕</span></th>
               </tr>
             </thead>
             <tbody id="tbodyClosedHistory">
               <tr>
-                <td colspan="9" style="text-align: center; color: var(--text-dim); padding: 24px;">No closed trades recorded yet.</td>
+                <td colspan="8" style="text-align: center; color: var(--text-dim); padding: 24px;">No closed trades recorded yet.</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- Tab Panel 3: Dedicated Trade Study & Hourly Strategy Matrix -->
+    <div class="tab-panel" id="panelStudy">
+      <div class="table-card">
+        <div class="dual-col-header" style="background: rgba(7, 13, 24, 0.95); border-bottom: 1px solid var(--border-color);">
+          <div class="dual-header-left">
+            <span class="indicator-dot" style="background: #38bdf8; box-shadow: 0 0 8px #38bdf8;"></span>
+            <span class="dual-header-title" style="color: #38bdf8;">HOURLY STRATEGY MATRIX & TIME-WINDOW CALCULATOR</span>
+          </div>
+          <span class="dual-count-pill" style="background: rgba(56, 189, 248, 0.15); color: #38bdf8; border: 1px solid rgba(56, 189, 248, 0.3);" id="badgeStudyTabCount">0 BIDS</span>
+        </div>
+
+        <!-- Hourly 24-Hour Matrix Breakdown -->
+        <div style="padding: 14px 16px; border-bottom: 1px solid var(--border-color); background: rgba(10, 18, 32, 0.6);">
+          <div style="font-size: 0.72rem; font-weight: 800; color: #38bdf8; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 10px;">
+            ⏱️ 24-HOUR IST ACTIVITY BREAKDOWN (Click any hour card to inspect its bids & P/L):
+          </div>
+          <div class="hourly-cards-grid" id="hourlyGridContainer">
+            <!-- Dynamically populated -->
+          </div>
+        </div>
+
+        <!-- Strategy Scorecard inside Tab 3 -->
+        <div class="study-scorecard-wrap" style="border-top: none;">
+          <div class="study-scorecard-header">
+            <div class="study-scorecard-title">
+              <span>📊 SELECTED WINDOW STRATEGY SCORECARD:</span>
+              <span id="studyTabWindowLabel" style="color: var(--gold-primary); font-family: var(--font-mono); font-weight: 900;">ALL CLOSED BIDS</span>
+            </div>
+            <button type="button" class="study-clear-btn" id="studyTabClearBtn" style="display: none;" onclick="setStudyPreset('ALL')">✕ Show All Bids</button>
+          </div>
+          <div class="study-scorecard-grid">
+            <div class="study-stat-box">
+              <div class="study-stat-label">Bids Ended</div>
+              <div class="study-stat-value val-cyan" id="studyTabBidsEnded">0</div>
+              <div class="study-stat-sub">Completed bids</div>
+            </div>
+            <div class="study-stat-box">
+              <div class="study-stat-label">Net Profit (₹ / $)</div>
+              <div class="study-stat-value val-gold" id="studyTabNetProfitINR">+₹0.00</div>
+              <div class="study-stat-sub" id="studyTabNetProfitUSD">+$0.00 Net</div>
+            </div>
+            <div class="study-stat-box">
+              <div class="study-stat-label">Gross (₹)</div>
+              <div class="study-stat-value val-cyan" id="studyTabGrossProfitINR">+₹0.00</div>
+              <div class="study-stat-sub">Before fees</div>
+            </div>
+            <div class="study-stat-box">
+              <div class="study-stat-label">Charges (₹)</div>
+              <div class="study-stat-value val-red" id="studyTabChargesINR">-₹0.00</div>
+              <div class="study-stat-sub">Fee + GST</div>
+            </div>
+            <div class="study-stat-box">
+              <div class="study-stat-label">Win Rate</div>
+              <div class="study-stat-value val-green" id="studyTabWinRate">100%</div>
+              <div class="study-stat-sub" id="studyTabWinCount">0 Win / 0 Loss</div>
+            </div>
+            <div class="study-stat-box">
+              <div class="study-stat-label">Avg Profit / Bid</div>
+              <div class="study-stat-value val-gold" id="studyTabAvgProfitINR">+₹0.00</div>
+              <div class="study-stat-sub" id="studyTabAvgProfitUSD">Per trade</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Filtered Table inside Tab 3 -->
+        <div class="scroll-table-box">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th class="sortable-th" onclick="setTableSort('closed', 'index')">Slno <span class="sort-icon" id="sortIcon_study_index">↕</span></th>
+                <th class="sortable-th" onclick="setTableSort('closed', 'exitTime')" style="color: #38bdf8; font-weight: 800;">⏱️ Exit Time (IST) <span class="sort-icon" id="sortIcon_study_exitTime">▼</span></th>
+                <th class="sortable-th" onclick="setTableSort('closed', 'netProfitINR')" style="color: var(--green-primary); font-weight: 800;">Net Profit (₹ / $) <span class="sort-icon" id="sortIcon_study_netProfitINR">↕</span></th>
+                <th class="sortable-th" onclick="setTableSort('closed', 'entryPrice')">Entry Price <span class="sort-icon" id="sortIcon_study_entryPrice">↕</span></th>
+                <th class="sortable-th" onclick="setTableSort('closed', 'exitPrice')" style="color: var(--gold-primary); font-weight: 800;">Exit Price <span class="sort-icon" id="sortIcon_study_exitPrice">↕</span></th>
+                <th class="sortable-th" onclick="setTableSort('closed', 'grossProfitINR')">Gross (₹) <span class="sort-icon" id="sortIcon_study_grossProfitINR">↕</span></th>
+                <th class="sortable-th" onclick="setTableSort('closed', 'totalChargesINR')">Charges (₹) <span class="sort-icon" id="sortIcon_study_totalChargesINR">↕</span></th>
+                <th class="sortable-th" onclick="setTableSort('closed', 'date')" style="color: #cbd5e1;">Date dd/mmm/yy <span class="sort-icon" id="sortIcon_study_date">↕</span></th>
+              </tr>
+            </thead>
+            <tbody id="tbodyStudyHistory">
+              <tr>
+                <td colspan="8" style="text-align: center; color: var(--text-dim); padding: 24px;">No closed trades recorded yet.</td>
               </tr>
             </tbody>
           </table>
@@ -879,25 +1329,281 @@
 
   <script>
     let currentDeskTab = 'active';
+    let latestData = null;
+
+    // Table sort states
+    const sortState = {
+      buy: { col: 'index', dir: 'asc' },
+      sell: { col: 'index', dir: 'asc' },
+      closed: { col: 'exitTime', dir: 'desc' }
+    };
+
+    // Time window study filter state
+    let studyFilter = {
+      type: 'ALL', // 'ALL', 'HOUR', 'TODAY', 'YESTERDAY', 'CUSTOM'
+      hour: null,
+      fromDate: null,
+      fromTime: null,
+      toDate: null,
+      toTime: null,
+      label: 'ALL CLOSED BIDS'
+    };
 
     function switchDeskTab(tab) {
       currentDeskTab = tab;
       const btnActive = document.getElementById('tabBtnActive');
       const btnClosed = document.getElementById('tabBtnClosed');
+      const btnStudy = document.getElementById('tabBtnStudy');
       const panelActive = document.getElementById('panelActive');
       const panelClosed = document.getElementById('panelClosed');
+      const panelStudy = document.getElementById('panelStudy');
+
+      btnActive.classList.remove('active');
+      btnClosed.classList.remove('active');
+      if (btnStudy) btnStudy.classList.remove('active');
+      panelActive.classList.remove('active');
+      panelClosed.classList.remove('active');
+      if (panelStudy) panelStudy.classList.remove('active');
 
       if (tab === 'active') {
         btnActive.classList.add('active');
-        btnClosed.classList.remove('active');
         panelActive.classList.add('active');
-        panelClosed.classList.remove('active');
-      } else {
-        btnActive.classList.remove('active');
+      } else if (tab === 'closed') {
         btnClosed.classList.add('active');
-        panelActive.classList.remove('active');
         panelClosed.classList.add('active');
+      } else if (tab === 'study') {
+        if (btnStudy) btnStudy.classList.add('active');
+        if (panelStudy) panelStudy.classList.add('active');
       }
+    }
+
+    // Toggle sorting on any column
+    function setTableSort(tableKey, col) {
+      if (sortState[tableKey].col === col) {
+        sortState[tableKey].dir = sortState[tableKey].dir === 'asc' ? 'desc' : 'asc';
+      } else {
+        sortState[tableKey].col = col;
+        // Smart initial sort direction
+        if (col === 'index') {
+          sortState[tableKey].dir = 'asc';
+        } else {
+          sortState[tableKey].dir = 'desc';
+        }
+      }
+      if (latestData) {
+        renderSubhMoneyUI(latestData);
+      }
+    }
+
+    // Set 1-Click Study Preset
+    function setStudyPreset(preset, hour = null) {
+      studyFilter.type = preset;
+      studyFilter.hour = hour;
+      const panel = document.getElementById('studyCustomPanel');
+      if (panel) panel.classList.remove('open');
+
+      if (preset === 'ALL') {
+        studyFilter.label = 'ALL CLOSED BIDS';
+      } else if (preset === 'HOUR') {
+        const startH = String(hour).padStart(2, '0');
+        const endH = String((hour + 1) % 24).padStart(2, '0');
+        const ampm = hour < 12 ? 'AM' : 'PM';
+        studyFilter.label = `WINDOW: ${startH}:00 - ${endH}:00 IST (${ampm})`;
+      } else if (preset === 'TODAY') {
+        studyFilter.label = 'WINDOW: TODAY (ALL HOURS)';
+      } else if (preset === 'YESTERDAY') {
+        studyFilter.label = 'WINDOW: YESTERDAY (ALL HOURS)';
+      }
+
+      // Update active chip UI
+      document.querySelectorAll('.study-chip').forEach(c => c.classList.remove('active'));
+      let activeChipId = 'chip_ALL';
+      if (preset === 'ALL') activeChipId = 'chip_ALL';
+      else if (preset === 'HOUR' && hour === 3) activeChipId = 'chip_0304';
+      else if (preset === 'HOUR' && hour === 4) activeChipId = 'chip_0405';
+      else if (preset === 'HOUR' && hour === 2) activeChipId = 'chip_0203';
+      else if (preset === 'HOUR' && hour === 0) activeChipId = 'chip_0001';
+      else if (preset === 'TODAY') activeChipId = 'chip_TODAY';
+      else if (preset === 'YESTERDAY') activeChipId = 'chip_YESTERDAY';
+      
+      const chipEl = document.getElementById(activeChipId);
+      if (chipEl) chipEl.classList.add('active');
+
+      if (latestData) {
+        renderSubhMoneyUI(latestData);
+      }
+    }
+
+    // Toggle custom date/time panel
+    function toggleCustomStudyPanel() {
+      const panel = document.getElementById('studyCustomPanel');
+      if (panel) {
+        panel.classList.toggle('open');
+      }
+    }
+
+    // Apply custom date & time filter
+    function applyCustomStudyFilter() {
+      const fromDate = document.getElementById('studyFromDate').value;
+      const fromTime = document.getElementById('studyFromTime').value || '00:00';
+      const toDate = document.getElementById('studyToDate').value;
+      const toTime = document.getElementById('studyToTime').value || '23:59';
+
+      studyFilter.type = 'CUSTOM';
+      studyFilter.fromDate = fromDate || null;
+      studyFilter.fromTime = fromTime;
+      studyFilter.toDate = toDate || null;
+      studyFilter.toTime = toTime;
+
+      let desc = 'CUSTOM: ';
+      if (fromDate) desc += `${fromDate} `;
+      desc += `${fromTime} to `;
+      if (toDate) desc += `${toDate} `;
+      desc += `${toTime} IST`;
+      studyFilter.label = desc;
+
+      document.querySelectorAll('.study-chip').forEach(c => c.classList.remove('active'));
+      const chipCustom = document.getElementById('chip_CUSTOM');
+      if (chipCustom) chipCustom.classList.add('active');
+
+      if (latestData) {
+        renderSubhMoneyUI(latestData);
+      }
+    }
+
+    // Helper: Format IST Date as dd/mmm/yy (e.g. 15/Oct/26)
+    function formatISTDateDDMMMYY(tsOrIso) {
+      if (!tsOrIso) return '--';
+      const d = new Date(tsOrIso);
+      if (isNaN(d.getTime())) return '--';
+      const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+      const istOffsetMs = 5.5 * 60 * 60 * 1000;
+      const istDate = new Date(d.getTime() + istOffsetMs);
+      const day = String(istDate.getUTCDate()).padStart(2, '0');
+      const month = months[istDate.getUTCMonth()];
+      const year = String(istDate.getUTCFullYear()).slice(-2);
+      return `${day}/${month}/${year}`;
+    }
+
+    // Helper: Format IST Time (e.g. 03:45:12 AM)
+    function formatISTTime(tsOrIso) {
+      if (!tsOrIso) return '--';
+      const d = new Date(tsOrIso);
+      if (isNaN(d.getTime())) return '--';
+      return d.toLocaleTimeString('en-IN', {
+        timeZone: 'Asia/Kolkata',
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit',
+        hour12: true
+      }).toUpperCase();
+    }
+
+    // Helper: Extract IST Date Components for Filtering
+    function getISTComponents(tsOrIso) {
+      if (!tsOrIso) return null;
+      const d = new Date(tsOrIso);
+      if (isNaN(d.getTime())) return null;
+      const istOffsetMs = 5.5 * 60 * 60 * 1000;
+      const istDate = new Date(d.getTime() + istOffsetMs);
+      const year = istDate.getUTCFullYear();
+      const month = istDate.getUTCMonth();
+      const day = istDate.getUTCDate();
+      const hours = istDate.getUTCHours();
+      const minutes = istDate.getUTCMinutes();
+      const isoDateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+      const totalMinutesOfDay = hours * 60 + minutes;
+      return {
+        timestamp: d.getTime(),
+        istDate,
+        isoDateStr,
+        hours,
+        minutes,
+        totalMinutesOfDay
+      };
+    }
+
+    // Helper: Sort records
+    function sortRecords(list, col, dir) {
+      const mult = dir === 'asc' ? 1 : -1;
+      return [...list].sort((a, b) => {
+        let valA = 0, valB = 0;
+        if (col === 'index') {
+          valA = Number(a.tradeNumber || a.originalIndex || 0);
+          valB = Number(b.tradeNumber || b.originalIndex || 0);
+        } else if (col === 'exitTime' || col === 'date') {
+          valA = Number(a.exitTimestamp || (a.exitTime ? new Date(a.exitTime).getTime() : 0));
+          valB = Number(b.exitTimestamp || (b.exitTime ? new Date(b.exitTime).getTime() : 0));
+        } else if (col === 'netProfitINR') {
+          valA = Number(a.netProfitINR || 0);
+          valB = Number(b.netProfitINR || 0);
+        } else if (col === 'grossProfitINR') {
+          valA = Number(a.grossProfitINR || 0);
+          valB = Number(b.grossProfitINR || 0);
+        } else if (col === 'totalChargesINR') {
+          valA = Number(a.totalChargesINR || 0);
+          valB = Number(b.totalChargesINR || 0);
+        } else if (col === 'entryPrice') {
+          valA = Number(a.entryPrice || 0);
+          valB = Number(b.entryPrice || 0);
+        } else if (col === 'exitPrice') {
+          valA = Number(a.exitPrice || 0);
+          valB = Number(b.exitPrice || 0);
+        } else if (col === 'targetPrice') {
+          valA = Number(a.targetPrice || a.targetExitPrice || 0);
+          valB = Number(b.targetPrice || b.targetExitPrice || 0);
+        } else if (col === 'floatingPnlINR') {
+          valA = Number(a.floatingPnlINR || 0);
+          valB = Number(b.floatingPnlINR || 0);
+        }
+        return (valA - valB) * mult;
+      });
+    }
+
+    // Helper: Update Header Sort Arrows
+    function updateHeaderSortIcons() {
+      // Buy Table
+      ['index', 'entryPrice', 'targetPrice', 'floatingPnlINR'].forEach(col => {
+        const el = document.getElementById(`sortIcon_buy_${col}`);
+        if (!el) return;
+        if (sortState.buy.col === col) {
+          el.innerText = sortState.buy.dir === 'asc' ? '▲' : '▼';
+          el.classList.add('active');
+        } else {
+          el.innerText = '↕';
+          el.classList.remove('active');
+        }
+      });
+
+      // Sell Table
+      ['index', 'entryPrice', 'targetPrice', 'floatingPnlINR'].forEach(col => {
+        const el = document.getElementById(`sortIcon_sell_${col}`);
+        if (!el) return;
+        if (sortState.sell.col === col) {
+          el.innerText = sortState.sell.dir === 'asc' ? '▲' : '▼';
+          el.classList.add('active');
+        } else {
+          el.innerText = '↕';
+          el.classList.remove('active');
+        }
+      });
+
+      // Closed & Study Tables
+      ['index', 'exitTime', 'netProfitINR', 'entryPrice', 'exitPrice', 'grossProfitINR', 'totalChargesINR', 'date'].forEach(col => {
+        const elClosed = document.getElementById(`sortIcon_closed_${col}`);
+        const elStudy = document.getElementById(`sortIcon_study_${col}`);
+        const arrow = sortState.closed.col === col ? (sortState.closed.dir === 'asc' ? '▲' : '▼') : '↕';
+        const isActive = sortState.closed.col === col;
+
+        if (elClosed) {
+          elClosed.innerText = arrow;
+          elClosed.classList.toggle('active', isActive);
+        }
+        if (elStudy) {
+          elStudy.innerText = arrow;
+          elStudy.classList.toggle('active', isActive);
+        }
+      });
     }
 
     async function fetchSubhMoneyData() {
@@ -906,6 +1612,7 @@
         if (!res.ok) return;
         const data = await res.json();
         if (data && data.success) {
+          latestData = data;
           renderSubhMoneyUI(data);
         }
       } catch (e) {
@@ -915,6 +1622,8 @@
 
     function renderSubhMoneyUI(data) {
       try {
+        if (!data) return;
+        latestData = data;
         const rate = data.rate || {};
         const wallet = data.wallet || {};
         const engine = data.engine || {};
@@ -934,22 +1643,24 @@
         document.getElementById('heroLivePrice').innerText = `$${livePrice.toFixed(2)}`;
 
         // Active Buy & Sell Lists with defensive normalization
-        const activeBuys = pairs.filter(p => p.buy && p.buy.status === 'OPEN').map(p => {
+        let activeBuys = pairs.filter(p => p.buy && p.buy.status === 'OPEN').map((p, idx) => {
           const entry = Number(p.buy.entryPrice || p.entryPrice || livePrice);
           const tgt = Number(p.buy.targetPrice || p.buy.targetExitPrice || p.buyTarget || (entry + targetMove));
           return {
             ...p.buy,
+            originalIndex: idx + 1,
             pairId: p.pairId,
             entryPrice: entry,
             targetPrice: tgt,
             targetExitPrice: tgt
           };
         });
-        const activeSells = pairs.filter(p => p.sell && p.sell.status === 'OPEN').map(p => {
+        let activeSells = pairs.filter(p => p.sell && p.sell.status === 'OPEN').map((p, idx) => {
           const entry = Number(p.sell.entryPrice || p.entryPrice || livePrice);
           const tgt = Number(p.sell.targetPrice || p.sell.targetExitPrice || p.sellTarget || (entry - targetMove));
           return {
             ...p.sell,
+            originalIndex: idx + 1,
             pairId: p.pairId,
             entryPrice: entry,
             targetPrice: tgt,
@@ -993,131 +1704,321 @@
         document.getElementById('heroActivePairs').innerText = `${pairs.length} PAIRS`;
         document.getElementById('heroPairsSub').innerText = `${engine.activeBuyCount || activeBuys.length} BUY / ${engine.activeSellCount || activeSells.length} SELL · ${engine.contractQuantity || 3.0} SOL 5x`;
 
-      // 5. Financial KPI 1: Mudrex Available Margin (₹ and $)
-      const availINR = Number(wallet.availableMarginINR || 0);
-      const availUSD = Number(wallet.availableMarginUSD || (availINR / usdInr));
-      document.getElementById('kpiAvailableMarginINR').innerText = `₹${availINR.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-      document.getElementById('kpiAvailableMarginUSD').innerText = `$${availUSD.toFixed(2)} Available Margin`;
+        // 5. Financial KPI 1: Mudrex Available Margin (₹ and $)
+        const availINR = Number(wallet.availableMarginINR || 0);
+        const availUSD = Number(wallet.availableMarginUSD || (availINR / usdInr));
+        document.getElementById('kpiAvailableMarginINR').innerText = `₹${availINR.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+        document.getElementById('kpiAvailableMarginUSD').innerText = `$${availUSD.toFixed(2)} Available Margin`;
 
-      // 6. Financial KPI 2: Realized Net Profit (₹ and $)
-      let realINR = Number(pnl.totalRealizedINR !== undefined ? pnl.totalRealizedINR : (pnl.realizedNetINR || 0));
-      let realUSD = Number(pnl.totalRealizedUSD !== undefined ? pnl.totalRealizedUSD : (pnl.realizedNetUSD || (realINR / usdInr)));
-      
-      // Authoritative fallback: If realINR evaluates to 0 but closed trades exist, sum them!
-      if (realINR === 0 && closed.length > 0) {
-        realINR = closed.reduce((acc, t) => acc + Number(t.netProfitINR || 0), 0);
-        realUSD = realINR / usdInr;
-      }
+        // 6. Financial KPI 2: Realized Net Profit (₹ and $)
+        let realINR = Number(pnl.totalRealizedINR !== undefined ? pnl.totalRealizedINR : (pnl.realizedNetINR || 0));
+        let realUSD = Number(pnl.totalRealizedUSD !== undefined ? pnl.totalRealizedUSD : (pnl.realizedNetUSD || (realINR / usdInr)));
+        
+        if (realINR === 0 && closed.length > 0) {
+          realINR = closed.reduce((acc, t) => acc + Number(t.netProfitINR || 0), 0);
+          realUSD = realINR / usdInr;
+        }
 
-      const realSign = realINR >= 0 ? '+' : '';
-      const closedTradesCount = Math.max(Number(pnl.totalClosedTrades || pnl.closedTradesCount || 0), closed.length);
-      document.getElementById('kpiRealizedNetINR').innerText = `${realSign}₹${realINR.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-      document.getElementById('kpiRealizedNetUSD').innerText = `${realSign}$${realUSD.toFixed(2)} Net (${closedTradesCount} Closed Trades)`;
-      document.getElementById('kpiClosedTradesTag').innerText = `${closedTradesCount} TRADES CLOSED`;
+        const realSign = realINR >= 0 ? '+' : '';
+        const closedTradesCount = Math.max(Number(pnl.totalClosedTrades || pnl.closedTradesCount || 0), closed.length);
+        document.getElementById('kpiRealizedNetINR').innerText = `${realSign}₹${realINR.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+        document.getElementById('kpiRealizedNetUSD').innerText = `${realSign}$${realUSD.toFixed(2)} Net (${closedTradesCount} Closed Trades)`;
+        document.getElementById('kpiClosedTradesTag').innerText = `${closedTradesCount} TRADES CLOSED`;
 
-      // Tab Counters
-      document.getElementById('tabCountActive').innerText = `${activeBuys.length + activeSells.length}`;
-      document.getElementById('tabCountClosed').innerText = `${closedTradesCount}`;
+        // Tab Counters
+        document.getElementById('tabCountActive').innerText = `${activeBuys.length + activeSells.length}`;
+        document.getElementById('tabCountClosed').innerText = `${closedTradesCount}`;
+        const tabCountStudyEl = document.getElementById('tabCountStudy');
+        if (tabCountStudyEl) tabCountStudyEl.innerText = `${closedTradesCount}`;
 
-      // 7. Render Dual Active Positions (BUY & SELL Separated Side-by-Side Inside Dedicated Scrollboxes)
-      document.getElementById('badgeBuyCount').innerText = `${activeBuys.length} BUYS`;
-      document.getElementById('badgeSellCount').innerText = `${activeSells.length} SELLS`;
+        // 7. Sort and Render Active BUY Table
+        activeBuys = sortRecords(activeBuys, sortState.buy.col, sortState.buy.dir);
+        document.getElementById('badgeBuyCount').innerText = `${activeBuys.length} BUYS`;
+        const tbodyBuys = document.getElementById('tbodyActiveBuys');
+        if (activeBuys.length === 0) {
+          tbodyBuys.innerHTML = `<tr><td colspan="4" style="text-align: center; color: var(--text-dim); padding: 20px;">Waiting for BUY positions...</td></tr>`;
+        } else {
+          tbodyBuys.innerHTML = activeBuys.map((pos) => {
+            const bTgt = Number(pos.targetPrice || pos.targetExitPrice || (pos.entryPrice ? (pos.entryPrice + targetMove) : 0));
+            const dist = bTgt - livePrice;
+            const distSign = dist >= 0 ? '+' : '';
+            const pnlINR = Number(pos.floatingPnlINR || 0);
+            const pnlColor = pnlINR >= 0 ? 'var(--green-primary)' : 'var(--red-primary)';
+            const pnlSign = pnlINR >= 0 ? '+' : '';
 
-      // Render Active BUYs Table (4 Compact Columns for Side-by-Side Mobile Fit)
-      const tbodyBuys = document.getElementById('tbodyActiveBuys');
-      if (activeBuys.length === 0) {
-        tbodyBuys.innerHTML = `<tr><td colspan="4" style="text-align: center; color: var(--text-dim); padding: 20px;">Waiting for BUY positions...</td></tr>`;
-      } else {
-        tbodyBuys.innerHTML = activeBuys.map((pos, idx) => {
-          const bTgt = Number(pos.targetPrice || pos.targetExitPrice || (pos.entryPrice ? (pos.entryPrice + targetMove) : 0));
-          const dist = bTgt - livePrice;
-          const distSign = dist >= 0 ? '+' : '';
-          const pnlINR = Number(pos.floatingPnlINR || 0);
-          const pnlColor = pnlINR >= 0 ? 'var(--green-primary)' : 'var(--red-primary)';
-          const pnlSign = pnlINR >= 0 ? '+' : '';
+            return `
+              <tr>
+                <td style="color: var(--text-dim); font-weight: 700;">#${pos.originalIndex}</td>
+                <td style="color: #cbd5e1; font-weight: 600;">$${Number(pos.entryPrice || 0).toFixed(2)}</td>
+                <td>
+                  <div style="color: var(--green-primary); font-weight: 900; font-size: 0.88rem; text-shadow: 0 0 10px rgba(0, 255, 163, 0.35); line-height: 1.15;">$${bTgt.toFixed(2)}</div>
+                  <div style="font-size: 0.64rem; color: #94a3b8; font-weight: 700; margin-top: 1px;">${distSign}$${dist.toFixed(2)}</div>
+                </td>
+                <td style="color: ${pnlColor}; font-weight: 800;">${pnlSign}₹${pnlINR.toFixed(2)}</td>
+              </tr>
+            `;
+          }).join('');
+        }
 
-          return `
-            <tr>
-              <td style="color: var(--text-dim); font-weight: 700;">#${idx + 1}</td>
-              <td style="color: #cbd5e1; font-weight: 600;">$${Number(pos.entryPrice || 0).toFixed(2)}</td>
-              <td>
-                <div style="color: var(--green-primary); font-weight: 900; font-size: 0.88rem; text-shadow: 0 0 10px rgba(0, 255, 163, 0.35); line-height: 1.15;">$${bTgt.toFixed(2)}</div>
-                <div style="font-size: 0.64rem; color: #94a3b8; font-weight: 700; margin-top: 1px;">${distSign}$${dist.toFixed(2)}</div>
-              </td>
-              <td style="color: ${pnlColor}; font-weight: 800;">${pnlSign}₹${pnlINR.toFixed(2)}</td>
-            </tr>
-          `;
-        }).join('');
-      }
+        // 8. Sort and Render Active SELL Table
+        activeSells = sortRecords(activeSells, sortState.sell.col, sortState.sell.dir);
+        document.getElementById('badgeSellCount').innerText = `${activeSells.length} SELLS`;
+        const tbodySells = document.getElementById('tbodyActiveSells');
+        if (activeSells.length === 0) {
+          tbodySells.innerHTML = `<tr><td colspan="4" style="text-align: center; color: var(--text-dim); padding: 20px;">Waiting for SELL positions...</td></tr>`;
+        } else {
+          tbodySells.innerHTML = activeSells.map((pos) => {
+            const sTgt = Number(pos.targetPrice || pos.targetExitPrice || (pos.entryPrice ? (pos.entryPrice - targetMove) : 0));
+            const dist = livePrice - sTgt;
+            const distSign = dist >= 0 ? '+' : '';
+            const pnlINR = Number(pos.floatingPnlINR || 0);
+            const pnlColor = pnlINR >= 0 ? 'var(--green-primary)' : 'var(--red-primary)';
+            const pnlSign = pnlINR >= 0 ? '+' : '';
 
-      // Render Active SELLs Table (4 Compact Columns for Side-by-Side Mobile Fit)
-      const tbodySells = document.getElementById('tbodyActiveSells');
-      if (activeSells.length === 0) {
-        tbodySells.innerHTML = `<tr><td colspan="4" style="text-align: center; color: var(--text-dim); padding: 20px;">Waiting for SELL positions...</td></tr>`;
-      } else {
-        tbodySells.innerHTML = activeSells.map((pos, idx) => {
-          const sTgt = Number(pos.targetPrice || pos.targetExitPrice || (pos.entryPrice ? (pos.entryPrice - targetMove) : 0));
-          const dist = livePrice - sTgt;
-          const distSign = dist >= 0 ? '+' : '';
-          const pnlINR = Number(pos.floatingPnlINR || 0);
-          const pnlColor = pnlINR >= 0 ? 'var(--green-primary)' : 'var(--red-primary)';
-          const pnlSign = pnlINR >= 0 ? '+' : '';
+            return `
+              <tr>
+                <td style="color: var(--text-dim); font-weight: 700;">#${pos.originalIndex}</td>
+                <td style="color: #cbd5e1; font-weight: 600;">$${Number(pos.entryPrice || 0).toFixed(2)}</td>
+                <td>
+                  <div style="color: var(--red-primary); font-weight: 900; font-size: 0.88rem; text-shadow: 0 0 10px rgba(244, 63, 94, 0.35); line-height: 1.15;">$${sTgt.toFixed(2)}</div>
+                  <div style="font-size: 0.64rem; color: #94a3b8; font-weight: 700; margin-top: 1px;">${distSign}$${dist.toFixed(2)}</div>
+                </td>
+                <td style="color: ${pnlColor}; font-weight: 800;">${pnlSign}₹${pnlINR.toFixed(2)}</td>
+              </tr>
+            `;
+          }).join('');
+        }
 
-          return `
-            <tr>
-              <td style="color: var(--text-dim); font-weight: 700;">#${idx + 1}</td>
-              <td style="color: #cbd5e1; font-weight: 600;">$${Number(pos.entryPrice || 0).toFixed(2)}</td>
-              <td>
-                <div style="color: var(--red-primary); font-weight: 900; font-size: 0.88rem; text-shadow: 0 0 10px rgba(244, 63, 94, 0.35); line-height: 1.15;">$${sTgt.toFixed(2)}</div>
-                <div style="font-size: 0.64rem; color: #94a3b8; font-weight: 700; margin-top: 1px;">${distSign}$${dist.toFixed(2)}</div>
-              </td>
-              <td style="color: ${pnlColor}; font-weight: 800;">${pnlSign}₹${pnlINR.toFixed(2)}</td>
-            </tr>
-          `;
-        }).join('');
-      }
-
-      // 8. Render Closed Trades History Table (Sorted by Exit Time - Newest First)
-      const tbodyClosed = document.getElementById('tbodyClosedHistory');
-      document.getElementById('badgeClosedCount').innerText = `${closedTradesCount} TRADES`;
-      if (closed.length === 0) {
-        tbodyClosed.innerHTML = `<tr><td colspan="9" style="text-align: center; color: var(--text-dim); padding: 24px;">No closed trades recorded yet.</td></tr>`;
-      } else {
-        const sortedClosed = [...closed].sort((a, b) => {
+        // 9. Assign Chronological Trade Numbers & Preprocess Closed Trades
+        const chronoSorted = [...closed].sort((a, b) => {
           const tA = Number(a.exitTimestamp || (a.exitTime ? new Date(a.exitTime).getTime() : 0));
           const tB = Number(b.exitTimestamp || (b.exitTime ? new Date(b.exitTime).getTime() : 0));
-          return tB - tA; // Newest first
+          return tA - tB;
+        });
+        chronoSorted.forEach((t, i) => {
+          t.tradeNumber = i + 1;
         });
 
-        tbodyClosed.innerHTML = sortedClosed.slice(0, 100).map((t, idx) => {
-          const isBuy = t.direction === 'BUY';
-          const netINR = Number(t.netProfitINR || 0);
-          const netUSD = Number(t.netProfitUSD || (netINR / usdInr));
-          const netSign = netINR >= 0 ? '+' : '';
-          const netColor = netINR >= 0 ? 'var(--green-primary)' : 'var(--red-primary)';
-          const exitTimeStr = t.exitTime 
-            ? new Date(t.exitTime).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true })
-            : (t.exitTimestamp ? new Date(t.exitTimestamp).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true }) : 'N/A');
+        // Compute 24-Hour Activity Breakdown
+        const hourlyStats = {};
+        for (let h = 0; h < 24; h++) {
+          hourlyStats[h] = { hour: h, count: 0, netINR: 0, netUSD: 0, grossINR: 0, chargesINR: 0, wins: 0 };
+        }
 
-          return `
-            <tr>
-              <td style="color: var(--text-dim); font-weight: 700;">#${idx + 1}</td>
-              <td style="color: #38bdf8; font-family: var(--font-mono); font-size: 0.8rem; font-weight: 600;">${exitTimeStr}</td>
-              <td><span class="${isBuy ? 'badge-buy' : 'badge-sell'}">${t.direction}</span></td>
-              <td style="color: #cbd5e1;">$${Number(t.entryPrice || 0).toFixed(2)}</td>
-              <td style="color: #ffffff; font-weight: 900; font-size: 0.95rem; text-shadow: 0 0 10px rgba(251, 191, 36, 0.3);">$${Number(t.exitPrice || 0).toFixed(2)}</td>
-              <td style="color: #38bdf8;">+₹${Number(t.grossProfitINR || 0).toFixed(2)}</td>
-              <td style="color: #f87171;">-₹${Number(t.totalChargesINR || 0).toFixed(2)}</td>
-              <td style="color: ${netColor}; font-weight: 900;">${netSign}₹${netINR.toFixed(2)} <span style="font-size: 0.72rem; color: #94a3b8;">(${netSign}$${netUSD.toFixed(2)})</span></td>
-              <td style="color: var(--text-dim); font-size: 0.72rem;">${t.exitReason || 'TARGET HIT'}</td>
-            </tr>
-          `;
-        }).join('');
+        let count0304 = 0, count0405 = 0, count0203 = 0, count0001 = 0;
+        const nowIST = getISTComponents(Date.now());
+        const todayStr = nowIST ? nowIST.isoDateStr : '';
+
+        closed.forEach(t => {
+          const comp = getISTComponents(t.exitTime || t.exitTimestamp);
+          if (comp) {
+            const h = comp.hours;
+            hourlyStats[h].count++;
+            hourlyStats[h].netINR += Number(t.netProfitINR || 0);
+            hourlyStats[h].netUSD += Number(t.netProfitUSD || ((t.netProfitINR || 0) / usdInr));
+            hourlyStats[h].grossINR += Number(t.grossProfitINR || 0);
+            hourlyStats[h].chargesINR += Number(t.totalChargesINR || 0);
+            if (Number(t.netProfitINR || 0) > 0) hourlyStats[h].wins++;
+
+            if (h === 3) count0304++;
+            if (h === 4) count0405++;
+            if (h === 2) count0203++;
+            if (h === 0) count0001++;
+          }
+        });
+
+        // Update Preset Chips Counter Badges
+        const elAll = document.getElementById('count_ALL');
+        const el0304 = document.getElementById('count_0304');
+        const el0405 = document.getElementById('count_0405');
+        const el0203 = document.getElementById('count_0203');
+        const el0001 = document.getElementById('count_0001');
+        if (elAll) elAll.innerText = `${closed.length}`;
+        if (el0304) el0304.innerText = `${count0304}`;
+        if (el0405) el0405.innerText = `${count0405}`;
+        if (el0203) el0203.innerText = `${count0203}`;
+        if (el0001) el0001.innerText = `${count0001}`;
+
+        // Render 24-Hour Grid in Tab 3
+        const hourlyGrid = document.getElementById('hourlyGridContainer');
+        if (hourlyGrid) {
+          hourlyGrid.innerHTML = Object.keys(hourlyStats).map(key => {
+            const stat = hourlyStats[key];
+            if (stat.count === 0) return '';
+            const h = Number(key);
+            const startH = String(h).padStart(2, '0');
+            const endH = String((h + 1) % 24).padStart(2, '0');
+            const pnlSign = stat.netINR >= 0 ? '+' : '';
+            const pnlColor = stat.netINR >= 0 ? 'var(--green-primary)' : 'var(--red-primary)';
+            const isSelected = studyFilter.type === 'HOUR' && studyFilter.hour === h;
+
+            return `
+              <div class="hourly-card ${isSelected ? 'active' : ''}" onclick="setStudyPreset('HOUR', ${h})">
+                <div class="hourly-card-time">⏱️ ${startH}:00 - ${endH}:00 IST</div>
+                <div class="hourly-card-bids">${stat.count} Bids Ended</div>
+                <div class="hourly-card-pnl" style="color: ${pnlColor};">${pnlSign}₹${stat.netINR.toFixed(2)} <span style="font-size: 0.65rem; color: #94a3b8;">(${pnlSign}$${stat.netUSD.toFixed(2)})</span></div>
+              </div>
+            `;
+          }).join('');
+        }
+
+        // 10. Filter Closed Trades based on active studyFilter
+        let filteredTrades = closed.filter(t => {
+          if (studyFilter.type === 'ALL') return true;
+          const comp = getISTComponents(t.exitTime || t.exitTimestamp);
+          if (!comp) return false;
+
+          if (studyFilter.type === 'HOUR') {
+            return comp.hours === studyFilter.hour;
+          }
+
+          if (studyFilter.type === 'TODAY') {
+            return comp.isoDateStr === todayStr;
+          }
+
+          if (studyFilter.type === 'YESTERDAY') {
+            const yesterdayDate = new Date(Date.now() - 24 * 60 * 60 * 1000);
+            const yComp = getISTComponents(yesterdayDate);
+            return comp.isoDateStr === (yComp ? yComp.isoDateStr : '');
+          }
+
+          if (studyFilter.type === 'CUSTOM') {
+            if (studyFilter.fromDate && comp.isoDateStr < studyFilter.fromDate) return false;
+            if (studyFilter.toDate && comp.isoDateStr > studyFilter.toDate) return false;
+            if (studyFilter.fromTime) {
+              const [fh, fm] = studyFilter.fromTime.split(':').map(Number);
+              if (comp.totalMinutesOfDay < (fh * 60 + fm)) return false;
+            }
+            if (studyFilter.toTime) {
+              const [th, tm] = studyFilter.toTime.split(':').map(Number);
+              if (comp.totalMinutesOfDay > (th * 60 + tm)) return false;
+            }
+            return true;
+          }
+
+          return true;
+        });
+
+        // 11. Compute Strategy Scorecard Metrics on filteredTrades
+        const fCount = filteredTrades.length;
+        const fNetINR = filteredTrades.reduce((s, t) => s + Number(t.netProfitINR || 0), 0);
+        const fNetUSD = filteredTrades.reduce((s, t) => s + Number(t.netProfitUSD || ((t.netProfitINR || 0) / usdInr)), 0);
+        const fGrossINR = filteredTrades.reduce((s, t) => s + Number(t.grossProfitINR || 0), 0);
+        const fChargesINR = filteredTrades.reduce((s, t) => s + Number(t.totalChargesINR || 0), 0);
+        const fWins = filteredTrades.filter(t => Number(t.netProfitINR || 0) > 0).length;
+        const fLosses = filteredTrades.filter(t => Number(t.netProfitINR || 0) < 0).length;
+        const fWinRate = fCount > 0 ? ((fWins / fCount) * 100).toFixed(1) : '100.0';
+        const fAvgProfitINR = fCount > 0 ? (fNetINR / fCount).toFixed(2) : '0.00';
+        const fAvgProfitUSD = fCount > 0 ? (fNetUSD / fCount).toFixed(2) : '0.00';
+
+        const fNetSign = fNetINR >= 0 ? '+' : '';
+        const fNetColor = fNetINR >= 0 ? 'var(--green-primary)' : 'var(--red-primary)';
+        const fAvgSign = Number(fAvgProfitINR) >= 0 ? '+' : '';
+
+        // Update Scorecards in both Panel 2 and Panel 3
+        const isFilterActive = studyFilter.type !== 'ALL';
+        
+        // Panel 2 elements
+        document.getElementById('studyWindowLabel').innerText = studyFilter.label;
+        document.getElementById('studyBidsEnded').innerText = `${fCount}`;
+        document.getElementById('studyBidsSub').innerText = isFilterActive ? `of ${closed.length} total bids` : 'Total completed';
+        const pNet = document.getElementById('studyNetProfitINR');
+        pNet.innerText = `${fNetSign}₹${fNetINR.toFixed(2)}`;
+        pNet.style.color = fNetColor;
+        document.getElementById('studyNetProfitUSD').innerText = `${fNetSign}$${fNetUSD.toFixed(2)} Net Realized`;
+        document.getElementById('studyGrossProfitINR').innerText = `+₹${fGrossINR.toFixed(2)}`;
+        document.getElementById('studyChargesINR').innerText = `-₹${fChargesINR.toFixed(2)}`;
+        document.getElementById('studyWinRate').innerText = `${fWinRate}%`;
+        document.getElementById('studyWinCount').innerText = `${fWins} Win / ${fLosses} Loss`;
+        document.getElementById('studyAvgProfitINR').innerText = `${fAvgSign}₹${fAvgProfitINR}`;
+        document.getElementById('studyAvgProfitUSD').innerText = `${fAvgSign}$${fAvgProfitUSD} / Bid`;
+        const clearBtn = document.getElementById('studyClearBtn');
+        if (clearBtn) clearBtn.style.display = isFilterActive ? 'inline-block' : 'none';
+
+        // Panel 3 elements
+        const tabWindowLbl = document.getElementById('studyTabWindowLabel');
+        if (tabWindowLbl) tabWindowLbl.innerText = studyFilter.label;
+        const tabBidsEnded = document.getElementById('studyTabBidsEnded');
+        if (tabBidsEnded) tabBidsEnded.innerText = `${fCount}`;
+        const tabNetINR = document.getElementById('studyTabNetProfitINR');
+        if (tabNetINR) {
+          tabNetINR.innerText = `${fNetSign}₹${fNetINR.toFixed(2)}`;
+          tabNetINR.style.color = fNetColor;
+        }
+        const tabNetUSD = document.getElementById('studyTabNetProfitUSD');
+        if (tabNetUSD) tabNetUSD.innerText = `${fNetSign}$${fNetUSD.toFixed(2)} Net Realized`;
+        const tabGross = document.getElementById('studyTabGrossProfitINR');
+        if (tabGross) tabGross.innerText = `+₹${fGrossINR.toFixed(2)}`;
+        const tabCharges = document.getElementById('studyTabChargesINR');
+        if (tabCharges) tabCharges.innerText = `-₹${fChargesINR.toFixed(2)}`;
+        const tabWinRate = document.getElementById('studyTabWinRate');
+        if (tabWinRate) tabWinRate.innerText = `${fWinRate}%`;
+        const tabWinCount = document.getElementById('studyTabWinCount');
+        if (tabWinCount) tabWinCount.innerText = `${fWins} Win / ${fLosses} Loss`;
+        const tabAvgINR = document.getElementById('studyTabAvgProfitINR');
+        if (tabAvgINR) tabAvgINR.innerText = `${fAvgSign}₹${fAvgProfitINR}`;
+        const tabAvgUSD = document.getElementById('studyTabAvgProfitUSD');
+        if (tabAvgUSD) tabAvgUSD.innerText = `${fAvgSign}$${fAvgProfitUSD} / Bid`;
+        const tabClearBtn = document.getElementById('studyTabClearBtn');
+        if (tabClearBtn) tabClearBtn.style.display = isFilterActive ? 'inline-block' : 'none';
+
+        const badgeClosed = document.getElementById('badgeClosedCount');
+        if (badgeClosed) badgeClosed.innerText = isFilterActive ? `${fCount} OF ${closed.length} TRADES` : `${closed.length} TRADES`;
+        const badgeStudy = document.getElementById('badgeStudyTabCount');
+        if (badgeStudy) badgeStudy.innerText = `${fCount} TRADES`;
+
+        // 12. Sort Closed Trades Table based on sortState.closed
+        filteredTrades = sortRecords(filteredTrades, sortState.closed.col, sortState.closed.dir);
+
+        // Render Table Rows (8 Exact Columns Requested: Slno | Exit Time (IST) | Net Profit (₹ / $) | Entry Price | Exit Price | Gross (₹) | Charges (₹) | Date dd/mmm/yy)
+        const renderTradeRows = (tradesList) => {
+          if (tradesList.length === 0) {
+            return `<tr><td colspan="8" style="text-align: center; color: var(--text-dim); padding: 24px;">No closed trades match this study filter.</td></tr>`;
+          }
+          return tradesList.slice(0, 100).map(t => {
+            const netINR = Number(t.netProfitINR || 0);
+            const netUSD = Number(t.netProfitUSD || (netINR / usdInr));
+            const netSign = netINR >= 0 ? '+' : '';
+            const netColor = netINR >= 0 ? 'var(--green-primary)' : 'var(--red-primary)';
+            const grossINR = Number(t.grossProfitINR || 0);
+            const chargesINR = Number(t.totalChargesINR || 0);
+            const entryPrice = Number(t.entryPrice || 0);
+            const exitPrice = Number(t.exitPrice || 0);
+            const exitTimeIST = formatISTTime(t.exitTime || t.exitTimestamp);
+            const dateDDMMMYY = formatISTDateDDMMMYY(t.exitTime || t.exitTimestamp);
+            const isBuy = (t.direction === 'BUY');
+            const sideIcon = isBuy 
+              ? '<span style="color: var(--green-primary); font-size: 0.68rem; margin-right: 3px;" title="BUY Position">▲</span>' 
+              : '<span style="color: var(--red-primary); font-size: 0.68rem; margin-right: 3px;" title="SELL Position">▼</span>';
+
+            return `
+              <tr>
+                <td style="color: var(--text-dim); font-weight: 700;">${sideIcon}#${t.tradeNumber || t.originalIndex}</td>
+                <td style="color: #38bdf8; font-family: var(--font-mono); font-size: 0.8rem; font-weight: 700;">${exitTimeIST}</td>
+                <td style="color: ${netColor}; font-weight: 900; font-size: 0.88rem;">${netSign}₹${netINR.toFixed(2)} <span style="font-size: 0.72rem; color: #94a3b8; font-weight: 600;">(${netSign}$${netUSD.toFixed(2)})</span></td>
+                <td style="color: #cbd5e1; font-weight: 600;">$${entryPrice.toFixed(2)}</td>
+                <td style="color: #ffffff; font-weight: 900; font-size: 0.92rem; text-shadow: 0 0 10px rgba(251, 191, 36, 0.3);">$${exitPrice.toFixed(2)}</td>
+                <td style="color: #38bdf8; font-weight: 700;">+₹${grossINR.toFixed(2)}</td>
+                <td style="color: #f87171; font-weight: 700;">-₹${chargesINR.toFixed(2)}</td>
+                <td style="color: #cbd5e1; font-family: var(--font-mono); font-size: 0.8rem; font-weight: 700;">${dateDDMMMYY}</td>
+              </tr>
+            `;
+          }).join('');
+        };
+
+        const tbodyClosed = document.getElementById('tbodyClosedHistory');
+        if (tbodyClosed) tbodyClosed.innerHTML = renderTradeRows(filteredTrades);
+
+        const tbodyStudy = document.getElementById('tbodyStudyHistory');
+        if (tbodyStudy) tbodyStudy.innerHTML = renderTradeRows(filteredTrades);
+
+        // 13. Update Header Sorting Arrow Visuals
+        updateHeaderSortIcons();
+
+      } catch (err) {
+        console.error('[Subh Money Render Error]', err);
       }
-    } catch (err) {
-      console.error('[Subh Money Render Error]', err);
     }
-  }
 
     // Initial Load & High-Frequency Polling (every 1 second)
     fetchSubhMoneyData();
