@@ -915,6 +915,53 @@ class SolanaEngine {
     };
   }
 
+  closeLotGroup(targetQty, triggerReason = 'USER_MANUAL_LOT_CLOSE', livePrice = null, usdInrRate = 102.00) {
+    const qtyTarget = parseFloat(targetQty);
+    if (isNaN(qtyTarget) || qtyTarget <= 0) {
+      return { success: false, error: 'Valid target lot size required' };
+    }
+
+    const price = livePrice ? Number(livePrice) : (this.lastProcessedRate || 104.50);
+    const usdInr = usdInrRate || this.settings.usdInrRate || 102.00;
+    const takerFee = this.settings.takerFeeRate || 0.00075;
+    const gstRate = this.settings.gstRate || 0.18;
+
+    let closedPairs = 0;
+    let closedLegs = 0;
+    const now = Date.now();
+
+    for (const pair of this.pairs) {
+      if (pair.status === 'CLOSED') continue;
+      const pQty = Number(pair.quantity || this.settings.contractQuantity || 4.0);
+      if (Math.abs(pQty - qtyTarget) > 0.05) continue; // Only target exact lot size!
+
+      let hadOpenLeg = false;
+      if (pair.buyPosition && pair.buyPosition.status === 'OPEN') {
+        this.closePositionLeg(pair.buyPosition, price, now, `MANUAL CLOSE (${qtyTarget} SOL LOT)`, usdInr, takerFee, gstRate);
+        closedLegs++;
+        hadOpenLeg = true;
+      }
+      if (pair.sellPosition && pair.sellPosition.status === 'OPEN') {
+        this.closePositionLeg(pair.sellPosition, price, now, `MANUAL CLOSE (${qtyTarget} SOL LOT)`, usdInr, takerFee, gstRate);
+        closedLegs++;
+        hadOpenLeg = true;
+      }
+
+      pair.status = 'CLOSED';
+      if (hadOpenLeg) closedPairs++;
+    }
+
+    this.saveState();
+    console.log(`[Solana Engine] Manual Lot Exit: Closed ${closedPairs} pairs (${closedLegs} legs) of ${qtyTarget} SOL at $${price.toFixed(2)}.`);
+    return {
+      success: true,
+      message: `Closed all ${qtyTarget} SOL pairs (${closedPairs} pairs, ${closedLegs} trade legs).`,
+      closedPairs,
+      closedLegs,
+      lotSize: qtyTarget
+    };
+  }
+
   resetData(newQty = null, newCapital = 186682.39, newTargetMove = null) {
     this.settings.startingCapitalINR = (newCapital && !isNaN(newCapital) && Number(newCapital) > 0) ? Number(newCapital) : 186682.39;
     if (newQty && !isNaN(newQty) && Number(newQty) > 0) {

@@ -1021,6 +1021,15 @@ app.post(['/api/solana-live-mudrex/action', '/api/subh-mani-solana/action', '/ap
       solanaEngine.settings.maxActivePairs = newMax;
       solanaEngine.saveState();
       return res.json({ success: true, message: `Solana Max Active Pairs updated to ${newMax}.`, maxActivePairs: newMax });
+    } else if (action === 'closeLotGroup') {
+      const lotQty = Number(req.body.lotSize || req.body.quantity);
+      if (isNaN(lotQty) || lotQty <= 0) {
+        return res.status(400).json({ success: false, error: 'Valid lot size required.' });
+      }
+      const cur = rateFeed.getCurrentRate('SOLUSDT');
+      const livePrice = cur ? cur.price : solanaEngine.lastProcessedRate;
+      const resClose = solanaEngine.closeLotGroup(lotQty, 'USER_MANUAL_LOT_CLOSE', livePrice, cur ? cur.usdInrRate : 102.00);
+      return res.json(resClose);
     } else if (action === 'resetData' || action === 'resetSimulator') {
       const customQty = req.body.quantity ? Number(req.body.quantity) : null;
       const customCapital = req.body.capitalINR ? Number(req.body.capitalINR) : 300000.00;

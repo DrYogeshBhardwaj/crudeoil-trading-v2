@@ -235,10 +235,10 @@
       font-weight: 600;
     }
 
-    /* 3. Financial KPI Row (ONLY 2 Cards: Mudrex Available Margin + Realized Net Profit) */
+    /* 3. Financial KPI Row (3 Cards: Available Margin + Realized Net Profit + Lot P/L & End SOL) */
     .financial-kpi-grid {
       display: grid;
-      grid-template-columns: repeat(2, 1fr);
+      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
       gap: 12px;
       margin-bottom: 16px;
     }
@@ -260,6 +260,148 @@
     .kpi-box.box-profit {
       border-color: rgba(251, 191, 36, 0.35);
       background: linear-gradient(135deg, rgba(28, 24, 16, 0.95), rgba(7, 13, 24, 0.95));
+    }
+
+    .kpi-box.box-lot-end {
+      border-color: rgba(56, 189, 248, 0.35);
+      background: linear-gradient(135deg, rgba(14, 28, 48, 0.95), rgba(7, 13, 24, 0.95));
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+    .kpi-box.box-lot-end:hover {
+      border-color: #38bdf8;
+      box-shadow: 0 0 16px rgba(56, 189, 248, 0.35);
+      transform: translateY(-2px);
+    }
+
+    /* Modal: Lot P/L & End SOL */
+    .lot-modal-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.82);
+      backdrop-filter: blur(8px);
+      z-index: 9999;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 16px;
+    }
+    .lot-modal-overlay.active {
+      display: flex;
+    }
+    .lot-modal-card {
+      background: #0b1323;
+      border: 1.5px solid rgba(56, 189, 248, 0.45);
+      border-radius: 16px;
+      width: 100%;
+      max-width: 680px;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.8), 0 0 30px rgba(56, 189, 248, 0.2);
+      overflow: hidden;
+      animation: modalFadeIn 0.2s ease-out;
+    }
+    @keyframes modalFadeIn {
+      from { opacity: 0; transform: scale(0.96); }
+      to { opacity: 1; transform: scale(1); }
+    }
+    .lot-modal-header {
+      padding: 18px 22px;
+      background: rgba(14, 28, 48, 0.9);
+      border-bottom: 1px solid rgba(56, 189, 248, 0.3);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .lot-modal-title {
+      font-size: 1.05rem;
+      font-weight: 900;
+      color: #38bdf8;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .lot-modal-close {
+      background: transparent;
+      border: none;
+      color: #94a3b8;
+      font-size: 1.4rem;
+      cursor: pointer;
+      line-height: 1;
+      padding: 4px 8px;
+      border-radius: 6px;
+    }
+    .lot-modal-close:hover {
+      color: #fff;
+      background: rgba(255, 255, 255, 0.1);
+    }
+    .lot-modal-body {
+      padding: 20px 22px;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+      max-height: 70vh;
+      overflow-y: auto;
+    }
+    .lot-group-card {
+      background: rgba(16, 26, 44, 0.7);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 12px;
+      padding: 16px 18px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 16px;
+      flex-wrap: wrap;
+    }
+    .lot-group-card.highlight {
+      border-color: rgba(251, 191, 36, 0.4);
+      background: linear-gradient(135deg, rgba(28, 24, 16, 0.8), rgba(16, 26, 44, 0.8));
+    }
+    .lot-info-left {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+    .lot-name-tag {
+      font-size: 1.15rem;
+      font-weight: 900;
+      font-family: var(--font-display);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .lot-sub-info {
+      font-size: 0.78rem;
+      color: #94a3b8;
+      font-family: var(--font-mono);
+    }
+    .lot-pnl-col {
+      text-align: right;
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+    .lot-pnl-val {
+      font-size: 1.25rem;
+      font-weight: 900;
+      font-family: var(--font-mono);
+    }
+    .btn-end-lot {
+      background: linear-gradient(135deg, #e11d48, #be123c);
+      border: 1px solid #fb7185;
+      color: #ffffff;
+      font-weight: 800;
+      font-size: 0.82rem;
+      padding: 8px 16px;
+      border-radius: 8px;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      transition: all 0.2s;
+    }
+    .btn-end-lot:hover {
+      background: #f43f5e;
+      box-shadow: 0 0 12px rgba(244, 63, 94, 0.5);
     }
 
     .kpi-box-header {
@@ -1221,7 +1363,7 @@
       </div>
     </section>
 
-    <!-- 3. Financial KPI Row (ONLY 2 Clean Cards as requested: Available Margin + Realized Net Profit) -->
+    <!-- 3. Financial KPI Row (Available Margin + Realized Net Profit + Lot P/L & End SOL) -->
     <section class="financial-kpi-grid">
       <!-- Card 1: Mudrex Available Margin -->
       <div class="kpi-box box-margin">
@@ -1241,6 +1383,21 @@
         </div>
         <div class="kpi-box-primary val-gold" id="kpiRealizedNetINR">+₹0.00</div>
         <div class="kpi-box-secondary" id="kpiRealizedNetUSD">+$0.00 Net Realized Profit</div>
+      </div>
+
+      <!-- Card 3: Lot P/L & End SOL (Click to inspect Lot-wise Running P/L and End lots selectively) -->
+      <div class="kpi-box box-lot-end" onclick="openLotManagerModal()" title="Click to inspect Lot-wise Running P/L and End lots selectively">
+        <div class="kpi-box-header">
+          <span class="kpi-box-title" style="color: #38bdf8;">⚡ Lot P/L &amp; End SOL</span>
+          <span class="kpi-box-tag" style="background: rgba(56, 189, 248, 0.18); color: #38bdf8; border: 1px solid rgba(56, 189, 248, 0.4);">LIVE LOT MONITOR</span>
+        </div>
+        <div class="kpi-box-primary" id="kpiLotMonitorSummary" style="font-size: 1.05rem; display: flex; gap: 8px; flex-wrap: wrap; align-items: center; min-height: 38px;">
+          <span style="color: var(--text-dim); font-size: 0.82rem;">Loading Lot P/L...</span>
+        </div>
+        <div class="kpi-box-secondary" style="display: flex; justify-content: space-between; align-items: center; margin-top: 4px;">
+          <span style="color: #94a3b8; font-size: 0.74rem;">Inspect live P/L &amp; End specific lots</span>
+          <span style="color: #38bdf8; font-weight: 800; font-size: 0.74rem;">OPEN ➔</span>
+        </div>
       </div>
     </section>
 
@@ -1584,6 +1741,27 @@
               </tr>
             </tbody>
           </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: Lot-Wise P/L & End SOL Manager -->
+  <div class="lot-modal-overlay" id="modalLotManager" onclick="handleLotModalBackdrop(event)">
+    <div class="lot-modal-card">
+      <div class="lot-modal-header">
+        <div class="lot-modal-title">
+          <span>⚡</span>
+          <span>LOT-WISE LIVE P/L &amp; MANUAL EXIT CONTROL</span>
+        </div>
+        <button type="button" class="lot-modal-close" onclick="closeLotManagerModal()">✕</button>
+      </div>
+      <div class="lot-modal-body">
+        <div style="font-size: 0.8rem; color: #94a3b8; line-height: 1.45; background: rgba(56, 189, 248, 0.08); border: 1px solid rgba(56, 189, 248, 0.25); padding: 10px 14px; border-radius: 8px;">
+          💡 <strong>Pro Trader Control</strong>: Yahan aap 3.0 SOL, 4.0 SOL (aur naye lots) ka <strong>Running Floating P/L</strong> alag-alag live dekh sakte hain. Jab koi group profit (+Green) me aaye ya aapko margin free karna ho, tab <strong>End All</strong> button se us group ke saare pairs market rate par close kar sakte hain (PIN: <code>340556</code>).
+        </div>
+        <div id="lotModalCardsContainer" style="display: flex; flex-direction: column; gap: 12px; margin-top: 4px;">
+          <!-- Dynamically populated per lot size (3.0 SOL, 4.0 SOL, etc.) -->
         </div>
       </div>
     </div>
@@ -2028,6 +2206,55 @@
         document.getElementById('kpiRealizedNetUSD').innerText = `${realSign}$${realUSD.toFixed(2)} Net (${closedTradesCount} Closed Trades)`;
         document.getElementById('kpiClosedTradesTag').innerText = `${closedTradesCount} TRADES CLOSED`;
 
+        // 6.5. Compute Lot-Wise Live Running Floating P/L & Locked Margin
+        const lotStats = {};
+        openPairs.forEach(p => {
+          const qty = Number(p.quantity || (p.buy && p.buy.quantity) || (p.sell && p.sell.quantity) || engine.contractQuantity || 4.0);
+          if (!lotStats[qty]) {
+            lotStats[qty] = {
+              quantity: qty,
+              pairsCount: 0,
+              openBuys: 0,
+              openSells: 0,
+              floatingNetINR: 0,
+              lockedMarginINR: 0
+            };
+          }
+          lotStats[qty].pairsCount++;
+          if (p.buy && p.buy.status === 'OPEN') {
+            lotStats[qty].openBuys++;
+            lotStats[qty].floatingNetINR += Number(p.buy.floatingPnlINR || 0);
+            lotStats[qty].lockedMarginINR += ((Number(p.buy.entryPrice || livePrice) * qty * usdInr) / 5);
+          }
+          if (p.sell && p.sell.status === 'OPEN') {
+            lotStats[qty].openSells++;
+            lotStats[qty].floatingNetINR += Number(p.sell.floatingPnlINR || 0);
+            lotStats[qty].lockedMarginINR += ((Number(p.sell.entryPrice || livePrice) * qty * usdInr) / 5);
+          }
+        });
+
+        // Update KPI Card 3 Badges
+        const lotMonitorEl = document.getElementById('kpiLotMonitorSummary');
+        if (lotMonitorEl) {
+          const activeKeys = Object.keys(lotStats).sort((a, b) => parseFloat(a) - parseFloat(b));
+          if (activeKeys.length === 0) {
+            lotMonitorEl.innerHTML = `<span style="color: var(--text-dim); font-size: 0.82rem;">No Active Lots</span>`;
+          } else {
+            lotMonitorEl.innerHTML = activeKeys.map(k => {
+              const st = lotStats[k];
+              const pSign = st.floatingNetINR >= 0 ? '+' : '';
+              const pColor = st.floatingNetINR >= 0 ? 'var(--green-primary)' : 'var(--red-primary)';
+              return `<span style="background: rgba(255, 255, 255, 0.06); border: 1px solid rgba(255, 255, 255, 0.15); padding: 3px 8px; border-radius: 6px; font-size: 0.80rem; font-family: var(--font-mono); font-weight: 700; white-space: nowrap;">${Number(k).toFixed(1)} SOL: <span style="color: ${pColor}; font-weight: 900;">${pSign}₹${st.floatingNetINR.toFixed(2)}</span></span>`;
+            }).join('');
+          }
+        }
+
+        window.currentLotStats = lotStats;
+        const modalEl = document.getElementById('modalLotManager');
+        if (modalEl && modalEl.classList.contains('active')) {
+          renderLotModalCards(lotStats);
+        }
+
         // Tab Counters
         document.getElementById('tabCountActive').innerText = `${activeBuys.length + activeSells.length}`;
         document.getElementById('tabCountClosed').innerText = `${closedTradesCount}`;
@@ -2457,6 +2684,105 @@
         alert('Network Error: ' + err.message);
         btn.innerText = origText;
         btn.disabled = false;
+      }
+    }
+
+    // Lot Manager Modal Functions
+    function openLotManagerModal() {
+      const modal = document.getElementById('modalLotManager');
+      if (modal) {
+        modal.classList.add('active');
+        if (window.currentLotStats) {
+          renderLotModalCards(window.currentLotStats);
+        }
+      }
+    }
+
+    function closeLotManagerModal() {
+      const modal = document.getElementById('modalLotManager');
+      if (modal) modal.classList.remove('active');
+    }
+
+    function handleLotModalBackdrop(e) {
+      if (e.target.id === 'modalLotManager') {
+        closeLotManagerModal();
+      }
+    }
+
+    function renderLotModalCards(lotStats) {
+      const container = document.getElementById('lotModalCardsContainer');
+      if (!container) return;
+      const lotKeys = Object.keys(lotStats || {}).sort((a, b) => parseFloat(a) - parseFloat(b));
+      if (lotKeys.length === 0) {
+        container.innerHTML = `<div style="text-align: center; color: var(--text-dim); padding: 24px;">No active pairs found.</div>`;
+        return;
+      }
+
+      container.innerHTML = lotKeys.map(k => {
+        const st = lotStats[k];
+        const pSign = st.floatingNetINR >= 0 ? '+' : '';
+        const pColor = st.floatingNetINR >= 0 ? 'var(--green-primary)' : 'var(--red-primary)';
+        const pUSD = (st.floatingNetINR / 102.00);
+        const pUSDSign = pUSD >= 0 ? '+' : '';
+        const isThree = Math.abs(parseFloat(k) - 3.0) < 0.05;
+
+        return `
+          <div class="lot-group-card ${isThree ? 'highlight' : ''}">
+            <div class="lot-info-left">
+              <div class="lot-name-tag">
+                <span style="color: ${isThree ? '#fbbf24' : '#38bdf8'}; font-weight: 900;">⚡ ${Number(k).toFixed(1)} SOL LOT</span>
+                <span class="badge" style="background: rgba(255, 255, 255, 0.08); color: #fff; font-size: 0.72rem; padding: 2px 8px; border-radius: 6px; font-family: var(--font-mono);">${st.pairsCount} PAIRS (${st.openBuys} BUY / ${st.openSells} SELL)</span>
+              </div>
+              <div class="lot-sub-info" style="margin-top: 2px;">
+                🔓 Margin to free: <strong style="color: #38bdf8; font-weight: 800;">₹${Math.round(st.lockedMarginINR).toLocaleString('en-IN')} INR</strong>
+              </div>
+            </div>
+
+            <div style="display: flex; gap: 16px; align-items: center; flex-wrap: wrap;">
+              <div class="lot-pnl-col">
+                <div style="font-size: 0.68rem; color: #94a3b8; text-transform: uppercase; font-weight: 700;">Running Floating P/L</div>
+                <div class="lot-pnl-val" style="color: ${pColor};">${pSign}₹${st.floatingNetINR.toFixed(2)}</div>
+                <div style="font-size: 0.72rem; color: #94a3b8; font-family: var(--font-mono); font-weight: 600;">${pUSDSign}$${pUSD.toFixed(2)}</div>
+              </div>
+
+              <button type="button" class="btn-end-lot" onclick="confirmEndLot(${st.quantity}, ${st.pairsCount})">
+                <span>✕</span>
+                <span>End All ${Number(k).toFixed(1)} SOL</span>
+              </button>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    async function confirmEndLot(qty, count) {
+      const pin = prompt(`⚠️ CAUTION: Kya aap sabhi ${qty} SOL wale ${count} pairs ko MARKET RATE par close karke exit karna chahte hain?\n\nAdmin Password (340556) enter karein:`);
+      if (!pin) return;
+      if (pin !== '340556') {
+        alert('❌ Galat password! Action cancelled.');
+        return;
+      }
+
+      try {
+        const res = await fetch('/api/subh-money-solana/action', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            action: 'closeLotGroup',
+            lotSize: qty,
+            password: pin
+          })
+        });
+        const data = await res.json();
+        if (data.success) {
+          alert(`✅ Success: ${data.message}`);
+          closeLotManagerModal();
+          fetchSubhMoneyData();
+        } else {
+          alert(`❌ Error: ${data.error || 'Failed to close lot'}`);
+        }
+      } catch (err) {
+        alert(`❌ Network Error: ${err.message}`);
       }
     }
 
