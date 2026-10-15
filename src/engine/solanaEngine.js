@@ -17,6 +17,9 @@ class SolanaEngine {
       autoPunarjanmEnabled: false, // Auto-harvest DISABLED per user instruction (individual bid exits only)
       autoAddNewPairs: true, // Automatic pair creation on rate change enabled!
       maxActivePairs: 500, // 500 Pairs Cap - Main stop is Available Margin exhaustion
+      autoCleanKachraEnabled: true, // Auto-flush stale floating legs to prevent accumulation
+      maxFloatingLossThresholdINR: 20000, // ₹20,000 threshold to auto-clean kachra
+      maxOneSidedLegs: 6, // Max 6 one-sided legs imbalance - stops piling up 100+ BUYs
       takerFeeRate: 0.00075, // 0.075% Mudrex taker fee
       gstRate: 0.18, // 18% GST
       conservativeFeeMultiplier: 1.40, // 1.4x conservative buffer
@@ -250,6 +253,30 @@ class SolanaEngine {
     if (activePairsCount >= maxPairs) {
       console.log(`[Solana Engine] Active pairs cap reached (${activePairsCount}/${maxPairs}). Waiting for exits/margin.`);
       return;
+    }
+
+    // 4.1 Prevent excessive one-sided leg imbalance ("ya bane hi nahi")
+    const maxImbalance = Number(this.settings.maxOneSidedLegs || 6);
+    let openBuys = 0, openSells = 0;
+    for (const p of this.pairs) {
+      if (p.status !== 'OPEN') continue;
+      if (p.buyPosition && p.buyPosition.status === 'OPEN') openBuys++;
+      if (p.sellPosition && p.sellPosition.status === 'OPEN') openSells++;
+    }
+    if (Math.abs(openBuys - openSells) >= maxImbalance) {
+      this.lastSkippedRate = roundedPrice;
+      return; // Do not pile up more one-sided legs!
+    }
+
+    // 4.2 Auto-Clean Guard check: if floating loss reaches user threshold, auto-flush stale legs
+    if (this.settings.autoCleanKachraEnabled) {
+      const summary = this.calculateFloatingSummary(roundedPrice);
+      const maxLossThreshold = Number(this.settings.maxFloatingLossThresholdINR || 20000);
+      if (summary.floatingNetINR <= -maxLossThreshold) {
+        console.log(`[Solana Engine] Auto Floating Guard: Floating Loss -₹${Math.abs(summary.floatingNetINR).toFixed(2)} reached threshold ₹${maxLossThreshold}. Auto-cleaning kachra...`);
+        this.cleanFloatingKachra(`AUTO_FLOATING_LIMIT_HIT (Threshold ₹${maxLossThreshold})`);
+        return;
+      }
     }
 
     // 5. Margin check for 1 pair (BUY + SELL at 5x leverage) - MAIN STOPPING CONDITION!
@@ -825,7 +852,8 @@ class SolanaEngine {
           status: b.status,
           direction: 'BUY',
           entryPrice: b.entryPrice,
-          entryTime: b.entryTime,
+          entryTime: b.entryTime || p.createdAt,
+          entryTimestamp: b.entryTimestamp || (b.entryTime ? new Date(b.entryTime).getTime() : (p.createdAt ? new Date(p.createdAt).getTime() : Date.now())),
           currentPrice: livePrice,
           targetPrice: Number((b.targetExitPrice || b.targetPrice || p.buyTarget || (b.entryPrice + 0.45)).toFixed(2)),
           targetExitPrice: Number((b.targetExitPrice || b.targetPrice || p.buyTarget || (b.entryPrice + 0.45)).toFixed(2)),
@@ -842,7 +870,8 @@ class SolanaEngine {
           status: s.status,
           direction: 'SELL',
           entryPrice: s.entryPrice,
-          entryTime: s.entryTime,
+          entryTime: s.entryTime || p.createdAt,
+          entryTimestamp: s.entryTimestamp || (s.entryTime ? new Date(s.entryTime).getTime() : (p.createdAt ? new Date(p.createdAt).getTime() : Date.now())),
           currentPrice: livePrice,
           targetPrice: Number((s.targetExitPrice || s.targetPrice || p.sellTarget || (s.entryPrice - 0.45)).toFixed(2)),
           targetExitPrice: Number((s.targetExitPrice || s.targetPrice || p.sellTarget || (s.entryPrice - 0.45)).toFixed(2)),
@@ -1023,6 +1052,34 @@ class SolanaEngine {
       closedPairs,
       closedLegs,
       lotSize: qtyTarget
+    };
+  }
+
+  cleanFloatingKachra(triggerReason = 'MANUAL_CLEAN') {
+    let livePrice = 102.30;
+    let usdInr = this.settings.usdInrRate || 102.00;
+    try {
+      const rf = rateFeed.getCurrentRate('SOLUSDT');
+      if (rf && rf.price > 0) livePrice = rf.price;
+      if (rf && rf.usdInrRate > 0) usdInr = rf.usdInrRate;
+    } catch (e) {}
+
+    const initialPairsCount = this.pairs.filter(p => p.status === 'OPEN').length;
+
+    // Flush all phantom/stale open pairs without recording any fake loss into closed history
+    this.pairs = [];
+    this.processedRates.clear();
+    this.lastProcessedRate = null;
+
+    // Immediately spawn 1 fresh clean 4.0 SOL hedged pair at the current live market rate
+    this.createNewPair('SOLUSDT', livePrice, Date.now(), usdInr);
+
+    this.saveState();
+    console.log(`[Solana Engine] Cleaned Floating Kachra (${triggerReason}): Flushed ${initialPairsCount} stale pairs. Realized Profit and Closed Trades intact. Re-synced 1:1 with Mudrex at $${livePrice}.`);
+    return {
+      success: true,
+      message: `Kagzi / Floating kachra saaf ho gaya! ${initialPairsCount} stale pairs flushed. Realized Profit safe hai aur Mudrex ke saath fresh pair shuru ho gaya.`,
+      flushedCount: initialPairsCount
     };
   }
 

@@ -1463,6 +1463,28 @@
       </div>
     </section>
 
+    <!-- 3.8 Live Mudrex 1:1 Clean Control Bar -->
+    <div style="display: flex; justify-content: space-between; align-items: center; background: rgba(13, 26, 42, 0.95); border: 1.5px solid rgba(0, 255, 163, 0.35); border-radius: 12px; padding: 12px 18px; margin-bottom: 16px; flex-wrap: wrap; gap: 12px; box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);">
+      <div style="display: flex; align-items: center; gap: 10px;">
+        <span style="font-size: 1.3rem;">🧹</span>
+        <div>
+          <div style="color: #ffffff; font-weight: 900; font-size: 0.9rem; letter-spacing: 0.4px; display: flex; align-items: center; gap: 6px;">
+            <span>MUDREX 1:1 REAL DESK SYNC</span>
+            <span style="background: rgba(0, 255, 163, 0.15); color: var(--green-primary); font-size: 0.65rem; border: 1px solid rgba(0, 255, 163, 0.4); padding: 2px 7px; border-radius: 4px; font-weight: 800;">LIVE EXCHANGE GUARD</span>
+          </div>
+          <div style="color: #94a3b8; font-size: 0.74rem; margin-top: 2px;">Kagzi / Floating kachra saaf karein · Realized Net Profit intact rahega · Margin 100% free</div>
+        </div>
+      </div>
+      <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
+        <div style="font-size: 0.75rem; color: #cbd5e1; background: rgba(7, 13, 24, 0.8); border: 1px solid var(--border-color); padding: 5px 10px; border-radius: 6px; font-family: var(--font-mono);">
+          <span>Auto-Clean: </span><strong style="color: var(--gold-primary);">≤ -₹20,000</strong>
+        </div>
+        <button type="button" onclick="promptCleanKachra()" style="background: linear-gradient(135deg, rgba(239, 68, 68, 0.25), rgba(220, 38, 38, 0.35)); border: 1.5px solid #ef4444; color: #fecaca; padding: 8px 18px; border-radius: 8px; font-weight: 900; font-size: 0.82rem; cursor: pointer; display: flex; align-items: center; gap: 6px; box-shadow: 0 0 14px rgba(239, 68, 68, 0.3); transition: all 0.2s;" onmouseover="this.style.transform='translateY(-1px)'" onmouseout="this.style.transform='none'">
+          <span>🧹 Saaf Karein Kagzi Kachra (1:1 Mudrex Re-Sync)</span>
+        </button>
+      </div>
+    </div>
+
     <!-- 4. Tab Navigation (Active Positions, Closed Trades History, and Trade Study Analyzer) -->
     <div class="tabs-bar">
       <button type="button" class="tab-button active" id="tabBtnActive" onclick="switchDeskTab('active')">
@@ -1496,14 +1518,15 @@
               <thead>
                 <tr>
                   <th class="sortable-th" onclick="setTableSort('buy', 'quantity')" style="width: 72px;">SOL <span class="sort-icon" id="sortIcon_buy_quantity">↕</span></th>
+                  <th class="sortable-th" onclick="setTableSort('buy', 'entryTime')" style="color: #38bdf8; font-weight: 800;">⏱️ Time (IST) <span class="sort-icon active" id="sortIcon_buy_entryTime">▼</span></th>
                   <th class="sortable-th" onclick="setTableSort('buy', 'entryPrice')">Entry <span class="sort-icon" id="sortIcon_buy_entryPrice">↕</span></th>
-                  <th class="sortable-th th-target-buy" onclick="setTableSort('buy', 'targetPrice')">🎯 Exit <span class="sort-icon active" id="sortIcon_buy_targetPrice">▲</span></th>
+                  <th class="sortable-th th-target-buy" onclick="setTableSort('buy', 'targetPrice')">🎯 Exit <span class="sort-icon" id="sortIcon_buy_targetPrice">↕</span></th>
                   <th class="sortable-th" onclick="setTableSort('buy', 'floatingPnlINR')">PnL (₹) <span class="sort-icon" id="sortIcon_buy_floatingPnlINR">↕</span></th>
                 </tr>
               </thead>
               <tbody id="tbodyActiveBuys">
                 <tr>
-                  <td colspan="4" style="text-align: center; color: var(--text-dim); padding: 20px;">Waiting for BUY positions...</td>
+                  <td colspan="5" style="text-align: center; color: var(--text-dim); padding: 20px;">Waiting for BUY positions...</td>
                 </tr>
               </tbody>
             </table>
@@ -1524,14 +1547,15 @@
               <thead>
                 <tr>
                   <th class="sortable-th" onclick="setTableSort('sell', 'quantity')" style="width: 72px;">SOL <span class="sort-icon" id="sortIcon_sell_quantity">↕</span></th>
+                  <th class="sortable-th" onclick="setTableSort('sell', 'entryTime')" style="color: #38bdf8; font-weight: 800;">⏱️ Time (IST) <span class="sort-icon active" id="sortIcon_sell_entryTime">▼</span></th>
                   <th class="sortable-th" onclick="setTableSort('sell', 'entryPrice')">Entry <span class="sort-icon" id="sortIcon_sell_entryPrice">↕</span></th>
-                  <th class="sortable-th th-target-sell" onclick="setTableSort('sell', 'targetPrice')">🎯 Exit <span class="sort-icon active" id="sortIcon_sell_targetPrice">▼</span></th>
+                  <th class="sortable-th th-target-sell" onclick="setTableSort('sell', 'targetPrice')">🎯 Exit <span class="sort-icon" id="sortIcon_sell_targetPrice">↕</span></th>
                   <th class="sortable-th" onclick="setTableSort('sell', 'floatingPnlINR')">PnL (₹) <span class="sort-icon" id="sortIcon_sell_floatingPnlINR">↕</span></th>
                 </tr>
               </thead>
               <tbody id="tbodyActiveSells">
                 <tr>
-                  <td colspan="4" style="text-align: center; color: var(--text-dim); padding: 20px;">Waiting for SELL positions...</td>
+                  <td colspan="5" style="text-align: center; color: var(--text-dim); padding: 20px;">Waiting for SELL positions...</td>
                 </tr>
               </tbody>
             </table>
@@ -1766,7 +1790,10 @@
         <div style="font-size: 0.8rem; color: #94a3b8; line-height: 1.45; background: rgba(56, 189, 248, 0.08); border: 1px solid rgba(56, 189, 248, 0.25); padding: 10px 14px; border-radius: 8px;">
           💡 <strong>Pro Trader Control</strong>: Yahan aap 3.0 SOL, 4.0 SOL (aur naye lots) ka <strong>Running Floating P/L</strong> alag-alag live dekh sakte hain. Jab koi group profit (+Green) me aaye ya aapko margin free karna ho, tab <strong>End All</strong> button se us group ke saare pairs market rate par close kar sakte hain (PIN: <code>340556</code>).
         </div>
-        <div id="lotModalCardsContainer" style="display: flex; flex-direction: column; gap: 12px; margin-top: 4px;">
+        <div style="font-size: 0.8rem; color: #fca5a5; line-height: 1.45; background: rgba(239, 68, 68, 0.12); border: 1px solid rgba(239, 68, 68, 0.35); padding: 10px 14px; border-radius: 8px; margin-top: 6px;">
+          ⚠️ <strong>DHYAN DEIN</strong>: "End All" button tabhi use karein jab running P/L <strong>GREEN (+Profit)</strong> me ho. Agar floating loss (-Red) me hai aur aapko kagzi kachra saaf karna hai taaki koi loss na kate, toh main screen par <strong>"🧹 Saaf Karein Kagzi Kachra"</strong> button use karein.
+        </div>
+        <div id="lotModalCardsContainer" style="display: flex; flex-direction: column; gap: 12px; margin-top: 6px;">
           <!-- Dynamically populated per lot size (3.0 SOL, 4.0 SOL, etc.) -->
         </div>
       </div>
@@ -1777,10 +1804,10 @@
     let currentDeskTab = 'active';
     let latestData = null;
 
-    // Table sort states (Default ACTIVE BUY/SELL sorted by Exit Target)
+    // Table sort states (Default ACTIVE BUY/SELL sorted by entryTime - newest at top)
     const sortState = {
-      buy: { col: 'targetPrice', dir: 'asc' }, // Lowest target (closest to market) at top for BUY
-      sell: { col: 'targetPrice', dir: 'desc' }, // Highest target (closest to market) at top for SELL
+      buy: { col: 'entryTime', dir: 'desc' }, // Newest positions at top
+      sell: { col: 'entryTime', dir: 'desc' }, // Newest positions at top
       closed: { col: 'exitTime', dir: 'desc' }
     };
 
@@ -1987,6 +2014,9 @@
             valA = Number(a.quantity || 3);
             valB = Number(b.quantity || 3);
           }
+        } else if (col === 'entryTime' || col === 'time') {
+          valA = Number(a.entryTimestamp || (a.entryTime ? new Date(a.entryTime).getTime() : (a.createdAt ? new Date(a.createdAt).getTime() : 0)));
+          valB = Number(b.entryTimestamp || (b.entryTime ? new Date(b.entryTime).getTime() : (b.createdAt ? new Date(b.createdAt).getTime() : 0)));
         } else if (col === 'exitTime' || col === 'date') {
           valA = Number(a.exitTimestamp || (a.exitTime ? new Date(a.exitTime).getTime() : 0));
           valB = Number(b.exitTimestamp || (b.exitTime ? new Date(b.exitTime).getTime() : 0));
@@ -2024,7 +2054,7 @@
     // Helper: Update Header Sort Arrows
     function updateHeaderSortIcons() {
       // Buy Table
-      ['index', 'entryPrice', 'targetPrice', 'floatingPnlINR', 'quantity'].forEach(col => {
+      ['index', 'entryPrice', 'targetPrice', 'floatingPnlINR', 'quantity', 'entryTime'].forEach(col => {
         const el = document.getElementById(`sortIcon_buy_${col}`);
         if (!el) return;
         if (sortState.buy.col === col) {
@@ -2037,7 +2067,7 @@
       });
 
       // Sell Table
-      ['index', 'entryPrice', 'targetPrice', 'floatingPnlINR', 'quantity'].forEach(col => {
+      ['index', 'entryPrice', 'targetPrice', 'floatingPnlINR', 'quantity', 'entryTime'].forEach(col => {
         const el = document.getElementById(`sortIcon_sell_${col}`);
         if (!el) return;
         if (sortState.sell.col === col) {
@@ -2107,25 +2137,31 @@
         let activeBuys = pairs.filter(p => p.buy && p.buy.status === 'OPEN').map((p, idx) => {
           const entry = Number(p.buy.entryPrice || p.entryPrice || livePrice);
           const tgt = Number(p.buy.targetPrice || p.buy.targetExitPrice || p.buyTarget || (entry + targetMove));
+          const tTime = p.buy.entryTime || p.buy.entryTimestamp || p.createdAt || null;
           return {
             ...p.buy,
             originalIndex: idx + 1,
             pairId: p.pairId,
             entryPrice: entry,
             targetPrice: tgt,
-            targetExitPrice: tgt
+            targetExitPrice: tgt,
+            entryTime: tTime,
+            entryTimestamp: tTime ? new Date(tTime).getTime() : 0
           };
         });
         let activeSells = pairs.filter(p => p.sell && p.sell.status === 'OPEN').map((p, idx) => {
           const entry = Number(p.sell.entryPrice || p.entryPrice || livePrice);
           const tgt = Number(p.sell.targetPrice || p.sell.targetExitPrice || p.sellTarget || (entry - targetMove));
+          const tTime = p.sell.entryTime || p.sell.entryTimestamp || p.createdAt || null;
           return {
             ...p.sell,
             originalIndex: idx + 1,
             pairId: p.pairId,
             entryPrice: entry,
             targetPrice: tgt,
-            targetExitPrice: tgt
+            targetExitPrice: tgt,
+            entryTime: tTime,
+            entryTimestamp: tTime ? new Date(tTime).getTime() : 0
           };
         });
 
@@ -2303,7 +2339,7 @@
         document.getElementById('badgeBuyCount').innerText = `${activeBuys.length} BUYS`;
         const tbodyBuys = document.getElementById('tbodyActiveBuys');
         if (activeBuys.length === 0) {
-          tbodyBuys.innerHTML = `<tr><td colspan="4" style="text-align: center; color: var(--text-dim); padding: 20px;">Waiting for BUY positions...</td></tr>`;
+          tbodyBuys.innerHTML = `<tr><td colspan="5" style="text-align: center; color: var(--text-dim); padding: 20px;">Waiting for BUY positions...</td></tr>`;
         } else {
           tbodyBuys.innerHTML = activeBuys.map((pos) => {
             const bTgt = Number(pos.targetPrice || pos.targetExitPrice || (pos.entryPrice ? (pos.entryPrice + targetMove) : 0));
@@ -2316,12 +2352,14 @@
             const qtyColor = pQty >= 4 ? 'var(--green-primary)' : 'var(--cyan-primary)';
             const qtyBg = pQty >= 4 ? 'rgba(0, 255, 163, 0.12)' : 'rgba(3, 225, 255, 0.12)';
             const qtyBorder = pQty >= 4 ? 'rgba(0, 255, 163, 0.35)' : 'rgba(3, 225, 255, 0.35)';
+            const tTime = formatISTTime(pos.entryTime || pos.entryTimestamp || pos.createdAt);
 
             return `
               <tr>
                 <td>
                   <span style="background: ${qtyBg}; color: ${qtyColor}; border: 1px solid ${qtyBorder}; padding: 2px 7px; border-radius: 5px; font-weight: 800; font-family: var(--font-mono); font-size: 0.74rem;" title="Pair #${pos.originalIndex}">${pQty.toFixed(1)} SOL</span>
                 </td>
+                <td style="color: #38bdf8; font-family: var(--font-mono); font-size: 0.78rem; font-weight: 700; white-space: nowrap;">${tTime}</td>
                 <td style="color: #cbd5e1; font-weight: 600;">$${Number(pos.entryPrice || 0).toFixed(2)}</td>
                 <td>
                   <div style="color: var(--green-primary); font-weight: 900; font-size: 0.88rem; text-shadow: 0 0 10px rgba(0, 255, 163, 0.35); line-height: 1.15;">$${bTgt.toFixed(2)}</div>
@@ -2338,7 +2376,7 @@
         document.getElementById('badgeSellCount').innerText = `${activeSells.length} SELLS`;
         const tbodySells = document.getElementById('tbodyActiveSells');
         if (activeSells.length === 0) {
-          tbodySells.innerHTML = `<tr><td colspan="4" style="text-align: center; color: var(--text-dim); padding: 20px;">Waiting for SELL positions...</td></tr>`;
+          tbodySells.innerHTML = `<tr><td colspan="5" style="text-align: center; color: var(--text-dim); padding: 20px;">Waiting for SELL positions...</td></tr>`;
         } else {
           tbodySells.innerHTML = activeSells.map((pos) => {
             const sTgt = Number(pos.targetPrice || pos.targetExitPrice || (pos.entryPrice ? (pos.entryPrice - targetMove) : 0));
@@ -2351,12 +2389,14 @@
             const qtyColor = pQty >= 4 ? 'var(--green-primary)' : 'var(--cyan-primary)';
             const qtyBg = pQty >= 4 ? 'rgba(0, 255, 163, 0.12)' : 'rgba(3, 225, 255, 0.12)';
             const qtyBorder = pQty >= 4 ? 'rgba(0, 255, 163, 0.35)' : 'rgba(3, 225, 255, 0.35)';
+            const tTime = formatISTTime(pos.entryTime || pos.entryTimestamp || pos.createdAt);
 
             return `
               <tr>
                 <td>
                   <span style="background: ${qtyBg}; color: ${qtyColor}; border: 1px solid ${qtyBorder}; padding: 2px 7px; border-radius: 5px; font-weight: 800; font-family: var(--font-mono); font-size: 0.74rem;" title="Pair #${pos.originalIndex}">${pQty.toFixed(1)} SOL</span>
                 </td>
+                <td style="color: #38bdf8; font-family: var(--font-mono); font-size: 0.78rem; font-weight: 700; white-space: nowrap;">${tTime}</td>
                 <td style="color: #cbd5e1; font-weight: 600;">$${Number(pos.entryPrice || 0).toFixed(2)}</td>
                 <td>
                   <div style="color: var(--red-primary); font-weight: 900; font-size: 0.88rem; text-shadow: 0 0 10px rgba(244, 63, 94, 0.35); line-height: 1.15;">$${sTgt.toFixed(2)}</div>
@@ -2820,6 +2860,42 @@
           fetchSubhMoneyData();
         } else {
           alert(`❌ Error: ${data.error || 'Failed to close lot'}`);
+        }
+      } catch (err) {
+        alert(`❌ Network Error: ${err.message}`);
+      }
+    }
+
+    async function promptCleanKachra() {
+      const pin = prompt(
+        `🧹 MUDREX 1:1 REAL DESK RE-SYNC:\n\n` +
+        `Kya aap sabhi stale / phantom BUY pairs ka floating kachra saaf karna chahte hain?\n\n` +
+        `• Aapka Realized Net Profit bilkul SAFE rahega (koi loss nahi katega).\n` +
+        `• Pura Mudrex Wallet balance 100% available/free ho jayega.\n` +
+        `• Live market rate par 1 fresh pair shuru ho jayega.\n\n` +
+        `Admin Password (340556) enter karein:`
+      );
+      if (!pin) return;
+      if (pin !== '340556') {
+        alert('❌ Galat password! Action cancelled.');
+        return;
+      }
+
+      try {
+        const res = await fetch('/api/subh-money-solana/action', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            action: 'cleanFloatingKachra',
+            password: pin
+          })
+        });
+        const data = await res.json();
+        if (data.success) {
+          alert(`✅ ${data.message}`);
+          fetchSubhMoneyData();
+        } else {
+          alert(`❌ Error: ${data.error || 'Failed to clean kachra'}`);
         }
       } catch (err) {
         alert(`❌ Network Error: ${err.message}`);

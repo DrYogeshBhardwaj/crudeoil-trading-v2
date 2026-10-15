@@ -1030,6 +1030,16 @@ app.post(['/api/solana-live-mudrex/action', '/api/subh-mani-solana/action', '/ap
       const livePrice = cur ? cur.price : solanaEngine.lastProcessedRate;
       const resClose = solanaEngine.closeLotGroup(lotQty, 'USER_MANUAL_LOT_CLOSE', livePrice, cur ? cur.usdInrRate : 102.00);
       return res.json(resClose);
+    } else if (action === 'cleanFloatingKachra' || action === 'cleanKachra' || action === 'resyncMudrex') {
+      const result = solanaEngine.cleanFloatingKachra('USER_MANUAL_CLEAN');
+      return res.json(result);
+    } else if (action === 'updateAutoCleanSettings') {
+      const { enabled, thresholdINR, maxImbalance } = req.body || {};
+      if (typeof enabled === 'boolean') solanaEngine.settings.autoCleanKachraEnabled = enabled;
+      if (typeof thresholdINR === 'number' && thresholdINR > 0) solanaEngine.settings.maxFloatingLossThresholdINR = thresholdINR;
+      if (typeof maxImbalance === 'number' && maxImbalance > 0) solanaEngine.settings.maxOneSidedLegs = maxImbalance;
+      solanaEngine.saveState();
+      return res.json({ success: true, message: 'Auto-Clean Settings updated successfully.', settings: solanaEngine.settings });
     } else if (action === 'resetData' || action === 'resetSimulator') {
       const customQty = req.body.quantity ? Number(req.body.quantity) : null;
       const customCapital = req.body.capitalINR ? Number(req.body.capitalINR) : 300000.00;
