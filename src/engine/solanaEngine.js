@@ -6,27 +6,30 @@ class SolanaEngine {
   constructor() {
     this.settings = {
       startingCapitalINR: 186682.39, // Mudrex Futures Wallet Available Cash
-      contractQuantity: 5.0, // 5.0 SOL default lot size for new pairs requested by user
+      contractQuantity: 1.0, // Conservative 1.0 SOL default lot size for testing/safety
       leverage: 5,
       instrument: 'SOLUSDT',
       profitTargetMove: 0.45, // $0.45 Target Move for Solana
       buyTargetMove: 0.45,
       sellTargetMove: 0.45,
-      gridSpacing: 0.005, // 0.005 tolerance: every distinct cent movement creates a new pair
+      gridSpacing: 0.50, // Conservative $0.50 grid spacing (replaces dangerous $0.005 micro-grid)
       basketProfitTargetINR: 500, // ₹500 Punarjanm Basket Profit Threshold
-      autoPunarjanmEnabled: false, // Auto-harvest DISABLED per user instruction (individual bid exits only)
-      autoAddNewPairs: true, // Automatic pair creation on rate change enabled!
-      maxActivePairs: 500, // 500 Pairs Cap - Main stop is Available Margin exhaustion
-      autoCleanKachraEnabled: true, // Auto-flush stale floating legs to prevent accumulation
-      maxFloatingLossThresholdINR: 20000, // ₹20,000 threshold to auto-clean kachra
-      maxOneSidedLegs: 80, // Up to 80 one-sided leg imbalance allowance for ₹4.3L+ capital
+      autoPunarjanmEnabled: false, // Auto-harvest DISABLED
+      autoAddNewPairs: false, // Default FALSE: prevent uncontrolled automated pair creation
+      maxActivePairs: 10, // Conservative 10 pairs cap (replaces dangerous 500 cap)
+      autoCleanKachraEnabled: true, // Auto-flush stale floating legs
+      maxFloatingLossThresholdINR: 20000,
+      maxOneSidedLegs: 5, // Strict 5 leg imbalance cap (replaces 80)
+      dailyFeeBudgetINR: 1000, // Daily ₹1,000 fee budget circuit breaker
+      maxDailyOrders: 50, // Max 50 orders/day limit
+      priceCooldownMinutes: 30, // 30-minute lock per price level
       takerFeeRate: 0.00075, // 0.075% Mudrex taker fee
       gstRate: 0.18, // 18% GST
       conservativeFeeMultiplier: 1.40, // 1.4x conservative buffer
       slippageBufferINR: 2.0, // ₹2.00 slippage buffer
       usdInrRate: 102.00, // Authoritative Mudrex INR Futures Rate
-      tradingMode: 'LIVE', // Real Live Trading on Mudrex
-      realOrdersDisabled: false
+      tradingMode: 'PAPER', // Default PAPER mode (Fail-Closed)
+      realOrdersDisabled: true // Default TRUE: live order placement disabled
     };
 
     this.pairs = [];
@@ -41,9 +44,12 @@ class SolanaEngine {
     this.lastSkippedRate = null;
     this.pairCounter = 1;
 
-    this.isEngineRunning = true;
-    this.engineStatus = 'RUNNING';
-    this.pauseReason = '';
+    // Per-price cooldown tracking (priceKey -> timestamp)
+    this.priceLevelLocks = new Map();
+
+    this.isEngineRunning = false;
+    this.engineStatus = 'PAUSED';
+    this.pauseReason = 'Safe state: Trading engine initialized in PAUSED mode with real orders disabled.';
     this.engineStartedAt = null;
     this.lastResetTime = null;
 
@@ -56,12 +62,7 @@ class SolanaEngine {
     // Subscribe to real-time market rates
     rateFeed.subscribe((type, data) => this.handleRateEvent(type, data));
 
-    // Periodic order transmission & retry loop for unfulfilled Solana orders
-    setInterval(() => {
-      if (this.isEngineRunning && this.settings.tradingMode === 'LIVE' && !this.settings.realOrdersDisabled) {
-        this.transmitPendingSolanaOrders();
-      }
-    }, 7000);
+    // REMOVED: Blind 7-second retry loop. Order retries must only occur via verified idempotency check and exchange status query.
 
     // Periodic background Mudrex wallet balance sync (keeps available margin fresh)
     setInterval(() => {
@@ -101,16 +102,19 @@ class SolanaEngine {
           if (typeof data.punarjanmCount === 'number') this.punarjanmCount = data.punarjanmCount;
           if (typeof data.pairCounter === 'number') this.pairCounter = data.pairCounter;
           if (data.settings) this.settings = { ...this.settings, ...data.settings };
-          this.settings.contractQuantity = 5.0; // Enforce 5.0 SOL for new pairs per user instruction
-          this.settings.profitTargetMove = 0.45; // Enforce $0.45 target move
-          this.settings.tradingMode = 'LIVE';
-          this.settings.realOrdersDisabled = false;
-          this.settings.autoAddNewPairs = true;
-          this.settings.gridSpacing = 0.005;
-          this.settings.maxActivePairs = 500;
-          this.settings.maxOneSidedLegs = 80;
-          this.settings.basketProfitTargetINR = 500;
-          this.settings.autoPunarjanmEnabled = false; // Harvest disabled per user instruction
+          
+          // Fail-closed enforcement: never auto-enable LIVE execution from saved state
+          this.settings.tradingMode = 'PAPER';
+          this.settings.realOrdersDisabled = true;
+          this.settings.autoAddNewPairs = false;
+          if (!this.settings.gridSpacing || this.settings.gridSpacing < 0.20) this.settings.gridSpacing = 0.50;
+          if (!this.settings.maxActivePairs || this.settings.maxActivePairs > 20) this.settings.maxActivePairs = 10;
+          if (!this.settings.maxOneSidedLegs || this.settings.maxOneSidedLegs > 10) this.settings.maxOneSidedLegs = 5;
+          if (!this.settings.contractQuantity) this.settings.contractQuantity = 1.0;
+          this.isEngineRunning = false;
+          this.engineStatus = 'PAUSED';
+          this.pauseReason = 'Engine restored in safe PAUSED state. Operator action required to activate.';
+
           if (data.engineStartedAt) {
             this.engineStartedAt = data.engineStartedAt;
           } else if (Array.isArray(this.pairs) && this.pairs.length > 0 && this.pairs[0].createdAt) {
@@ -248,29 +252,67 @@ class SolanaEngine {
   }
 
   evaluateRateForNewPair(price) {
+    // 0. Fail-Closed check: Engine must be actively RUNNING and autoAddNewPairs must be explicitly true
+    if (!this.isEngineRunning || !this.settings.autoAddNewPairs) {
+      return;
+    }
+
     const roundedPrice = Number(price.toFixed(2));
     if (!roundedPrice || isNaN(roundedPrice) || roundedPrice <= 0) return;
 
     const usdInrRate = Number(this.settings.usdInrRate || 102.00);
-    const qty = Number(this.settings.contractQuantity || 5.0);
+    const qty = Number(this.settings.contractQuantity || 1.0);
     const leverage = Number(this.settings.leverage || 5);
+    const gridSpacing = Number(this.settings.gridSpacing || 0.50);
 
-    // 0. If zero active pairs are currently open, immediately spawn a fresh hedged pair at live rate!
-    const activePairsCount = this.pairs.filter(p => p.status === 'OPEN').length;
-    if (activePairsCount === 0) {
-      this.createNewPair('SOLUSDT', roundedPrice, Date.now(), usdInrRate);
-      this.lastProcessedRate = roundedPrice;
-      console.log(`[Solana Engine] Zero active pairs detected. Auto-spawned fresh seed pair at $${roundedPrice.toFixed(2)}.`);
-      return;
+    // 1. Circuit Breaker Check (Fee Budget & Max Daily Orders)
+    try {
+      const mudrexAdapter = require('./mudrexLiveAdapter');
+      if (mudrexAdapter && typeof mudrexAdapter.checkCircuitBreakers === 'function') {
+        const cb = mudrexAdapter.checkCircuitBreakers();
+        if (!cb.allowed) {
+          console.warn(`[Solana Engine] New pair creation blocked by Circuit Breaker: ${cb.reason}`);
+          this.lastSkippedRate = roundedPrice;
+          return;
+        }
+      }
+    } catch (e) {}
+
+    // 2. Per-Price Level Cooldown Lock Check (Prevents rapid orders at same grid level)
+    const priceKey = (Math.round(roundedPrice / gridSpacing) * gridSpacing).toFixed(2);
+    const cooldownMs = (this.settings.priceCooldownMinutes || 30) * 60 * 1000;
+    if (this.priceLevelLocks && this.priceLevelLocks.has(priceKey)) {
+      const lastLockedAt = this.priceLevelLocks.get(priceKey);
+      if (Date.now() - lastLockedAt < cooldownMs) {
+        this.lastSkippedRate = roundedPrice;
+        return;
+      }
     }
 
-    // 1. Skip consecutive identical tick
+    // 3. Skip consecutive identical tick
     if (this.lastProcessedRate === roundedPrice) {
       this.lastSkippedRate = roundedPrice;
       return;
     }
 
-    // 2. Check for missing legs on existing active pairs
+    // 4. Check active pairs cap (Conservative 10 pairs cap)
+    const activePairsCount = this.pairs.filter(p => p.status === 'OPEN').length;
+    const maxPairs = Number(this.settings.maxActivePairs || 10);
+    if (activePairsCount >= maxPairs) {
+      console.log(`[Solana Engine] Active pairs cap reached (${activePairsCount}/${maxPairs}). Waiting for exits/margin.`);
+      return;
+    }
+
+    // 5. If zero active pairs are currently open, spawn a fresh pair at live rate
+    if (activePairsCount === 0) {
+      this.createNewPair('SOLUSDT', roundedPrice, Date.now(), usdInrRate);
+      this.lastProcessedRate = roundedPrice;
+      if (this.priceLevelLocks) this.priceLevelLocks.set(priceKey, Date.now());
+      console.log(`[Solana Engine] Zero active pairs detected. Auto-spawned fresh seed pair at $${roundedPrice.toFixed(2)}.`);
+      return;
+    }
+
+    // 6. Check for missing legs on existing active pairs
     for (const pair of this.pairs) {
       if (pair.status === 'CLOSED') continue;
       const bOpen = pair.buyPosition && pair.buyPosition.status === 'OPEN';
@@ -278,7 +320,7 @@ class SolanaEngine {
 
       if (bOpen && sOpen) continue; // Both legs already open
 
-      const tolerance = 0.005;
+      const tolerance = gridSpacing * 0.25; // Adaptive tolerance based on grid spacing
 
       // Case 1: BUY is OPEN, SELL was closed, price came back to pair entry price
       if (bOpen && !sOpen && Math.abs(roundedPrice - pair.entryPrice) <= tolerance) {
@@ -295,8 +337,7 @@ class SolanaEngine {
       }
     }
 
-    // 3. Skip only if a pair already exists at this exact rounded cent (0.005 tolerance)
-    const gridSpacing = Number(this.settings.gridSpacing || 0.005);
+    // 7. Skip if a pair already exists within grid spacing tolerance
     const existingBothOpenPairAtRate = this.pairs.find(p => {
       if (p.status !== 'OPEN') return false;
       const bOpen = p.buyPosition && p.buyPosition.status === 'OPEN';
@@ -309,15 +350,8 @@ class SolanaEngine {
       return;
     }
 
-    // 4. Check active pairs cap (500 pairs max)
-    const maxPairs = Number(this.settings.maxActivePairs || 500);
-    if (activePairsCount >= maxPairs) {
-      console.log(`[Solana Engine] Active pairs cap reached (${activePairsCount}/${maxPairs}). Waiting for exits/margin.`);
-      return;
-    }
-
-    // 4.1 Prevent excessive one-sided leg imbalance ("ya bane hi nahi")
-    const maxImbalance = Number(this.settings.maxOneSidedLegs || 80);
+    // 8. Prevent excessive one-sided leg imbalance
+    const maxImbalance = Number(this.settings.maxOneSidedLegs || 5);
     let openBuys = 0, openSells = 0;
     for (const p of this.pairs) {
       if (p.status !== 'OPEN') continue;
@@ -327,10 +361,10 @@ class SolanaEngine {
     if (Math.abs(openBuys - openSells) >= maxImbalance) {
       console.log(`[Solana Engine] One-sided leg imbalance limit reached: Buys=${openBuys}, Sells=${openSells}, Diff=${Math.abs(openBuys - openSells)}/${maxImbalance}`);
       this.lastSkippedRate = roundedPrice;
-      return; // Do not pile up more one-sided legs!
+      return;
     }
 
-    // 4.2 Auto-Clean Guard check: if floating loss reaches user threshold, auto-flush stale legs
+    // 9. Auto-Clean Guard check: if floating loss reaches threshold, auto-flush stale legs
     if (this.settings.autoCleanKachraEnabled) {
       const summary = this.calculateFloatingSummary(roundedPrice);
       const maxLossThreshold = Number(this.settings.maxFloatingLossThresholdINR || 20000);
@@ -341,7 +375,7 @@ class SolanaEngine {
       }
     }
 
-    // 5. Margin check for 1 pair (5x leverage) - MAIN STOPPING CONDITION!
+    // 10. Authoritative Margin check for 1 pair (5x leverage)
     const reqMarginPairINR = (roundedPrice * qty * usdInrRate) / leverage;
     const metrics = this.getDashboardMetrics();
     const availMargin = Math.max(
@@ -353,9 +387,10 @@ class SolanaEngine {
       return;
     }
 
-    // 6. Create brand new pair at this rate!
+    // 11. Create brand new pair at this rate and lock price level
     this.createNewPair('SOLUSDT', roundedPrice, Date.now(), usdInrRate);
     this.lastProcessedRate = roundedPrice;
+    if (this.priceLevelLocks) this.priceLevelLocks.set(priceKey, Date.now());
     console.log(`[Solana Engine] New rate $${roundedPrice.toFixed(2)} accepted! Created pair ${this.pairCounter - 1}. Active pairs: ${activePairsCount + 1}`);
   }
 
@@ -475,11 +510,11 @@ class SolanaEngine {
     // Real Live Mudrex Order Dispatch
     if (this.settings.tradingMode === 'LIVE' && !this.settings.realOrdersDisabled) {
       buyPos.ledger = 'LIVE';
-      sellPos.ledger = 'LIVE';
+      sellPos.ledger = 'PAPER'; // Prevent opposing hedge in One-Way Net mode
       buyPos.source = 'MUDREX_EXCHANGE';
-      sellPos.source = 'MUDREX_EXCHANGE';
+      sellPos.source = 'SOLANA_SIMULATOR';
       buyPos.apiStatus = 'PENDING_TRANSMISSION';
-      sellPos.apiStatus = 'PENDING_TRANSMISSION';
+      sellPos.apiStatus = 'PAPER_HEDGE_SIMULATED';
 
       this.dispatchPairOrders(pair).catch(err => {
         console.error('[Solana Live] Error dispatching pair orders:', err.message);
@@ -501,89 +536,91 @@ class SolanaEngine {
       return;
     }
 
+    // 1. Circuit Breaker Guard
+    const cb = mudrexLive.checkCircuitBreakers();
+    if (!cb.allowed) {
+      console.warn(`[Solana Live] Cannot dispatch order: Circuit Breaker active (${cb.reason})`);
+      return;
+    }
+
     const { buyPosition, sellPosition } = pair;
 
-    // 1. Dispatch BUY if not already filled
+    // 2. ONE-WAY NETTING ENFORCEMENT:
+    // Mudrex operates strictly in One-Way Net Mode.
+    // Submitting both BUY and SELL orders at the same price creates immediate net-zero fill with 2x taker fees.
+    // Therefore, in LIVE mode, only ONE directional entry can be submitted. The opposing leg is marked PAPER simulator only.
+    let targetLeg = null;
     if (buyPosition && (!buyPosition.mudrexOrderId || buyPosition.apiStatus !== 'REAL_MUDREX_POSITION')) {
-      buyPosition.apiStatus = 'TRANSMITTING_TO_MUDREX';
-      this.saveState();
-      try {
-        const bRes = await mudrexLive.createRealOrder({
-          symbol: 'SOLUSDT',
-          side: 'BUY',
-          quantity: buyPosition.quantity || this.settings.contractQuantity || 3.0,
-          leverage: this.settings.leverage || 5,
-          targetPrice: buyPosition.targetExitPrice
-        });
-        if (bRes && bRes.success) {
-          buyPosition.mudrexOrderId = mudrexLive.extractOrderId(bRes.data);
-          buyPosition.apiStatus = 'REAL_MUDREX_POSITION';
-          buyPosition.apiError = null;
-          console.log(`[Solana Live] Real BUY Order confirmed for ${pair.pairId}: ${buyPosition.mudrexOrderId}`);
-        } else {
-          buyPosition.apiError = bRes ? (bRes.error || JSON.stringify(bRes)) : 'Failed';
-          buyPosition.apiStatus = 'LIVE_ENGINE_PAIR (RETRY_QUEUED)';
-          console.warn(`[Solana Live] Real BUY Order rejected for ${pair.pairId}:`, buyPosition.apiError);
-        }
-      } catch (e) {
-        buyPosition.apiError = e.message;
-        buyPosition.apiStatus = 'LIVE_ENGINE_PAIR (RETRY_QUEUED)';
+      targetLeg = buyPosition;
+      if (sellPosition) {
+        sellPosition.ledger = 'PAPER';
+        sellPosition.source = 'SOLANA_SIMULATOR';
+        sellPosition.apiStatus = 'PAPER_HEDGE_SIMULATED';
       }
-      this.saveState();
+    } else if (sellPosition && (!sellPosition.mudrexOrderId || sellPosition.apiStatus !== 'REAL_MUDREX_POSITION')) {
+      targetLeg = sellPosition;
     }
 
-    // Wait 1000ms before sending SELL to prevent Mudrex API rate limit (5002)
-    await new Promise(r => setTimeout(r, 1000));
+    if (!targetLeg) return;
 
-    // 2. Dispatch SELL if not already filled
-    if (sellPosition && (!sellPosition.mudrexOrderId || sellPosition.apiStatus !== 'REAL_MUDREX_POSITION')) {
-      sellPosition.apiStatus = 'TRANSMITTING_TO_MUDREX';
-      this.saveState();
-      try {
-        const sRes = await mudrexLive.createRealOrder({
-          symbol: 'SOLUSDT',
-          side: 'SELL',
-          quantity: sellPosition.quantity || this.settings.contractQuantity || 3.0,
-          leverage: this.settings.leverage || 5,
-          targetPrice: sellPosition.targetExitPrice
-        });
-        if (sRes && sRes.success) {
-          sellPosition.mudrexOrderId = mudrexLive.extractOrderId(sRes.data);
-          sellPosition.apiStatus = 'REAL_MUDREX_POSITION';
-          sellPosition.apiError = null;
-          console.log(`[Solana Live] Real SELL Order confirmed for ${pair.pairId}: ${sellPosition.mudrexOrderId}`);
-        } else {
-          sellPosition.apiError = sRes ? (sRes.error || JSON.stringify(sRes)) : 'Failed';
-          sellPosition.apiStatus = 'LIVE_ENGINE_PAIR (RETRY_QUEUED)';
-          console.warn(`[Solana Live] Real SELL Order rejected for ${pair.pairId}:`, sellPosition.apiError);
-        }
-      } catch (e) {
-        sellPosition.apiError = e.message;
-        sellPosition.apiStatus = 'LIVE_ENGINE_PAIR (RETRY_QUEUED)';
+    // 3. Check exchange exposure before placing entry
+    try {
+      const positions = await mudrexLive.queryRealPositions('SOLUSDT');
+      const hasOpposingPosition = Array.isArray(positions) && positions.some(p => {
+        const qty = Number(p.quantity || p.size || 0);
+        if (Math.abs(qty) <= 0.0001) return false;
+        const currentSide = qty > 0 ? 'BUY' : 'SELL';
+        return currentSide !== targetLeg.direction;
+      });
+
+      if (hasOpposingPosition) {
+        console.warn(`[One-Way Netting Shield] Cannot place live ${targetLeg.direction} order: opposing position exists on exchange. Refusing to churn.`);
+        targetLeg.apiStatus = 'REJECTED_ONE_WAY_NET_COLLISION';
+        this.saveState();
+        return;
       }
-      this.saveState();
+    } catch (e) {
+      console.error('[Solana Live] Exchange position check failed. Failing closed:', e.message);
+      return;
     }
+
+    // 4. Unique Idempotency Intent Key
+    const intentId = `INTENT-ENTRY-${pair.pairId}-${targetLeg.direction}-${targetLeg.positionId}`;
+
+    targetLeg.apiStatus = 'TRANSMITTING_TO_MUDREX';
+    this.saveState();
+
+    try {
+      const res = await mudrexLive.createRealOrder({
+        symbol: 'SOLUSDT',
+        side: targetLeg.direction,
+        quantity: targetLeg.quantity || this.settings.contractQuantity || 1.0,
+        leverage: this.settings.leverage || 5,
+        targetPrice: targetLeg.targetExitPrice,
+        intentId
+      });
+
+      if (res && res.success) {
+        targetLeg.mudrexOrderId = mudrexLive.extractOrderId(res.data);
+        targetLeg.apiStatus = 'REAL_MUDREX_POSITION';
+        targetLeg.apiError = null;
+        console.log(`[Solana Live] Real ${targetLeg.direction} Order confirmed for ${pair.pairId}: ${targetLeg.mudrexOrderId}`);
+      } else {
+        targetLeg.apiError = res ? (res.error || JSON.stringify(res)) : 'Failed';
+        targetLeg.apiStatus = 'ORDER_SUBMISSION_FAILED';
+        console.warn(`[Solana Live] Real ${targetLeg.direction} Order failed for ${pair.pairId}:`, targetLeg.apiError);
+      }
+    } catch (e) {
+      targetLeg.apiError = e.message;
+      targetLeg.apiStatus = 'ORDER_SUBMISSION_ERROR';
+    }
+    this.saveState();
   }
 
   transmitPendingSolanaOrders() {
-    if (this.isTransmittingQueue) return;
-    this.isTransmittingQueue = true;
-    (async () => {
-      try {
-        for (const pair of this.pairs) {
-          if (pair.status === 'CLOSED') continue;
-          const bOpen = pair.buyPosition && pair.buyPosition.status === 'OPEN';
-          const sOpen = pair.sellPosition && pair.sellPosition.status === 'OPEN';
-          const bNeedsOrder = bOpen && (!pair.buyPosition.mudrexOrderId || pair.buyPosition.apiStatus !== 'REAL_MUDREX_POSITION');
-          const sNeedsOrder = sOpen && (!pair.sellPosition.mudrexOrderId || pair.sellPosition.apiStatus !== 'REAL_MUDREX_POSITION');
-          if (bNeedsOrder || sNeedsOrder) {
-            await this.dispatchPairOrders(pair);
-          }
-        }
-      } finally {
-        this.isTransmittingQueue = false;
-      }
-    })();
+    // REMOVED BLIND LOOP: Orders must only be transmitted on explicit verified intent, never retried on a blind 7s interval.
+    // Kept as safe no-op to maintain interface compatibility without churning orders.
+    return;
   }
 
   evaluateOpenPositions(livePrice) {
@@ -622,14 +659,45 @@ class SolanaEngine {
     }
   }
 
-  closePositionLeg(pos, exitPrice, exitTime = Date.now(), exitReason = 'TARGET PROFIT HIT', usdInr = 102.00, takerFee = 0.00075, gstRate = 0.18) {
-    pos.status = 'CLOSED';
+  closePositionLeg(pos, exitPrice, exitTime = Date.now(), exitReason = 'TARGET PROFIT HIT', usdInr = 102.00, takerFee = 0.00075, gstRate = 0.18, actualFilledQty = null) {
+    const totalQty = pos.quantity || this.settings.contractQuantity || 1.0;
+    const filledQty = (actualFilledQty !== null && actualFilledQty > 0 && actualFilledQty < totalQty) ? actualFilledQty : totalQty;
+    const isPartial = filledQty < totalQty;
+
+    // Handle partial fills: split residual position and keep it OPEN
+    let residualPos = null;
+    if (isPartial) {
+      const remainingQty = Number((totalQty - filledQty).toFixed(4));
+      residualPos = {
+        ...pos,
+        positionId: `${pos.positionId}-RESIDUAL-${Date.now().toString().slice(-4)}`,
+        quantity: remainingQty,
+        status: 'OPEN',
+        isResidual: true,
+        parentPositionId: pos.positionId
+      };
+
+      const parentPair = this.pairs.find(p => p.pairId === pos.pairId || (p.buyPosition === pos || p.sellPosition === pos));
+      if (parentPair) {
+        if (parentPair.buyPosition === pos || (parentPair.buyPosition && parentPair.buyPosition.positionId === pos.positionId)) {
+          parentPair.buyPosition = residualPos;
+        } else if (parentPair.sellPosition === pos || (parentPair.sellPosition && parentPair.sellPosition.positionId === pos.positionId)) {
+          parentPair.sellPosition = residualPos;
+        }
+      }
+      pos.status = 'CLOSED_PARTIAL';
+    } else {
+      pos.status = 'CLOSED';
+    }
+
+    pos.quantity = filledQty;
+    pos.isPartial = isPartial;
     pos.exitPrice = Number(exitPrice.toFixed(2));
     pos.exitTime = new Date(exitTime).toISOString();
     pos.exitTimestamp = exitTime;
     pos.exitReason = exitReason;
 
-    const qty = pos.quantity || this.settings.contractQuantity || 4.0;
+    const qty = filledQty;
     const isBuy = pos.direction === 'BUY';
     const grossUSD = isBuy ? (pos.exitPrice - pos.entryPrice) * qty : (pos.entryPrice - pos.exitPrice) * qty;
     const grossINR = grossUSD * usdInr;
@@ -656,7 +724,7 @@ class SolanaEngine {
     pos.netProfitINR = Number(netINR.toFixed(2));
     pos.usdInrRate = usdInr;
 
-    // Real Live Exit Order Dispatch on Mudrex
+    // Real Live Exit Order Dispatch on Mudrex (Reduce-Only)
     if (this.settings.tradingMode === 'LIVE' && !this.settings.realOrdersDisabled && pos.mudrexOrderId) {
       try {
         const mudrexLive = require('./mudrexLiveAdapter');
@@ -672,6 +740,7 @@ class SolanaEngine {
 
     this.closedPositions.unshift({ ...pos });
     this.saveState();
+    return { closedPosition: pos, residualPosition: residualPos };
   }
 
   checkPunarjanmAutoHarvest(livePrice) {
@@ -1140,13 +1209,17 @@ class SolanaEngine {
 
     const initialPairsCount = this.pairs.filter(p => p.status === 'OPEN').length;
 
-    // Flush all phantom/stale open pairs without recording any fake loss into closed history
-    this.pairs = [];
+    // SAFEGUARD: Preserve real Mudrex exchange positions intact! Only flush local simulated pairs.
+    const realPairs = this.pairs.filter(p => {
+      const bReal = p.buyPosition && (p.buyPosition.mudrexOrderId || p.buyPosition.apiStatus === 'REAL_MUDREX_POSITION');
+      const sReal = p.sellPosition && (p.sellPosition.mudrexOrderId || p.sellPosition.apiStatus === 'REAL_MUDREX_POSITION');
+      return bReal || sReal;
+    });
+
+    const flushedCount = this.pairs.length - realPairs.length;
+    this.pairs = realPairs;
     this.processedRates.clear();
     this.lastProcessedRate = null;
-
-    // Immediately spawn 1 fresh clean 4.0 SOL hedged pair at the current live market rate
-    this.createNewPair('SOLUSDT', livePrice, Date.now(), usdInr);
 
     this.saveState();
     try {
@@ -1165,11 +1238,12 @@ class SolanaEngine {
       };
       fs.writeFileSync(seedFile, JSON.stringify(seedPayload, null, 2), 'utf8');
     } catch (err) {}
-    console.log(`[Solana Engine] Cleaned Floating Kachra (${triggerReason}): Flushed ${initialPairsCount} stale pairs. Realized Profit and Closed Trades intact. Re-synced 1:1 with Mudrex at $${livePrice}.`);
+    console.log(`[Solana Engine] Cleaned Floating Kachra (${triggerReason}): Flushed ${flushedCount} simulated pairs. Preserved ${realPairs.length} real exchange positions. Realized Profit and Closed Trades intact.`);
     return {
       success: true,
-      message: `Kagzi / Floating kachra saaf ho gaya! ${initialPairsCount} stale pairs flushed. Realized Profit safe hai aur Mudrex ke saath fresh pair shuru ho gaya.`,
-      flushedCount: initialPairsCount
+      message: `Simulated kachra cleared! Flushed ${flushedCount} paper pairs. Preserved ${realPairs.length} real exchange positions.`,
+      flushedCount,
+      preservedRealPairs: realPairs.length
     };
   }
 
@@ -1178,7 +1252,7 @@ class SolanaEngine {
     if (newQty && !isNaN(newQty) && Number(newQty) > 0) {
       this.settings.contractQuantity = Number(newQty);
     } else {
-      this.settings.contractQuantity = 3.0;
+      this.settings.contractQuantity = 1.0;
     }
     if (newTargetMove && !isNaN(newTargetMove) && Number(newTargetMove) > 0) {
       this.settings.profitTargetMove = Number(newTargetMove);
@@ -1189,37 +1263,41 @@ class SolanaEngine {
       this.settings.buyTargetMove = 0.45;
       this.settings.sellTargetMove = 0.45;
     }
-    this.settings.tradingMode = 'LIVE';
-    this.settings.realOrdersDisabled = false;
-    this.settings.autoPunarjanmEnabled = false; // Harvest disabled per user request
+
+    // Fail-Closed default: Never auto-enable live trading or real orders on reset
+    this.settings.tradingMode = 'PAPER';
+    this.settings.realOrdersDisabled = true;
+    this.settings.autoPunarjanmEnabled = false;
     this.settings.autoAddNewPairs = false;
-    this.pairs = [];
-    this.closedPositions = [];
+    this.settings.gridSpacing = 0.50;
+    this.settings.maxActivePairs = 10;
+    this.settings.maxOneSidedLegs = 5;
+
+    // SAFEGUARD: Never delete real Mudrex positions or real closed trades!
+    this.pairs = this.pairs.filter(p => {
+      const bReal = p.buyPosition && (p.buyPosition.mudrexOrderId || p.buyPosition.apiStatus === 'REAL_MUDREX_POSITION');
+      const sReal = p.sellPosition && (p.sellPosition.mudrexOrderId || p.sellPosition.apiStatus === 'REAL_MUDREX_POSITION');
+      return bReal || sReal;
+    });
+
+    // Preserve real exchange closed positions
+    this.closedPositions = this.closedPositions.filter(cp => cp.mudrexOrderId || cp.source === 'MUDREX_EXCHANGE' || cp.ledger === 'LIVE');
+
     this.punarjanmCount = 0;
     this.punarjanmCycles = [];
     this.processedRates.clear();
     this.lastProcessedRate = null;
-    this.pairCounter = 1;
-    this.isEngineRunning = true;
-    this.engineStatus = 'RUNNING';
+    this.isEngineRunning = false;
+    this.engineStatus = 'PAUSED';
+    this.pauseReason = 'Engine reset into safe PAUSED state.';
     this.engineStartedAt = new Date().toISOString();
     this.lastResetTime = this.engineStartedAt;
 
-    // Auto-create initial fresh pair with current lot size if live rate is present
-    try {
-      const cur = rateFeed.getCurrentRate('SOLUSDT');
-      if (cur && cur.price > 0) {
-        this.createNewPair('SOLUSDT', cur.price, Date.now(), cur.usdInrRate || 102.00);
-      }
-    } catch (e) {
-      console.warn('[Solana Engine] Error creating initial pair after reset:', e.message);
-    }
-
     this.saveState();
-    console.log(`[Solana Engine] Reset data: Capital set to ₹${this.settings.startingCapitalINR.toLocaleString('en-IN')} INR with ${this.settings.contractQuantity} SOL contract size and $${this.settings.profitTargetMove.toFixed(2)} target move.`);
+    console.log(`[Solana Engine] Reset data: Capital set to ₹${this.settings.startingCapitalINR.toLocaleString('en-IN')} INR with ${this.settings.contractQuantity} SOL contract size in safe PAPER mode.`);
     return { 
       success: true, 
-      message: `Solana simulator data reset to ₹${this.settings.startingCapitalINR.toLocaleString('en-IN')} capital, ${this.settings.contractQuantity} SOL lot size, and $${this.settings.profitTargetMove.toFixed(2)} target move.`, 
+      message: `Solana data reset in safe PAPER mode: Capital ₹${this.settings.startingCapitalINR.toLocaleString('en-IN')}, lot size ${this.settings.contractQuantity} SOL. Real Mudrex exchange positions and history preserved.`, 
       contractQuantity: this.settings.contractQuantity,
       startingCapitalINR: this.settings.startingCapitalINR,
       profitTargetMove: this.settings.profitTargetMove

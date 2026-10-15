@@ -23,7 +23,7 @@ class PaperEngine {
       gstRate: 0.18, // 18% GST on fees
       slippageBufferINR: 5.0, // ₹5.00 slippage & funding fee buffer per trade
       usdInrRate: 102.00, // 1 USD = 102.00 INR (Mudrex INR Futures Rate)
-      tradingMode: 'LIVE', // 'PAPER' (Simulated) or 'LIVE' (Real Orders)
+      tradingMode: 'PAPER', // Default 'PAPER' mode (Fail-Closed)
       realOrdersDisabled: true, // Disabled per user request
       sessionScheduler: {
         enabled: true,
@@ -213,7 +213,7 @@ class PaperEngine {
         }
       }
       this.settings.startingCapitalINR = 119923.61; // ₹1,19,923.61 INR capital (Live Mudrex balance)
-      this.settings.maxActivePairs = 500; // 500 Active Pairs Cap
+      this.settings.maxActivePairs = 10; // Conservative Active Pairs Cap
       this.settings.contractQuantity = 2.0; // 2.0 Barrels per pair
       this.settings.profitTargetMove = 0.25; // $0.25 Target Move (User-Configured)
       this.settings.buyTargetMove = 0.25;
@@ -222,7 +222,7 @@ class PaperEngine {
       this.settings.autoPunarjanmEnabled = false; // Stopped per user request
       this.settings.autoAddNewPairs = false; // Stopped per user request
       this.settings.profitTargetMode = 'PRICE_MOVE';
-      this.settings.tradingMode = 'LIVE';
+      this.settings.tradingMode = 'PAPER'; // Default 'PAPER' mode (Fail-Closed)
       this.settings.realOrdersDisabled = true; // Disabled per user request
       if (saved.punarjanmCount !== undefined) this.punarjanmCount = saved.punarjanmCount;
       if (saved.lastPunarjanmSummary) this.lastPunarjanmSummary = saved.lastPunarjanmSummary;

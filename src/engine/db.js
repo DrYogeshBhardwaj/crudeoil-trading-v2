@@ -59,6 +59,28 @@ class DatabaseManager {
           event TEXT NOT NULL,
           details TEXT NOT NULL
         );
+
+        CREATE TABLE IF NOT EXISTS order_intents (
+          intent_id TEXT PRIMARY KEY,
+          symbol TEXT NOT NULL,
+          side TEXT NOT NULL,
+          quantity REAL NOT NULL,
+          price REAL,
+          status TEXT NOT NULL,
+          mudrex_order_id TEXT,
+          created_at TEXT NOT NULL,
+          updated_at TEXT NOT NULL,
+          data TEXT
+        );
+
+        CREATE TABLE IF NOT EXISTS circuit_breaker_events (
+          id TEXT PRIMARY KEY,
+          timestamp TEXT NOT NULL,
+          breaker_name TEXT NOT NULL,
+          metric_value REAL NOT NULL,
+          threshold REAL NOT NULL,
+          details TEXT NOT NULL
+        );
       `);
       console.log(`[DBMS] SQLite Database initialized successfully at ${DB_FILE}`);
     } catch (err) {
@@ -210,13 +232,13 @@ class DatabaseManager {
       }
 
       if (finalState) {
-        finalState.isEngineRunning = true;
+        finalState.isEngineRunning = false;
         if (!finalState.settings) finalState.settings = {};
         finalState.settings.strategyMode = 'ALTERNATING_STAGGERED';
-        finalState.settings.maxActivePairs = 500;
+        finalState.settings.maxActivePairs = 10;
         finalState.settings.startingCapitalINR = 119923.61;
-        finalState.settings.tradingMode = 'LIVE';
-        finalState.settings.realOrdersDisabled = false;
+        finalState.settings.tradingMode = 'PAPER';
+        finalState.settings.realOrdersDisabled = true;
         return finalState;
       }
     } catch (err) {
@@ -343,8 +365,8 @@ class DatabaseManager {
       try {
         this.db.exec(`
           DELETE FROM kv_store;
-          DELETE FROM active_pairs;
-          DELETE FROM closed_positions;
+          DELETE FROM active_pairs WHERE data NOT LIKE '%REAL_MUDREX_POSITION%' AND data NOT LIKE '%mudrexOrderId%';
+          DELETE FROM closed_positions WHERE data NOT LIKE '%REAL_MUDREX_POSITION%' AND data NOT LIKE '%mudrexOrderId%';
           DELETE FROM audit_logs;
         `);
       } catch (err) {
@@ -362,14 +384,15 @@ class DatabaseManager {
         startingCapitalINR: 119923.61,
         contractQuantity: 1.0,
         leverage: 5,
-        profitTargetMove: 0.20,
+        profitTargetMove: 0.45,
         profitTargetMode: "PRICE_MOVE",
         strategyMode: "ALTERNATING_STAGGERED",
         priceMatchingTolerance: 0.0001,
-        maxActivePairs: 500,
-        tradingMode: "LIVE",
-        realOrdersDisabled: false,
-        instrument: "CLUSDT",
+        maxActivePairs: 10,
+        gridSpacing: 0.50,
+        tradingMode: "PAPER",
+        realOrdersDisabled: true,
+        instrument: "SOLUSDT",
         takerFeeRate: 0.00075,
         gstRate: 0.18,
         slippageBufferINR: 5.0,
@@ -384,18 +407,113 @@ class DatabaseManager {
         event: "ENGINE_RESET",
         details: "Simulated state reset cleanly. Old simulated data removed, authoritative live positions preserved."
       }],
-      processedRates: { CLUSDT: [], XAGUSDT: [], BTCUSDT: [] },
+      processedRates: { SOLUSDT: [], CLUSDT: [], XAGUSDT: [], BTCUSDT: [] },
       lastProcessedRate: null,
       dailyTracker: {
         dateKey: new Date().toISOString().split('T')[0],
         realizedNetLossINR: 0,
         realizedNetProfitINR: 0
       },
-      isEngineRunning: true
+      isEngineRunning: false
     };
     try {
       fs.writeFileSync(STATE_JSON_FILE, JSON.stringify(cleanSeed, null, 2), 'utf8');
     } catch (e) {}
+  }
+
+  saveOrderIntent(intent) {
+    if (!intent || !intent.intentId) return false;
+    const now = new Date().toISOString();
+    try {
+      if (this.db) {
+        const stmt = this.db.prepare(`
+          INSERT INTO order_intents (intent_id, symbol, side, quantity, price, status, mudrex_order_id, created_at, updated_at, data)
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+          ON CONFLICT(intent_id) DO UPDATE SET
+            status = excluded.status,
+            mudrex_order_id = COALESCE(excluded.mudrex_order_id, order_intents.mudrex_order_id),
+            updated_at = excluded.updated_at,
+            data = excluded.data
+        `);
+        stmt.run(
+          intent.intentId,
+          intent.symbol || 'SOLUSDT',
+          intent.side || 'BUY',
+          Number(intent.quantity || 0),
+          Number(intent.price || 0),
+          intent.status || 'CREATED',
+          intent.mudrexOrderId || null,
+          intent.createdAt || now,
+          now,
+          JSON.stringify(intent)
+        );
+      }
+      return true;
+    } catch (e) {
+      console.warn('[DBMS] Error saving order intent:', e.message);
+      return false;
+    }
+  }
+
+  getOrderIntent(intentId) {
+    if (!intentId) return null;
+    try {
+      if (this.db) {
+        const row = this.db.prepare('SELECT data FROM order_intents WHERE intent_id = ?').get(intentId);
+        if (row && row.data) return JSON.parse(row.data);
+      }
+    } catch (e) {}
+    return null;
+  }
+
+  findMatchingRecentIntent(symbol, side, quantity, windowMs = 60000) {
+    try {
+      if (this.db) {
+        const rows = this.db.prepare('SELECT data, created_at FROM order_intents WHERE symbol = ? AND side = ? ORDER BY created_at DESC LIMIT 20').all(symbol, side);
+        const cutoff = Date.now() - windowMs;
+        for (const r of rows) {
+          const t = new Date(r.created_at).getTime();
+          if (t >= cutoff) {
+            const parsed = JSON.parse(r.data);
+            if (Math.abs(Number(parsed.quantity) - Number(quantity)) < 0.01) {
+              return parsed;
+            }
+          }
+        }
+      }
+    } catch (e) {}
+    return null;
+  }
+
+  logCircuitBreakerEvent(event) {
+    if (!event) return;
+    try {
+      if (this.db) {
+        const stmt = this.db.prepare(`
+          INSERT INTO circuit_breaker_events (id, timestamp, breaker_name, metric_value, threshold, details)
+          VALUES (?, ?, ?, ?, ?, ?)
+        `);
+        stmt.run(
+          event.id || `CB-${Date.now()}`,
+          event.timestamp || new Date().toISOString(),
+          event.breakerName || 'UNKNOWN',
+          Number(event.metricValue || 0),
+          Number(event.threshold || 0),
+          typeof event.details === 'string' ? event.details : JSON.stringify(event.details || {})
+        );
+      }
+    } catch (e) {
+      console.warn('[DBMS] Error logging circuit breaker event:', e.message);
+    }
+  }
+
+  getCircuitBreakerEvents(limit = 50) {
+    try {
+      if (this.db) {
+        return this.db.prepare('SELECT * FROM circuit_breaker_events ORDER BY timestamp DESC LIMIT ?').all(limit);
+      }
+    } catch (e) {}
+    return [];
   }
 }
 

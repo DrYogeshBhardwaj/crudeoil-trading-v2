@@ -46,22 +46,51 @@ class MudrexLiveAdapter {
     this.lastFetchPositionsRes = null;
     this.recentPrices = [];
 
+    // Audit Safeguards & Circuit Breakers (Oct 16 Audit Fix)
+    this.safetyLimits = {
+      maxOrdersPerDay: 50,
+      maxOrdersPerHour: 10,
+      maxDailyFeeBudgetINR: 1000.0,
+      maxNetExposureQuantity: 25.0,
+      minPriceLevelCooldownMs: 30 * 60 * 1000, // 30 minutes minimum cooldown per rate level
+      failClosedOnApiError: true
+    };
+
+    this.circuitBreakers = {
+      dailyOrdersCount: 0,
+      dailyFeesSpentINR: 0,
+      hourlyOrdersCount: 0,
+      currentDateKey: new Date().toISOString().split('T')[0],
+      currentHourKey: new Date().toISOString().slice(0, 13),
+      isCircuitBreakerTripped: false,
+      tripReason: ''
+    };
+
+    this.orderIntents = new Map();
+    this.priceLevelLocks = new Map();
+    this.isOrderDispatching = false;
+    try {
+      this.db = require('./db');
+    } catch (e) {
+      this.db = null;
+    }
+
     this.settings = {
-      instrument: 'CLUSDT',
-      profitTargetMove: 1.0,
-      buyTargetMove: 0.20,
-      sellTargetMove: 0.20,
-      autoAiTargetMode: true,
+      instrument: 'SOLUSDT',
+      profitTargetMove: 0.45,
+      buyTargetMove: 0.45,
+      sellTargetMove: 0.45,
+      autoAiTargetMode: false,
       targetDisabled: false,
-      maxActivePairs: 500,
-      contractQuantity: 1.0,
+      maxActivePairs: 10, // Conservative default
+      contractQuantity: 1.0, // Conservative 1.0 SOL lot size
       leverage: 5,
       takerFeeRate: 0.00075, // 0.075% strict fee
       gstRate: 0.18, // 18% GST on fees
       slippageBufferINR: 5.0, // ₹5.00 funding & slippage buffer
       usdInrRate: 102.00, // 1 USD = 102.00 INR (Mudrex INR Futures Rate)
       syncRealMudrexPositions: true,
-      liveExecutionGate: process.env.LIVE_EXECUTION_GATE || 'APPROVED'
+      liveExecutionGate: process.env.LIVE_EXECUTION_GATE || 'LOCKED'
     };
 
     this.initFromStorage();
@@ -195,18 +224,139 @@ class MudrexLiveAdapter {
     return headers;
   }
 
-  async createRealOrder({ symbol, side, quantity, leverage, targetPrice }) {
+  checkCircuitBreakers() {
+    const today = new Date().toISOString().split('T')[0];
+    const currentHour = new Date().toISOString().slice(0, 13);
+
+    // Reset daily counters on new date
+    if (this.circuitBreakers.currentDateKey !== today) {
+      this.circuitBreakers.dailyOrdersCount = 0;
+      this.circuitBreakers.dailyFeesSpentINR = 0;
+      this.circuitBreakers.currentDateKey = today;
+      this.circuitBreakers.isCircuitBreakerTripped = false;
+      this.circuitBreakers.tripReason = '';
+    }
+
+    // Reset hourly counter on new hour
+    if (this.circuitBreakers.currentHourKey !== currentHour) {
+      this.circuitBreakers.hourlyOrdersCount = 0;
+      this.circuitBreakers.currentHourKey = currentHour;
+    }
+
+    if (this.circuitBreakers.isCircuitBreakerTripped) {
+      return { allowed: false, reason: this.circuitBreakers.tripReason };
+    }
+
+    if (this.circuitBreakers.dailyOrdersCount >= this.safetyLimits.maxOrdersPerDay) {
+      this.tripCircuitBreaker(`DAILY_ORDER_LIMIT_EXCEEDED (${this.circuitBreakers.dailyOrdersCount}/${this.safetyLimits.maxOrdersPerDay})`, this.circuitBreakers.dailyOrdersCount, this.safetyLimits.maxOrdersPerDay);
+      return { allowed: false, reason: this.circuitBreakers.tripReason };
+    }
+
+    if (this.circuitBreakers.hourlyOrdersCount >= this.safetyLimits.maxOrdersPerHour) {
+      this.tripCircuitBreaker(`HOURLY_ORDER_LIMIT_EXCEEDED (${this.circuitBreakers.hourlyOrdersCount}/${this.safetyLimits.maxOrdersPerHour})`, this.circuitBreakers.hourlyOrdersCount, this.safetyLimits.maxOrdersPerHour);
+      return { allowed: false, reason: this.circuitBreakers.tripReason };
+    }
+
+    if (this.circuitBreakers.dailyFeesSpentINR >= this.safetyLimits.maxDailyFeeBudgetINR) {
+      this.tripCircuitBreaker(`DAILY_FEE_BUDGET_EXCEEDED (₹${this.circuitBreakers.dailyFeesSpentINR.toFixed(2)}/₹${this.safetyLimits.maxDailyFeeBudgetINR})`, this.circuitBreakers.dailyFeesSpentINR, this.safetyLimits.maxDailyFeeBudgetINR);
+      return { allowed: false, reason: this.circuitBreakers.tripReason };
+    }
+
+    return { allowed: true };
+  }
+
+  tripCircuitBreaker(reason, metricValue = 0, threshold = 0) {
+    this.circuitBreakers.isCircuitBreakerTripped = true;
+    this.circuitBreakers.tripReason = reason;
+    console.error(`[Mudrex Live Adapter] *** EMERGENCY CIRCUIT BREAKER TRIPPED ***: ${reason}`);
+    if (this.db && typeof this.db.logCircuitBreakerEvent === 'function') {
+      this.db.logCircuitBreakerEvent({
+        breakerName: reason.split(' ')[0],
+        metricValue,
+        threshold,
+        details: reason
+      });
+    }
+  }
+
+  recordOrderSuccessMetrics(symbol, quantity, priceLevel) {
+    this.circuitBreakers.dailyOrdersCount++;
+    this.circuitBreakers.hourlyOrdersCount++;
+    const estFeeINR = (Number(quantity) * (priceLevel || 105.0) * (this.settings.usdInrRate || 102.00)) * 0.0007; // ~0.07% taker fee incl GST
+    this.circuitBreakers.dailyFeesSpentINR += estFeeINR;
+
+    if (priceLevel) {
+      this.priceLevelLocks.set(Number(Number(priceLevel).toFixed(2)), Date.now());
+    }
+  }
+
+  async verifyOrderOnExchange({ symbol, side, quantity, windowSeconds = 30 }) {
+    try {
+      const ordersRes = await this.request('GET', `${this.baseUrl}/futures/orders?symbol=${symbol}&trade_currency=INR`);
+      if (ordersRes && ordersRes.success && Array.isArray(ordersRes.data)) {
+        const cutoff = Date.now() - (windowSeconds * 1000);
+        const match = ordersRes.data.find(o => {
+          const symMatch = (o.symbol || '').toUpperCase() === symbol;
+          const sideMatch = (o.order_type || o.side || '').toUpperCase().includes(side);
+          const qtyMatch = Math.abs(Number(o.quantity || 0) - quantity) < 0.01;
+          const time = new Date(o.created_at || o.time || o.timestamp || 0).getTime();
+          return symMatch && sideMatch && qtyMatch && (time >= cutoff);
+        });
+        if (match) {
+          return { found: true, orderId: match.order_id || match.id || match.orderId, order: match };
+        }
+      }
+    } catch (e) {
+      console.warn('[Mudrex Live Adapter] Error verifying order on exchange:', e.message);
+    }
+    return { found: false };
+  }
+
+  async createRealOrder({ symbol, side, quantity, leverage, targetPrice, orderIntentId, intentId: passedIntentId, priceLevel, reduceOnly = false }) {
     if (!this.isRealExecutionEnabled()) {
       console.log('[Mudrex Live Adapter] Real order execution disabled. Failing closed.');
       return { success: false, error: 'REAL_ORDERS_DISABLED' };
     }
+
+    // 1. Check Circuit Breakers
+    const cbCheck = this.checkCircuitBreakers();
+    if (!cbCheck.allowed) {
+      console.warn(`[Mudrex Live Adapter] Order rejected by Circuit Breaker: ${cbCheck.reason}`);
+      return { success: false, error: `CIRCUIT_BREAKER_TRIPPED: ${cbCheck.reason}`, circuitBreaker: true };
+    }
+
+    // 2. Check Price-Level Cooldown (Prevent repetitive orders at the same price)
+    const roundedPriceLevel = priceLevel !== undefined && priceLevel !== null ? Number(Number(priceLevel).toFixed(2)) : null;
+    if (roundedPriceLevel && !reduceOnly) {
+      const lastOrderTime = this.priceLevelLocks.get(roundedPriceLevel);
+      const cooldownMs = this.safetyLimits.minPriceLevelCooldownMs || (30 * 60 * 1000);
+      if (lastOrderTime && (Date.now() - lastOrderTime < cooldownMs)) {
+        const remainingMin = Math.ceil((cooldownMs - (Date.now() - lastOrderTime)) / 60000);
+        console.warn(`[Mudrex Live Adapter] Order rejected by Price-Level Cooldown: $${roundedPriceLevel} locked for ${remainingMin} more mins.`);
+        return { success: false, error: `PRICE_LEVEL_COOLDOWN_ACTIVE: Level $${roundedPriceLevel} locked for ${remainingMin}m`, cooldown: true };
+      }
+    }
+
+    // 3. Idempotency Check: Verify Intent ID
+    const intentId = passedIntentId || orderIntentId || `INTENT-${symbol}-${side}-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
+    const existingIntent = this.orderIntents.get(intentId) || (this.db && typeof this.db.getOrderIntent === 'function' ? this.db.getOrderIntent(intentId) : null);
+    if (existingIntent && (existingIntent.status === 'FILLED' || existingIntent.mudrexOrderId)) {
+      console.log(`[Mudrex Live Adapter] Idempotent order duplicate detected for intent ${intentId}. Returning confirmed order ${existingIntent.mudrexOrderId}.`);
+      return { success: true, data: { order_id: existingIntent.mudrexOrderId, position_id: existingIntent.mudrexOrderId }, idempotent: true, isExistingIntent: true };
+    }
+
+    // 4. Prevent Concurrent Order Invocations (Order Dispatch Mutex)
+    if (this.isOrderDispatching) {
+      return { success: false, error: 'ORDER_DISPATCH_MUTEX_LOCKED: Another order submission is currently in flight.', inFlight: true, isExistingIntent: true };
+    }
+    this.isOrderDispatching = true;
 
     // Pre-flight check: Verify Mudrex Futures Wallet Available Balance
     try {
       const auth = await this.testAuthentication();
       if (auth && auth.success && auth.futuresBalance === 0) {
         console.warn('[Mudrex Live Adapter] Order pre-flight rejected: Mudrex Futures Wallet Available Balance is ₹0.00 INR.');
-        return { success: false, error: 'INSUFFICIENT_MUDREX_FUTURES_MARGIN (Mudrex Futures Wallet balance is ₹0.00 INR. Transfer funds to Futures wallet)' };
+        return { success: false, error: 'INSUFFICIENT_MUDREX_FUTURES_MARGIN' };
       }
     } catch (authErr) {}
 
@@ -214,7 +364,7 @@ class MudrexLiveAdapter {
     const rawSym = (symbol || 'CLUSDT').toUpperCase();
     if (!rawSym.includes('CL') && !rawSym.includes('SOL')) {
       console.warn(`[Mudrex Live Adapter] REJECTED order for ${rawSym}. Only CLUSDT and SOLUSDT are permitted.`);
-      return { success: false, error: `TRADING_BLOCKED: Only Crude Oil (CLUSDT) and Solana (SOLUSDT) are permitted. Blocked trade for ${rawSym}.` };
+      return { success: false, error: `TRADING_BLOCKED: Only Crude Oil (CLUSDT) and Solana (SOLUSDT) are permitted.` };
     }
 
     const isSolana = rawSym.includes('SOL');
@@ -225,65 +375,108 @@ class MudrexLiveAdapter {
     const qty = String(quantity || this.settings.contractQuantity || 1.0);
     const lev = String(leverage || 5);
 
-    const body = {
-      trade_currency: 'INR',
+    // Save Intent as TRANSMITTING
+    const intentRecord = {
+      intentId,
       symbol: symb,
-      side: sideUpper === 'BUY' ? 'BUY' : 'SELL',
-      order_type: orderType,
-      trigger_type: 'MARKET',
-      type: 'MARKET',
-      quantity: qty,
-      leverage: lev,
-      reduce_only: false
+      side: sideUpper,
+      orderType,
+      quantity: Number(qty),
+      price: roundedPriceLevel,
+      status: 'TRANSMITTING',
+      createdAt: new Date().toISOString()
     };
-
-    if (targetPrice) {
-      body.takeprofit_price = String(targetPrice);
-      body.is_takeprofit = true;
+    this.orderIntents.set(intentId, intentRecord);
+    if (this.db && typeof this.db.saveOrderIntent === 'function') {
+      this.db.saveOrderIntent(intentRecord);
     }
 
-    const url = `${this.baseUrl}/futures/${symb}/order?is_symbol=true&trade_currency=INR`;
-    console.log(`[Mudrex Live Adapter] Sending Real Order POST to ${url}:`, body);
-    let res = await this.request('POST', url, body);
+    this.isOrderDispatching = true;
+    try {
+      const body = {
+        trade_currency: 'INR',
+        symbol: symb,
+        side: sideUpper === 'BUY' ? 'BUY' : 'SELL',
+        order_type: orderType,
+        trigger_type: 'MARKET',
+        type: 'MARKET',
+        quantity: qty,
+        leverage: lev,
+        reduce_only: reduceOnly === true
+      };
 
-    // If initial order with TP was rejected, retry without takeprofit price
-    if (!res.success && body.is_takeprofit) {
-      console.warn(`[Mudrex Live Adapter] Order with TP rejected (${res.error}). Retrying market order without takeprofit...`);
-      const retryBody = { ...body };
-      delete retryBody.takeprofit_price;
-      delete retryBody.is_takeprofit;
-      res = await this.request('POST', url, retryBody);
-    }
-
-    // Only retry CLUSDT with dash variant CL-USDT. Never retry SOLUSDT with hyphen variant
-    if (!res.success && !isSolana && dashSymb !== symb) {
-      const altUrl = `${this.baseUrl}/futures/${dashSymb}/order?is_symbol=true&trade_currency=INR`;
-      console.log(`[Mudrex Live Adapter] Retrying with symbol variant ${dashSymb} via ${altUrl}...`);
-      body.symbol = dashSymb;
-      res = await this.request('POST', altUrl, body);
-    }
-    if (!res.success) {
-      // Timeout/Error Safety Check: Verify if Mudrex exchange accepted the order despite HTTP error/timeout
-      try {
-        const positionsRes = await this.fetchPositions();
-        if (positionsRes.success && Array.isArray(positionsRes.data)) {
-          const matched = positionsRes.data.find(p => {
-            const matchSym = (p.symbol || '').toUpperCase().includes('CL');
-            const matchSide = (p.side || p.order_type || '').toUpperCase().includes(orderType);
-            return matchSym && matchSide;
-          });
-          if (matched) {
-            const foundId = matched.position_id || matched.id || matched.order_id || matched.orderId;
-            console.log(`[Mudrex Live Adapter] Exchange Timeout Recovery: Found matching live position ${foundId} on Mudrex.`);
-            return { success: true, data: { order_id: foundId, position_id: foundId } };
-          }
-        }
-      } catch (checkErr) {
-        console.warn('[Mudrex Live Adapter] Timeout check error:', checkErr.message);
+      if (targetPrice) {
+        body.takeprofit_price = String(targetPrice);
+        body.is_takeprofit = true;
       }
+
+      const url = `${this.baseUrl}/futures/${symb}/order?is_symbol=true&trade_currency=INR`;
+      console.log(`[Mudrex Live Adapter] Sending Real Order POST to ${url} (Intent: ${intentId}):`, body);
+      let res = await this.request('POST', url, body);
+
+      // If initial order with TP was rejected, retry without takeprofit price
+      if (!res.success && body.is_takeprofit) {
+        console.warn(`[Mudrex Live Adapter] Order with TP rejected (${res.error}). Retrying market order without takeprofit...`);
+        const retryBody = { ...body };
+        delete retryBody.takeprofit_price;
+        delete retryBody.is_takeprofit;
+        res = await this.request('POST', url, retryBody);
+      }
+
+      // Only retry CLUSDT with dash variant CL-USDT
+      if (!res.success && !isSolana && dashSymb !== symb) {
+        const altUrl = `${this.baseUrl}/futures/${dashSymb}/order?is_symbol=true&trade_currency=INR`;
+        body.symbol = dashSymb;
+        res = await this.request('POST', altUrl, body);
+      }
+
+      // Two-phase exchange verification: If request failed or timed out, NEVER blind retry!
+      if (!res.success) {
+        const errStr = typeof res.error === 'object' ? JSON.stringify(res.error) : String(res.error || '');
+        if (errStr.includes('429') || errStr.includes('5002') || errStr.includes('rate limit') || errStr.includes('Too many requests')) {
+          this.rateLimitUntil = Date.now() + 5000;
+          this.tripCircuitBreaker('RATE_LIMIT_HIT');
+          return { success: false, error: res.error, rateLimited: true, intentId };
+        }
+
+        console.warn(`[Mudrex Live Adapter] Order POST unconfirmed (${res.error}). Verifying against exchange before failing...`);
+        const verified = await this.verifyOrderOnExchange({
+          symbol: symb,
+          side: orderType,
+          quantity: Number(qty),
+          windowSeconds: 30
+        });
+
+        if (verified && verified.found) {
+          console.log(`[Mudrex Live Adapter] Exchange Verification Confirmed! Order found on Mudrex: ${verified.orderId}`);
+          res = { success: true, data: { order_id: verified.orderId, position_id: verified.orderId }, reconciledFromExchange: true };
+        } else {
+          intentRecord.status = 'FAILED_UNCONFIRMED';
+          intentRecord.error = res.error;
+          if (this.db && typeof this.db.saveOrderIntent === 'function') {
+            this.db.saveOrderIntent(intentRecord);
+          }
+          return { success: false, error: res.error, intentId, unconfirmed: true };
+        }
+      }
+
+      // Order Confirmed Success on Exchange
+      const mudrexOrderId = this.extractOrderId(res.data);
+      intentRecord.status = 'FILLED';
+      intentRecord.mudrexOrderId = mudrexOrderId;
+      intentRecord.filledAt = new Date().toISOString();
+      if (this.db && typeof this.db.saveOrderIntent === 'function') {
+        this.db.saveOrderIntent(intentRecord);
+      }
+
+      // Update Circuit Breakers & Cooldown
+      this.recordOrderSuccessMetrics(symb, Number(qty), roundedPriceLevel);
+
+      console.log(`[Mudrex Live Adapter] Real Order Result:`, res);
+      return { success: true, data: res.data, mudrexOrderId, intentId, reconciledFromExchange: !!res.reconciledFromExchange };
+    } finally {
+      this.isOrderDispatching = false;
     }
-    console.log(`[Mudrex Live Adapter] Real Order Result:`, res);
-    return res;
   }
 
   initFromStorage() {
@@ -414,58 +607,73 @@ class MudrexLiveAdapter {
 
       for (const pair of pairsToCheck) {
         if (pair.status === 'CLOSED') continue;
-        for (const pos of [pair.buyPosition, pair.sellPosition]) {
-          if (!pos || pos.status !== 'OPEN') continue;
-          const isTransmitting = pos.apiStatus === 'TRANSMITTING_TO_MUDREX' && (Date.now() - (pos.transmittingSince || 0) < 15000);
-          const isAlreadyReal = !!(pos.mudrexOrderId || pos.apiStatus === 'REAL_MUDREX_POSITION' || isTransmitting);
-          if (isAlreadyReal) continue;
 
-          // Check rate limit cooldown
-          if (Date.now() < this.rateLimitUntil) continue;
-
-          const posSymbol = (pos.symbol || pair.symbol || 'CLUSDT').toUpperCase();
-          if (!posSymbol.includes('CL') && !posSymbol.includes('SOL')) {
-            console.warn(`[Mudrex Live Adapter] Skipping unsupported position: ${pos.positionId} (${posSymbol})`);
-            continue;
-          }
-
-          pos.apiStatus = 'TRANSMITTING_TO_MUDREX';
-          pos.transmittingSince = Date.now();
-          const qty = pos.quantity || this.settings.contractQuantity || 1.0;
-          const lev = pos.leverage || this.settings.leverage || 5;
-          const targetPrice = pos.targetExitPrice || null;
-
-          try {
-            const orderSym = posSymbol.includes('SOL') ? 'SOLUSDT' : 'CLUSDT';
-            const res = await this.createRealOrder({ symbol: orderSym, side: pos.direction, quantity: qty, leverage: lev, targetPrice });
-            if (res.success) {
-              pos.mudrexOrderId = this.extractOrderId(res.data);
-              pos.apiStatus = 'REAL_MUDREX_POSITION';
-              pos.apiError = null;
-              console.log(`[Mudrex Live Adapter] SUCCESS: Transmitted Real Order for ${pos.positionId} -> Mudrex Order ID: ${pos.mudrexOrderId}`);
-            } else {
-              let errStr = typeof res.error === 'object' ? JSON.stringify(res.error) : String(res.error || '');
-              if (errStr.includes('5002') || errStr.includes('rate limit') || errStr.includes('RATE_LIMIT')) {
-                pos.apiStatus = 'LIVE_ENGINE_PAIR (RATE_LIMIT_COOLDOWN)';
-                this.rateLimitUntil = Date.now() + 4000;
-              } else if (errStr.includes('balance') || errStr.includes('margin') || errStr.includes('5001') || errStr.includes('5000')) {
-                pos.apiStatus = 'LIVE_ENGINE_PAIR (INSUFFICIENT_MARGIN)';
-              } else {
-                pos.apiStatus = 'LIVE_ENGINE_PAIR (RETRY_QUEUED)';
-              }
-              pos.apiError = errStr;
-              console.warn(`[Mudrex Live Adapter] Real Order POST for ${pos.positionId} returned: ${errStr}`);
-            }
-          } catch (err) {
-            pos.apiStatus = 'LIVE_ENGINE_PAIR (RETRY_QUEUED)';
-            pos.apiError = err.message;
-            console.error(`[Mudrex Live Adapter] Real Order Error for ${pos.positionId}:`, err.message);
-          }
-          this.saveState();
-
-          // Sequential Delay: wait 400ms between orders to prevent Mudrex burst rate limits
-          await new Promise(r => setTimeout(r, 400));
+        // Circuit Breaker Check before attempting any transmission
+        const cb = this.checkCircuitBreakers();
+        if (!cb.allowed) {
+          console.warn(`[Mudrex Live Adapter] Transmission halted: Circuit breaker active (${cb.reason})`);
+          break;
         }
+
+        // ONE-WAY NETTING RULE: Mudrex does not support simultaneous hedge positions.
+        // Transmit at most ONE leg to the real exchange.
+        const candidateLegs = [pair.buyPosition, pair.sellPosition].filter(p => p && p.status === 'OPEN');
+        if (candidateLegs.length === 0) continue;
+
+        // Pick primary unfulfilled leg
+        const pos = candidateLegs.find(p => !p.mudrexOrderId && p.apiStatus !== 'REAL_MUDREX_POSITION' && p.apiStatus !== 'ORDER_FAILED_FINAL');
+        if (!pos) continue;
+
+        const isTransmitting = pos.apiStatus === 'TRANSMITTING_TO_MUDREX' && (Date.now() - (pos.transmittingSince || 0) < 15000);
+        const isAlreadyReal = !!(pos.mudrexOrderId || pos.apiStatus === 'REAL_MUDREX_POSITION' || isTransmitting);
+        if (isAlreadyReal) continue;
+
+        // Check rate limit cooldown
+        if (Date.now() < this.rateLimitUntil) continue;
+
+        const posSymbol = (pos.symbol || pair.symbol || 'CLUSDT').toUpperCase();
+        if (!posSymbol.includes('CL') && !posSymbol.includes('SOL')) {
+          console.warn(`[Mudrex Live Adapter] Skipping unsupported position: ${pos.positionId} (${posSymbol})`);
+          continue;
+        }
+
+        pos.apiStatus = 'TRANSMITTING_TO_MUDREX';
+        pos.transmittingSince = Date.now();
+        const qty = pos.quantity || this.settings.contractQuantity || 1.0;
+        const lev = pos.leverage || this.settings.leverage || 5;
+        const targetPrice = pos.targetExitPrice || null;
+        const intentId = `INTENT-TX-${pair.pairId || 'PAIR'}-${pos.direction}-${pos.positionId}`;
+
+        try {
+          const orderSym = posSymbol.includes('SOL') ? 'SOLUSDT' : 'CLUSDT';
+          const res = await this.createRealOrder({ symbol: orderSym, side: pos.direction, quantity: qty, leverage: lev, targetPrice, intentId });
+          if (res.success) {
+            pos.mudrexOrderId = this.extractOrderId(res.data);
+            pos.apiStatus = 'REAL_MUDREX_POSITION';
+            pos.apiError = null;
+            console.log(`[Mudrex Live Adapter] SUCCESS: Transmitted Real Order for ${pos.positionId} -> Mudrex Order ID: ${pos.mudrexOrderId}`);
+          } else {
+            let errStr = typeof res.error === 'object' ? JSON.stringify(res.error) : String(res.error || '');
+            if (errStr.includes('5002') || errStr.includes('rate limit') || errStr.includes('RATE_LIMIT')) {
+              pos.apiStatus = 'ORDER_FAILED_RATE_LIMITED';
+              this.rateLimitUntil = Date.now() + 5000;
+            } else if (errStr.includes('balance') || errStr.includes('margin') || errStr.includes('5001') || errStr.includes('5000')) {
+              pos.apiStatus = 'ORDER_FAILED_INSUFFICIENT_MARGIN';
+            } else {
+              pos.apiStatus = 'ORDER_FAILED_FINAL';
+            }
+            pos.apiError = errStr;
+            console.warn(`[Mudrex Live Adapter] Real Order POST for ${pos.positionId} failed: ${errStr}`);
+          }
+        } catch (err) {
+          pos.apiStatus = 'ORDER_SUBMISSION_ERROR';
+          pos.apiError = err.message;
+          console.error(`[Mudrex Live Adapter] Real Order Error for ${pos.positionId}:`, err.message);
+        }
+        this.saveState();
+
+        // Sequential Delay: wait 500ms between orders to prevent Mudrex burst rate limits
+        await new Promise(r => setTimeout(r, 500));
       }
     } finally {
       this.isTransmittingQueue = false;
@@ -822,8 +1030,22 @@ class MudrexLiveAdapter {
       console.warn('[Mudrex Live Adapter] Pre-exit position check error:', preErr.message);
     }
 
-    // 7. Send Reduce-Only Market Order for ONLY the Leg's Quantity (Net Position Mode)
-    // NEVER call /positions/{positionId}/close for a single B/L, as that would wipe the entire aggregate position!
+    // SAFEGUARD: If exchange position is already flat (0), DO NOT send an opposing market order!
+    // Sending an opposing order when exchange position is 0 would OPEN an unwanted reverse position!
+    if (preExchangeQty === 0) {
+      console.log(`[Mudrex Live Adapter] Exchange position for ${cleanSymbol} is already flat (0). Marking leg ${posId} closed without dispatching unnecessary reverse order.`);
+      position.status = 'CLOSED';
+      position.exitPrice = currentPrice;
+      position.exitTime = new Date().toISOString();
+      position.exitTimestamp = Date.now();
+      position.exitReason = `${exitReason} (EXCHANGE_ALREADY_FLAT)`;
+      this.exitInFlight.delete(posId);
+      this.saveState();
+      return { success: true, message: 'EXCHANGE_ALREADY_FLAT', closedQty: 0, position, skipped: true };
+    }
+
+    // 7. Send Reduce-Only Market Order capped to ACTUAL exchange quantity
+    const actualQtyToClose = Math.min(qtyToClose, preExchangeQty);
     const body = {
       trade_currency: 'INR',
       symbol: cleanSymbol,
@@ -831,19 +1053,19 @@ class MudrexLiveAdapter {
       order_type: oppositeOrderType,
       trigger_type: 'MARKET',
       type: 'MARKET',
-      quantity: String(qtyToClose),
+      quantity: String(actualQtyToClose),
       reduce_only: true
     };
 
     const orderUrl = `${this.baseUrl}/futures/${cleanSymbol}/order?is_symbol=true&trade_currency=INR`;
-    console.log(`[Mudrex Live Adapter] Dispatching Net Reduce-Only Exit Order (${qtyToClose} B/L of ${preExchangeQty} aggregate) via POST ${orderUrl}:`, body);
+    console.log(`[Mudrex Live Adapter] Dispatching Net Reduce-Only Exit Order (${actualQtyToClose} of ${preExchangeQty} aggregate) via POST ${orderUrl}:`, body);
 
     let closeRes = null;
     try {
       closeRes = await this.request('POST', orderUrl, body);
       // Fallback: If cleanSymbol rejected by endpoint, try /close endpoint ONLY if exchange position ID is provided AND leg quantity equals total aggregate position
       if (!closeRes || !closeRes.success) {
-        if (position.exchangePositionId && preExchangeQty > 0 && qtyToClose >= preExchangeQty) {
+        if (position.exchangePositionId && preExchangeQty > 0 && actualQtyToClose >= preExchangeQty) {
           const posCloseUrl = `${this.baseUrl}/futures/positions/${encodeURIComponent(position.exchangePositionId)}/close`;
           console.log(`[Mudrex Live Adapter] Full position close fallback via POST ${posCloseUrl}`);
           closeRes = await this.request('POST', posCloseUrl, { symbol: cleanSymbol, trade_currency: 'INR' });
