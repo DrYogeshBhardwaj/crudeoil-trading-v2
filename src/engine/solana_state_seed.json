@@ -2,7 +2,7 @@
   "timestamp": "2026-10-15T02:04:21.915Z",
   "settings": {
     "startingCapitalINR": 300000,
-    "contractQuantity": 4,
+    "contractQuantity": 5,
     "leverage": 5,
     "instrument": "SOLUSDT",
     "profitTargetMove": 0.45,

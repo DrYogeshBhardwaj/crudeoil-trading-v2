@@ -6,7 +6,7 @@ class SolanaEngine {
   constructor() {
     this.settings = {
       startingCapitalINR: 186682.39, // Mudrex Futures Wallet Available Cash
-      contractQuantity: 4.0, // 4.0 SOL default lot size for new pairs requested by user
+      contractQuantity: 5.0, // 5.0 SOL default lot size for new pairs requested by user
       leverage: 5,
       instrument: 'SOLUSDT',
       profitTargetMove: 0.45, // $0.45 Target Move for Solana
@@ -91,7 +91,8 @@ class SolanaEngine {
           if (typeof data.punarjanmCount === 'number') this.punarjanmCount = data.punarjanmCount;
           if (typeof data.pairCounter === 'number') this.pairCounter = data.pairCounter;
           if (data.settings) this.settings = { ...this.settings, ...data.settings };
-          this.settings.contractQuantity = 4.0; // Enforce 4.0 SOL for new pairs per user instruction
+          this.settings.contractQuantity = 5.0; // Enforce 5.0 SOL for new pairs per user instruction
+          this.settings.profitTargetMove = 0.45; // Enforce $0.45 target move
           this.settings.tradingMode = 'LIVE';
           this.settings.realOrdersDisabled = false;
           this.settings.autoAddNewPairs = true;

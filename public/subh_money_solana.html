@@ -1363,7 +1363,7 @@
       <div class="hero-card card-pairs">
         <div class="hero-label" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
           <span>⚡ TOTAL ACTIVE PAIRS</span>
-          <span class="badge" style="background: rgba(0, 255, 163, 0.15); color: var(--green-primary); font-size: 0.65rem; border: 1px solid rgba(0, 255, 163, 0.35); padding: 2px 6px; border-radius: 6px; font-weight: 800;">NEXT: 4.0 SOL</span>
+          <span class="badge" style="background: rgba(0, 255, 163, 0.15); color: var(--green-primary); font-size: 0.65rem; border: 1px solid rgba(0, 255, 163, 0.35); padding: 2px 6px; border-radius: 6px; font-weight: 800;">NEXT: 5.0 SOL</span>
         </div>
         <div class="hero-value val-gold" id="heroActivePairs">0 PAIRS</div>
         <!-- Dual Lot Breakdown (Only Active Lots > 0 Displayed) -->
@@ -1427,16 +1427,16 @@
         <div class="config-control-group">
           <div class="config-label">
             <span>⚡ Naye Pairs Ka Lot Size:</span>
-            <span class="current-val-tag" id="currentLotTag">4.0 SOL</span>
+            <span class="current-val-tag" id="currentLotTag">5.0 SOL</span>
           </div>
           <div class="config-input-row">
             <div class="quick-presets">
               <button type="button" class="preset-pill preset-lot" data-val="3.0" onclick="setLotInput(3.0)">3 SOL</button>
-              <button type="button" class="preset-pill preset-lot active" data-val="4.0" onclick="setLotInput(4.0)" id="presetLot4">4 SOL</button>
-              <button type="button" class="preset-pill preset-lot" data-val="5.0" onclick="setLotInput(5.0)">5 SOL</button>
+              <button type="button" class="preset-pill preset-lot" data-val="4.0" onclick="setLotInput(4.0)" id="presetLot4">4 SOL</button>
+              <button type="button" class="preset-pill preset-lot active" data-val="5.0" onclick="setLotInput(5.0)" id="presetLot5">5 SOL</button>
             </div>
             <div class="input-with-btn">
-              <input type="number" id="inputLotSize" value="4.0" step="0.5" min="1" max="25" class="config-input">
+              <input type="number" id="inputLotSize" value="5.0" step="0.5" min="1" max="25" class="config-input">
               <span class="input-unit">SOL</span>
               <button type="button" class="btn-apply-ok" id="btnApplyLot" onclick="applyLotSize()">OK</button>
             </div>
@@ -2911,7 +2911,7 @@
     async function promptAddNewPair() {
       const pin = prompt(
         `➕ NAYA PAIR KHARIDEIN (BUY NEW HEDGED PAIR):\n\n` +
-        `Current live market rate par ek fresh 4.0 SOL hedged pair (BUY + SELL) turant open hoga.\n\n` +
+        `Current live market rate par ek fresh 5.0 SOL hedged pair (BUY + SELL) turant open hoga.\n\n` +
         `Admin Password (340556) enter karein:`
       );
       if (!pin) return;
