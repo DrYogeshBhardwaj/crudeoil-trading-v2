@@ -1007,11 +1007,21 @@
 
       <!-- Metric 4: Total Active Pairs -->
       <div class="hero-card card-pairs">
-        <div class="hero-label">
+        <div class="hero-label" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
           <span>⚡ TOTAL ACTIVE PAIRS</span>
+          <span class="badge" style="background: rgba(0, 255, 163, 0.15); color: var(--green-primary); font-size: 0.65rem; border: 1px solid rgba(0, 255, 163, 0.35); padding: 2px 6px; border-radius: 6px; font-weight: 800;">NEXT: 4.0 SOL</span>
         </div>
         <div class="hero-value val-gold" id="heroActivePairs">0 PAIRS</div>
-        <div class="hero-sub" id="heroPairsSub">0 BUY / 0 SELL · 3.0 SOL 5x</div>
+        <!-- Dual Lot Breakdown (3 SOL & 4 SOL) -->
+        <div id="heroPairsLots" style="display: flex; gap: 6px; margin: 4px 0 6px 0; flex-wrap: wrap;">
+          <span id="lotBadge3" style="background: rgba(3, 225, 255, 0.12); color: var(--cyan-primary); border: 1px solid rgba(3, 225, 255, 0.3); padding: 3px 8px; border-radius: 6px; font-size: 0.72rem; font-weight: 700; font-family: var(--font-mono); display: inline-flex; align-items: center; gap: 4px;">
+            <span>3.0 SOL:</span> <strong style="color: #fff;" id="lotCount3">0 Pairs</strong>
+          </span>
+          <span id="lotBadge4" style="background: rgba(0, 255, 163, 0.12); color: var(--green-primary); border: 1px solid rgba(0, 255, 163, 0.35); padding: 3px 8px; border-radius: 6px; font-size: 0.72rem; font-weight: 700; font-family: var(--font-mono); display: inline-flex; align-items: center; gap: 4px;">
+            <span>4.0 SOL:</span> <strong style="color: #fff;" id="lotCount4">0 Pairs</strong>
+          </span>
+        </div>
+        <div class="hero-sub" id="heroPairsSub">0 BUY / 0 SELL · 5x Leverage</div>
       </div>
     </section>
 
@@ -1700,9 +1710,45 @@
           document.getElementById('heroSellLabel').innerHTML = `<span>🎯 ACTIVE SELL TARGET (-$${targetMove.toFixed(2)})</span>`;
         }
 
-        // 4. Hero Metric 4: Total Active Pairs
-        document.getElementById('heroActivePairs').innerText = `${pairs.length} PAIRS`;
-        document.getElementById('heroPairsSub').innerText = `${engine.activeBuyCount || activeBuys.length} BUY / ${engine.activeSellCount || activeSells.length} SELL · ${engine.contractQuantity || 3.0} SOL 5x`;
+        // 4. Hero Metric 4: Total Active Pairs & Lot Size Breakdown (3 SOL and 4 SOL)
+        const openPairs = pairs || [];
+        document.getElementById('heroActivePairs').innerText = `${openPairs.length} PAIRS`;
+
+        // Calculate breakdown of pairs by lot size (SOL)
+        const qtyCounts = {};
+        openPairs.forEach(p => {
+          const q = Number(p.quantity || (p.buy && p.buy.quantity) || (p.sell && p.sell.quantity) || 3.0);
+          qtyCounts[q] = (qtyCounts[q] || 0) + 1;
+        });
+
+        // Ensure 3.0 SOL and 4.0 SOL counts are accurately tracked
+        const count3 = qtyCounts[3] || qtyCounts[3.0] || 0;
+        const count4 = qtyCounts[4] || qtyCounts[4.0] || 0;
+
+        const lotCount3 = document.getElementById('lotCount3');
+        const lotCount4 = document.getElementById('lotCount4');
+        if (lotCount3) lotCount3.innerText = `${count3} Pairs`;
+        if (lotCount4) lotCount4.innerText = `${count4} Pairs`;
+
+        const heroPairsLots = document.getElementById('heroPairsLots');
+        if (heroPairsLots) {
+          const lots = Object.keys(qtyCounts).map(Number).sort((a, b) => a - b);
+          if (!lots.includes(3)) lots.unshift(3);
+          if (!lots.includes(4)) lots.push(4);
+
+          heroPairsLots.innerHTML = lots.map(lot => {
+            const cnt = qtyCounts[lot] || 0;
+            const isFour = lot === 4;
+            const color = isFour ? 'var(--green-primary)' : 'var(--cyan-primary)';
+            const bg = isFour ? 'rgba(0, 255, 163, 0.12)' : 'rgba(3, 225, 255, 0.12)';
+            const border = isFour ? 'rgba(0, 255, 163, 0.35)' : 'rgba(3, 225, 255, 0.35)';
+            return `<span style="background: ${bg}; color: ${color}; border: 1px solid ${border}; padding: 3px 8px; border-radius: 6px; font-size: 0.72rem; font-weight: 700; font-family: var(--font-mono); display: inline-flex; align-items: center; gap: 4px;">
+              <span>${lot}.0 SOL:</span> <strong style="color: #fff;">${cnt} ${cnt === 1 ? 'Pair' : 'Pairs'}</strong>
+            </span>`;
+          }).join('');
+        }
+
+        document.getElementById('heroPairsSub').innerText = `${engine.activeBuyCount || activeBuys.length} BUY / ${engine.activeSellCount || activeSells.length} SELL · 5x Leverage`;
 
         // 5. Financial KPI 1: Mudrex Available Margin (₹ and $)
         const availINR = Number(wallet.availableMarginINR || 0);
@@ -1745,10 +1791,12 @@
             const pnlINR = Number(pos.floatingPnlINR || 0);
             const pnlColor = pnlINR >= 0 ? 'var(--green-primary)' : 'var(--red-primary)';
             const pnlSign = pnlINR >= 0 ? '+' : '';
+            const pQty = Number(pos.quantity || 3.0);
+            const qtyBadge = pQty === 4 ? `<span style="font-size: 0.6rem; color: var(--green-primary); background: rgba(0,255,163,0.14); padding: 1px 4px; border-radius: 4px; font-weight: 800; margin-left: 4px;">4S</span>` : '';
 
             return `
               <tr>
-                <td style="color: var(--text-dim); font-weight: 700;">#${pos.originalIndex}</td>
+                <td style="color: var(--text-dim); font-weight: 700;">#${pos.originalIndex}${qtyBadge}</td>
                 <td style="color: #cbd5e1; font-weight: 600;">$${Number(pos.entryPrice || 0).toFixed(2)}</td>
                 <td>
                   <div style="color: var(--green-primary); font-weight: 900; font-size: 0.88rem; text-shadow: 0 0 10px rgba(0, 255, 163, 0.35); line-height: 1.15;">$${bTgt.toFixed(2)}</div>
@@ -1774,10 +1822,12 @@
             const pnlINR = Number(pos.floatingPnlINR || 0);
             const pnlColor = pnlINR >= 0 ? 'var(--green-primary)' : 'var(--red-primary)';
             const pnlSign = pnlINR >= 0 ? '+' : '';
+            const pQty = Number(pos.quantity || 3.0);
+            const qtyBadge = pQty === 4 ? `<span style="font-size: 0.6rem; color: var(--green-primary); background: rgba(0,255,163,0.14); padding: 1px 4px; border-radius: 4px; font-weight: 800; margin-left: 4px;">4S</span>` : '';
 
             return `
               <tr>
-                <td style="color: var(--text-dim); font-weight: 700;">#${pos.originalIndex}</td>
+                <td style="color: var(--text-dim); font-weight: 700;">#${pos.originalIndex}${qtyBadge}</td>
                 <td style="color: #cbd5e1; font-weight: 600;">$${Number(pos.entryPrice || 0).toFixed(2)}</td>
                 <td>
                   <div style="color: var(--red-primary); font-weight: 900; font-size: 0.88rem; text-shadow: 0 0 10px rgba(244, 63, 94, 0.35); line-height: 1.15;">$${sTgt.toFixed(2)}</div>

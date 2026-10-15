@@ -6,7 +6,7 @@ class SolanaEngine {
   constructor() {
     this.settings = {
       startingCapitalINR: 186682.39, // Mudrex Futures Wallet Available Cash
-      contractQuantity: 3.0, // 3.0 SOL default lot size requested by user
+      contractQuantity: 4.0, // 4.0 SOL default lot size for new pairs requested by user
       leverage: 5,
       instrument: 'SOLUSDT',
       profitTargetMove: 0.45, // $0.45 Target Move for Solana
@@ -80,6 +80,7 @@ class SolanaEngine {
           if (typeof data.punarjanmCount === 'number') this.punarjanmCount = data.punarjanmCount;
           if (typeof data.pairCounter === 'number') this.pairCounter = data.pairCounter;
           if (data.settings) this.settings = { ...this.settings, ...data.settings };
+          this.settings.contractQuantity = 4.0; // Enforce 4.0 SOL for new pairs per user instruction
           this.settings.tradingMode = 'LIVE';
           this.settings.realOrdersDisabled = false;
           this.settings.autoAddNewPairs = true;
@@ -168,7 +169,7 @@ class SolanaEngine {
     }
 
     const usdInrRate = Number(this.settings.usdInrRate || 102.00);
-    const qty = Number(this.settings.contractQuantity || 3.0);
+    const qty = Number(this.settings.contractQuantity || 4.0);
     const leverage = Number(this.settings.leverage || 5);
 
     // 2. Check for missing legs on existing active pairs
@@ -233,7 +234,7 @@ class SolanaEngine {
   }
 
   reopenMissingLeg(pair, direction, entryPrice, timestamp = Date.now(), usdInrRate = 102.00) {
-    const qty = pair.quantity || this.settings.contractQuantity || 5.0;
+    const qty = pair.quantity || this.settings.contractQuantity || 4.0;
     const targetMove = pair.targetMove || this.settings.profitTargetMove || 0.50;
     const seq = pair.pairId.replace('PAIR-SOL-', '');
     const legId = `P-PAIR-SOL-${seq}-${direction}-${Date.now().toString().slice(-4)}`;
@@ -288,7 +289,7 @@ class SolanaEngine {
   }
 
   createNewPair(symbol, price, timestamp = Date.now(), usdInrRate = 102.00, customQty = null, customTarget = null) {
-    const qty = customQty !== null ? Number(customQty) : Number(this.settings.contractQuantity || 5.0);
+    const qty = customQty !== null ? Number(customQty) : Number(this.settings.contractQuantity || 4.0);
     const targetMove = customTarget !== null ? Number(customTarget) : Number(this.settings.profitTargetMove || 0.50);
     const pairId = `PAIR-SOL-${this.pairCounter.toString().padStart(4, '0')}`;
     this.pairCounter++;
@@ -502,7 +503,7 @@ class SolanaEngine {
     pos.exitTimestamp = exitTime;
     pos.exitReason = exitReason;
 
-    const qty = pos.quantity || this.settings.contractQuantity || 5.0;
+    const qty = pos.quantity || this.settings.contractQuantity || 4.0;
     const isBuy = pos.direction === 'BUY';
     const grossUSD = isBuy ? (pos.exitPrice - pos.entryPrice) * qty : (pos.entryPrice - pos.exitPrice) * qty;
     const grossINR = grossUSD * usdInr;
@@ -621,7 +622,7 @@ class SolanaEngine {
 
     for (const pair of this.pairs) {
       if (pair.status === 'CLOSED') continue;
-      const qty = pair.quantity || this.settings.contractQuantity || 3.0;
+      const qty = pair.quantity || this.settings.contractQuantity || 4.0;
 
       // Buy
       if (pair.buyPosition && pair.buyPosition.status === 'OPEN') {
@@ -733,7 +734,7 @@ class SolanaEngine {
       let bPnlUSD = 0, bPnlINR = 0;
       let sPnlUSD = 0, sPnlINR = 0;
 
-      const defQty = this.settings.contractQuantity || 3.0;
+      const defQty = this.settings.contractQuantity || 4.0;
       const feeMultiplier = this.settings.conservativeFeeMultiplier || 1.40;
       if (b && b.status === 'OPEN') {
         const bQty = b.quantity || defQty;
@@ -798,7 +799,7 @@ class SolanaEngine {
 
     // Net Summary for Hero Banner
     let netSummary = null;
-    const netQty = Math.abs(floating.openBuyCount - floating.openSellCount) * (this.settings.contractQuantity || 5.0);
+    const netQty = Math.abs(floating.openBuyCount - floating.openSellCount) * (this.settings.contractQuantity || 4.0);
     const sideDisplay = floating.openBuyCount >= floating.openSellCount ? 'LONG' : 'SHORT';
     if (floating.openBuyCount > 0 || floating.openSellCount > 0) {
       netSummary = {
@@ -816,6 +817,12 @@ class SolanaEngine {
         source: 'SOLANA_SIMULATOR'
       };
     }
+
+    const qtyBreakdown = {};
+    openPairs.forEach(p => {
+      const q = Number(p.quantity || this.settings.contractQuantity || 4.0);
+      qtyBreakdown[q] = (qtyBreakdown[q] || 0) + 1;
+    });
 
     return {
       success: true,
@@ -853,7 +860,8 @@ class SolanaEngine {
         activePairsCount: openPairs.length,
         activeBuyCount: floating.openBuyCount,
         activeSellCount: floating.openSellCount,
-        contractQuantity: this.settings.contractQuantity,
+        contractQuantity: this.settings.contractQuantity || 4.0,
+        qtyBreakdown,
         profitTargetMove: this.settings.profitTargetMove,
         basketProfitTargetINR: this.settings.basketProfitTargetINR,
         leverage: this.settings.leverage,
