@@ -180,6 +180,16 @@ class SolanaEngine {
     const price = Number(data.price);
     if (!price || isNaN(price) || price <= 0) return;
 
+    // 0. Auto-Clean Guard: if stale floating loss has crossed threshold (e.g. ₹20,000), auto-flush kagzi kachra
+    if (this.settings.autoCleanKachraEnabled) {
+      const summary = this.calculateFloatingSummary(price);
+      const maxLossThreshold = Number(this.settings.maxFloatingLossThresholdINR || 20000);
+      if (summary.floatingNetINR <= -maxLossThreshold) {
+        console.log(`[Solana Engine] Auto Floating Guard: Floating Loss -₹${Math.abs(summary.floatingNetINR).toFixed(2)} reached threshold ₹${maxLossThreshold}. Auto-cleaning kachra...`);
+        this.cleanFloatingKachra(`AUTO_FLOATING_LIMIT_HIT (Threshold ₹${maxLossThreshold})`);
+      }
+    }
+
     // 1. Check open positions for target profit exits
     this.evaluateOpenPositions(price);
 
@@ -1075,6 +1085,22 @@ class SolanaEngine {
     this.createNewPair('SOLUSDT', livePrice, Date.now(), usdInr);
 
     this.saveState();
+    try {
+      const seedFile = path.join(__dirname, 'solana_state_seed.json');
+      const seedPayload = {
+        timestamp: new Date().toISOString(),
+        settings: this.settings,
+        engineStartedAt: this.engineStartedAt,
+        lastResetTime: this.lastResetTime,
+        pairs: this.pairs,
+        closedPositions: this.closedPositions,
+        punarjanmCount: this.punarjanmCount,
+        punarjanmCycles: this.punarjanmCycles,
+        pairCounter: this.pairCounter,
+        processedRates: Array.from(this.processedRates)
+      };
+      fs.writeFileSync(seedFile, JSON.stringify(seedPayload, null, 2), 'utf8');
+    } catch (err) {}
     console.log(`[Solana Engine] Cleaned Floating Kachra (${triggerReason}): Flushed ${initialPairsCount} stale pairs. Realized Profit and Closed Trades intact. Re-synced 1:1 with Mudrex at $${livePrice}.`);
     return {
       success: true,
