@@ -1,17 +1,19 @@
 /**
  * SOL PAIR ENGINE V2 — Comprehensive Test Suite
  * 
- * Tests:
- * 1. Clean initial start (0 pairs, 0 closed trades, 0 realized P&L).
- * 2. Pair creation at live price (5 SOL size, $0.45 target move).
- * 3. Permanent entry price immutability (live ticks never overwrite entry prices).
- * 4. Active level occupancy rejection (duplicate blocked while legs active).
- * 5. Independent leg tracking (BUY target hit closes BUY once, SELL remains open, level remains occupied).
- * 6. Full closure & dynamic release (both legs closed releases level for reuse -> PROOF OF REUSE).
- * 7. Partial closure (residual open quantity holds level lock).
- * 8. Safety limits enforcement (max active pairs, margin limit, leg imbalance).
- * 9. Process restart & recovery (restores active pairs & locks without importing old history).
- * 10. Clean state reset (pristine isolated state for production deployment).
+ * Verifies the complete automatic lifecycle:
+ * 1. Clean initial start & automatic startup in RUNNING + PAPER mode.
+ * 2. Background tick processing: valid tick automatically creates first 5 SOL pair.
+ * 3. Permanent entry price immutability: live ticks never overwrite entry prices.
+ * 4. Active level occupancy rejection: duplicate blocked while active.
+ * 5. Independent leg tracking: BUY target hit closes BUY once, SELL remains open, level remains occupied.
+ * 6. Full closure & dynamic release: both legs closed releases level for reuse -> PROOF OF REUSE.
+ * 7. Partial closure: residual open quantity holds level lock.
+ * 8. Safety limits enforcement: max active pairs, margin limit, leg imbalance.
+ * 9. Evaluation & rejection logging: reasons logged and stored in diagnostics buffer.
+ * 10. Process restart & recovery: restores active pairs & locks without importing old history.
+ * 11. Pause & Resume control: rejects new pair when paused, resumes when started.
+ * 12. Clean state reset for production deployment.
  */
 
 const assert = require('assert');
@@ -23,7 +25,7 @@ const db = require('../src/engine/db');
 
 async function runV2Tests() {
   console.log('================================================================');
-  console.log('   SOL PAIR ENGINE V2 — ISOLATED ACCEPTANCE TEST SUITE');
+  console.log('   SOL PAIR ENGINE V2 — AUTOMATIC LIFECYCLE ACCEPTANCE TESTS   ');
   console.log('================================================================\n');
 
   let passed = 0;
@@ -41,11 +43,11 @@ async function runV2Tests() {
     }
   }
 
-  // Ensure clean test start
-  solanaEngineV2.resetData(5.0, 200000.00, 0.45);
+  // Ensure clean test start in RUNNING mode
+  solanaEngineV2.resetData(5.0, 200000.00, 0.45, true);
 
-  // TEST 1: Clean initial start
-  test('Clean initial start: 0 pairs, 0 closed trades, 0 realized P&L', () => {
+  // TEST 1: Clean initial start & automatic startup in RUNNING + PAPER mode
+  test('Clean initial start & automatic startup in RUNNING + PAPER mode', () => {
     assert.strictEqual(solanaEngineV2.pairs.length, 0, 'Must have 0 pairs');
     assert.strictEqual(solanaEngineV2.closedPositions.length, 0, 'Must have 0 closed trades');
     const realized = solanaEngineV2.calculateRealizedSummary();
@@ -55,14 +57,18 @@ async function runV2Tests() {
     assert.strictEqual(solanaEngineV2.settings.profitTargetMove, 0.45, 'Default profit target move must be $0.45');
     assert.strictEqual(solanaEngineV2.settings.tradingMode, 'PAPER', 'Trading mode must be PAPER');
     assert.strictEqual(solanaEngineV2.settings.realOrdersDisabled, true, 'Real orders must be disabled');
-    assert.strictEqual(solanaEngineV2.engineStatus, 'PAUSED', 'Initial engine status must be PAUSED');
+    assert.strictEqual(solanaEngineV2.engineStatus, 'RUNNING', 'Engine status must be RUNNING automatically');
+    assert.strictEqual(solanaEngineV2.isEngineRunning, true, 'Engine must be running');
   });
 
-  // TEST 2: Pair creation at live price
+  // TEST 2: Background tick processing creates first 5 SOL pair at live price
   const testPrice1 = 107.25;
-  test('Pair creation at live price: creates 5 SOL BUY & SELL legs with $0.45 targets', () => {
-    const pair = solanaEngineV2.createNewPair('SOLUSDT', testPrice1);
-    assert(pair !== null, 'Pair creation must succeed');
+  test('Background tick processing: valid tick automatically creates first 5 SOL pair ($0.45 targets)', () => {
+    // Process live rate tick via the core evaluation cycle
+    solanaEngineV2.processEvaluationCycle('TEST_TICK', { symbol: 'SOLUSDT', price: testPrice1, time: Date.now() });
+
+    assert.strictEqual(solanaEngineV2.pairs.length, 1, 'First pair must be created automatically');
+    const pair = solanaEngineV2.pairs[0];
     assert.strictEqual(pair.entryPrice, testPrice1, 'Pair entryPrice must be 107.25');
     assert.strictEqual(pair.quantity, 5.0, 'Pair quantity must be 5.0 SOL');
     assert.strictEqual(pair.buyTarget, 107.70, 'BUY target must be 107.25 + 0.45 = 107.70');
@@ -189,7 +195,22 @@ async function runV2Tests() {
     solanaEngineV2.settings.maxActivePairs = 10;
   });
 
-  // TEST 9: Process restart & recovery
+  // TEST 9: Evaluation & rejection logging
+  test('Evaluation & rejection logging: reasons logged and retrievable via API diagnostics', () => {
+    // Attempt pair at occupied level 107.25 via evaluateRateForNewPair
+    solanaEngineV2.evaluateRateForNewPair(testPrice1, 'DIAGNOSTIC_TEST');
+
+    assert(solanaEngineV2.recentLogs.length > 0, 'Recent logs ring buffer must not be empty');
+    assert(solanaEngineV2.lastEvaluation !== null, 'lastEvaluation must be set');
+    assert.strictEqual(solanaEngineV2.lastEvaluation.code, 'LEVEL_OCCUPIED', 'Rejection code must be LEVEL_OCCUPIED');
+    assert(solanaEngineV2.lastEvaluation.message.includes('currently occupied'), 'Rejection message must explain occupancy');
+
+    const metrics = solanaEngineV2.getDashboardMetrics();
+    assert(Array.isArray(metrics.engine.recentLogs), 'Metrics must expose recentLogs array');
+    assert(metrics.engine.lastEvaluation !== null, 'Metrics must expose lastEvaluation');
+  });
+
+  // TEST 10: Process restart & recovery
   test('Process restart & recovery: restores active pairs & locks without importing old history', () => {
     // Current engine has active pairs
     const activeCountBefore = solanaEngineV2.pairs.filter(p => p.status === 'OPEN').length;
@@ -201,20 +222,47 @@ async function runV2Tests() {
 
     assert.strictEqual(restartedEngine.pairs.filter(p => p.status === 'OPEN').length, activeCountBefore, 'Active pairs must be restored on restart');
     assert.strictEqual(restartedEngine.isPriceLevelOccupied(107.25), true, '107.25 active lock must be preserved');
+    assert.strictEqual(restartedEngine.engineStatus, 'RUNNING', 'Restarted engine must default to RUNNING');
 
     // Cannot create duplicate at 107.25 on restarted engine
     const restartDup = restartedEngine.createNewPair('SOLUSDT', 107.25);
     assert.strictEqual(restartDup, null, 'Restarted engine must reject duplicate at 107.25');
+
+    // Stop background interval of test instance
+    restartedEngine.stopEvaluationLoop();
   });
 
-  // TEST 10: Clean state reset for production deployment
+  // TEST 11: Pause & Resume control
+  test('Pause & Resume control: rejects new pair when paused, resumes when started', () => {
+    solanaEngineV2.pauseEngine('Testing operator pause');
+    assert.strictEqual(solanaEngineV2.isEngineRunning, false);
+    assert.strictEqual(solanaEngineV2.engineStatus, 'PAUSED');
+
+    // When paused, evaluation cycle must not create new pairs
+    const pairsCountBefore = solanaEngineV2.pairs.length;
+    solanaEngineV2.processEvaluationCycle('PAUSED_TEST', { symbol: 'SOLUSDT', price: 155.00, time: Date.now() });
+    assert.strictEqual(solanaEngineV2.pairs.length, pairsCountBefore, 'No pair must be created while paused');
+    assert.strictEqual(solanaEngineV2.lastEvaluation.code, 'ENGINE_PAUSED');
+
+    // Resume engine
+    solanaEngineV2.lastOrderTimestamp = 0;
+    solanaEngineV2.startEngine();
+    assert.strictEqual(solanaEngineV2.isEngineRunning, true);
+    assert.strictEqual(solanaEngineV2.engineStatus, 'RUNNING');
+
+    // Now evaluation cycle creates the pair
+    solanaEngineV2.processEvaluationCycle('RESUMED_TEST', { symbol: 'SOLUSDT', price: 155.00, time: Date.now() });
+    assert.strictEqual(solanaEngineV2.pairs.length, pairsCountBefore + 1, 'Pair must be created after start');
+  });
+
+  // TEST 12: Clean state reset for production deployment
   test('Clean state reset: pristine isolated state for production deployment', () => {
-    const res = solanaEngineV2.resetData(5.0, 200000.00, 0.45);
+    const res = solanaEngineV2.resetData(5.0, 200000.00, 0.45, true);
     assert.strictEqual(res.success, true);
     assert.strictEqual(solanaEngineV2.pairs.length, 0, 'Pairs must be 0');
     assert.strictEqual(solanaEngineV2.closedPositions.length, 0, 'Closed trades must be 0');
     assert.strictEqual(solanaEngineV2.activePriceLevels.size, 0, 'Active price locks must be 0');
-    assert.strictEqual(solanaEngineV2.engineStatus, 'PAUSED', 'Engine must remain PAUSED');
+    assert.strictEqual(solanaEngineV2.engineStatus, 'RUNNING', 'Engine must be RUNNING for automatic operation');
     assert.strictEqual(solanaEngineV2.settings.tradingMode, 'PAPER', 'Engine must be PAPER');
     assert.strictEqual(solanaEngineV2.settings.realOrdersDisabled, true, 'Real orders must be disabled');
   });

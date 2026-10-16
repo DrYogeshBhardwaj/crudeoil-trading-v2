@@ -1918,7 +1918,22 @@
           </div>
         </div>
 
-        <!-- Section 3: Manual Pair Action inside Settings -->
+        <!-- Section 3: Automatic Engine Status & Toggle -->
+        <div style="background: rgba(13, 22, 38, 0.7); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 10px; padding: 12px 16px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
+          <div>
+            <div style="font-size: 0.85rem; font-weight: 800; color: #fff; display: flex; align-items: center; gap: 8px;">
+              <span>🤖 Auto Cycle State:</span>
+              <span id="modalEngineStatusTag" style="background: rgba(0, 255, 163, 0.15); color: #00ffa3; border: 1px solid #00ffa3; padding: 2px 8px; border-radius: 4px; font-size: 0.74rem; font-weight: 900;">RUNNING</span>
+            </div>
+            <div id="modalEngineLastEval" style="font-size: 0.72rem; color: #94a3b8; margin-top: 3px;">Monitoring live SOLUSDT market ticks...</div>
+          </div>
+          <button type="button" id="btnToggleEngine" onclick="toggleEngineAutoState()" style="background: linear-gradient(135deg, rgba(244, 63, 94, 0.25), rgba(225, 29, 72, 0.35)); border: 1.5px solid #f43f5e; color: #fecdd3; padding: 7px 16px; border-radius: 8px; font-weight: 900; font-size: 0.80rem; cursor: pointer; display: flex; align-items: center; gap: 6px;">
+            <span id="btnToggleEngineIcon">⏸️</span>
+            <span id="btnToggleEngineText">Pause Engine</span>
+          </button>
+        </div>
+
+        <!-- Section 4: Manual Pair Action inside Settings -->
         <div style="background: rgba(13, 22, 38, 0.7); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 10px; padding: 12px 16px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
           <div>
             <div style="font-size: 0.85rem; font-weight: 800; color: #fff;">Manual Pair Spawn</div>
@@ -2396,8 +2411,57 @@
         let uptimeHours = (engine && typeof engine.uptimeHours === 'number') ? engine.uptimeHours : (startTs > 0 ? ((Date.now() - startTs) / (1000 * 60 * 60)) : 0);
         let uptimeFormatted = (engine && engine.uptimeFormatted) ? engine.uptimeFormatted : (uptimeHours > 0 ? `${Math.floor(uptimeHours)}h ${Math.round((uptimeHours % 1) * 60)}m` : '-- hrs');
         
-        const headerUptimeEl = document.getElementById('headerUptimeText');
-        if (headerUptimeEl) headerUptimeEl.innerText = `${uptimeFormatted} (${Number(uptimeHours).toFixed(1)} hrs)`;
+        const isRunning = Boolean(engine && (engine.isEngineRunning || engine.status === 'RUNNING'));
+        const uptimePillEl = document.getElementById('uptimePill');
+        if (uptimePillEl) {
+          if (isRunning) {
+            uptimePillEl.style.background = 'rgba(0, 255, 163, 0.12)';
+            uptimePillEl.style.borderColor = 'rgba(0, 255, 163, 0.35)';
+            uptimePillEl.style.color = '#00ffa3';
+            uptimePillEl.innerHTML = `<span>🟢 AUTO: RUNNING</span> <span id="headerUptimeText" style="color: #38bdf8; font-weight:700;">${uptimeFormatted} (${Number(uptimeHours).toFixed(1)} hrs)</span>`;
+          } else {
+            uptimePillEl.style.background = 'rgba(251, 191, 36, 0.12)';
+            uptimePillEl.style.borderColor = 'rgba(251, 191, 36, 0.35)';
+            uptimePillEl.style.color = '#fbbf24';
+            uptimePillEl.innerHTML = `<span>⏸️ AUTO: PAUSED</span>`;
+          }
+        }
+
+        // Sync Modal Engine Status & Diagnostics
+        const modalStatusTag = document.getElementById('modalEngineStatusTag');
+        const modalLastEval = document.getElementById('modalEngineLastEval');
+        const btnToggleEngine = document.getElementById('btnToggleEngine');
+        const btnToggleEngineIcon = document.getElementById('btnToggleEngineIcon');
+        const btnToggleEngineText = document.getElementById('btnToggleEngineText');
+
+        if (modalStatusTag) {
+          modalStatusTag.innerText = isRunning ? 'RUNNING' : 'PAUSED';
+          modalStatusTag.style.color = isRunning ? '#00ffa3' : '#fbbf24';
+          modalStatusTag.style.borderColor = isRunning ? '#00ffa3' : '#fbbf24';
+          modalStatusTag.style.background = isRunning ? 'rgba(0, 255, 163, 0.15)' : 'rgba(251, 191, 36, 0.15)';
+        }
+        if (modalLastEval) {
+          if (engine.lastEvaluation && engine.lastEvaluation.message) {
+            modalLastEval.innerText = `Last Event: [${engine.lastEvaluation.code}] ${engine.lastEvaluation.message}`;
+          } else {
+            modalLastEval.innerText = isRunning ? 'Monitoring live SOLUSDT market ticks...' : 'Engine is currently paused.';
+          }
+        }
+        if (btnToggleEngine) {
+          if (isRunning) {
+            btnToggleEngine.style.borderColor = '#f43f5e';
+            btnToggleEngine.style.background = 'linear-gradient(135deg, rgba(244, 63, 94, 0.25), rgba(225, 29, 72, 0.35))';
+            btnToggleEngine.style.color = '#fecdd3';
+            if (btnToggleEngineIcon) btnToggleEngineIcon.innerText = '⏸️';
+            if (btnToggleEngineText) btnToggleEngineText.innerText = 'Pause Engine';
+          } else {
+            btnToggleEngine.style.borderColor = '#00ffa3';
+            btnToggleEngine.style.background = 'linear-gradient(135deg, rgba(0, 255, 163, 0.25), rgba(5, 150, 105, 0.35))';
+            btnToggleEngine.style.color = '#a7f3d0';
+            if (btnToggleEngineIcon) btnToggleEngineIcon.innerText = '▶️';
+            if (btnToggleEngineText) btnToggleEngineText.innerText = 'Start Engine';
+          }
+        }
 
         let sessionINR = 0;
         let sessionUSD = 0;
@@ -3110,6 +3174,35 @@
         }
       } catch (err) {
         alert(`❌ Network Error: ${err.message}`);
+      }
+    }
+
+    async function toggleEngineAutoState() {
+      const isRunning = Boolean(latestData && latestData.engine && (latestData.engine.isEngineRunning || latestData.engine.status === 'RUNNING'));
+      const actionName = isRunning ? 'pauseEngine' : 'startEngine';
+      const promptMsg = isRunning ? 'Kya aap SOL Pair Engine V2 ko PAUSE karna chahte hain?' : 'Kya aap SOL Pair Engine V2 ko automatic PAPER mode me START karna chahte hain?';
+      const pin = prompt(`${promptMsg}\n\nAdmin Password (340556) enter karein:`, '340556');
+      if (!pin) return;
+      if (pin !== '340556') {
+        alert('❌ Galat password! Action cancelled.');
+        return;
+      }
+
+      try {
+        const res = await fetch('/api/sol-pair-engine-v2/action', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: actionName, password: pin })
+        });
+        const data = await res.json();
+        if (data.success) {
+          alert(`✅ ${data.message}`);
+          fetchSubhMoneyData();
+        } else {
+          alert(`❌ Error: ${data.error || 'Failed to update engine state'}`);
+        }
+      } catch (e) {
+        alert(`❌ Network Error: ${e.message}`);
       }
     }
 

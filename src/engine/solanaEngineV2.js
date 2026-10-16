@@ -56,9 +56,9 @@ class SolanaEngineV2 {
 
     this.engineStartedAt = new Date().toISOString();
     this.lastResetTime = this.engineStartedAt;
-    this.isEngineRunning = false;
-    this.engineStatus = 'PAUSED';
-    this.pauseReason = 'SOL Pair Engine V2 initialized in safe PAUSED state.';
+    this.isEngineRunning = true; // Auto-start in PAPER mode for continuous hands-free operation
+    this.engineStatus = 'RUNNING';
+    this.pauseReason = '';
 
     this.pairs = [];
     this.closedPositions = [];
@@ -73,10 +73,18 @@ class SolanaEngineV2 {
     // Active price level locks (in-memory fast cache)
     this.activePriceLevels = new Set();
 
+    // Diagnostics & Evaluation Ring Buffer
+    this.recentLogs = [];
+    this.lastEvaluation = null;
+    this.lastLogKey = '';
+    this.lastLogTimestamp = 0;
+    this.evaluationInterval = null;
+
     this.ensureDirectory();
     this.loadState();
     this.syncActivePriceLevels();
     this.initRateFeedListener();
+    this.startEvaluationLoop();
   }
 
   ensureDirectory() {
@@ -114,17 +122,27 @@ class SolanaEngineV2 {
         this.punarjanmCycles = Array.isArray(data.punarjanmCycles) ? data.punarjanmCycles : [];
         this.pairCounter = data.pairCounter || (this.pairs.length + 1);
 
-        this.isEngineRunning = false;
-        this.engineStatus = 'PAUSED';
-        this.pauseReason = 'SOL Pair Engine V2 restored in safe PAUSED state.';
+        // Keep engine running by default in PAPER mode unless explicitly paused in state
+        if (data.isEngineRunning !== undefined) {
+          this.isEngineRunning = Boolean(data.isEngineRunning);
+          this.engineStatus = this.isEngineRunning ? 'RUNNING' : 'PAUSED';
+          this.pauseReason = data.pauseReason || (this.isEngineRunning ? '' : 'Engine paused');
+        } else {
+          this.isEngineRunning = true;
+          this.engineStatus = 'RUNNING';
+          this.pauseReason = '';
+        }
 
         if (data.engineStartedAt) this.engineStartedAt = data.engineStartedAt;
         if (data.lastResetTime) this.lastResetTime = data.lastResetTime;
         if (Array.isArray(data.processedRates)) this.processedRates = new Set(data.processedRates);
 
-        console.log(`[Solana Engine V2] Restored state from storage: ${this.pairs.length} pairs, ${this.closedPositions.length} closed trades.`);
+        console.log(`[Solana Engine V2] Restored state from storage: ${this.pairs.length} pairs, ${this.closedPositions.length} closed trades. Engine Status: ${this.engineStatus}`);
       } else {
-        console.log('[Solana Engine V2] Clean start: Zero pairs, zero closed trades.');
+        this.isEngineRunning = true;
+        this.engineStatus = 'RUNNING';
+        this.pauseReason = '';
+        console.log('[Solana Engine V2] Clean start: Engine RUNNING in PAPER mode. Zero pairs, zero closed trades.');
       }
     } catch (e) {
       console.warn('[Solana Engine V2] Notice loading state:', e.message);
@@ -139,6 +157,9 @@ class SolanaEngineV2 {
         settings: this.settings,
         engineStartedAt: this.engineStartedAt,
         lastResetTime: this.lastResetTime,
+        isEngineRunning: this.isEngineRunning,
+        engineStatus: this.engineStatus,
+        pauseReason: this.pauseReason,
         pairs: this.pairs,
         closedPositions: this.closedPositions.slice(0, 1000),
         punarjanmCount: this.punarjanmCount,
@@ -156,6 +177,23 @@ class SolanaEngineV2 {
     }
   }
 
+  startEvaluationLoop() {
+    if (this.evaluationInterval) clearInterval(this.evaluationInterval);
+    // Continuous background evaluation loop every 1000ms (1s) independent of any UI requests
+    this.evaluationInterval = setInterval(() => {
+      this.processEvaluationCycle('BACKGROUND_TIMER');
+    }, 1000);
+    if (this.evaluationInterval.unref) this.evaluationInterval.unref();
+    console.log('[Solana Engine V2] Continuous background price-evaluation loop started (1s interval).');
+  }
+
+  stopEvaluationLoop() {
+    if (this.evaluationInterval) {
+      clearInterval(this.evaluationInterval);
+      this.evaluationInterval = null;
+    }
+  }
+
   initRateFeedListener() {
     if (rateFeed && typeof rateFeed.subscribe === 'function') {
       rateFeed.subscribe((type, data) => {
@@ -167,26 +205,80 @@ class SolanaEngineV2 {
   }
 
   handleRateEvent(type, data) {
-    if (!this.isEngineRunning) return;
     if (!data || data.symbol !== 'SOLUSDT') return;
+    this.processEvaluationCycle('WEBSOCKET_TICK', data);
+  }
 
-    const price = Number(data.price);
-    if (!price || isNaN(price) || price <= 0) return;
+  processEvaluationCycle(source = 'BACKGROUND_TIMER', tickData = null) {
+    if (!this.isEngineRunning) {
+      this.logEvaluation('ENGINE_PAUSED', null, `Engine is PAUSED: ${this.pauseReason || 'Paused by operator'}`);
+      return;
+    }
+
+    // Determine current rate: use provided tickData or poll rateFeed directly
+    let livePrice = null;
+    let rateObj = null;
+
+    if (tickData && tickData.price && tickData.symbol === 'SOLUSDT') {
+      livePrice = Number(tickData.price);
+      rateObj = tickData;
+    } else if (rateFeed && typeof rateFeed.getCurrentRate === 'function') {
+      rateObj = rateFeed.getCurrentRate('SOLUSDT');
+      if (rateObj && rateObj.price) {
+        livePrice = Number(rateObj.price);
+      }
+    }
+
+    if (!livePrice || isNaN(livePrice) || livePrice <= 0) {
+      this.logEvaluation('WAITING_PRICE', null, 'Waiting for valid live SOLUSDT market price feed...');
+      return;
+    }
 
     // Stale feed check
-    const tickTime = data.timestamp ? new Date(data.timestamp).getTime() : Date.now();
-    if (Date.now() - tickTime > 30000) {
-      console.warn(`[Solana Engine V2] Stale tick rejected (${Date.now() - tickTime}ms old).`);
+    const tickTime = rateObj ? (rateObj.lastTime || rateObj.receivedTime || rateObj.time || Date.now()) : Date.now();
+    const tickAgeMs = Date.now() - tickTime;
+    if (tickAgeMs > 30000) {
+      this.logEvaluation('FEED_STALE', livePrice, `SOLUSDT tick is STALE (${tickAgeMs}ms old). Skipping cycle.`);
       return;
     }
 
     // 1. Evaluate open positions for target profit exits
-    this.evaluateOpenPositions(price);
+    this.evaluateOpenPositions(livePrice);
 
     // 2. Auto-Add new pairs on price movement if enabled
     if (this.settings.autoAddNewPairs) {
-      this.evaluateRateForNewPair(price);
+      this.evaluateRateForNewPair(livePrice, source);
     }
+  }
+
+  logEvaluation(code, price, message) {
+    const now = Date.now();
+    this.lastEvaluation = {
+      timestamp: new Date().toISOString(),
+      code,
+      price: price ? Number(price.toFixed(2)) : null,
+      message
+    };
+
+    // Console logging: log high-priority events immediately, throttle repetitive heartbeat logs
+    const isPriorityEvent = (code === 'PAIR_CREATED' || code === 'TARGET_HIT' || code === 'FULL_PAIR_CLOSED' || code === 'PUNARJANM');
+    const logKey = `${code}_${price ? price.toFixed(1) : 'NONE'}`;
+    const isHeartbeatDue = (now - this.lastLogTimestamp > 15000);
+
+    if (isPriorityEvent || this.lastLogKey !== logKey || isHeartbeatDue) {
+      this.lastLogKey = logKey;
+      this.lastLogTimestamp = now;
+      console.log(`[Solana Engine V2] [${code}] ${message}`);
+    }
+
+    if (!this.recentLogs) this.recentLogs = [];
+    this.recentLogs.unshift({
+      timestamp: new Date().toISOString(),
+      code,
+      price: price ? Number(price.toFixed(2)) : null,
+      message
+    });
+    if (this.recentLogs.length > 50) this.recentLogs.pop();
   }
 
   // --- ACTIVE PRICE-LEVEL REGISTRY & LOCKING ---
@@ -379,17 +471,21 @@ class SolanaEngineV2 {
 
   // --- PAIR CREATION CYCLE ---
 
-  evaluateRateForNewPair(livePrice) {
+  evaluateRateForNewPair(livePrice, source = 'EVAL') {
     const numPrice = Number(livePrice);
     if (!numPrice || isNaN(numPrice) || numPrice <= 0) return;
 
     const bucketSize = Number(this.settings.priceBucketSize || 0.50);
     const norm = this.getNormalizedPriceBucket(numPrice, bucketSize);
-    if (!norm) return;
+    if (!norm) {
+      this.logEvaluation('INVALID_BUCKET', numPrice, 'Could not determine price bucket.');
+      return;
+    }
 
     // Check if level is already occupied
     if (this.isPriceLevelOccupied(numPrice, bucketSize)) {
       this.lastSkippedRate = numPrice;
+      this.logEvaluation('LEVEL_OCCUPIED', numPrice, `Price level $${numPrice.toFixed(2)} (${norm.bucketKey}) is currently occupied by an active position.`);
       return;
     }
 
@@ -397,6 +493,7 @@ class SolanaEngineV2 {
     const targetCheck = this.isPriceReservedByActiveTarget(numPrice);
     if (targetCheck.reserved) {
       this.lastSkippedRate = numPrice;
+      this.logEvaluation('TARGET_RESERVED', numPrice, `Price level $${numPrice.toFixed(2)} is reserved by active ${targetCheck.type} for ${targetCheck.pairId} ($${targetCheck.targetPrice}).`);
       return;
     }
 
@@ -404,12 +501,14 @@ class SolanaEngineV2 {
     const check = this.canOpenNewPair(numPrice);
     if (!check.allowed) {
       this.lastSkippedRate = numPrice;
+      this.logEvaluation('SAFETY_BLOCKED', numPrice, `Safety condition blocked pair creation: ${check.reason}`);
       return;
     }
 
     // Create the pair!
     const pair = this.createNewPair('SOLUSDT', numPrice, Date.now());
     if (pair) {
+      this.logEvaluation('PAIR_CREATED', numPrice, `AUTOMATIC PAIR CREATED: ${pair.pairId} at $${numPrice.toFixed(2)} (BUY: $${pair.buyTarget}, SELL: $${pair.sellTarget}) via ${source}`);
       console.log(`[Solana Engine V2] Created Pair ${pair.pairId} at entry price $${numPrice.toFixed(2)} (Targets: BUY $${pair.buyTarget}, SELL $${pair.sellTarget}).`);
     }
   }
@@ -533,14 +632,16 @@ class SolanaEngineV2 {
       // BUY leg: exits if live price >= buyTarget
       if (pair.buyPosition && pair.buyPosition.status === 'OPEN') {
         if (price >= pair.buyPosition.targetExitPrice) {
-          this.closePositionLeg(pair.buyPosition, price, now, 'BUY TARGET HIT', usdInr, takerFee, gstRate);
+          const res = this.closePositionLeg(pair.buyPosition, price, now, 'BUY TARGET HIT', usdInr, takerFee, gstRate);
+          this.logEvaluation('TARGET_HIT', price, `BUY TARGET HIT for ${pair.pairId}: Exit at $${price.toFixed(2)} (Target was $${pair.buyPosition.targetExitPrice}). Net PnL: ₹${res?.closedPosition?.netProfitINR}`);
         }
       }
 
       // SELL leg: exits if live price <= sellTarget
       if (pair.sellPosition && pair.sellPosition.status === 'OPEN') {
         if (price <= pair.sellPosition.targetExitPrice) {
-          this.closePositionLeg(pair.sellPosition, price, now, 'SELL TARGET HIT', usdInr, takerFee, gstRate);
+          const res = this.closePositionLeg(pair.sellPosition, price, now, 'SELL TARGET HIT', usdInr, takerFee, gstRate);
+          this.logEvaluation('TARGET_HIT', price, `SELL TARGET HIT for ${pair.pairId}: Exit at $${price.toFixed(2)} (Target was $${pair.sellPosition.targetExitPrice}). Net PnL: ₹${res?.closedPosition?.netProfitINR}`);
         }
       }
 
@@ -551,6 +652,7 @@ class SolanaEngineV2 {
         if (pair.status !== 'CLOSED') {
           pair.status = 'CLOSED';
           this.releaseActivePriceLevel(pair);
+          this.logEvaluation('FULL_PAIR_CLOSED', pair.entryPrice, `PAIR ${pair.pairId} FULLY CLOSED: Price level $${pair.entryPrice.toFixed(2)} released for future reuse.`);
           console.log(`[Solana Engine V2] PAIR ${pair.pairId} FULLY CLOSED: Price level $${pair.entryPrice.toFixed(2)} released for future reuse.`);
         }
       }
@@ -837,7 +939,9 @@ class SolanaEngineV2 {
         lastResetTime: this.lastResetTime,
         uptimeFormatted: this.getUptimeFormatted(),
         pairs: formattedPairs,
-        activePriceLocksCount: this.activePriceLevels.size
+        activePriceLocksCount: this.activePriceLevels.size,
+        lastEvaluation: this.lastEvaluation || null,
+        recentLogs: (this.recentLogs || []).slice(0, 30)
       },
       punarjanm: {
         count: this.punarjanmCount,
@@ -876,8 +980,11 @@ class SolanaEngineV2 {
     this.isEngineRunning = true;
     this.engineStatus = 'RUNNING';
     this.pauseReason = '';
+    this.startEvaluationLoop();
     this.saveState();
-    console.log('[Solana Engine V2] Engine STARTED in PAPER mode.');
+    this.logEvaluation('ENGINE_STARTED', null, 'SOL Pair Engine V2 started in automatic PAPER mode.');
+    console.log('[Solana Engine V2] Engine STARTED in automatic PAPER mode.');
+    this.processEvaluationCycle('MANUAL_START');
     return { success: true, message: 'SOL Pair Engine V2 started successfully in PAPER mode.' };
   }
 
@@ -886,11 +993,12 @@ class SolanaEngineV2 {
     this.engineStatus = 'PAUSED';
     this.pauseReason = reason;
     this.saveState();
+    this.logEvaluation('ENGINE_PAUSED', null, `SOL Pair Engine V2 PAUSED: ${reason}`);
     console.log(`[Solana Engine V2] Engine PAUSED: ${reason}`);
-    return { success: true, message: 'SOL Pair Engine V2 paused successfully.' };
+    return { success: true, message: 'SOL Pair Engine V2 paused successfully.', reason };
   }
 
-  resetData(newQty = null, newCapital = 200000.00, newTargetMove = null) {
+  resetData(newQty = null, newCapital = 200000.00, newTargetMove = null, keepRunning = true) {
     this.settings.startingCapitalINR = (newCapital && !isNaN(newCapital) && Number(newCapital) > 0) ? Number(newCapital) : 200000.00;
     this.settings.contractQuantity = 5.0; // Invariable
     this.settings.profitTargetMove = 0.45; // Invariable
@@ -908,23 +1016,28 @@ class SolanaEngineV2 {
     this.punarjanmCycles = [];
     this.processedRates.clear();
     this.lastProcessedRate = null;
-    this.isEngineRunning = false;
-    this.engineStatus = 'PAUSED';
-    this.pauseReason = 'Engine reset into clean initial state.';
+    this.lastSkippedRate = null;
+    this.isEngineRunning = Boolean(keepRunning);
+    this.engineStatus = this.isEngineRunning ? 'RUNNING' : 'PAUSED';
+    this.pauseReason = this.isEngineRunning ? '' : 'Engine reset into clean initial state.';
     this.engineStartedAt = new Date().toISOString();
     this.lastResetTime = this.engineStartedAt;
     this.pairCounter = 1;
+    this.recentLogs = [];
+    this.lastEvaluation = null;
 
     this.syncActivePriceLevels();
     this.saveState();
 
-    console.log('[Solana Engine V2] Reset: Fresh engine initialized with 0 trades, 0 P&L.');
+    console.log(`[Solana Engine V2] Reset: Fresh engine initialized with 0 trades, 0 P&L. Engine Status: ${this.engineStatus}`);
     return {
       success: true,
       message: 'SOL Pair Engine V2 cleanly reset. 0 active pairs, 0 closed trades.',
       contractQuantity: this.settings.contractQuantity,
       startingCapitalINR: this.settings.startingCapitalINR,
-      profitTargetMove: this.settings.profitTargetMove
+      profitTargetMove: this.settings.profitTargetMove,
+      isEngineRunning: this.isEngineRunning,
+      engineStatus: this.engineStatus
     };
   }
 

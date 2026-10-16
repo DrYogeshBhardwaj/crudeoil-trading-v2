@@ -4,6 +4,7 @@ const path = require('path');
 const rateFeed = require('./engine/rateFeed');
 const paperEngine = require('./engine/paperEngine');
 const pairAddEngine = require('./engine/pairAddEngine');
+const solanaEngineV2 = require('./engine/solanaEngineV2');
 const backtest = require('./engine/backtest');
 const mcxBacktest = require('./engine/mcxBacktest');
 
@@ -47,6 +48,9 @@ app.use(express.static(path.join(__dirname, '../public'), {
 
 // Start rate feed manager
 rateFeed.start();
+
+// Initialize SOL Pair Engine V2 autonomous cycle on startup
+console.log(`[SOL Pair Engine V2] Auto-Engine initialized (Status: ${solanaEngineV2.engineStatus}, Mode: ${solanaEngineV2.settings.tradingMode}, Real Orders Disabled: ${solanaEngineV2.settings.realOrdersDisabled})`);
 
 // REST API Endpoints
 
