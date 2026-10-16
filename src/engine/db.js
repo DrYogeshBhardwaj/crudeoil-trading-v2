@@ -11,6 +11,7 @@ class DatabaseManager {
   constructor() {
     this.activePriceReservationsFallback = new Map();
     this.usedPriceLevelsFallback = this.activePriceReservationsFallback;
+    this.v2ActivePriceReservationsFallback = new Map();
     this.ensureDirectory();
     this.initDatabase();
   }
@@ -99,6 +100,20 @@ class DatabaseManager {
         );
         CREATE UNIQUE INDEX IF NOT EXISTS idx_active_price_reservations_norm 
         ON active_price_reservations (instrument, normalized_price);
+
+        CREATE TABLE IF NOT EXISTS solana_v2_active_price_reservations (
+          instrument TEXT NOT NULL,
+          bucket_key TEXT NOT NULL,
+          normalized_price REAL NOT NULL,
+          pair_id TEXT NOT NULL,
+          raw_price REAL NOT NULL,
+          bucket_size REAL NOT NULL,
+          direction TEXT DEFAULT 'BOTH',
+          created_at TEXT NOT NULL,
+          PRIMARY KEY (instrument, bucket_key)
+        );
+        CREATE UNIQUE INDEX IF NOT EXISTS idx_solana_v2_active_price_norm 
+        ON solana_v2_active_price_reservations (instrument, normalized_price);
       `);
       console.log(`[DBMS] SQLite Database initialized successfully at ${DB_FILE}`);
     } catch (err) {
@@ -721,6 +736,165 @@ class DatabaseManager {
 
   seedExistingPriceLevels(records, symbol = 'SOLUSDT', bucketSize = 0.50) {
     return this.syncActivePriceReservations(symbol, records, bucketSize);
+  }
+
+  // ==========================================
+  // SOL PAIR ENGINE V2 ISOLATED PRICE METHODS
+  // ==========================================
+
+  isActivePriceOccupiedV2(symbol, price, bucketSize = 0.50) {
+    const norm = this.normalizePriceBucket(price, bucketSize);
+    if (!norm) return false;
+    const sym = symbol || 'SOLUSDT';
+
+    if (this.db) {
+      try {
+        const row = this.db.prepare(
+          'SELECT 1 FROM solana_v2_active_price_reservations WHERE instrument = ? AND (bucket_key = ? OR normalized_price = ?) LIMIT 1'
+        ).get(sym, norm.bucketKey, norm.normalizedPrice);
+        if (row) return true;
+      } catch (e) {}
+    }
+
+    const fallbackKey = `${sym}:${norm.bucketKey}`;
+    return this.v2ActivePriceReservationsFallback.has(fallbackKey);
+  }
+
+  reserveActivePriceLevelV2(symbol, rawPrice, pairId, bucketSize = 0.50, direction = 'BOTH') {
+    const norm = this.normalizePriceBucket(rawPrice, bucketSize);
+    if (!norm) {
+      return { success: false, reason: 'INVALID_PRICE', rawPrice };
+    }
+    const sym = symbol || 'SOLUSDT';
+    const fallbackKey = `${sym}:${norm.bucketKey}`;
+    const now = new Date().toISOString();
+
+    if (this.v2ActivePriceReservationsFallback.has(fallbackKey)) {
+      return {
+        success: false,
+        reason: 'PRICE_LEVEL_ACTIVE_V2',
+        instrument: sym,
+        normalizedPrice: norm.normalizedPrice,
+        bucketKey: norm.bucketKey,
+        existing: this.v2ActivePriceReservationsFallback.get(fallbackKey)
+      };
+    }
+
+    if (this.db) {
+      try {
+        const stmt = this.db.prepare(`
+          INSERT INTO solana_v2_active_price_reservations (instrument, bucket_key, normalized_price, pair_id, raw_price, bucket_size, direction, created_at)
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        `);
+        stmt.run(
+          sym,
+          norm.bucketKey,
+          norm.normalizedPrice,
+          pairId || 'UNASSIGNED',
+          Number(rawPrice),
+          norm.bucketSize,
+          direction || 'BOTH',
+          now
+        );
+      } catch (err) {
+        return {
+          success: false,
+          reason: 'PRICE_LEVEL_ACTIVE_V2',
+          instrument: sym,
+          normalizedPrice: norm.normalizedPrice,
+          bucketKey: norm.bucketKey,
+          error: err.message
+        };
+      }
+    }
+
+    const record = {
+      instrument: sym,
+      bucketKey: norm.bucketKey,
+      normalizedPrice: norm.normalizedPrice,
+      pairId: pairId || 'UNASSIGNED',
+      rawPrice: Number(rawPrice),
+      bucketSize: norm.bucketSize,
+      direction: direction || 'BOTH',
+      createdAt: now
+    };
+    this.v2ActivePriceReservationsFallback.set(fallbackKey, record);
+
+    return {
+      success: true,
+      instrument: sym,
+      normalizedPrice: norm.normalizedPrice,
+      bucketKey: norm.bucketKey,
+      record
+    };
+  }
+
+  releaseActivePriceLevelV2(symbol, pairId, bucketKey = null) {
+    const sym = symbol || 'SOLUSDT';
+    if (this.db) {
+      try {
+        if (bucketKey) {
+          this.db.prepare('DELETE FROM solana_v2_active_price_reservations WHERE instrument = ? AND (pair_id = ? OR bucket_key = ?)').run(sym, pairId || '', String(bucketKey));
+        } else if (pairId) {
+          this.db.prepare('DELETE FROM solana_v2_active_price_reservations WHERE instrument = ? AND pair_id = ?').run(sym, pairId);
+        }
+      } catch (e) {}
+    }
+
+    for (const [k, v] of this.v2ActivePriceReservationsFallback.entries()) {
+      if (k.startsWith(`${sym}:`)) {
+        if ((pairId && v.pairId === pairId) || (bucketKey && v.bucketKey === bucketKey)) {
+          this.v2ActivePriceReservationsFallback.delete(k);
+        }
+      }
+    }
+    return { success: true };
+  }
+
+  syncActivePriceReservationsV2(symbol, activePairs = [], bucketSize = 0.50) {
+    const sym = symbol || 'SOLUSDT';
+    if (this.db) {
+      try {
+        this.db.prepare('DELETE FROM solana_v2_active_price_reservations WHERE instrument = ?').run(sym);
+      } catch (e) {}
+    }
+
+    for (const k of Array.from(this.v2ActivePriceReservationsFallback.keys())) {
+      if (k.startsWith(`${sym}:`)) {
+        this.v2ActivePriceReservationsFallback.delete(k);
+      }
+    }
+
+    if (!Array.isArray(activePairs) || activePairs.length === 0) return 0;
+
+    let synced = 0;
+    for (const pair of activePairs) {
+      const bOpen = pair.buyPosition && pair.buyPosition.status === 'OPEN';
+      const sOpen = pair.sellPosition && pair.sellPosition.status === 'OPEN';
+      const isOpen = pair.status === 'OPEN' || bOpen || sOpen;
+      if (!isOpen) continue;
+
+      const price = Number(pair.entryPrice || (pair.buyPosition && pair.buyPosition.entryPrice) || (pair.sellPosition && pair.sellPosition.entryPrice));
+      if (!price || isNaN(price) || price <= 0) continue;
+
+      const res = this.reserveActivePriceLevelV2(sym, price, pair.pairId, bucketSize, 'BOTH');
+      if (res.success) synced++;
+    }
+    return synced;
+  }
+
+  getAllActivePriceReservationsV2(symbol = 'SOLUSDT') {
+    const sym = symbol || 'SOLUSDT';
+    if (this.db) {
+      try {
+        return this.db.prepare('SELECT * FROM solana_v2_active_price_reservations WHERE instrument = ? ORDER BY normalized_price ASC').all(sym);
+      } catch (e) {}
+    }
+    const results = [];
+    for (const [k, v] of this.v2ActivePriceReservationsFallback.entries()) {
+      if (k.startsWith(`${sym}:`)) results.push(v);
+    }
+    return results.sort((a, b) => a.normalizedPrice - b.normalizedPrice);
   }
 }
 

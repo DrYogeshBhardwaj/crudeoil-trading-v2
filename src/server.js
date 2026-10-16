@@ -102,6 +102,18 @@ app.get([
   '/terminal'
 ], (req, res) => res.sendFile(path.join(__dirname, '../public/subh_money_solana.html')));
 
+// Dedicated SOL Pair Engine V2 Page Route
+app.get([
+  '/sol-pair-engine-v2',
+  '/Sol-Pair-Engine-V2',
+  '/sol_pair_engine_v2',
+  '/sol-pair-v2',
+  '/sol_pair_v2',
+  '/solana-v2',
+  '/solana_v2',
+  '/sol-v2'
+], (req, res) => res.sendFile(path.join(__dirname, '../public/sol_pair_engine_v2.html')));
+
 app.get([
   '/solana-live-mudrex',
   '/Solana-Live-Mudrex',
@@ -1078,6 +1090,85 @@ app.post(['/api/solana-live-mudrex/action', '/api/subh-mani-solana/action', '/ap
     } else {
       return res.status(400).json({ success: false, error: 'Unknown action: ' + action });
     }
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// ==========================================
+// SOL PAIR ENGINE V2 DEDICATED REST ENDPOINTS
+// ==========================================
+
+app.get(['/api/sol-pair-engine-v2/data', '/api/sol-pair-v2/data', '/api/solana-v2/data'], (req, res) => {
+  try {
+    const solanaEngineV2 = require('./engine/solanaEngineV2');
+    const data = solanaEngineV2.getDashboardMetrics();
+    res.json(data);
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+app.post(['/api/sol-pair-engine-v2/action', '/api/sol-pair-v2/action', '/api/solana-v2/action'], async (req, res) => {
+  try {
+    const { action, password } = req.body || {};
+    if (password !== '340556') {
+      return res.status(403).json({ success: false, error: 'Incorrect Admin Password. Must provide 340556.' });
+    }
+
+    const solanaEngineV2 = require('./engine/solanaEngineV2');
+    const rateFeed = require('./engine/rateFeed');
+
+    if (action === 'startEngine') {
+      return res.json(solanaEngineV2.startEngine());
+    } else if (action === 'pauseEngine') {
+      return res.json(solanaEngineV2.pauseEngine('User paused engine from SOL Pair Engine V2 desk'));
+    } else if (action === 'addNewPair') {
+      const cur = rateFeed.getCurrentRate('SOLUSDT');
+      const price = cur ? cur.price : 106.30;
+      const usdInrRate = cur ? (cur.usdInrRate || 102.00) : 102.00;
+      const pair = solanaEngineV2.createNewPair('SOLUSDT', price, Date.now(), usdInrRate);
+      if (!pair) {
+        return res.status(400).json({ success: false, error: `Price level $${price.toFixed(2)} is occupied by an active position or reserved by an active target.` });
+      }
+      return res.json({ success: true, message: `New Solana V2 Pair created at $${price.toFixed(2)}.`, pair });
+    } else if (action === 'punarjanm') {
+      const cur = rateFeed.getCurrentRate('SOLUSDT');
+      const closeRate = cur ? cur.price : 106.30;
+      const usdInrRate = cur ? (cur.usdInrRate || 102.00) : 102.00;
+      const punarjanmResult = solanaEngineV2.executePunarjanm('MANUAL_USER_REQUEST', closeRate, usdInrRate);
+      return res.json(punarjanmResult);
+    } else if (action === 'cleanFloatingKachra' || action === 'cleanKachra') {
+      const result = solanaEngineV2.cleanFloatingKachra('USER_MANUAL_CLEAN');
+      return res.json(result);
+    } else if (action === 'closeLotGroup') {
+      const lotQty = Number(req.body.lotSize || req.body.quantity || 5.0);
+      const cur = rateFeed.getCurrentRate('SOLUSDT');
+      const livePrice = cur ? cur.price : 105.00;
+      const usdInr = cur ? (cur.usdInrRate || 102.00) : 102.00;
+      const resClose = solanaEngineV2.closeLotGroup(lotQty, 'USER_MANUAL_LOT_CLOSE', livePrice, usdInr);
+      return res.json(resClose);
+    } else if (action === 'resetData') {
+      const newCapital = req.body.startingCapitalINR || 200000.00;
+      const result = solanaEngineV2.resetData(5.0, newCapital, 0.45);
+      return res.json(result);
+    } else if (action === 'updateContractQuantity' || action === 'updateLotSize') {
+      const newQty = Number(req.body.quantity || req.body.contractQuantity);
+      if (isNaN(newQty) || newQty <= 0) return res.status(400).json({ success: false, error: 'Valid contract quantity required.' });
+      solanaEngineV2.settings.contractQuantity = newQty;
+      solanaEngineV2.saveState();
+      return res.json({ success: true, message: `Lot Size updated to ${newQty} SOL.`, contractQuantity: newQty });
+    } else if (action === 'updateTargetMove') {
+      const newMove = Number(req.body.targetMove || req.body.profitTargetMove);
+      if (isNaN(newMove) || newMove <= 0) return res.status(400).json({ success: false, error: 'Valid target move required.' });
+      solanaEngineV2.settings.profitTargetMove = newMove;
+      solanaEngineV2.settings.buyTargetMove = newMove;
+      solanaEngineV2.settings.sellTargetMove = newMove;
+      solanaEngineV2.saveState();
+      return res.json({ success: true, message: `Target move updated to $${newMove.toFixed(2)}.`, profitTargetMove: newMove });
+    }
+
+    return res.status(400).json({ success: false, error: 'Unknown action: ' + action });
   } catch (err) {
     res.status(500).json({ success: false, error: err.message });
   }
