@@ -620,14 +620,19 @@ class BTCStudyEngine {
           // Initial entry
           createPair(candle.open, candleTime);
         } else {
-          // Check if distance from all existing active pair entries is >= pairEntryDifference
+          // Check if distance from all existing active open leg entries is >= pairEntryDifference
           let canCreate = true;
           for (const existingPair of activePairs) {
-            const distance = Math.abs(candle.open - existingPair.entryPrice);
-            if (distance < safePairDiff) {
-              canCreate = false;
-              break;
+            for (const pos of existingPair.positions) {
+              if (pos.status === 'OPEN') {
+                const distance = Math.abs(candle.open - pos.entryPrice);
+                if (distance < safePairDiff) {
+                  canCreate = false;
+                  break;
+                }
+              }
             }
+            if (!canCreate) break;
           }
           if (canCreate) {
             createPair(candle.open, candleTime);

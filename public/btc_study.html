@@ -2374,7 +2374,7 @@
   function processLiveTick(currentPrice, time) {
     if (!liveSimState.running) return;
 
-    // Check targets on active positions
+    // 1. Check targets on active positions
     for (const pair of liveSimState.activePairs) {
       for (const pos of pair.positions) {
         if (pos.status !== 'OPEN') continue;
@@ -2395,23 +2395,61 @@
       }
     }
 
-    // Grid pair creation
-    if (liveSimState.activePairs.length < liveSimState.maxPairs) {
-      let canCreate = true;
-      if (liveSimState.activePairs.length > 0) {
-        for (const ep of liveSimState.activePairs) {
-          if (Math.abs(currentPrice - ep.entryPrice) < liveSimState.pairDiff) {
-            canCreate = false;
-            break;
-          }
+    // 2. Clean up fully closed pairs from activePairs to instantly free up slots
+    for (let i = liveSimState.activePairs.length - 1; i >= 0; i--) {
+      const p = liveSimState.activePairs[i];
+      const allClosed = p.positions.every(pos => pos.status === 'CLOSED');
+      if (allClosed) {
+        liveSimState.activePairs.splice(i, 1);
+      }
+    }
+
+    // 3. Compute real-time available margin in hand
+    let usedMarginINR = 0;
+    for (const p of liveSimState.activePairs) {
+      for (const pos of p.positions) {
+        if (pos.status === 'OPEN') {
+          usedMarginINR += pos.marginINR;
         }
       }
+    }
+    let netRealizedINR = 0;
+    for (const t of liveSimState.closedTrades) {
+      netRealizedINR += t.netPnLINR;
+    }
+    const availableMarginINR = Math.max(0, liveSimState.startingCapitalINR + netRealizedINR - usedMarginINR);
 
-      if (canCreate) {
-        const pairId = `PAIR-LIVE-${liveSimState.activePairs.length + 1}`;
+    // 4. Grid Pair Creation Logic:
+    // Only take a new pair if:
+    // a) Active pairs count < configured limit (e.g. 3, 5, 10 pairs)
+    // b) At the current live rate, NO existing open leg is present (rate vacancy check)
+    // c) Available margin in hand is sufficient to cover the new pair
+    if (liveSimState.activePairs.length < liveSimState.maxPairs) {
+      let isRateOccupied = false;
+
+      // Check all currently OPEN legs across all active pairs
+      for (const ep of liveSimState.activePairs) {
+        for (const pos of ep.positions) {
+          if (pos.status === 'OPEN') {
+            const distance = Math.abs(currentPrice - pos.entryPrice);
+            if (distance < liveSimState.pairDiff) {
+              isRateOccupied = true;
+              break;
+            }
+          }
+        }
+        if (isRateOccupied) break;
+      }
+
+      const activeLegCount = (liveSimState.direction === 'BOTH') ? 2 : 1;
+      const marginPerLegUSD = (liveSimState.quantity * currentPrice) / liveSimState.leverage;
+      const marginPerLegINR = marginPerLegUSD * 102.00;
+      const totalPairMarginINR = marginPerLegINR * activeLegCount;
+
+      if (!isRateOccupied && availableMarginINR >= totalPairMarginINR) {
+        liveSimState.pairCounter = (liveSimState.pairCounter || 0) + 1;
+        const pairId = `PAIR-LIVE-${String(liveSimState.pairCounter).padStart(4, '0')}`;
         const positions = [];
-        const marginUSD = (liveSimState.quantity * currentPrice) / liveSimState.leverage;
-        const marginINR = marginUSD * 102.00;
 
         if (liveSimState.direction === 'BOTH' || liveSimState.direction === 'BUY') {
           positions.push({
@@ -2419,7 +2457,7 @@
             direction: 'BUY',
             entryPrice: currentPrice,
             quantity: liveSimState.quantity,
-            marginINR,
+            marginINR: marginPerLegINR,
             targetPrice: liveSimState.targetType === 'PER_PAIR' ? (currentPrice + liveSimState.target) : null,
             stopLossPrice: (liveSimState.lossType === 'PER_PAIR' && liveSimState.lossLimit > 0) ? (currentPrice - liveSimState.lossLimit) : null,
             status: 'OPEN'
@@ -2431,7 +2469,7 @@
             direction: 'SELL',
             entryPrice: currentPrice,
             quantity: liveSimState.quantity,
-            marginINR,
+            marginINR: marginPerLegINR,
             targetPrice: liveSimState.targetType === 'PER_PAIR' ? (currentPrice - liveSimState.target) : null,
             stopLossPrice: (liveSimState.lossType === 'PER_PAIR' && liveSimState.lossLimit > 0) ? (currentPrice + liveSimState.lossLimit) : null,
             status: 'OPEN'
