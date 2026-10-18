@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" width="128" height="128">
+  <defs>
+    <linearGradient id="btcGlow" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#f59e0b" />
+      <stop offset="50%" stop-color="#fbbf24" />
+      <stop offset="100%" stop-color="#d97706" />
+    </linearGradient>
+    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0f172a" />
+      <stop offset="100%" stop-color="#020617" />
+    </linearGradient>
+    <filter id="glow" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="4" result="blur" />
+      <feComposite in="SourceGraphic" in2="blur" operator="over" />
+    </filter>
+  </defs>
+  <rect width="128" height="128" rx="28" fill="url(#bgGrad)" stroke="rgba(245, 158, 11, 0.4)" stroke-width="2.5"/>
+  <circle cx="64" cy="64" r="42" fill="url(#btcGlow)" filter="url(#glow)"/>
+  <circle cx="64" cy="64" r="39" fill="none" stroke="#ffffff" stroke-width="2" opacity="0.6"/>
+  <!-- Bitcoin B symbol -->
+  <text x="64" y="80" font-family="'JetBrains Mono', 'Outfit', 'Inter', -apple-system, sans-serif" font-size="52" font-weight="900" fill="#ffffff" text-anchor="middle" dominant-baseline="alphabetic">₿</text>
+</svg>

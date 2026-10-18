@@ -164,6 +164,15 @@ app.get([
   '/btc_live_mudrex_pro.html'
 ], (req, res) => res.sendFile(path.join(__dirname, '../public/btc_live_mudrex_pro.html')));
 
+// Dedicated BTC Compare Lab (0.02 vs 0.06 Quantity & Risk Lab)
+app.get([
+  '/btc-compare',
+  '/BTC-Compare',
+  '/btc_compare',
+  '/btc-compare.html',
+  '/btc_compare.html'
+], (req, res) => res.sendFile(path.join(__dirname, '../public/btc_compare.html')));
+
 app.get('/api/mudrex-debug', async (req, res) => {
   try {
     const mudrexLive = require('./engine/mudrexLiveAdapter');
@@ -1418,6 +1427,15 @@ app.post('/api/btc-study/compare-strategies', async (req, res) => {
     }
     const comparisonResult = btcStudyEngine.compareConfigurations(baseConfig, variations, candleData);
     res.json({ success: true, results: comparisonResult });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+app.post('/api/btc-compare/run', async (req, res) => {
+  try {
+    const result = await btcStudyEngine.compareBtcQuantities(req.body);
+    res.json(result);
   } catch (err) {
     res.status(500).json({ success: false, error: err.message });
   }

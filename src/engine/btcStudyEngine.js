@@ -855,6 +855,7 @@ class BTCStudyEngine {
       const simEngine = new BtcEngineClass();
       simEngine.storagePath = null;
       simEngine.saveState = () => {};
+      simEngine.isSimulation = true;
       simEngine.resetData(
         safeQty,
         capital,
@@ -870,43 +871,49 @@ class BTCStudyEngine {
       let peakEquity = capital;
       let maxDrawdown = 0;
 
-      for (let i = 0; i < klines.length; i++) {
-        const k = klines[i];
+      const _origLog = console.log;
+      console.log = () => {};
+      try {
+        for (let i = 0; i < klines.length; i++) {
+          const k = klines[i];
 
-        if (autoHaisiyatScaling) {
-          const mCurrent = simEngine.getDashboardMetrics();
-          const curEq = mCurrent.wallet.equityINR;
-          const curMarginPerPair = (2 * safeQty * k.close * usdInr) / leverage;
-          const dynamicThresholdFor2 = Math.round((2 * curMarginPerPair) + safeBufferReq);
+          if (autoHaisiyatScaling) {
+            const mCurrent = simEngine.getDashboardMetrics();
+            const curEq = mCurrent.wallet.equityINR;
+            const curMarginPerPair = (2 * safeQty * k.close * usdInr) / leverage;
+            const dynamicThresholdFor2 = Math.round((2 * curMarginPerPair) + safeBufferReq);
 
-          // Auto-scale to 2 pairs ONLY if wallet equity has grown through harvest profit to afford 2 pairs safely
-          if (curEq >= dynamicThresholdFor2 && simEngine.settings.maxActivePairs < 2) {
-            simEngine.settings.maxActivePairs = 2;
-            simEngine.settings.basketProfitTargetINR = harvestTargetINR;
-            scaledTo2 = true;
-            scaledAtEquity = Math.round(curEq);
-          } else if (curEq < dynamicThresholdFor2 && simEngine.settings.maxActivePairs > 1) {
-            // SAFETY SCALE-DOWN: If market drawdown drops equity below capacity, scale back DOWN to 1 pair immediately!
-            simEngine.settings.maxActivePairs = 1;
-            simEngine.settings.basketProfitTargetINR = Math.min(harvestTargetINR, targetProfitINR);
+            // Auto-scale to 2 pairs ONLY if wallet equity has grown through harvest profit to afford 2 pairs safely
+            if (curEq >= dynamicThresholdFor2 && simEngine.settings.maxActivePairs < 2) {
+              simEngine.settings.maxActivePairs = 2;
+              simEngine.settings.basketProfitTargetINR = harvestTargetINR;
+              scaledTo2 = true;
+              scaledAtEquity = Math.round(curEq);
+            } else if (curEq < dynamicThresholdFor2 && simEngine.settings.maxActivePairs > 1) {
+              // SAFETY SCALE-DOWN: If market drawdown drops equity below capacity, scale back DOWN to 1 pair immediately!
+              simEngine.settings.maxActivePairs = 1;
+              simEngine.settings.basketProfitTargetINR = Math.min(harvestTargetINR, targetProfitINR);
+            }
+
+            // When running 1 pair, sync harvest target to profit target so single win harvests immediately
+            if (simEngine.settings.maxActivePairs === 1) {
+              simEngine.settings.basketProfitTargetINR = Math.min(harvestTargetINR, targetProfitINR);
+            } else {
+              simEngine.settings.basketProfitTargetINR = harvestTargetINR;
+            }
           }
 
-          // When running 1 pair, sync harvest target to profit target so single win harvests immediately
-          if (simEngine.settings.maxActivePairs === 1) {
-            simEngine.settings.basketProfitTargetINR = Math.min(harvestTargetINR, targetProfitINR);
-          } else {
-            simEngine.settings.basketProfitTargetINR = harvestTargetINR;
-          }
+          simEngine.evaluatePriceTick(k.high, k.openTime, usdInr);
+          simEngine.evaluatePriceTick(k.low, k.openTime + 30000, usdInr);
+          simEngine.evaluatePriceTick(k.close, k.closeTime, usdInr);
+
+          const m = simEngine.getDashboardMetrics();
+          if (m.wallet.equityINR > peakEquity) peakEquity = m.wallet.equityINR;
+          const dd = peakEquity - m.wallet.equityINR;
+          if (dd > maxDrawdown) maxDrawdown = dd;
         }
-
-        simEngine.evaluatePriceTick(k.high, k.openTime, usdInr);
-        simEngine.evaluatePriceTick(k.low, k.openTime + 30000, usdInr);
-        simEngine.evaluatePriceTick(k.close, k.closeTime, usdInr);
-
-        const m = simEngine.getDashboardMetrics();
-        if (m.wallet.equityINR > peakEquity) peakEquity = m.wallet.equityINR;
-        const dd = peakEquity - m.wallet.equityINR;
-        if (dd > maxDrawdown) maxDrawdown = dd;
+      } finally {
+        console.log = _origLog;
       }
 
       const m = simEngine.getDashboardMetrics();

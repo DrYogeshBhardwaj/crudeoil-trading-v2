@@ -311,8 +311,8 @@ class BtcEngine {
       return null;
     }
 
-    const now = Date.now();
-    if (this.lastPairCreatedTimestamp && (now - this.lastPairCreatedTimestamp < 3000)) {
+    const now = this.isSimulation ? timestamp : Date.now();
+    if (!this.isSimulation && this.lastPairCreatedTimestamp && (now - this.lastPairCreatedTimestamp < 3000)) {
       console.warn(`[BTC Engine] createNewPair throttled by 3-second safety cooldown.`);
       return null;
     }
@@ -409,7 +409,7 @@ class BtcEngine {
     this.saveState();
 
     // LIVE EXECUTION ROUTING: If in LIVE mode, dispatch order to Mudrex Exchange
-    if (this.settings.tradingMode === 'LIVE' && !this.settings.realOrdersDisabled) {
+    if (!this.isSimulation && this.settings.tradingMode === 'LIVE' && !this.settings.realOrdersDisabled) {
       this.dispatchLiveOrder(pair, buyPosition).catch(e => {
         console.error('[BTC Engine] Error in dispatchLiveOrder:', e.message);
       });
@@ -449,7 +449,7 @@ class BtcEngine {
     const exitNotional = exitPrice * qty;
     const takerFeeRate = this.settings.takerFeeRate || 0.00075;
     const makerFeeRate = this.settings.makerFeeRate || 0.0002;
-    const isTarget = reason.includes('TARGET');
+    const isTarget = reason.includes('TARGET') || reason.includes('TP') || reason.includes('HARVEST');
     const exitFeeRate = isTarget ? makerFeeRate : takerFeeRate;
 
     const entryFeeUSD = entryNotional * takerFeeRate;

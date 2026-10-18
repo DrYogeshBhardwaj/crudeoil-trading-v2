@@ -7,6 +7,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Outfit:wght@500;600;700;800;900&family=JetBrains+Mono:wght@400;600;700&display=swap" rel="stylesheet">
+  <link rel="icon" type="image/svg+xml" href="/btc-favicon.svg">
   <style>
     :root {
       --bg-dark: #070a12;
@@ -634,13 +635,14 @@
       <button type="button" class="preset-btn active" onclick="setTimeframePreset('short')">⚡ 11 Jan 23:00 - 12 Jan 02:00 (3h Pump)</button>
       <button type="button" class="preset-btn" onclick="setTimeframePreset('swing')">🌊 11 Jan - 14 Jan (3-Day Volatility)</button>
       <button type="button" class="preset-btn" onclick="setTimeframePreset('crash')">📉 11 Jan - 11 Feb (1-Month Crash)</button>
+      <button type="button" class="preset-btn" onclick="setTimeframePreset('recent')">🔥 Last 24 Hours</button>
       <button type="button" class="preset-btn" onclick="setTimeframePreset('custom')">📅 Custom Date</button>
     </div>
 
     <div class="form-grid" style="grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));">
       <div class="form-group">
         <label class="form-label" for="inputQty1">BTC Value 1 (Lot)</label>
-        <input type="number" id="inputQty1" class="form-input" value="0.02" step="0.01" min="0.001" oninput="recalcLiveMetrics()">
+        <input type="number" id="inputQty1" class="form-input" value="0.02" step="0.01" min="0.001" oninput="onConfigParamChange()">
         <div style="display: flex; gap: 4px; margin-top: 4px;">
           <button type="button" class="quick-qty-btn" onclick="setQty(1, 0.01)">0.01</button>
           <button type="button" class="quick-qty-btn" onclick="setQty(1, 0.02)">0.02</button>
@@ -650,7 +652,7 @@
       </div>
       <div class="form-group">
         <label class="form-label" for="inputQty2">BTC Value 2 (Lot)</label>
-        <input type="number" id="inputQty2" class="form-input" value="0.06" step="0.01" min="0.001" oninput="recalcLiveMetrics()">
+        <input type="number" id="inputQty2" class="form-input" value="0.06" step="0.01" min="0.001" oninput="onConfigParamChange()">
         <div style="display: flex; gap: 4px; margin-top: 4px;">
           <button type="button" class="quick-qty-btn" onclick="setQty(2, 0.04)">0.04</button>
           <button type="button" class="quick-qty-btn" onclick="setQty(2, 0.06)">0.06</button>
@@ -660,46 +662,46 @@
       </div>
       <div class="form-group">
         <label class="form-label" for="inputCapital">Wallet Capital (INR)</label>
-        <input type="number" id="inputCapital" class="form-input" value="87375" step="1000" oninput="recalcLiveMetrics()">
+        <input type="number" id="inputCapital" class="form-input" value="87375" step="1000" oninput="onConfigParamChange()">
       </div>
       <div class="form-group">
         <label class="form-label" for="inputLeverage">Leverage</label>
-        <input type="number" id="inputLeverage" class="form-input" value="15" min="1" max="50" oninput="recalcLiveMetrics()">
+        <input type="number" id="inputLeverage" class="form-input" value="15" min="1" max="50" oninput="onConfigParamChange()">
       </div>
       <div class="form-group">
         <label class="form-label" for="inputMaxPairs">Max Pairs Limit</label>
-        <input type="number" id="inputMaxPairs" class="form-input" value="1" min="1" max="10" oninput="recalcLiveMetrics()">
+        <input type="number" id="inputMaxPairs" class="form-input" value="1" min="1" max="10" oninput="onConfigParamChange()">
       </div>
       <div class="form-group">
         <label class="form-label" for="inputTargetProfit">Exit Target (INR)</label>
-        <input type="number" id="inputTargetProfit" class="form-input" value="1000" step="100" oninput="recalcLiveMetrics()">
+        <input type="number" id="inputTargetProfit" class="form-input" value="1000" step="100" oninput="onConfigParamChange()">
       </div>
       <div class="form-group">
         <label class="form-label" for="inputHarvestTarget">Punarjanm Harvest (INR)</label>
-        <input type="number" id="inputHarvestTarget" class="form-input" value="2000" step="500">
+        <input type="number" id="inputHarvestTarget" class="form-input" value="2000" step="500" oninput="onConfigParamChange()">
       </div>
     </div>
 
     <div class="form-grid" id="customDateRow" style="border-top: 1px dashed var(--border-subtle); padding-top: 16px;">
       <div class="form-group">
         <label class="form-label" for="inputFromDate">From Date</label>
-        <input type="date" id="inputFromDate" class="form-input" value="2026-10-16">
+        <input type="date" id="inputFromDate" class="form-input" value="2026-10-15" onchange="onDateParamChange()">
       </div>
       <div class="form-group">
         <label class="form-label" for="inputFromHour">From Hour (0-23)</label>
-        <input type="number" id="inputFromHour" class="form-input" value="0" min="0" max="23">
+        <input type="number" id="inputFromHour" class="form-input" value="0" min="0" max="23" onchange="onDateParamChange()">
       </div>
       <div class="form-group">
         <label class="form-label" for="inputToDate">To Date</label>
-        <input type="date" id="inputToDate" class="form-input" value="2026-10-17">
+        <input type="date" id="inputToDate" class="form-input" value="2026-10-16" onchange="onDateParamChange()">
       </div>
       <div class="form-group">
         <label class="form-label" for="inputToHour">To Hour (0-23)</label>
-        <input type="number" id="inputToHour" class="form-input" value="23" min="0" max="23">
+        <input type="number" id="inputToHour" class="form-input" value="23" min="0" max="23" onchange="onDateParamChange()">
       </div>
       <div class="form-group" style="justify-content: flex-end;">
         <label style="display: inline-flex; align-items: center; gap: 8px; cursor: pointer; color: #38bdf8; font-size: 13px; font-weight: 700; background: rgba(56, 189, 248, 0.1); border: 1px solid rgba(56, 189, 248, 0.3); padding: 8px 12px; border-radius: 8px; margin-bottom: 6px;">
-          <input type="checkbox" id="chkAutoHaisiyat" checked style="width: 17px; height: 17px; accent-color: #38bdf8;">
+          <input type="checkbox" id="chkAutoHaisiyat" checked onchange="onConfigParamChange()" style="width: 17px; height: 17px; accent-color: #38bdf8;">
           <span>⚡ Auto Haisiyat Scaling (जैसे ही हैसियत बने, Auto 2nd Pair चालू)</span>
         </label>
         <button type="button" class="btn-run" id="btnRunReplay" onclick="runComparisonReplay()">
@@ -1018,10 +1020,40 @@
       }
     }
 
+    let replayDebounceTimer = null;
+    function debounceRunReplay(delay = 600) {
+      if (replayDebounceTimer) clearTimeout(replayDebounceTimer);
+      replayDebounceTimer = setTimeout(() => {
+        runComparisonReplay();
+      }, delay);
+    }
+
+    function onDateParamChange() {
+      // Mark Custom Date as active preset
+      const btns = document.querySelectorAll('.preset-btn');
+      btns.forEach(b => {
+        b.classList.remove('active');
+        if (b.innerText.includes('Custom Date')) b.classList.add('active');
+      });
+      debounceRunReplay(600);
+    }
+
+    function onConfigParamChange() {
+      recalcLiveMetrics();
+      debounceRunReplay(700);
+    }
+
+    function setQty(slot, val) {
+      document.getElementById(`inputQty${slot}`).value = val;
+      recalcLiveMetrics();
+      debounceRunReplay(400);
+    }
+
     function setTimeframePreset(type) {
       const btns = document.querySelectorAll('.preset-btn');
       btns.forEach(b => b.classList.remove('active'));
-      event.target.classList.add('active');
+      const activeBtn = (window.event && (window.event.currentTarget || window.event.target));
+      if (activeBtn) activeBtn.classList.add('active');
 
       if (type === 'short') {
         document.getElementById('inputFromDate').value = '2026-01-11';
@@ -1038,7 +1070,19 @@
         document.getElementById('inputFromHour').value = '0';
         document.getElementById('inputToDate').value = '2026-02-11';
         document.getElementById('inputToHour').value = '23';
+      } else if (type === 'recent') {
+        // Last 24 Hours
+        const dTo = new Date();
+        const dFrom = new Date(Date.now() - 24 * 3600 * 1000);
+        document.getElementById('inputFromDate').value = dFrom.toISOString().split('T')[0];
+        document.getElementById('inputFromHour').value = '0';
+        document.getElementById('inputToDate').value = dTo.toISOString().split('T')[0];
+        document.getElementById('inputToHour').value = '23';
+      } else if (type === 'custom') {
+        document.getElementById('inputFromDate').focus();
+        return;
       }
+      runComparisonReplay();
     }
 
     function recalcLiveMetrics() {
@@ -1279,6 +1323,8 @@
     recalcLiveMetrics();
     fetchLivePrice();
     setInterval(fetchLivePrice, 10000);
+    // Auto-run comparison replay on initial load
+    setTimeout(runComparisonReplay, 350);
   </script>
 </body>
 </html>
