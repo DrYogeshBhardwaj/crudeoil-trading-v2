@@ -150,6 +150,20 @@ app.get([
   '/btc-simulator'
 ], (req, res) => res.sendFile(path.join(__dirname, '../public/btc_study.html')));
 
+// Dedicated BTC Live Mudrex Pro Desk
+app.get([
+  '/btc-live-mudrex-pro',
+  '/BTC-Live-Mudrex-Pro',
+  '/btc-live-mudrex',
+  '/BTC-Live-Mudrex',
+  '/btc-pro',
+  '/BTC-Pro',
+  '/btc_live_mudrex_pro',
+  '/btc_live_mudrex',
+  '/btc-live-mudrex-pro.html',
+  '/btc_live_mudrex_pro.html'
+], (req, res) => res.sendFile(path.join(__dirname, '../public/btc_live_mudrex_pro.html')));
+
 app.get('/api/mudrex-debug', async (req, res) => {
   try {
     const mudrexLive = require('./engine/mudrexLiveAdapter');
@@ -1104,6 +1118,129 @@ app.post(['/api/solana-live-mudrex/action', '/api/subh-mani-solana/action', '/ap
         startingCapitalINR: result.startingCapitalINR,
         profitTargetMove: result.profitTargetMove 
       });
+    } else {
+      return res.status(400).json({ success: false, error: 'Unknown action: ' + action });
+    }
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// ==========================================
+// BTC LIVE MUDREX PRO DEDICATED REST ENDPOINTS
+// ==========================================
+
+app.get(['/api/btc-live-mudrex/data', '/api/btc-live-mudrex-pro/data', '/api/btc-pro/data'], (req, res) => {
+  try {
+    const btcEngine = require('./engine/btcEngine');
+    const data = btcEngine.getDashboardMetrics();
+    res.json(data);
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+app.post(['/api/btc-live-mudrex/action', '/api/btc-live-mudrex-pro/action', '/api/btc-pro/action'], async (req, res) => {
+  try {
+    const { action, password } = req.body || {};
+    // Per user instruction: password removed from update/reset, pair addition, pair close, pairs limit, harvest target, and punarjanm operations
+    const noPasswordActions = ['resetSimulator', 'resetData', 'addNewPair', 'closePair', 'updateMaxPairs', 'setMaxPairs', 'increaseMaxPairs', 'updateBasketTarget', 'punarjanm'];
+    if (!noPasswordActions.includes(action) && password !== '340556') {
+      return res.status(403).json({ success: false, error: 'Incorrect Admin Password. Must provide 340556.' });
+    }
+
+    const btcEngine = require('./engine/btcEngine');
+    const rateFeed = require('./engine/rateFeed');
+
+    if (action === 'startEngine') {
+      btcEngine.engineStatus = 'RUNNING';
+      btcEngine.isEngineRunning = true;
+      btcEngine.pauseReason = '';
+      btcEngine.saveState();
+      return res.json({ success: true, message: 'BTC Simulation Engine started successfully.' });
+    } else if (action === 'pauseEngine') {
+      btcEngine.engineStatus = 'PAUSED';
+      btcEngine.isEngineRunning = false;
+      btcEngine.pauseReason = 'User paused engine from BTC desk';
+      btcEngine.saveState();
+      return res.json({ success: true, message: 'BTC Simulation Engine paused successfully.' });
+    } else if (action === 'addNewPair') {
+      const cur = rateFeed.getCurrentRate('BTCUSDT') || { price: 82000.00, usdInrRate: 102.00 };
+      const price = cur.price || 82000.00;
+      const usdInrRate = cur.usdInrRate || 102.00;
+      const activeCount = btcEngine.pairs.filter(p => p.status !== 'CLOSED').length;
+      const currentCap = (btcEngine.settings.maxActivePairs !== undefined && btcEngine.settings.maxActivePairs !== null) ? Number(btcEngine.settings.maxActivePairs) : 0;
+      if (currentCap > 0 && activeCount >= currentCap) {
+        btcEngine.settings.maxActivePairs = activeCount + 1;
+      }
+      const pair = btcEngine.createNewPair('BTCUSDT', price, Date.now(), usdInrRate);
+      btcEngine.saveState();
+      return res.json({ 
+        success: true, 
+        message: `New BTC Pair added at live rate $${price.toFixed(2)}. ${btcEngine.settings.maxActivePairs === 0 ? 'Pairs Cap is 0 (Unlimited)' : `Max pairs limit is now ${btcEngine.settings.maxActivePairs}`}.`, 
+        pair,
+        maxActivePairs: btcEngine.settings.maxActivePairs,
+        activePairsCount: btcEngine.pairs.filter(p => p.status !== 'CLOSED').length
+      });
+    } else if (action === 'updateMaxPairs' || action === 'setMaxPairs' || action === 'increaseMaxPairs') {
+      let newMax;
+      const curMax = (btcEngine.settings.maxActivePairs !== undefined && btcEngine.settings.maxActivePairs !== null) ? Number(btcEngine.settings.maxActivePairs) : 0;
+      if (action === 'increaseMaxPairs') {
+        const delta = req.body.delta ? Number(req.body.delta) : 1;
+        newMax = (curMax === 0 ? 3 : curMax) + delta;
+      } else {
+        newMax = (req.body.maxActivePairs !== undefined && req.body.maxActivePairs !== '') ? Number(req.body.maxActivePairs) : 0;
+      }
+      if (isNaN(newMax) || newMax < 0) {
+        return res.status(400).json({ success: false, error: 'Invalid max pairs count (must be 0 or higher)' });
+      }
+      btcEngine.settings.maxActivePairs = newMax;
+      btcEngine.saveState();
+      return res.json({
+        success: true,
+        message: newMax === 0 
+          ? `Max Active Pairs set to 0 (Unlimited / Jab tak amt in hand hai). Engine will take pairs continuously as live rate moves to vacant levels.`
+          : `Max Active Pairs limit set to ${newMax} Pairs. Engine will automatically take new pairs up to ${newMax} as live rate changes to vacant levels.`,
+        maxActivePairs: newMax
+      });
+    } else if (action === 'punarjanm') {
+      const cur = rateFeed.getCurrentRate('BTCUSDT') || { price: 82000.00, usdInrRate: 102.00 };
+      const closeRate = cur.price || 82000.00;
+      const usdInrRate = cur.usdInrRate || 102.00;
+      const punarjanmResult = btcEngine.executePunarjanm('MANUAL_USER_REQUEST', closeRate, usdInrRate);
+      return res.json({
+        success: true,
+        message: 'BTC Punarjanm executed successfully! Harvest profit credited to wallet.',
+        punarjanm: punarjanmResult
+      });
+    } else if (action === 'updateBasketTarget') {
+      const newTarget = Number(req.body.targetINR);
+      if (isNaN(newTarget) || newTarget <= 0) {
+        return res.status(400).json({ success: false, error: 'Target INR must be a positive number.' });
+      }
+      btcEngine.settings.basketProfitTargetINR = newTarget;
+      btcEngine.saveState();
+      return res.json({ success: true, message: `BTC Punarjanm target updated to ₹${newTarget.toFixed(2)} INR.`, targetINR: newTarget });
+    } else if (action === 'resetSimulator' || action === 'resetData') {
+      const customQty = req.body.quantity ? Number(req.body.quantity) : 0.10;
+      const customCapital = req.body.capitalINR ? Number(req.body.capitalINR) : 100000.00;
+      const customTargetProfitINR = (req.body.targetProfitINR || req.body.profitTargetINR || req.body.targetINR || req.body.targetMove || req.body.profitTargetMove) ? Number(req.body.targetProfitINR || req.body.profitTargetINR || req.body.targetINR || req.body.targetMove || req.body.profitTargetMove) : 1000.00;
+      const customLev = req.body.leverage ? Number(req.body.leverage) : 15;
+      const customGridDiff = (req.body.gridSpacing !== undefined && req.body.gridSpacing !== '') ? Number(req.body.gridSpacing) : ((req.body.pairEntryDifference !== undefined && req.body.pairEntryDifference !== '') ? Number(req.body.pairEntryDifference) : 0.00);
+      const customMaxPairs = (req.body.maxActivePairs !== undefined && req.body.maxActivePairs !== '') ? Number(req.body.maxActivePairs) : 10;
+      const customBasketTarget = (req.body.basketProfitTargetINR || req.body.harvestINR) ? Number(req.body.basketProfitTargetINR || req.body.harvestINR) : 3000;
+      const customStopLoss = (req.body.stopLossINR || req.body.stopLoss || req.body.stopLossMove) ? Number(req.body.stopLossINR || req.body.stopLoss || req.body.stopLossMove) : 500.00;
+
+      const result = btcEngine.resetData(customQty, customCapital, customTargetProfitINR, customLev, customGridDiff, customMaxPairs, customBasketTarget, customStopLoss);
+      return res.json({
+        success: true,
+        message: result.message,
+        settings: btcEngine.settings
+      });
+    } else if (action === 'closePair') {
+      const { pairId } = req.body || {};
+      const result = btcEngine.closePair(pairId);
+      return res.json(result);
     } else {
       return res.status(400).json({ success: false, error: 'Unknown action: ' + action });
     }

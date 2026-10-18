@@ -781,6 +781,208 @@ class BTCStudyEngine {
 
     return results;
   }
+
+  /**
+   * Dedicated Comparison Tool for BTC Quantity evaluation (e.g. 0.02 BTC vs 0.06 BTC).
+   * Runs isolated in-memory simulation without touching live disk storage or live trading state.
+   */
+  async compareBtcQuantities({
+    symbol = 'BTCUSDT',
+    fromDate = '2026-01-11',
+    toDate = '2026-01-12',
+    fromHour = 23,
+    toHour = 2,
+    interval = '1m',
+    capital = 87375,
+    qty1 = 0.02,
+    qty2 = 0.06,
+    leverage = 15,
+    maxPairs = 3,
+    targetProfitINR = 1000,
+    harvestTargetINR = 3000,
+    autoHaisiyatScaling = true
+  }) {
+    const fetchRes = await this.fetchHistoricalKlines({
+      symbol,
+      fromDate,
+      toDate,
+      fromHour,
+      toHour,
+      interval
+    });
+
+    if (!fetchRes.success || !fetchRes.klines || fetchRes.klines.length === 0) {
+      throw new Error(fetchRes.error || 'Failed to fetch historical candles.');
+    }
+
+    const klines = fetchRes.klines;
+    const livePrice = klines[klines.length - 1].close;
+    const usdInr = 102.00;
+
+    const btcEngineSingleton = require('./btcEngine');
+    const BtcEngineClass = btcEngineSingleton.constructor;
+
+    function runIsolatedReplay(qty) {
+      const safeQty = parseFloat(qty) || 0.02;
+      const notionalPerLegUSD = safeQty * livePrice;
+      const marginPerLegINR = (notionalPerLegUSD * usdInr) / leverage;
+      const marginPerPairINR = marginPerLegINR * 2;
+      const totalPairsMarginINR = marginPerPairINR * maxPairs;
+      const cashBufferINR = capital - totalPairsMarginINR;
+      const maxAffordablePairs = Math.max(0, Math.floor(capital / marginPerPairINR));
+      const adverseBufferUSD = cashBufferINR > 0 ? (cashBufferINR / (safeQty * usdInr)) : 0;
+      
+      const estRoundtripFeeINR = notionalPerLegUSD * 0.00095 * 1.18 * usdInr;
+      const grossNeededINR = targetProfitINR + estRoundtripFeeINR;
+      const targetMoveUSD = grossNeededINR / (safeQty * usdInr);
+
+      // Accurate 2-Pair Capacity (Haisiyat) Threshold:
+      // Both legs (BUY + SELL) require margin = (2 * safeQty * price * usdInr) / leverage
+      const initialPrice = klines[0].open;
+      const marginPerPairFull = (2 * safeQty * initialPrice * usdInr) / leverage;
+      // Realistic safe cash cushion to avoid drawdown breach:
+      // Minimum ₹30,000 for 0.02 BTC, ~₹35,000 for 0.04 BTC, ~₹50,000 for 0.06 BTC
+      const safeBufferReq = Math.max(30000, Math.round(safeQty * 850000));
+      const reqFor2 = Math.round((2 * marginPerPairFull) + safeBufferReq);
+
+      // ALWAYS honor user's starting maxPairs (e.g. 1 pair). Never forcefully start with 2 pairs!
+      let currentMaxPairs = maxPairs;
+      let initialPairs = maxPairs;
+      let scaledTo2 = false;
+      let scaledAtEquity = null;
+
+      // Create isolated in-memory engine instance (NEVER writes to live state disk)
+      const simEngine = new BtcEngineClass();
+      simEngine.storagePath = null;
+      simEngine.saveState = () => {};
+      simEngine.resetData(
+        safeQty,
+        capital,
+        targetProfitINR,
+        leverage,
+        0,
+        currentMaxPairs,
+        harvestTargetINR,
+        0
+      );
+      simEngine.settings.originalHarvestTargetINR = harvestTargetINR;
+
+      let peakEquity = capital;
+      let maxDrawdown = 0;
+
+      for (let i = 0; i < klines.length; i++) {
+        const k = klines[i];
+
+        if (autoHaisiyatScaling) {
+          const mCurrent = simEngine.getDashboardMetrics();
+          const curEq = mCurrent.wallet.equityINR;
+          const curMarginPerPair = (2 * safeQty * k.close * usdInr) / leverage;
+          const dynamicThresholdFor2 = Math.round((2 * curMarginPerPair) + safeBufferReq);
+
+          // Auto-scale to 2 pairs ONLY if wallet equity has grown through harvest profit to afford 2 pairs safely
+          if (curEq >= dynamicThresholdFor2 && simEngine.settings.maxActivePairs < 2) {
+            simEngine.settings.maxActivePairs = 2;
+            simEngine.settings.basketProfitTargetINR = harvestTargetINR;
+            scaledTo2 = true;
+            scaledAtEquity = Math.round(curEq);
+          } else if (curEq < dynamicThresholdFor2 && simEngine.settings.maxActivePairs > 1) {
+            // SAFETY SCALE-DOWN: If market drawdown drops equity below capacity, scale back DOWN to 1 pair immediately!
+            simEngine.settings.maxActivePairs = 1;
+            simEngine.settings.basketProfitTargetINR = Math.min(harvestTargetINR, targetProfitINR);
+          }
+
+          // When running 1 pair, sync harvest target to profit target so single win harvests immediately
+          if (simEngine.settings.maxActivePairs === 1) {
+            simEngine.settings.basketProfitTargetINR = Math.min(harvestTargetINR, targetProfitINR);
+          } else {
+            simEngine.settings.basketProfitTargetINR = harvestTargetINR;
+          }
+        }
+
+        simEngine.evaluatePriceTick(k.high, k.openTime, usdInr);
+        simEngine.evaluatePriceTick(k.low, k.openTime + 30000, usdInr);
+        simEngine.evaluatePriceTick(k.close, k.closeTime, usdInr);
+
+        const m = simEngine.getDashboardMetrics();
+        if (m.wallet.equityINR > peakEquity) peakEquity = m.wallet.equityINR;
+        const dd = peakEquity - m.wallet.equityINR;
+        if (dd > maxDrawdown) maxDrawdown = dd;
+      }
+
+      const m = simEngine.getDashboardMetrics();
+
+      return {
+        qty: safeQty,
+        liveAnalysis: {
+          livePrice,
+          notionalPerLegUSD: Math.round(notionalPerLegUSD),
+          marginPerLegINR: Math.round(marginPerLegINR),
+          marginPerPairINR: Math.round(marginPerPairINR),
+          totalPairsMarginINR: Math.round(totalPairsMarginINR),
+          cashBufferINR: Math.round(cashBufferINR),
+          maxAffordablePairs,
+          adverseBufferUSD: Math.round(adverseBufferUSD),
+          targetMoveUSD: Math.round(targetMoveUSD),
+          estRoundtripFeeINR: Math.round(estRoundtripFeeINR),
+          status: cashBufferINR < 0 ? 'CRITICAL_DEFICIT' : (cashBufferINR < 20000 ? 'HIGH_RISK' : 'SAFE')
+        },
+        backtestResult: {
+          equity: Math.round(m.wallet.equityINR),
+          realizedProfit: Math.round(m.pnl.totalRealizedINR),
+          floatingProfit: Math.round(m.pnl.totalFloatingINR),
+          totalNetProfit: Math.round(m.wallet.equityINR - capital),
+          totalNetProfitPct: (((m.wallet.equityINR - capital) / capital) * 100).toFixed(1) + '%',
+          closedTrades: m.pnl.closedTradesCount,
+          winRate: m.pnl.closedTradesCount > 0 ? ((m.pnl.winCount / m.pnl.closedTradesCount) * 100).toFixed(1) + '%' : '0%',
+          fees: Math.round(m.pnl.tradingFeesINR),
+          extra10PctFees: Math.round(m.pnl.tradingFeesINR * 0.10),
+          totalFeesWithBuffer: Math.round(m.pnl.tradingFeesINR * 1.10),
+          netProfitWithBuffer: Math.round((m.wallet.equityINR - capital) - (m.pnl.tradingFeesINR * 0.10)),
+          finalEquityWithBuffer: Math.round(m.wallet.equityINR - (m.pnl.tradingFeesINR * 0.10)),
+          netProfitPctWithBuffer: ((((m.wallet.equityINR - (m.pnl.tradingFeesINR * 0.10)) - capital) / capital) * 100).toFixed(1) + '%',
+          maxDrawdown: Math.round(maxDrawdown),
+          maxDrawdownPct: ((maxDrawdown / peakEquity) * 100).toFixed(1) + '%',
+          harvestCount: simEngine.punarjanmCount,
+          activePairs: m.engine.pairsCount,
+          haisiyatScaling: {
+            enabled: autoHaisiyatScaling,
+            initialPairs,
+            finalPairs: simEngine.settings.maxActivePairs,
+            scaledTo2: (simEngine.settings.maxActivePairs >= 2 && m.wallet.equityINR >= reqFor2),
+            scaledAtEquity,
+            targetFor2INR: Math.round(reqFor2),
+            neededMoreFor2INR: Math.max(0, Math.round(reqFor2 - m.wallet.equityINR)),
+            progressPct: Math.min(100, Math.max(0, Math.round((m.wallet.equityINR / reqFor2) * 100)))
+          }
+        }
+      };
+    }
+
+    const config1 = runIsolatedReplay(qty1);
+    const config2 = runIsolatedReplay(qty2);
+
+    return {
+      success: true,
+      timeframe: {
+        fromDate,
+        toDate,
+        fromHour,
+        toHour,
+        interval,
+        candleCount: klines.length,
+        startingPrice: klines[0].open,
+        endingPrice: klines[klines.length - 1].close,
+        priceChangeUSD: Math.round(klines[klines.length - 1].close - klines[0].open)
+      },
+      capital,
+      leverage,
+      maxPairs,
+      targetProfitINR,
+      harvestTargetINR,
+      config1,
+      config2
+    };
+  }
 }
 
 module.exports = new BTCStudyEngine();

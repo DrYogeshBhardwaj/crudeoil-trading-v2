@@ -1,0 +1,818 @@
+const fs = require('fs');
+const path = require('path');
+const rateFeed = require('./rateFeed');
+
+class BtcEngine {
+  constructor() {
+    this.settings = {
+      startingCapitalINR: 100000.00, // Total amt: ₹1,00,000 (1 Lakh User Default)
+      contractQuantity: 0.10, // BTC starting: 0.10 BTC (User Default)
+      leverage: 15, // Leverage: 15x (User Default)
+      instrument: 'BTCUSDT',
+      profitTargetINR: 1000.00, // Exit profit: ₹1,000 INR net per hit (User Default)
+      stopLossINR: 500.00, // Loss: ₹500 INR (User Default)
+      profitTargetMove: 190.00, // Approximate USD move for ₹1,000 INR
+      buyTargetMove: 190.00,
+      sellTargetMove: 190.00,
+      stopLossMove: 50.00, // Approximate USD move for ₹500 INR
+      gridSpacing: 0.00, // User: "📊 DIFF RATE ($) also 0 kar dijiye default"
+      priceBucketSize: 0.00,
+      basketProfitTargetINR: 3000, // Harvest: ₹3,000 (User Default)
+      autoPunarjanmEnabled: true, // Harvest amt auto add to wallet (Auto-Harvest)
+      autoAddNewPairs: true, // Continuous re-entry when live rate moves to vacant level and margin is available
+      maxActivePairs: 10, // Circle Target: Min 10 pairs circle maintained continuously
+      autoCleanKachraEnabled: true,
+      maxFloatingLossThresholdINR: 50000,
+      maxOneSidedLegs: 5,
+      takerFeeRate: 0.00075, // 0.075% Mudrex taker fee
+      makerFeeRate: 0.0002, // 0.02% Mudrex maker fee
+      gstRate: 0.18, // 18% GST on trading fees
+      conservativeFeeMultiplier: 1.20,
+      slippageBufferINR: 5.0, // ₹5.00 slippage buffer
+      usdInrRate: 102.00, // Mudrex INR Futures Rate
+      tradingMode: 'PAPER', // Safe PAPER simulation
+      realOrdersDisabled: true // Live exchange orders permanently disabled
+    };
+
+    this.pairs = [];
+    this.closedPositions = [];
+    this.auditLogs = [];
+    this.punarjanmCount = 0;
+    this.punarjanmCycles = [];
+    this.lastPunarjanmSummary = null;
+    this.lastPunarjanmTime = 0;
+    this.processedRates = new Set();
+    this.lastProcessedRate = null;
+    this.pairCounter = 0;
+
+    this.activePriceLevels = new Set();
+    this.isEngineRunning = true;
+    this.engineStatus = 'RUNNING';
+    this.pauseReason = '';
+    this.engineStartedAt = new Date().toISOString();
+    this.lastResetTime = null;
+
+    const dataDir = process.env.RAILWAY_VOLUME_MOUNT_PATH || process.env.DATA_DIR || path.join(__dirname, '../../data');
+    if (!fs.existsSync(dataDir)) {
+      try { fs.mkdirSync(dataDir, { recursive: true }); } catch (e) {}
+    }
+    this.storagePath = path.join(dataDir, 'btc_engine_state.json');
+
+    this.initFromStorage();
+    this.syncActivePriceLevels();
+
+    // Subscribe to real-time market rates
+    rateFeed.subscribe((type, data) => this.handleRateEvent(type, data));
+
+    // Continuous background price-evaluation loop (1s interval)
+    setInterval(() => {
+      if (this.isEngineRunning) {
+        const cur = rateFeed.getCurrentRate('BTCUSDT');
+        if (cur && cur.price && cur.price > 0) {
+          this.evaluatePriceTick(cur.price, Date.now());
+        }
+      }
+    }, 1000);
+  }
+
+  initFromStorage() {
+    try {
+      if (fs.existsSync(this.storagePath)) {
+        const raw = fs.readFileSync(this.storagePath, 'utf8');
+        if (raw) {
+          const data = JSON.parse(raw);
+          if (Array.isArray(data.pairs)) {
+            this.pairs = data.pairs;
+          }
+          if (Array.isArray(data.closedPositions)) {
+            this.closedPositions = data.closedPositions;
+          }
+          if (Array.isArray(data.punarjanmCycles)) {
+            this.punarjanmCycles = data.punarjanmCycles;
+          }
+          if (typeof data.punarjanmCount === 'number') {
+            this.punarjanmCount = data.punarjanmCount;
+          }
+          if (typeof data.pairCounter === 'number') {
+            this.pairCounter = data.pairCounter;
+          }
+          if (data.settings) {
+            this.settings = { ...this.settings, ...data.settings };
+            if (this.settings.gridSpacing === undefined || this.settings.gridSpacing === null) {
+              this.settings.gridSpacing = 0.00;
+            }
+            if (this.settings.maxActivePairs === undefined || this.settings.maxActivePairs === null) {
+              this.settings.maxActivePairs = 0;
+            }
+          }
+          if (data.engineStartedAt) {
+            this.engineStartedAt = data.engineStartedAt;
+          }
+          console.log(`[BTC Engine] Restored state from storage: ${this.pairs.length} pairs, ${this.closedPositions.length} closed trades.`);
+        }
+      }
+    } catch (e) {
+      console.warn('[BTC Engine] Error initializing from storage:', e.message);
+    }
+  }
+
+  saveState() {
+    try {
+      const state = {
+        pairs: this.pairs,
+        closedPositions: this.closedPositions.slice(0, 1000), // Keep latest 1000
+        punarjanmCycles: this.punarjanmCycles.slice(0, 50),
+        punarjanmCount: this.punarjanmCount,
+        pairCounter: this.pairCounter,
+        settings: this.settings,
+        engineStartedAt: this.engineStartedAt,
+        savedAt: new Date().toISOString()
+      };
+      fs.writeFileSync(this.storagePath, JSON.stringify(state, null, 2), 'utf8');
+    } catch (e) {
+      console.warn('[BTC Engine] Could not save state:', e.message);
+    }
+  }
+
+  syncActivePriceLevels() {
+    this.activePriceLevels.clear();
+    for (const p of this.pairs) {
+      if (p.status !== 'CLOSED') {
+        const bucket = (Math.round(p.entryPrice / this.settings.gridSpacing) * this.settings.gridSpacing).toFixed(2);
+        this.activePriceLevels.add(bucket);
+      }
+    }
+  }
+
+  handleRateEvent(type, data) {
+    if ((type === 'tick' || type === 'rate_updated') && data && data.symbol === 'BTCUSDT' && this.isEngineRunning) {
+      const price = Number(data.price);
+      if (price && price > 0) {
+        this.evaluatePriceTick(price, data.time || Date.now());
+      }
+    }
+  }
+
+  /**
+   * Core Live Tick Evaluation:
+   * 1. Evaluates open legs against targets (BUY hits target -> closes BUY, SELL hits target -> closes SELL).
+   * 2. Dynamically releases fully closed pairs.
+   * 3. Checks Punarjanm Basket Profit Auto-Harvest.
+   * 4. User's Continuous Re-entry Logic:
+   *    - Current live rate has NO active open leg (rate vacancy check >= gridSpacing)
+   *    - Active pairs count < maxActivePairs (e.g. < 3, 5, 10)
+   *    - Available margin in hand is sufficient
+   *    - Takes the next pair automatically!
+   */
+  evaluatePriceTick(livePrice, timestamp = Date.now()) {
+    if (!livePrice || livePrice <= 0 || !this.isEngineRunning) return;
+    this.lastProcessedRate = livePrice;
+
+    const usdInr = this.settings.usdInrRate || 102.00;
+
+    // 1. Initial pair creation if no pairs exist
+    const openPairs = this.pairs.filter(p => p.status !== 'CLOSED');
+    if (openPairs.length === 0) {
+      this.createNewPair('BTCUSDT', livePrice, timestamp, usdInr);
+      return;
+    }
+
+    // 2. Evaluate targets on open positions
+    for (const pair of this.pairs) {
+      if (pair.status === 'CLOSED') continue;
+
+      // BUY Leg target hit
+      if (pair.buyPosition && pair.buyPosition.status === 'OPEN') {
+        const target = pair.buyPosition.targetExitPrice;
+        if (target && livePrice >= target) {
+          this.closePositionLeg(pair.buyPosition, target, timestamp, 'BUY TARGET PROFIT HIT (HARVESTED)', usdInr);
+          console.log(`[BTC Engine] Pair ${pair.pairId} BUY TARGET HIT at $${target}! +₹${Math.round(this.settings.profitTargetINR || 1000)} Net profit booked.`);
+        }
+      }
+
+      // SELL Leg target hit
+      if (pair.sellPosition && pair.sellPosition.status === 'OPEN') {
+        const target = pair.sellPosition.targetExitPrice;
+        if (target && livePrice <= target) {
+          this.closePositionLeg(pair.sellPosition, target, timestamp, 'SELL TARGET PROFIT HIT (HARVESTED)', usdInr);
+          console.log(`[BTC Engine] Pair ${pair.pairId} SELL TARGET HIT at $${target}! +₹${Math.round(this.settings.profitTargetINR || 1000)} Net profit booked.`);
+        }
+      }
+
+      // Check if pair is now fully closed
+      const isBuyClosed = !pair.buyPosition || pair.buyPosition.status === 'CLOSED';
+      const isSellClosed = !pair.sellPosition || pair.sellPosition.status === 'CLOSED';
+      if (isBuyClosed && isSellClosed && pair.status !== 'CLOSED') {
+        pair.status = 'CLOSED';
+        console.log(`[BTC Engine] Pair ${pair.pairId} (B/S) fully ended at entry $${pair.entryPrice}. Circle slot freed!`);
+      }
+    }
+
+    // 3. Check Punarjanm Auto-Harvest Basket Target (Cycle Realized Profit + Floating Profit)
+    if (this.settings.autoPunarjanmEnabled) {
+      const summary = this.calculateFloatingSummary(livePrice);
+      const basketThreshold = this.settings.basketProfitTargetINR || 3000;
+      const cycleRealizedINR = this.getCycleRealizedProfitINR();
+      const totalNetCycleProfitINR = cycleRealizedINR + summary.floatingNetINR;
+
+      if (cycleRealizedINR >= basketThreshold || summary.floatingNetINR >= basketThreshold || totalNetCycleProfitINR >= basketThreshold) {
+        console.log(`[BTC Engine] Punarjanm Auto-Harvest Triggered! Target: ₹${basketThreshold} | Cycle Realized: ₹${cycleRealizedINR} | Floating: ₹${summary.floatingNetINR} | Total Net: ₹${totalNetCycleProfitINR}`);
+        this.executePunarjanm('AUTO_BASKET_TARGET_HIT', livePrice, usdInr);
+        return;
+      }
+    }
+
+    // 4. Continuous Circle Replenishment:
+    // Strictly respects maxActivePairs to avoid excessive pair buildup
+    const currentActivePairs = this.pairs.filter(p => p.status !== 'CLOSED');
+    const circleTarget = Number(this.settings.maxActivePairs !== undefined && this.settings.maxActivePairs > 0 ? this.settings.maxActivePairs : 10);
+    const activeBuyCount = this.pairs.filter(p => p.buyPosition && p.buyPosition.status === 'OPEN').length;
+    const activeSellCount = this.pairs.filter(p => p.sellPosition && p.sellPosition.status === 'OPEN').length;
+    
+    // Strict Cap: Only replenish if active pairs count is strictly below circleTarget
+    const needsCircleReplenish = (currentActivePairs.length < circleTarget);
+
+    if (this.settings.autoAddNewPairs && needsCircleReplenish) {
+      let isRateOccupied = false;
+      const minSpacing = Number(this.settings.gridSpacing || 0);
+      const tolerance = (minSpacing > 0) ? minSpacing : 0.05;
+
+      for (const p of currentActivePairs) {
+        if (p.buyPosition && p.buyPosition.status === 'OPEN') {
+          if (Math.abs(livePrice - p.buyPosition.entryPrice) < tolerance) {
+            isRateOccupied = true;
+            break;
+          }
+        }
+        if (p.sellPosition && p.sellPosition.status === 'OPEN') {
+          if (Math.abs(livePrice - p.sellPosition.entryPrice) < tolerance) {
+            isRateOccupied = true;
+            break;
+          }
+        }
+      }
+
+      if (!isRateOccupied) {
+        const metrics = this.getDashboardMetrics();
+        const hasAmtInHand = (metrics.wallet.equityINR > 0) && (metrics.wallet.availableMarginINR >= 1000);
+
+        if (hasAmtInHand) {
+          console.log(`[BTC Engine] Circle Replenish: Live rate moved to vacant rate $${livePrice.toFixed(2)}. Adding pair ${currentActivePairs.length + 1}/${circleTarget} to circle.`);
+          this.createNewPair('BTCUSDT', livePrice, timestamp, usdInr);
+        }
+      }
+    }
+
+    this.syncActivePriceLevels();
+    this.saveState();
+  }
+
+  createNewPair(symbol, entryPrice, timestamp = Date.now(), usdInrRate = 102.00) {
+    this.pairCounter++;
+    const pairId = `PAIR-BTC-${String(this.pairCounter).padStart(4, '0')}`;
+    const qty = this.settings.contractQuantity || 0.10;
+    const lev = this.settings.leverage || 15;
+    const profitTargetINR = this.settings.profitTargetINR || 1000.00;
+    const stopLossINR = this.settings.stopLossINR || 500.00;
+
+    // Accurate Target Exit Price in USD based on desired Net INR profit
+    // Net USD = profitTargetINR / usdInrRate
+    // Includes Mudrex taker entry fee (0.075%), maker exit fee (0.02%), GST (18%), and slippage buffer (₹5.00)
+    const targetUSD = profitTargetINR / usdInrRate;
+    const entryFeeUSD = entryPrice * qty * (this.settings.takerFeeRate || 0.00075);
+    const slippageUSD = (this.settings.slippageBufferINR || 5.0) / usdInrRate;
+    const gstMul = 1 + (this.settings.gstRate || 0.18);
+    const makerFeeMul = (this.settings.makerFeeRate || 0.0002) * gstMul;
+
+    const buyTargetPrice = Number(((targetUSD + (entryFeeUSD * gstMul) + slippageUSD + (entryPrice * qty)) / (qty * (1 - makerFeeMul))).toFixed(2));
+    const sellTargetPrice = Number((((entryPrice * qty) - targetUSD - (entryFeeUSD * gstMul) - slippageUSD) / (qty * (1 + makerFeeMul))).toFixed(2));
+
+    // Stop Loss in USD based on ₹ INR loss limit
+    const slMoveUSD = (stopLossINR / usdInrRate) / qty;
+    const buyStopLossPrice = Number((entryPrice - slMoveUSD).toFixed(2));
+    const sellStopLossPrice = Number((entryPrice + slMoveUSD).toFixed(2));
+
+    const perLegMarginUSD = (qty * entryPrice) / lev;
+    const perLegMarginINR = perLegMarginUSD * usdInrRate;
+
+    // Liquidation calculations (0.5% maintenance margin)
+    const buyLiqPrice = entryPrice * (1 - (1 / lev) + 0.005);
+    const sellLiqPrice = entryPrice * (1 + (1 / lev) - 0.005);
+
+    const buyPosition = {
+      positionId: `${pairId}-BUY`,
+      pairId,
+      direction: 'BUY',
+      symbol: 'BTCUSDT',
+      entryPrice,
+      entryTime: new Date(timestamp).toISOString(),
+      entryTimestamp: timestamp,
+      targetExitPrice: buyTargetPrice,
+      stopLossPrice: buyStopLossPrice,
+      profitTargetINR,
+      stopLossINR,
+      quantity: qty,
+      leverage: lev,
+      marginINR: Number(perLegMarginINR.toFixed(2)),
+      marginUSD: Number(perLegMarginUSD.toFixed(2)),
+      liquidationPrice: Number(buyLiqPrice.toFixed(2)),
+      status: 'OPEN'
+    };
+
+    const sellPosition = {
+      positionId: `${pairId}-SELL`,
+      pairId,
+      direction: 'SELL',
+      symbol: 'BTCUSDT',
+      entryPrice,
+      entryTime: new Date(timestamp).toISOString(),
+      entryTimestamp: timestamp,
+      targetExitPrice: sellTargetPrice,
+      stopLossPrice: sellStopLossPrice,
+      profitTargetINR,
+      stopLossINR,
+      quantity: qty,
+      leverage: lev,
+      marginINR: Number(perLegMarginINR.toFixed(2)),
+      marginUSD: Number(perLegMarginUSD.toFixed(2)),
+      liquidationPrice: Number(sellLiqPrice.toFixed(2)),
+      status: 'OPEN'
+    };
+
+    const pair = {
+      pairId,
+      symbol: 'BTCUSDT',
+      entryPrice,
+      createdAt: new Date(timestamp).toISOString(),
+      createdTimestamp: timestamp,
+      quantity: qty,
+      leverage: lev,
+      status: 'OPEN',
+      buyPosition,
+      sellPosition
+    };
+
+    this.pairs.push(pair);
+    this.syncActivePriceLevels();
+    this.saveState();
+    return pair;
+  }
+
+  closePositionLeg(pos, exitPrice, exitTime = Date.now(), reason = 'TARGET HIT', usdInrRate = 102.00) {
+    if (!pos || pos.status === 'CLOSED') return null;
+
+    pos.status = 'CLOSED';
+    pos.exitPrice = exitPrice;
+    pos.exitTime = new Date(exitTime).toISOString();
+    pos.exitTimestamp = exitTime;
+    pos.exitReason = reason;
+
+    const qty = pos.quantity || this.settings.contractQuantity || 0.001;
+    let grossUSD = 0;
+    if (pos.direction === 'BUY') {
+      grossUSD = (exitPrice - pos.entryPrice) * qty;
+    } else {
+      grossUSD = (pos.entryPrice - exitPrice) * qty;
+    }
+
+    const entryNotional = pos.entryPrice * qty;
+    const exitNotional = exitPrice * qty;
+    const takerFeeRate = this.settings.takerFeeRate || 0.00075;
+    const makerFeeRate = this.settings.makerFeeRate || 0.0002;
+    const isTarget = reason.includes('TARGET');
+    const exitFeeRate = isTarget ? makerFeeRate : takerFeeRate;
+
+    const entryFeeUSD = entryNotional * takerFeeRate;
+    const exitFeeUSD = exitNotional * exitFeeRate;
+    const gstUSD = (entryFeeUSD + exitFeeUSD) * (this.settings.gstRate || 0.18);
+    const slippageUSD = (this.settings.slippageBufferINR || 5.0) / usdInrRate;
+    const totalChargesUSD = entryFeeUSD + exitFeeUSD + gstUSD + slippageUSD;
+
+    const netUSD = grossUSD - totalChargesUSD;
+    const grossINR = grossUSD * usdInrRate;
+    const totalChargesINR = totalChargesUSD * usdInrRate;
+    const netINR = netUSD * usdInrRate;
+
+    pos.grossProfitUSD = Number(grossUSD.toFixed(4));
+    pos.grossProfitINR = Number(grossINR.toFixed(2));
+    pos.entryFeeUSD = Number(entryFeeUSD.toFixed(4));
+    pos.exitFeeUSD = Number(exitFeeUSD.toFixed(4));
+    pos.gstUSD = Number(gstUSD.toFixed(4));
+    pos.slippageUSD = Number(slippageUSD.toFixed(4));
+    pos.totalChargesUSD = Number(totalChargesUSD.toFixed(4));
+    pos.totalChargesINR = Number(totalChargesINR.toFixed(2));
+    pos.netProfitUSD = Number(netUSD.toFixed(4));
+    pos.netProfitINR = Number(netINR.toFixed(2));
+
+    this.closedPositions.unshift({ ...pos });
+    this.saveState();
+    return pos;
+  }
+
+  closePair(pairId, reason = 'MANUAL_CLOSE') {
+    const pair = this.pairs.find(p => p.pairId === pairId);
+    if (!pair) return { success: false, error: 'Pair not found: ' + pairId };
+    const cur = rateFeed.getCurrentRate('BTCUSDT') || { price: 82000.00, usdInrRate: 102.00 };
+    const livePrice = Number(cur.price || 82000.00);
+    const usdInr = Number(cur.usdInrRate || 102.00);
+    const now = Date.now();
+
+    if (pair.buyPosition && pair.buyPosition.status === 'OPEN') {
+      this.closePositionLeg(pair.buyPosition, livePrice, now, reason + ' (BUY)', usdInr);
+    }
+    if (pair.sellPosition && pair.sellPosition.status === 'OPEN') {
+      this.closePositionLeg(pair.sellPosition, livePrice, now, reason + ' (SELL)', usdInr);
+    }
+    pair.status = 'CLOSED';
+    this.saveState();
+    console.log(`[BTC Engine] Pair ${pairId} (B/S) ended (${reason}). Slot freed for fresh pair!`);
+    return { success: true, message: `Pair ${pairId} (B/S) ended. Circle slot freed for fresh pair!`, pair };
+  }
+
+  getCycleRealizedProfitINR() {
+    let sum = 0;
+    const sinceTime = this.lastPunarjanmTime || 0;
+    for (const cp of this.closedPositions) {
+      const exitTs = cp.exitTimestamp || (cp.exitTime ? new Date(cp.exitTime).getTime() : 0);
+      if (exitTs >= sinceTime) {
+        sum += (cp.netProfitINR !== undefined ? cp.netProfitINR : ((cp.grossProfitINR || 0) - (cp.totalChargesINR || 0)));
+      }
+    }
+    return Number(sum.toFixed(2));
+  }
+
+  executePunarjanm(triggerReason = 'MANUAL_TRIGGER', livePrice = 82000.00, usdInrRate = 102.00) {
+    const summary = this.calculateFloatingSummary(livePrice);
+    const cycleRealizedINR = this.getCycleRealizedProfitINR();
+    this.punarjanmCount++;
+    const cycleId = `PUNARJANM-BTC-${this.punarjanmCount}`;
+
+    // Flushes stale/open pairs into closed history WITHOUT recording negative standalone paper losses
+    let flushedTrades = 0;
+    for (const pair of this.pairs) {
+      if (pair.status === 'CLOSED') continue;
+      if (pair.buyPosition && pair.buyPosition.status === 'OPEN') {
+        pair.buyPosition.status = 'CLOSED';
+        pair.buyPosition.exitPrice = livePrice;
+        pair.buyPosition.exitTime = new Date().toISOString();
+        pair.buyPosition.exitTimestamp = Date.now();
+        pair.buyPosition.exitReason = `${cycleId} Flushed in Basket Profit Harvest`;
+        flushedTrades++;
+      }
+      if (pair.sellPosition && pair.sellPosition.status === 'OPEN') {
+        pair.sellPosition.status = 'CLOSED';
+        pair.sellPosition.exitPrice = livePrice;
+        pair.sellPosition.exitTime = new Date().toISOString();
+        pair.sellPosition.exitTimestamp = Date.now();
+        pair.sellPosition.exitReason = `${cycleId} Flushed in Basket Profit Harvest`;
+        flushedTrades++;
+      }
+      pair.status = 'CLOSED';
+    }
+
+    const harvestProfitINR = cycleRealizedINR > 0 ? cycleRealizedINR : Math.max(0, summary.floatingNetINR);
+
+    const cycleRecord = {
+      cycleId,
+      cycleNumber: this.punarjanmCount,
+      cycleName: `Punarjanm ${this.punarjanmCount}`,
+      timestamp: new Date().toISOString(),
+      livePrice,
+      harvestedProfitINR: harvestProfitINR,
+      harvestedProfitUSD: Number((harvestProfitINR / usdInrRate).toFixed(2)),
+      harvestedTrades: this.closedPositions.filter(c => (c.exitTimestamp || 0) >= (this.lastPunarjanmTime || 0)).length,
+      flushedTrades,
+      triggerReason
+    };
+
+    this.punarjanmCycles.unshift(cycleRecord);
+    this.lastPunarjanmSummary = cycleRecord;
+    this.lastPunarjanmTime = Date.now();
+
+    // Reset price grid and active pairs to release 100% margin back to Amount in Hand
+    this.pairs = [];
+    this.processedRates.clear();
+    this.activePriceLevels.clear();
+
+    // Spawn fresh seed pair at current live rate
+    const freshPair = this.createNewPair('BTCUSDT', livePrice, Date.now(), usdInrRate);
+    this.saveState();
+
+    console.log(`[BTC Engine] ${cycleId} Executed: Harvested Profit +₹${harvestProfitINR}. Flushed ${flushedTrades} stale legs. Spawned fresh seed pair ${freshPair ? freshPair.pairId : 'N/A'} at $${livePrice}.`);
+
+    return {
+      success: true,
+      cycle: cycleRecord,
+      freshPair
+    };
+  }
+
+  calculateFloatingSummary(livePrice) {
+    const usdInr = this.settings.usdInrRate || 102.00;
+    let grossUSD = 0, chargesUSD = 0, netUSD = 0;
+    let grossINR = 0, chargesINR = 0, netINR = 0;
+    let openBuyCount = 0, openSellCount = 0;
+    let dynamicMarginUsedINR = 0;
+
+    const lev = this.settings.leverage || 15;
+
+    for (const pair of this.pairs) {
+      if (pair.status === 'CLOSED') continue;
+      const qty = pair.quantity || this.settings.contractQuantity || 0.10;
+      let pairBuyMargin = 0;
+      let pairSellMargin = 0;
+
+      // Buy
+      if (pair.buyPosition && pair.buyPosition.status === 'OPEN') {
+        openBuyCount++;
+        const gUSD = (livePrice - pair.buyPosition.entryPrice) * qty;
+        grossUSD += gUSD;
+        netUSD += gUSD;
+
+        const gINR = gUSD * usdInr;
+        grossINR += gINR;
+        netINR += gINR;
+
+        pairBuyMargin = (pair.buyPosition.entryPrice * qty * usdInr) / lev;
+      }
+
+      // Sell
+      if (pair.sellPosition && pair.sellPosition.status === 'OPEN') {
+        openSellCount++;
+        const gUSD = (pair.sellPosition.entryPrice - livePrice) * qty;
+        grossUSD += gUSD;
+        netUSD += gUSD;
+
+        const gINR = gUSD * usdInr;
+        grossINR += gINR;
+        netINR += gINR;
+
+        pairSellMargin = (pair.sellPosition.entryPrice * qty * usdInr) / lev;
+      }
+
+      // Rule 3: Authoritative Hedged Margin based only on actually OPEN positions
+      const hasBuy = pair.buyPosition && pair.buyPosition.status === 'OPEN';
+      const hasSell = pair.sellPosition && pair.sellPosition.status === 'OPEN';
+      if (!hasBuy && !hasSell) continue; // Fully closed pair consumes 0 margin!
+
+      const nominalMargin = Math.max(pairBuyMargin, pairSellMargin);
+      const budgetDivisor = (this.settings.maxActivePairs && this.settings.maxActivePairs > 0) ? this.settings.maxActivePairs : 10;
+      const capBudget = this.settings.startingCapitalINR / budgetDivisor;
+      // If 1 leg closed, 50% margin freed immediately per Rule 3!
+      const legMultiplier = (hasBuy && hasSell) ? 1.0 : 0.5;
+      const pairCost = Math.min(nominalMargin, capBudget) * legMultiplier;
+      dynamicMarginUsedINR += pairCost;
+    }
+
+    return {
+      floatingGrossUSD: Number(grossUSD.toFixed(4)),
+      floatingGrossINR: Number(grossINR.toFixed(2)),
+      floatingChargesUSD: Number(chargesUSD.toFixed(4)),
+      floatingChargesINR: Number(chargesINR.toFixed(2)),
+      floatingNetUSD: Number(netUSD.toFixed(4)),
+      floatingNetINR: Number(netINR.toFixed(2)),
+      openBuyCount,
+      openSellCount,
+      dynamicMarginUsedINR: Number(dynamicMarginUsedINR.toFixed(2))
+    };
+  }
+
+  resetData(customQty, customCapital, customTargetProfitINR, customLev, customGridDiff, customMaxPairs, customBasketTarget, customStopLoss) {
+    if (customQty && customQty > 0) this.settings.contractQuantity = customQty;
+    if (customCapital && customCapital > 0) this.settings.startingCapitalINR = customCapital;
+    else this.settings.startingCapitalINR = 100000.00;
+    if (customTargetProfitINR && customTargetProfitINR > 0) {
+      this.settings.profitTargetINR = customTargetProfitINR;
+      const qty = this.settings.contractQuantity || 0.10;
+      const usdInr = this.settings.usdInrRate || 102.00;
+      const curRate = rateFeed.getCurrentRate('BTCUSDT') || { price: 82000.00 };
+      const curPrice = Number(curRate.price || 82000.00);
+      const targetUSD = customTargetProfitINR / usdInr;
+      const entryFeeUSD = curPrice * qty * (this.settings.takerFeeRate || 0.00075);
+      const slippageUSD = (this.settings.slippageBufferINR || 5.0) / usdInr;
+      const gstMul = 1 + (this.settings.gstRate || 0.18);
+      const makerFeeMul = (this.settings.makerFeeRate || 0.0002) * gstMul;
+      const calcBuyTarget = ((targetUSD + (entryFeeUSD * gstMul) + slippageUSD + (curPrice * qty)) / (qty * (1 - makerFeeMul)));
+      const requiredMoveUSD = Number((calcBuyTarget - curPrice).toFixed(2));
+      this.settings.profitTargetMove = requiredMoveUSD;
+      this.settings.buyTargetMove = requiredMoveUSD;
+      this.settings.sellTargetMove = requiredMoveUSD;
+    }
+    if (customLev && customLev > 0) this.settings.leverage = customLev;
+    if (customGridDiff !== undefined && customGridDiff !== null && !isNaN(customGridDiff)) {
+      this.settings.gridSpacing = Number(customGridDiff);
+      this.settings.priceBucketSize = Number(customGridDiff);
+    } else {
+      this.settings.gridSpacing = 0.00;
+      this.settings.priceBucketSize = 0.00;
+    }
+    if (customMaxPairs !== undefined && customMaxPairs !== null && !isNaN(customMaxPairs) && customMaxPairs !== '') {
+      this.settings.maxActivePairs = Number(customMaxPairs);
+    } else {
+      this.settings.maxActivePairs = 10;
+    }
+    if (customBasketTarget && customBasketTarget > 0) this.settings.basketProfitTargetINR = customBasketTarget;
+    if (customStopLoss && customStopLoss > 0) {
+      this.settings.stopLossINR = customStopLoss;
+      const qty = this.settings.contractQuantity || 0.10;
+      const usdInr = this.settings.usdInrRate || 102.00;
+      this.settings.stopLossMove = Number(((customStopLoss / usdInr) / qty).toFixed(2));
+    }
+
+    this.pairs = [];
+    this.closedPositions = [];
+    this.punarjanmCycles = [];
+    this.punarjanmCount = 0;
+    this.pairCounter = 0;
+    this.processedRates.clear();
+    this.activePriceLevels.clear();
+    this.engineStartedAt = new Date().toISOString();
+    this.lastResetTime = new Date().toISOString();
+    this.isEngineRunning = true;
+    this.engineStatus = 'RUNNING';
+    this.pauseReason = '';
+
+    // Spawn ONLY the 1st initial pair at current live market rate (User: "Hame market ki live rate par pahla pair lena hai")
+    const cur = rateFeed.getCurrentRate('BTCUSDT') || { price: 82000.00, usdInrRate: 102.00 };
+    const price = Number(cur.price || 82000.00);
+    const usdInr = Number(cur.usdInrRate || 102.00);
+
+    const firstPair = this.createNewPair('BTCUSDT', price, Date.now(), usdInr);
+
+    this.saveState();
+    return {
+      success: true,
+      message: `BTC Simulator reset complete with Capital ₹${Math.round(this.settings.startingCapitalINR).toLocaleString('en-IN')}, Lot: ${this.settings.contractQuantity} BTC, Exit Profit: ₹${Math.round(this.settings.profitTargetINR || 1000).toLocaleString('en-IN')}, Harvest: ₹${Math.round(this.settings.basketProfitTargetINR || 3000).toLocaleString('en-IN')}, Loss: ₹${Math.round(this.settings.stopLossINR || 500).toLocaleString('en-IN')}, Lev: ${this.settings.leverage}x. Initial 1st pair taken at live rate $${price.toFixed(2)}. Subsequent pairs will be taken automatically as live rate changes to vacant levels (up to ${this.settings.maxActivePairs} pairs).`,
+      pairs: [firstPair],
+      initialPair: firstPair
+    };
+  }
+
+  getDashboardMetrics() {
+    const rateInfo = rateFeed.getCurrentRate('BTCUSDT') || { price: 82000.00, markPrice: 82000.00, usdInrRate: 102.00 };
+    const livePrice = Number(rateInfo.price || 82000.00);
+    const usdInr = this.settings.usdInrRate || 102.00;
+
+    // Realized Closed Trades
+    let totalRealizedINR = 0;
+    let totalRealizedUSD = 0;
+    let winCount = 0;
+    let lossCount = 0;
+    let tradingFeesINR = 0;
+    let slippageINR = 0;
+
+    for (const cp of this.closedPositions) {
+      const net = cp.netProfitINR !== undefined ? cp.netProfitINR : ((cp.grossProfitINR || 0) - (cp.totalChargesINR || 0));
+      totalRealizedINR += net;
+      totalRealizedUSD += (cp.netProfitUSD || net / usdInr);
+      if (net >= 0) winCount++; else lossCount++;
+      tradingFeesINR += ((cp.entryFeeUSD || 0) + (cp.exitFeeUSD || 0) + (cp.gstUSD || 0)) * usdInr;
+      slippageINR += (cp.slippageUSD || 0) * usdInr;
+    }
+
+    // Floating summary
+    const floating = this.calculateFloatingSummary(livePrice);
+
+    // Wallet accounting (strictly avoiding double-counting)
+    const startingCapital = Number(this.settings.startingCapitalINR || 100000.00);
+    const usedMarginINR = floating.dynamicMarginUsedINR;
+    const availableMarginINR = Math.max(0, startingCapital + totalRealizedINR - usedMarginINR);
+    const equityINR = startingCapital + totalRealizedINR + floating.floatingNetINR;
+
+    // Open pairs formatted for Pro Desk UI
+    const openPairsFormatted = this.pairs.filter(p => p.status !== 'CLOSED').map(p => {
+      const b = p.buyPosition;
+      const s = p.sellPosition;
+
+      let bPnlUSD = 0, bPnlINR = 0;
+      if (b && b.status === 'OPEN') {
+        bPnlUSD = (livePrice - b.entryPrice) * (b.quantity || this.settings.contractQuantity);
+        bPnlINR = bPnlUSD * usdInr;
+      }
+
+      let sPnlUSD = 0, sPnlINR = 0;
+      if (s && s.status === 'OPEN') {
+        sPnlUSD = (s.entryPrice - livePrice) * (s.quantity || this.settings.contractQuantity);
+        sPnlINR = sPnlUSD * usdInr;
+      }
+
+      return {
+        pairId: p.pairId,
+        status: p.status,
+        entryPrice: p.entryPrice,
+        createdAt: p.createdAt,
+        netPairPnlUSD: Number((bPnlUSD + sPnlUSD).toFixed(4)),
+        netPairPnlINR: Number((bPnlINR + sPnlINR).toFixed(2)),
+        buy: b ? {
+          positionId: b.positionId,
+          status: b.status,
+          direction: 'BUY',
+          entryPrice: b.entryPrice,
+          currentPrice: livePrice,
+          targetPrice: b.targetExitPrice,
+          distToTarget: Number((b.targetExitPrice - livePrice).toFixed(2)),
+          quantity: b.quantity,
+          marginINR: b.marginINR,
+          liquidationPrice: b.liquidationPrice,
+          floatingPnlUSD: Number(bPnlUSD.toFixed(4)),
+          floatingPnlINR: Number(bPnlINR.toFixed(2))
+        } : null,
+        sell: s ? {
+          positionId: s.positionId,
+          status: s.status,
+          direction: 'SELL',
+          entryPrice: s.entryPrice,
+          currentPrice: livePrice,
+          targetPrice: s.targetExitPrice,
+          distToTarget: Number((livePrice - s.targetExitPrice).toFixed(2)),
+          quantity: s.quantity,
+          marginINR: s.marginINR,
+          liquidationPrice: s.liquidationPrice,
+          floatingPnlUSD: Number(sPnlUSD.toFixed(4)),
+          floatingPnlINR: Number(sPnlINR.toFixed(2))
+        } : null
+      };
+    });
+
+    const targetProfitINR = this.settings.profitTargetINR || 1000.00;
+    const stopLossINR = this.settings.stopLossINR || 500.00;
+    const qty = this.settings.contractQuantity || 0.10;
+    const targetUSD = targetProfitINR / usdInr;
+    const entryFeeUSD = livePrice * qty * (this.settings.takerFeeRate || 0.00075);
+    const slippageUSD = (this.settings.slippageBufferINR || 5.0) / usdInr;
+    const gstMul = 1 + (this.settings.gstRate || 0.18);
+    const makerFeeMul = (this.settings.makerFeeRate || 0.0002) * gstMul;
+
+    const buyTargetRate = Number(((targetUSD + (entryFeeUSD * gstMul) + slippageUSD + (livePrice * qty)) / (qty * (1 - makerFeeMul))).toFixed(2));
+    const sellTargetRate = Number((((livePrice * qty) - targetUSD - (entryFeeUSD * gstMul) - slippageUSD) / (qty * (1 + makerFeeMul))).toFixed(2));
+
+    return {
+      success: true,
+      timestamp: new Date().toISOString(),
+      rate: {
+        symbol: 'BTCUSDT',
+        price: livePrice,
+        markPrice: rateInfo.markPrice || livePrice,
+        indexPrice: rateInfo.indexPrice || livePrice,
+        usdInrRate: usdInr,
+        updatedAt: rateInfo.receivedTime ? new Date(rateInfo.receivedTime).toISOString() : new Date().toISOString()
+      },
+      wallet: {
+        availableMarginINR: Number(availableMarginINR.toFixed(2)),
+        availableMarginUSD: Number((availableMarginINR / usdInr).toFixed(2)),
+        totalAmountInHandINR: Number(availableMarginINR.toFixed(2)),
+        lockedMarginINR: Number(usedMarginINR.toFixed(2)),
+        lockedMarginUSD: Number((usedMarginINR / usdInr).toFixed(2)),
+        pairCostINR: Number(usedMarginINR.toFixed(2)),
+        equityINR: Number(equityINR.toFixed(2)),
+        equityUSD: Number((equityINR / usdInr).toFixed(2)),
+        startingCapitalINR: startingCapital,
+        usdInrRate: usdInr
+      },
+      engine: {
+        status: this.engineStatus,
+        isEngineRunning: this.isEngineRunning,
+        pauseReason: this.pauseReason,
+        pairsCount: openPairsFormatted.length,
+        contractQuantity: this.settings.contractQuantity,
+        profitTargetINR: targetProfitINR,
+        stopLossINR: stopLossINR,
+        profitTargetMove: Number((buyTargetRate - livePrice).toFixed(2)),
+        buyTargetRate,
+        sellTargetRate,
+        leverage: this.settings.leverage,
+        gridSpacing: this.settings.gridSpacing,
+        maxActivePairs: this.settings.maxActivePairs,
+        activeBuyCount: openPairsFormatted.filter(p => p.buy && p.buy.status === 'OPEN').length,
+        activeSellCount: openPairsFormatted.filter(p => p.sell && p.sell.status === 'OPEN').length,
+        pairs: openPairsFormatted
+      },
+      punarjanm: {
+        count: this.punarjanmCount,
+        currentCycleName: `Punarjanm ${this.punarjanmCount + 1}`,
+        lastCycleName: this.punarjanmCount > 0 ? `Punarjanm ${this.punarjanmCount}` : 'None',
+        basketTargetINR: this.settings.basketProfitTargetINR || 3000,
+        cycleRealizedProfitINR: this.getCycleRealizedProfitINR(),
+        autoEnabled: this.settings.autoPunarjanmEnabled,
+        lastSummary: this.lastPunarjanmSummary,
+        cycles: this.punarjanmCycles.slice(0, 10)
+      },
+      pnl: {
+        totalRealizedINR: Number(totalRealizedINR.toFixed(2)),
+        totalRealizedUSD: Number(totalRealizedUSD.toFixed(2)),
+        realizedNetINR: Number(totalRealizedINR.toFixed(2)),
+        realizedNetUSD: Number(totalRealizedUSD.toFixed(2)),
+        totalFloatingINR: floating.floatingNetINR,
+        totalFloatingUSD: floating.floatingNetUSD,
+        winCount,
+        lossCount,
+        closedTradesCount: this.closedPositions.length,
+        tradingFeesINR: Number(tradingFeesINR.toFixed(2)),
+        slippageINR: Number(slippageINR.toFixed(2))
+      },
+      closedPositions: this.closedPositions.slice(0, 500)
+    };
+  }
+}
+
+module.exports = new BtcEngine();

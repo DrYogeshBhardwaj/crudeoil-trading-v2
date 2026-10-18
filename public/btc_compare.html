@@ -1,0 +1,1284 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>BTC Quantity & Risk Lab — 0.02 BTC vs 0.06 BTC Live & Backtest Comparison</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Outfit:wght@500;600;700;800;900&family=JetBrains+Mono:wght@400;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg-dark: #070a12;
+      --bg-card: #0d1322;
+      --bg-card-alt: #121a2f;
+      --border-subtle: rgba(255, 255, 255, 0.08);
+      --border-focus: rgba(245, 158, 11, 0.5);
+      --text-main: #f8fafc;
+      --text-muted: #94a3b8;
+      --gold-primary: #f59e0b;
+      --gold-bright: #fbbf24;
+      --gold-glow: rgba(245, 158, 11, 0.25);
+      --emerald: #10b981;
+      --emerald-glow: rgba(16, 185, 129, 0.2);
+      --ruby: #ef4444;
+      --ruby-glow: rgba(239, 68, 68, 0.2);
+      --cyan: #06b6d4;
+      --font-heading: 'Outfit', sans-serif;
+      --font-body: 'Inter', sans-serif;
+      --font-mono: 'JetBrains Mono', monospace;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: var(--bg-dark);
+      color: var(--text-main);
+      font-family: var(--font-body);
+      min-height: 100vh;
+      padding: 16px 24px 60px;
+      line-height: 1.5;
+      background-image: 
+        radial-gradient(ellipse at 20% 0%, rgba(245, 158, 11, 0.08) 0%, transparent 60%),
+        radial-gradient(ellipse at 80% 10%, rgba(6, 182, 212, 0.06) 0%, transparent 50%),
+        radial-gradient(ellipse at 50% 100%, rgba(16, 185, 129, 0.05) 0%, transparent 60%);
+    }
+
+    /* Top Header */
+    header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 16px;
+      padding-bottom: 20px;
+      border-bottom: 1px solid var(--border-subtle);
+      margin-bottom: 24px;
+    }
+
+    .brand-left {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+
+    .brand-icon {
+      width: 48px;
+      height: 48px;
+      border-radius: 12px;
+      background: linear-gradient(135deg, rgba(245, 158, 11, 0.25), rgba(6, 182, 212, 0.25));
+      border: 1px solid var(--gold-bright);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 24px;
+      box-shadow: 0 0 20px var(--gold-glow);
+    }
+
+    .brand-text h1 {
+      font-family: var(--font-heading);
+      font-size: 20px;
+      font-weight: 800;
+      letter-spacing: -0.01em;
+      background: linear-gradient(135deg, #ffffff 40%, var(--gold-bright) 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .brand-text p {
+      font-size: 12px;
+      color: var(--text-muted);
+    }
+
+    .nav-links {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+    }
+
+    .nav-btn {
+      text-decoration: none;
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--text-muted);
+      padding: 8px 16px;
+      border-radius: 8px;
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid var(--border-subtle);
+      transition: all 0.2s ease;
+    }
+
+    .nav-btn:hover, .nav-btn.active {
+      color: var(--text-main);
+      background: rgba(245, 158, 11, 0.15);
+      border-color: var(--gold-bright);
+    }
+
+    /* Ticker Banner */
+    .ticker-bar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 12px;
+      background: rgba(255, 255, 255, 0.02);
+      border: 1px solid var(--border-subtle);
+      border-radius: 12px;
+      padding: 12px 20px;
+      margin-bottom: 24px;
+    }
+
+    .ticker-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 13px;
+    }
+
+    .ticker-label {
+      color: var(--text-muted);
+      font-weight: 600;
+      text-transform: uppercase;
+      font-size: 11px;
+    }
+
+    .ticker-val {
+      font-family: var(--font-mono);
+      font-weight: 700;
+      color: var(--text-main);
+    }
+
+    /* Configuration Panel */
+    .config-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border-subtle);
+      border-radius: 16px;
+      padding: 24px;
+      margin-bottom: 28px;
+      box-shadow: 0 8px 30px rgba(0, 0, 0, 0.35);
+    }
+
+    .section-title {
+      font-family: var(--font-heading);
+      font-size: 16px;
+      font-weight: 800;
+      letter-spacing: -0.01em;
+      margin-bottom: 18px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      color: var(--gold-bright);
+    }
+
+    .form-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 16px;
+      margin-bottom: 20px;
+    }
+
+    .form-group {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .form-label {
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.03em;
+    }
+
+    .form-input {
+      background: rgba(0, 0, 0, 0.35);
+      border: 1px solid var(--border-subtle);
+      color: var(--text-main);
+      padding: 10px 14px;
+      border-radius: 8px;
+      font-family: var(--font-mono);
+      font-size: 13px;
+      outline: none;
+      transition: all 0.2s ease;
+    }
+
+    .form-input:focus {
+      border-color: var(--gold-bright);
+      box-shadow: 0 0 10px var(--gold-glow);
+    }
+
+    /* Preset Quick Buttons */
+    .preset-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-bottom: 20px;
+      align-items: center;
+    }
+
+    .preset-label {
+      font-size: 12px;
+      font-weight: 700;
+      color: var(--text-muted);
+      margin-right: 4px;
+    }
+
+    .preset-btn {
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid var(--border-subtle);
+      color: var(--text-muted);
+      font-size: 12px;
+      font-weight: 600;
+      padding: 6px 14px;
+      border-radius: 20px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+
+    .preset-btn:hover {
+      background: rgba(255, 255, 255, 0.08);
+      color: var(--text-main);
+      border-color: rgba(255, 255, 255, 0.2);
+    }
+
+    .preset-btn.active {
+      background: linear-gradient(135deg, rgba(245, 158, 11, 0.25), rgba(6, 182, 212, 0.15));
+      border-color: var(--gold-bright);
+      color: var(--gold-bright);
+      font-weight: 700;
+    }
+
+    .btn-run {
+      background: linear-gradient(135deg, #f59e0b, #d97706);
+      color: #000;
+      border: none;
+      font-family: var(--font-heading);
+      font-size: 14px;
+      font-weight: 800;
+      padding: 12px 28px;
+      border-radius: 10px;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      box-shadow: 0 0 20px var(--gold-glow);
+      transition: all 0.2s ease;
+    }
+
+    .btn-run:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 24px rgba(245, 158, 11, 0.4);
+    }
+
+    .btn-run:active { transform: translateY(0); }
+
+    /* Comparison Dual Columns */
+    .compare-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 24px;
+      margin-bottom: 32px;
+    }
+
+    @media (max-width: 900px) {
+      .compare-grid { grid-template-columns: 1fr; }
+    }
+
+    .card-side {
+      background: var(--bg-card);
+      border: 1px solid var(--border-subtle);
+      border-radius: 16px;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      position: relative;
+    }
+
+    .card-side.recommended {
+      border-color: rgba(16, 185, 129, 0.4);
+      box-shadow: 0 0 25px rgba(16, 185, 129, 0.1);
+    }
+
+    .card-side.aggressive {
+      border-color: rgba(239, 68, 68, 0.4);
+      box-shadow: 0 0 25px rgba(239, 68, 68, 0.1);
+    }
+
+    .card-header {
+      padding: 18px 24px;
+      background: rgba(255, 255, 255, 0.02);
+      border-bottom: 1px solid var(--border-subtle);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .card-header h2 {
+      font-family: var(--font-heading);
+      font-size: 18px;
+      font-weight: 800;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .badge-status {
+      font-size: 11px;
+      font-weight: 800;
+      padding: 4px 10px;
+      border-radius: 20px;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+
+    .badge-safe {
+      background: rgba(16, 185, 129, 0.15);
+      color: var(--emerald);
+      border: 1px solid rgba(16, 185, 129, 0.3);
+    }
+
+    .badge-danger {
+      background: rgba(239, 68, 68, 0.15);
+      color: var(--ruby);
+      border: 1px solid rgba(239, 68, 68, 0.3);
+    }
+
+    .card-body {
+      padding: 24px;
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+      flex: 1;
+    }
+
+    /* Sub-section within card */
+    .sub-section {
+      background: rgba(0, 0, 0, 0.25);
+      border: 1px solid var(--border-subtle);
+      border-radius: 12px;
+      padding: 16px;
+    }
+
+    .sub-section h3 {
+      font-size: 12px;
+      font-weight: 800;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      margin-bottom: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .metric-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 6px 0;
+      font-size: 13px;
+      border-bottom: 1px dashed rgba(255, 255, 255, 0.05);
+    }
+
+    .metric-row:last-child { border-bottom: none; }
+
+    .metric-name { color: var(--text-muted); }
+    .metric-val {
+      font-family: var(--font-mono);
+      font-weight: 700;
+    }
+
+    .text-emerald { color: var(--emerald); }
+    .text-ruby { color: var(--ruby); }
+    .text-gold { color: var(--gold-bright); }
+    .text-cyan { color: var(--cyan); }
+
+    /* Verdict Box */
+    .verdict-box {
+      border-radius: 10px;
+      padding: 14px 16px;
+      font-size: 12px;
+      line-height: 1.5;
+    }
+
+    .verdict-box.safe {
+      background: rgba(16, 185, 129, 0.08);
+      border: 1px solid rgba(16, 185, 129, 0.25);
+      color: #d1fae5;
+    }
+
+    .verdict-box.danger {
+      background: rgba(239, 68, 68, 0.08);
+      border: 1px solid rgba(239, 68, 68, 0.25);
+      color: #fee2e2;
+    }
+
+    /* Comparative Master Table */
+    .table-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border-subtle);
+      border-radius: 16px;
+      padding: 24px;
+      margin-bottom: 30px;
+      overflow-x: auto;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13px;
+      text-align: left;
+    }
+
+    th {
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      color: var(--text-muted);
+      padding: 12px 16px;
+      border-bottom: 1px solid var(--border-subtle);
+      background: rgba(255, 255, 255, 0.02);
+    }
+
+    td {
+      padding: 14px 16px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+      font-family: var(--font-mono);
+    }
+
+    tr:hover td { background: rgba(255, 255, 255, 0.02); }
+
+    .td-feature {
+      font-family: var(--font-body);
+      font-weight: 600;
+      color: var(--text-main);
+    }
+
+    /* Explanation Banner */
+    .banner-hindi {
+      background: linear-gradient(135deg, rgba(245, 158, 11, 0.1), rgba(6, 182, 212, 0.08));
+      border: 1px solid rgba(245, 158, 11, 0.3);
+      border-radius: 14px;
+      padding: 20px 24px;
+      margin-bottom: 32px;
+      display: flex;
+      gap: 16px;
+      align-items: flex-start;
+    }
+
+    .banner-icon { font-size: 28px; line-height: 1; }
+    .banner-content h4 {
+      font-family: var(--font-heading);
+      font-size: 15px;
+      font-weight: 800;
+      color: var(--gold-bright);
+      margin-bottom: 6px;
+    }
+    .banner-content p {
+      font-size: 13px;
+      color: #e2e8f0;
+      line-height: 1.6;
+    }
+
+    /* Loading Spinner */
+    .spinner {
+      display: inline-block;
+      width: 16px;
+      height: 16px;
+      border: 2px solid rgba(0,0,0,0.3);
+      border-top-color: #000;
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* Big Top R/G Scoreboard */
+    .top-hero-scoreboard {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 24px;
+      margin-bottom: 28px;
+    }
+
+    @media (max-width: 900px) {
+      .top-hero-scoreboard { grid-template-columns: 1fr; }
+    }
+
+    .hero-score-card {
+      background: rgba(13, 19, 34, 0.95);
+      border: 2px solid rgba(255, 255, 255, 0.12);
+      border-radius: 18px;
+      padding: 24px;
+      text-align: center;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+      position: relative;
+      transition: all 0.3s ease;
+    }
+
+    .hero-score-card.green-glow {
+      border-color: #10b981;
+      background: radial-gradient(ellipse at center top, rgba(16, 185, 129, 0.18) 0%, rgba(13, 19, 34, 0.95) 75%);
+      box-shadow: 0 0 35px rgba(16, 185, 129, 0.3);
+    }
+
+    .hero-score-card.red-glow {
+      border-color: #ef4444;
+      background: radial-gradient(ellipse at center top, rgba(239, 68, 68, 0.18) 0%, rgba(13, 19, 34, 0.95) 75%);
+      box-shadow: 0 0 35px rgba(239, 68, 68, 0.3);
+    }
+
+    .hero-title-bar {
+      font-family: var(--font-heading);
+      font-size: 14px;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: var(--text-muted);
+      margin-bottom: 10px;
+    }
+
+    .hero-val-big {
+      font-family: var(--font-mono);
+      font-size: 40px;
+      font-weight: 900;
+      line-height: 1.15;
+      margin-bottom: 10px;
+      letter-spacing: -0.02em;
+    }
+
+    .hero-val-sub {
+      font-family: var(--font-mono);
+      font-size: 20px;
+      font-weight: 800;
+      margin-bottom: 14px;
+    }
+
+    .hero-pill-badge {
+      display: inline-block;
+      font-size: 13px;
+      font-weight: 800;
+      padding: 6px 16px;
+      border-radius: 20px;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+
+    .quick-qty-btn {
+      background: rgba(255, 255, 255, 0.06);
+      border: 1px solid var(--border-subtle);
+      color: var(--text-muted);
+      padding: 3px 8px;
+      border-radius: 6px;
+      font-size: 11px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+
+    .quick-qty-btn:hover {
+      background: rgba(255, 255, 255, 0.15);
+      color: var(--text-main);
+      border-color: var(--gold-bright);
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Top Header -->
+  <header>
+    <div class="brand-left">
+      <div class="brand-icon">⚖️</div>
+      <div class="brand-text">
+        <h1>BTC LOT SIZE & MARGIN RISK LAB</h1>
+        <p>Mathematical Proof: 0.02 BTC vs 0.06 BTC on Real Mudrex Wallet (₹87,375.93)</p>
+      </div>
+    </div>
+    <div class="nav-links">
+      <a href="/BTC-Live-Mudrex-Pro" class="nav-btn">🚀 Live Trading Desk</a>
+      <a href="/BTC-Study" class="nav-btn">📈 BTC Study & Replay</a>
+      <a href="/BTC-Compare" class="nav-btn active">⚖️ 0.02 vs 0.06 Lab</a>
+    </div>
+  </header>
+
+  <!-- Live Market Ticker -->
+  <div class="ticker-bar">
+    <div class="ticker-item">
+      <span class="ticker-label">Live BTC Price:</span>
+      <span class="ticker-val text-gold" id="tickerBtcPrice">$92,168.80</span>
+    </div>
+    <div class="ticker-item">
+      <span class="ticker-label">USD / INR Rate:</span>
+      <span class="ticker-val" id="tickerUsdInr">₹102.00</span>
+    </div>
+    <div class="ticker-item">
+      <span class="ticker-label">Wallet Available Capital:</span>
+      <span class="ticker-val text-emerald" id="tickerCapital">₹87,375.93</span>
+    </div>
+    <div class="ticker-item">
+      <span class="ticker-label">Leverage Mode:</span>
+      <span class="ticker-val text-cyan">15x Cross Margin</span>
+    </div>
+  </div>
+
+  <!-- Configuration & Replay Window Control -->
+  <div class="config-card">
+    <div class="section-title">
+      <span>⚙️ PARAMETER & REPLAY WINDOW CONFIGURATION</span>
+    </div>
+
+    <!-- Quick Timeframe Presets -->
+    <div class="preset-row">
+      <span class="preset-label">Timeframe Preset:</span>
+      <button type="button" class="preset-btn active" onclick="setTimeframePreset('short')">⚡ 11 Jan 23:00 - 12 Jan 02:00 (3h Pump)</button>
+      <button type="button" class="preset-btn" onclick="setTimeframePreset('swing')">🌊 11 Jan - 14 Jan (3-Day Volatility)</button>
+      <button type="button" class="preset-btn" onclick="setTimeframePreset('crash')">📉 11 Jan - 11 Feb (1-Month Crash)</button>
+      <button type="button" class="preset-btn" onclick="setTimeframePreset('custom')">📅 Custom Date</button>
+    </div>
+
+    <div class="form-grid" style="grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));">
+      <div class="form-group">
+        <label class="form-label" for="inputQty1">BTC Value 1 (Lot)</label>
+        <input type="number" id="inputQty1" class="form-input" value="0.02" step="0.01" min="0.001" oninput="recalcLiveMetrics()">
+        <div style="display: flex; gap: 4px; margin-top: 4px;">
+          <button type="button" class="quick-qty-btn" onclick="setQty(1, 0.01)">0.01</button>
+          <button type="button" class="quick-qty-btn" onclick="setQty(1, 0.02)">0.02</button>
+          <button type="button" class="quick-qty-btn" onclick="setQty(1, 0.03)">0.03</button>
+          <button type="button" class="quick-qty-btn" onclick="setQty(1, 0.04)">0.04</button>
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label" for="inputQty2">BTC Value 2 (Lot)</label>
+        <input type="number" id="inputQty2" class="form-input" value="0.06" step="0.01" min="0.001" oninput="recalcLiveMetrics()">
+        <div style="display: flex; gap: 4px; margin-top: 4px;">
+          <button type="button" class="quick-qty-btn" onclick="setQty(2, 0.04)">0.04</button>
+          <button type="button" class="quick-qty-btn" onclick="setQty(2, 0.06)">0.06</button>
+          <button type="button" class="quick-qty-btn" onclick="setQty(2, 0.08)">0.08</button>
+          <button type="button" class="quick-qty-btn" onclick="setQty(2, 0.10)">0.10</button>
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label" for="inputCapital">Wallet Capital (INR)</label>
+        <input type="number" id="inputCapital" class="form-input" value="87375" step="1000" oninput="recalcLiveMetrics()">
+      </div>
+      <div class="form-group">
+        <label class="form-label" for="inputLeverage">Leverage</label>
+        <input type="number" id="inputLeverage" class="form-input" value="15" min="1" max="50" oninput="recalcLiveMetrics()">
+      </div>
+      <div class="form-group">
+        <label class="form-label" for="inputMaxPairs">Max Pairs Limit</label>
+        <input type="number" id="inputMaxPairs" class="form-input" value="1" min="1" max="10" oninput="recalcLiveMetrics()">
+      </div>
+      <div class="form-group">
+        <label class="form-label" for="inputTargetProfit">Exit Target (INR)</label>
+        <input type="number" id="inputTargetProfit" class="form-input" value="1000" step="100" oninput="recalcLiveMetrics()">
+      </div>
+      <div class="form-group">
+        <label class="form-label" for="inputHarvestTarget">Punarjanm Harvest (INR)</label>
+        <input type="number" id="inputHarvestTarget" class="form-input" value="2000" step="500">
+      </div>
+    </div>
+
+    <div class="form-grid" id="customDateRow" style="border-top: 1px dashed var(--border-subtle); padding-top: 16px;">
+      <div class="form-group">
+        <label class="form-label" for="inputFromDate">From Date</label>
+        <input type="date" id="inputFromDate" class="form-input" value="2026-10-16">
+      </div>
+      <div class="form-group">
+        <label class="form-label" for="inputFromHour">From Hour (0-23)</label>
+        <input type="number" id="inputFromHour" class="form-input" value="0" min="0" max="23">
+      </div>
+      <div class="form-group">
+        <label class="form-label" for="inputToDate">To Date</label>
+        <input type="date" id="inputToDate" class="form-input" value="2026-10-17">
+      </div>
+      <div class="form-group">
+        <label class="form-label" for="inputToHour">To Hour (0-23)</label>
+        <input type="number" id="inputToHour" class="form-input" value="23" min="0" max="23">
+      </div>
+      <div class="form-group" style="justify-content: flex-end;">
+        <label style="display: inline-flex; align-items: center; gap: 8px; cursor: pointer; color: #38bdf8; font-size: 13px; font-weight: 700; background: rgba(56, 189, 248, 0.1); border: 1px solid rgba(56, 189, 248, 0.3); padding: 8px 12px; border-radius: 8px; margin-bottom: 6px;">
+          <input type="checkbox" id="chkAutoHaisiyat" checked style="width: 17px; height: 17px; accent-color: #38bdf8;">
+          <span>⚡ Auto Haisiyat Scaling (जैसे ही हैसियत बने, Auto 2nd Pair चालू)</span>
+        </label>
+        <button type="button" class="btn-run" id="btnRunReplay" onclick="runComparisonReplay()">
+          <span id="btnRunText">▶ RUN HISTORICAL REPLAY</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- TOP BIG R/G MAIN OUTPUT SCOREBOARD (ONE-GLANCE CLARITY) -->
+  <div class="top-hero-scoreboard">
+    <!-- Value 1 Hero Card -->
+    <div class="hero-score-card green-glow" id="heroCard1">
+      <div class="hero-title-bar">
+        <span>🛡️ BTC VALUE 1 (<span id="lblQty1">0.02</span> BTC) — PURE NET OUTPUT</span>
+      </div>
+      <div style="font-size: 12px; color: #cbd5e1; font-weight: 800; letter-spacing: 0.04em; margin-bottom: 6px;">
+        SHUDDH IN-HAND MUNAAFA (CHARGES + 10% BUFFER KATNE KE BAAD)
+      </div>
+      <div class="hero-val-big text-emerald" id="heroEquity1">+₹655 (+0.7%) 🟢 PROFIT</div>
+      <div class="hero-val-sub text-emerald" id="heroRealized1">
+        💰 <strong>IN-HAND WALLET: ₹88,030</strong> <span style="font-size: 13px; color: #94a3b8; font-weight: 500;">(Charges -₹1,441 Deducted)</span>
+      </div>
+      <div style="display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-top: 6px;">
+        <span class="hero-pill-badge badge-safe" id="heroStatus1">🟢 100% SAFE (Fits in ₹87K Wallet)</span>
+        <span class="hero-pill-badge" id="haisiyatBadge1" style="background: rgba(56, 189, 248, 0.15); color: #38bdf8; border: 1px solid rgba(56, 189, 248, 0.3);">⚖️ हैसियत: 1 Pair Active</span>
+      </div>
+      <div id="haisiyatText1" style="font-size: 11px; color: #94a3b8; margin-top: 6px; font-weight: 600;">
+        वॉलेट ₹87K में 2 पेयर की सुरक्षित हैसियत मौजूद है।
+      </div>
+    </div>
+
+    <!-- Value 2 Hero Card -->
+    <div class="hero-score-card green-glow" id="heroCard2">
+      <div class="hero-title-bar">
+        <span>⚡ BTC VALUE 2 (<span id="lblQty2">0.06</span> BTC) — PURE NET OUTPUT</span>
+      </div>
+      <div style="font-size: 12px; color: #cbd5e1; font-weight: 800; letter-spacing: 0.04em; margin-bottom: 6px;">
+        SHUDDH IN-HAND MUNAAFA (CHARGES + 10% BUFFER KATNE KE BAAD)
+      </div>
+      <div class="hero-val-big text-emerald" id="heroEquity2">+₹2,629 (+3.0%) 🟢 PROFIT</div>
+      <div class="hero-val-sub text-emerald" id="heroRealized2">
+        💰 <strong>IN-HAND WALLET: ₹90,004</strong> <span style="font-size: 13px; color: #94a3b8; font-weight: 500;">(Charges -₹9,877 Deducted)</span>
+      </div>
+      <div style="display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-top: 6px;">
+        <span class="hero-pill-badge badge-safe" id="heroStatus2">🟢 1 PAIR SAFE (Fits in ₹87K Wallet)</span>
+        <span class="hero-pill-badge" id="haisiyatBadge2" style="background: rgba(245, 158, 11, 0.15); color: #fbbf24; border: 1px solid rgba(245, 158, 11, 0.3);">⏳ 2nd Pair Goal: ₹1,15,000</span>
+      </div>
+      <div id="haisiyatText2" style="font-size: 11px; color: #fbbf24; margin-top: 6px; font-weight: 600;">
+        हार्वेस्ट से बाकी पैसा बनते ही ऑटोमैटिक 2 Pair चालू हो जायेंगे।
+      </div>
+    </div>
+  </div>
+
+  <!-- Hindi Summary Callout -->
+  <div class="banner-hindi">
+    <div class="banner-icon">💡</div>
+    <div class="banner-content">
+      <h4>SEEDHI BAAT: BTC Value Badhane Par Kya Hota Hai?</h4>
+      <p>
+        <strong>1. Bada Lot (0.06 BTC):</strong> Target jaldi hit hota hai (BTC ko ₹1,000 net banane ke liye sirf ~$267 move chahiye). Output machine gun speed se aayega!<br>
+        <strong>2. Chhota Lot (0.02 BTC):</strong> Market swing me thoda lamba wait karega (~$594 move), lekin wallet 100% cool aur safe rahega.<br>
+        <strong>3. Golden Rule:</strong> Bada lot chalana ho toh <strong>Pairs Limit ko 1 ya 2</strong> par hi rakhein aur <strong>Harvest Target ₹2,000</strong> rakhein taaki profit turant pocket me lock ho jaye!
+      </p>
+    </div>
+  </div>
+
+  <!-- Side-by-Side Dual Comparison Cards -->
+  <div class="compare-grid">
+
+    <!-- Column 1: 0.02 BTC (Balanced Safe) -->
+    <div class="card-side recommended">
+      <div class="card-header">
+        <h2><span>🛡️ 0.02 BTC</span> <small style="font-size: 13px; color: var(--emerald); font-weight: 700;">(SAFE BALANCED)</small></h2>
+        <span class="badge-status badge-safe">🟢 Recommended for ₹87K</span>
+      </div>
+      <div class="card-body">
+        
+        <!-- Live Reality -->
+        <div class="sub-section">
+          <h3>🔴 LIVE MUDREX MARGIN & LIQUIDATION RISK</h3>
+          <div class="metric-row">
+            <span class="metric-name">Contract Notional (1 Leg):</span>
+            <span class="metric-val" id="c1_notional">$1,843 (₹1,88,024)</span>
+          </div>
+          <div class="metric-row">
+            <span class="metric-name">Margin Required (1 Pair = 2 Legs):</span>
+            <span class="metric-val text-gold" id="c1_pairMargin">₹25,070</span>
+          </div>
+          <div class="metric-row">
+            <span class="metric-name">Margin Required (3 Pairs):</span>
+            <span class="metric-val" id="c1_totalMargin">₹75,210</span>
+          </div>
+          <div class="metric-row">
+            <span class="metric-name">Max Pairs Wallet Afford (₹87,375):</span>
+            <span class="metric-val text-emerald" id="c1_maxPairs">3 Pairs (Comfortable)</span>
+          </div>
+          <div class="metric-row">
+            <span class="metric-name">Cash Buffer Remaining:</span>
+            <span class="metric-val text-emerald" id="c1_cashBuffer">+₹12,165</span>
+          </div>
+          <div class="metric-row">
+            <span class="metric-name">Adverse Drop Buffer (Before Wipeout):</span>
+            <span class="metric-val text-emerald" id="c1_adverseBuffer">$5,963 Drop</span>
+          </div>
+          <div class="metric-row">
+            <span class="metric-name">Target Move for +₹1,000 Net:</span>
+            <span class="metric-val text-cyan" id="c1_targetMove">~$594 Move</span>
+          </div>
+        </div>
+
+        <!-- Backtest Replay Output -->
+        <div class="sub-section">
+          <h3>📊 HISTORICAL CANDLE REPLAY RESULTS</h3>
+          <div class="metric-row">
+            <span class="metric-name">Closed Trades (Win Rate):</span>
+            <span class="metric-val text-emerald" id="c1_trades">11 Trades (100.0%)</span>
+          </div>
+          <div class="metric-row">
+            <span class="metric-name">Total Realized Net Profit:</span>
+            <span class="metric-val text-emerald" id="c1_realized">+₹11,000 Net INR</span>
+          </div>
+          <div class="metric-row">
+            <span class="metric-name">Punarjanm Harvest Cycles:</span>
+            <span class="metric-val text-gold" id="c1_harvest">1 Auto-Harvest</span>
+          </div>
+          <div class="metric-row">
+            <span class="metric-name">Total Mudrex Fees Paid:</span>
+            <span class="metric-val" id="c1_fees">₹2,276</span>
+          </div>
+          <div class="metric-row">
+            <span class="metric-name">Max Recorded Drawdown:</span>
+            <span class="metric-val text-emerald" id="c1_drawdown">₹37,520 (21.7%)</span>
+          </div>
+          <div class="metric-row">
+            <span class="metric-name">Final Account Equity:</span>
+            <span class="metric-val text-emerald" id="c1_equity">₹1,73,284 (+98.3%)</span>
+          </div>
+        </div>
+
+        <!-- Verdict -->
+        <div class="verdict-box safe">
+          ✅ <strong>SAFE TO RUN LIVE:</strong> 0.02 BTC aapke ₹87,375 wallet ko 100% protect karta hai. Drawdown ₹37K tak gaya jo wallet ke andar tha. Zero margin call risk.
+        </div>
+
+      </div>
+    </div>
+
+    <!-- Column 2: 0.06 BTC (Aggressive 3x) -->
+    <div class="card-side aggressive">
+      <div class="card-header">
+        <h2><span>⚡ 0.06 BTC</span> <small style="font-size: 13px; color: var(--ruby); font-weight: 700;">(HIGH LEVERAGE 3X)</small></h2>
+        <span class="badge-status badge-danger">🔴 High Risk / Deficit</span>
+      </div>
+      <div class="card-body">
+        
+        <!-- Live Reality -->
+        <div class="sub-section">
+          <h3>🔴 LIVE MUDREX MARGIN & LIQUIDATION RISK</h3>
+          <div class="metric-row">
+            <span class="metric-name">Contract Notional (1 Leg):</span>
+            <span class="metric-val" id="c2_notional">$5,530 (₹5,64,073)</span>
+          </div>
+          <div class="metric-row">
+            <span class="metric-name">Margin Required (1 Pair = 2 Legs):</span>
+            <span class="metric-val text-ruby" id="c2_pairMargin">₹75,210</span>
+          </div>
+          <div class="metric-row">
+            <span class="metric-name">Margin Required (3 Pairs):</span>
+            <span class="metric-val text-ruby" id="c2_totalMargin">₹2,25,629</span>
+          </div>
+          <div class="metric-row">
+            <span class="metric-name">Max Pairs Wallet Afford (₹87,375):</span>
+            <span class="metric-val text-ruby" id="c2_maxPairs">1 Pair ONLY (Cannot do 3)</span>
+          </div>
+          <div class="metric-row">
+            <span class="metric-name">Cash Buffer Remaining (If 3 Pairs):</span>
+            <span class="metric-val text-ruby" id="c2_cashBuffer">-₹1,38,254 (DEFICIT)</span>
+          </div>
+          <div class="metric-row">
+            <span class="metric-name">Adverse Drop Buffer (Before Wipeout):</span>
+            <span class="metric-val text-ruby" id="c2_adverseBuffer">$0 (Immediate Liquidation)</span>
+          </div>
+          <div class="metric-row">
+            <span class="metric-name">Target Move for +₹1,000 Net:</span>
+            <span class="metric-val text-cyan" id="c2_targetMove">~$267 Move (Fast Hit!)</span>
+          </div>
+        </div>
+
+        <!-- Backtest Replay Output -->
+        <div class="sub-section">
+          <h3>📊 HISTORICAL CANDLE REPLAY RESULTS</h3>
+          <div class="metric-row">
+            <span class="metric-name">Closed Trades (Win Rate):</span>
+            <span class="metric-val text-emerald" id="c2_trades">21 Trades (100.0%)</span>
+          </div>
+          <div class="metric-row">
+            <span class="metric-name">Total Realized Net Profit:</span>
+            <span class="metric-val text-emerald" id="c2_realized">+₹21,000 Net INR</span>
+          </div>
+          <div class="metric-row">
+            <span class="metric-name">Punarjanm Harvest Cycles:</span>
+            <span class="metric-val" id="c2_harvest">0 Harvest</span>
+          </div>
+          <div class="metric-row">
+            <span class="metric-name">Total Mudrex Fees Paid:</span>
+            <span class="metric-val text-ruby" id="c2_fees">₹13,047</span>
+          </div>
+          <div class="metric-row">
+            <span class="metric-name">Max Recorded Drawdown:</span>
+            <span class="metric-val text-ruby" id="c2_drawdown">₹1,52,943 (EXCEEDS CAPITAL)</span>
+          </div>
+          <div class="metric-row">
+            <span class="metric-name">Simulated Account Equity:</span>
+            <span class="metric-val text-gold" id="c2_equity">₹4,35,622 (Paper Only)</span>
+          </div>
+        </div>
+
+        <!-- Verdict -->
+        <div class="verdict-box danger">
+          ⚠️ <strong>DANGER ON REAL MUDREX:</strong> Paper backtest me equity ₹4.35 Lakh dikhti hai kyuki simulator broker margin block nahi karta. Lekin real Mudrex par Drawdown <strong>₹1,52,943</strong> par pahuchte hi aapka poora <strong>₹87,375 capital wipeout (liquidate)</strong> ho jayega!
+        </div>
+
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Master Head-to-Head Comparison Table -->
+  <div class="table-card">
+    <div class="section-title">
+      <span>📋 HEAD-TO-HEAD COMPARISON MATRIX</span>
+    </div>
+    <table>
+      <thead>
+        <tr>
+          <th>Evaluation Metric</th>
+          <th style="color: var(--emerald);">0.02 BTC Lot (Safe)</th>
+          <th style="color: var(--ruby);">0.06 BTC Lot (Aggressive)</th>
+          <th>Mathematical Impact</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td class="td-feature">Target Price Move for +₹1,000 Net Profit</td>
+          <td class="text-gold">~$594 Move</td>
+          <td class="text-emerald">~$267 Move</td>
+          <td>0.06 BTC reaches target in less than half the price distance.</td>
+        </tr>
+        <tr>
+          <td class="td-feature">1 Pair Margin Requirement (Buy + Sell @ 15x)</td>
+          <td>₹25,070</td>
+          <td class="text-ruby">₹75,210</td>
+          <td>0.06 BTC takes 3x more margin per pair.</td>
+        </tr>
+        <tr>
+          <td class="td-feature">3 Pairs Total Margin Requirement</td>
+          <td class="text-emerald">₹75,210 (Fits in ₹87K)</td>
+          <td class="text-ruby">₹2,25,629 (Exceeds ₹87K by ₹1.38L)</td>
+          <td>Mudrex will reject 3 pairs order on 0.06 BTC due to Insufficient Margin.</td>
+        </tr>
+        <tr>
+          <td class="td-feature">Max Pairs Affordable with ₹87,375</td>
+          <td class="text-emerald">3 Full Pairs</td>
+          <td class="text-ruby">1 Pair Only</td>
+          <td>With 0.06 BTC you lose the multi-pair grid advantage unless capital is ₹2.5L+.</td>
+        </tr>
+        <tr>
+          <td class="td-feature">Max Drawdown in 3h Volatility Run</td>
+          <td class="text-emerald">₹37,520 (43% of capital)</td>
+          <td class="text-ruby">₹1,52,943 (175% of capital)</td>
+          <td>0.06 BTC would trigger a real liquidation margin call.</td>
+        </tr>
+        <tr>
+          <td class="td-feature">Mudrex Round-trip Fees & GST per Pair</td>
+          <td>~₹354</td>
+          <td>~₹1,062</td>
+          <td>0.06 BTC pays ₹1,062 in charges per completed pair.</td>
+        </tr>
+        <tr>
+          <td class="td-feature">Capital Required to Safely Run 3 Pairs</td>
+          <td class="text-emerald">₹80,000 - ₹90,000 (You Have This!)</td>
+          <td class="text-ruby">₹2,50,000 minimum</td>
+          <td>Do not run 0.06 BTC on 3 pairs until your wallet reaches ₹2.5 Lakhs.</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <script>
+    let liveBtcPrice = 92168.80;
+    const usdInr = 102.00;
+
+    function setQty(slot, val) {
+      if (slot === 1) {
+        document.getElementById('inputQty1').value = val;
+      } else {
+        document.getElementById('inputQty2').value = val;
+      }
+      recalcLiveMetrics();
+    }
+
+    // Fetch live BTC price from existing server endpoint
+    async function fetchLivePrice() {
+      try {
+        const res = await fetch('/api/btc-study/live-rate');
+        const data = await res.json();
+        if (data && data.success && data.livePrice) {
+          liveBtcPrice = parseFloat(data.livePrice);
+          const el = document.getElementById('tickerBtcPrice');
+          if (el) el.innerText = `$${liveBtcPrice.toLocaleString('en-US', { minimumFractionDigits: 2 })}`;
+          recalcLiveMetrics();
+        }
+      } catch (e) {
+        // Fallback to initial
+      }
+    }
+
+    function setTimeframePreset(type) {
+      const btns = document.querySelectorAll('.preset-btn');
+      btns.forEach(b => b.classList.remove('active'));
+      event.target.classList.add('active');
+
+      if (type === 'short') {
+        document.getElementById('inputFromDate').value = '2026-01-11';
+        document.getElementById('inputFromHour').value = '23';
+        document.getElementById('inputToDate').value = '2026-01-12';
+        document.getElementById('inputToHour').value = '2';
+      } else if (type === 'swing') {
+        document.getElementById('inputFromDate').value = '2026-01-11';
+        document.getElementById('inputFromHour').value = '0';
+        document.getElementById('inputToDate').value = '2026-01-14';
+        document.getElementById('inputToHour').value = '23';
+      } else if (type === 'crash') {
+        document.getElementById('inputFromDate').value = '2026-01-11';
+        document.getElementById('inputFromHour').value = '0';
+        document.getElementById('inputToDate').value = '2026-02-11';
+        document.getElementById('inputToHour').value = '23';
+      }
+    }
+
+    function recalcLiveMetrics() {
+      const qty1 = parseFloat(document.getElementById('inputQty1').value) || 0.02;
+      const qty2 = parseFloat(document.getElementById('inputQty2').value) || 0.06;
+      const capital = parseFloat(document.getElementById('inputCapital').value) || 87375;
+      const leverage = parseFloat(document.getElementById('inputLeverage').value) || 15;
+      const maxPairs = parseInt(document.getElementById('inputMaxPairs').value, 10) || 1;
+      const targetProfitINR = parseFloat(document.getElementById('inputTargetProfit').value) || 1000;
+
+      const q1El = document.getElementById('lblQty1');
+      if (q1El) q1El.innerText = qty1;
+      const q2El = document.getElementById('lblQty2');
+      if (q2El) q2El.innerText = qty2;
+
+      // Calc for QTY 1
+      calcCol(qty1, 'c1', capital, leverage, maxPairs, targetProfitINR);
+      // Calc for QTY 2
+      calcCol(qty2, 'c2', capital, leverage, maxPairs, targetProfitINR);
+    }
+
+    function calcCol(qty, prefix, capital, leverage, maxPairs, targetProfitINR) {
+      const notionalUSD = qty * liveBtcPrice;
+      const notionalINR = notionalUSD * usdInr;
+      const marginPerLegINR = notionalINR / leverage;
+      const marginPerPairINR = marginPerLegINR * 2;
+      const totalPairsMarginINR = marginPerPairINR * maxPairs;
+      const cashBufferINR = capital - totalPairsMarginINR;
+      const maxAffordablePairs = Math.max(0, Math.floor(capital / marginPerPairINR));
+      const adverseBufferUSD = cashBufferINR > 0 ? (cashBufferINR / (qty * usdInr)) : 0;
+      
+      const estFeeINR = notionalUSD * 0.00095 * 1.18 * usdInr;
+      const grossNeededINR = targetProfitINR + estFeeINR;
+      const targetMoveUSD = grossNeededINR / (qty * usdInr);
+
+      document.getElementById(`${prefix}_notional`).innerText = `$${Math.round(notionalUSD).toLocaleString()} (₹${Math.round(notionalINR).toLocaleString('en-IN')})`;
+      document.getElementById(`${prefix}_pairMargin`).innerText = `₹${Math.round(marginPerPairINR).toLocaleString('en-IN')}`;
+      document.getElementById(`${prefix}_totalMargin`).innerText = `₹${Math.round(totalPairsMarginINR).toLocaleString('en-IN')}`;
+      
+      const maxEl = document.getElementById(`${prefix}_maxPairs`);
+      maxEl.innerText = `${maxAffordablePairs} Pair${maxAffordablePairs === 1 ? '' : 's'} Max`;
+      maxEl.className = maxAffordablePairs >= maxPairs ? 'metric-val text-emerald' : 'metric-val text-ruby';
+
+      const bufEl = document.getElementById(`${prefix}_cashBuffer`);
+      bufEl.innerText = cashBufferINR >= 0 ? `+₹${Math.round(cashBufferINR).toLocaleString('en-IN')}` : `-₹${Math.round(Math.abs(cashBufferINR)).toLocaleString('en-IN')} (DEFICIT)`;
+      bufEl.className = cashBufferINR >= 0 ? 'metric-val text-emerald' : 'metric-val text-ruby';
+
+      const advEl = document.getElementById(`${prefix}_adverseBuffer`);
+      advEl.innerText = adverseBufferUSD > 0 ? `$${Math.round(adverseBufferUSD).toLocaleString()} Drop` : '$0 (Instant Wipeout)';
+      advEl.className = adverseBufferUSD > 1000 ? 'metric-val text-emerald' : 'metric-val text-ruby';
+
+      document.getElementById(`${prefix}_targetMove`).innerText = `~$${Math.round(targetMoveUSD)} Move`;
+    }
+
+    async function runComparisonReplay() {
+      const btn = document.getElementById('btnRunReplay');
+      const btnText = document.getElementById('btnRunText');
+      btn.disabled = true;
+      btnText.innerHTML = '<span class="spinner"></span> REPLAYING CANDLES...';
+
+      const qty1 = parseFloat(document.getElementById('inputQty1').value) || 0.02;
+      const qty2 = parseFloat(document.getElementById('inputQty2').value) || 0.06;
+      const capital = parseFloat(document.getElementById('inputCapital').value) || 87375;
+      const harvestTargetINR = parseFloat(document.getElementById('inputHarvestTarget').value) || 2000;
+
+      const payload = {
+        symbol: 'BTCUSDT',
+        fromDate: document.getElementById('inputFromDate').value,
+        toDate: document.getElementById('inputToDate').value,
+        fromHour: parseInt(document.getElementById('inputFromHour').value, 10),
+        toHour: parseInt(document.getElementById('inputToHour').value, 10),
+        interval: '1m',
+        capital: capital,
+        qty1: qty1,
+        qty2: qty2,
+        leverage: parseFloat(document.getElementById('inputLeverage').value) || 15,
+        maxPairs: parseInt(document.getElementById('inputMaxPairs').value, 10) || 1,
+        targetProfitINR: parseFloat(document.getElementById('inputTargetProfit').value) || 1000,
+        harvestTargetINR: harvestTargetINR,
+        autoHaisiyatScaling: document.getElementById('chkAutoHaisiyat') ? document.getElementById('chkAutoHaisiyat').checked : true
+      };
+
+      try {
+        const res = await fetch('/api/btc-compare/run', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+
+        const data = await res.json();
+        if (!data || !data.success) {
+          alert('Error running replay: ' + (data.error || 'Server error'));
+          return;
+        }
+
+        // 1. UPDATE BIG TOP R/G SCOREBOARD FOR SLOT 1 (PURE NET OUTPUT AFTER ALL CHARGES + 10% BUFFER)
+        const b1 = data.config1.backtestResult;
+        const netOut1 = b1.netProfitWithBuffer !== undefined ? b1.netProfitWithBuffer : Math.round((b1.equity - capital) - (b1.fees * 0.10));
+        const finalEq1 = b1.finalEquityWithBuffer !== undefined ? b1.finalEquityWithBuffer : Math.round(b1.equity - (b1.fees * 0.10));
+        const netPct1 = b1.netProfitPctWithBuffer !== undefined ? b1.netProfitPctWithBuffer : ((((finalEq1 - capital) / capital) * 100).toFixed(1) + '%');
+        const feesPaid1 = Math.round(b1.totalFeesWithBuffer || (b1.fees * 1.10));
+
+        const heroEq1 = document.getElementById('heroEquity1');
+        const heroCard1 = document.getElementById('heroCard1');
+        const heroRel1 = document.getElementById('heroRealized1');
+        const heroStat1 = document.getElementById('heroStatus1');
+
+        if (heroEq1) {
+          heroEq1.innerText = `${netOut1 >= 0 ? '+' : ''}₹${Math.round(netOut1).toLocaleString('en-IN')} (${netPct1}) ${netOut1 >= 0 ? '🟢 PROFIT' : '🔴 LOSS'}`;
+          heroEq1.className = netOut1 >= 0 ? 'hero-val-big text-emerald' : 'hero-val-big text-ruby';
+        }
+        if (heroCard1) {
+          heroCard1.className = netOut1 >= 0 ? 'hero-score-card green-glow' : 'hero-score-card red-glow';
+        }
+        if (heroRel1) {
+          heroRel1.innerHTML = `💰 <strong>IN-HAND WALLET: ₹${Math.round(finalEq1).toLocaleString('en-IN')}</strong> <span style="font-size: 13px; color: #94a3b8; font-weight: 500;">(Charges + 10% Cushion: -₹${feesPaid1.toLocaleString('en-IN')} Cut)</span>`;
+          heroRel1.className = netOut1 >= 0 ? 'hero-val-sub text-emerald' : 'hero-val-sub text-ruby';
+        }
+        if (heroStat1) {
+          const l1 = data.config1.liveAnalysis;
+          if (netOut1 < 0) {
+            heroStat1.innerText = `⚠️ DRAWDOWN OCCURRED (-₹${Math.abs(netOut1).toLocaleString('en-IN')})`;
+            heroStat1.className = 'hero-pill-badge badge-danger';
+          } else if (l1.cashBufferINR >= 0) {
+            heroStat1.innerText = `🟢 100% SAFE (Fits in ₹${(capital/1000).toFixed(0)}K Wallet)`;
+            heroStat1.className = 'hero-pill-badge badge-safe';
+          } else {
+            heroStat1.innerText = `🔴 MARGIN DEFICIT (Need ₹${Math.abs(l1.cashBufferINR).toLocaleString('en-IN')} More)`;
+            heroStat1.className = 'hero-pill-badge badge-danger';
+          }
+        }
+
+        // Slot 1 Haisiyat Scaling status
+        const h1 = b1.haisiyatScaling;
+        const hBadge1 = document.getElementById('haisiyatBadge1');
+        const hText1 = document.getElementById('haisiyatText1');
+        if (h1 && hBadge1 && hText1) {
+          if (h1.scaledTo2 && h1.finalPairs >= 2 && netOut1 >= 0) {
+            hBadge1.innerText = `🎉 हैसियत: Scaled to ${h1.finalPairs} Pairs!`;
+            hBadge1.style.background = 'rgba(16, 185, 129, 0.2)';
+            hBadge1.style.color = '#34d399';
+            hBadge1.style.borderColor = 'rgba(16, 185, 129, 0.4)';
+            hText1.innerText = `वॉलेट ने ${h1.finalPairs} पेयर की सुरक्षित क्षमता हासिल कर ली!`;
+            hText1.style.color = '#34d399';
+          } else {
+            hBadge1.innerText = `🛡️ 1 Pair Restricted (2nd Pair Locked)`;
+            hBadge1.style.background = 'rgba(56, 189, 248, 0.15)';
+            hBadge1.style.color = '#38bdf8';
+            hBadge1.style.borderColor = 'rgba(56, 189, 248, 0.3)';
+            hText1.innerText = `2 पेयर सुरक्षित हैसियत लक्ष्य: ₹${(h1.targetFor2INR || 70000).toLocaleString('en-IN')} (अभी ₹${(h1.neededMoreFor2INR || 0).toLocaleString('en-IN')} दूर)`;
+            hText1.style.color = '#94a3b8';
+          }
+        }
+
+        // 2. UPDATE BIG TOP R/G SCOREBOARD FOR SLOT 2 (PURE NET OUTPUT AFTER ALL CHARGES + 10% BUFFER)
+        const b2 = data.config2.backtestResult;
+        const netOut2 = b2.netProfitWithBuffer !== undefined ? b2.netProfitWithBuffer : Math.round((b2.equity - capital) - (b2.fees * 0.10));
+        const finalEq2 = b2.finalEquityWithBuffer !== undefined ? b2.finalEquityWithBuffer : Math.round(b2.equity - (b2.fees * 0.10));
+        const netPct2 = b2.netProfitPctWithBuffer !== undefined ? b2.netProfitPctWithBuffer : ((((finalEq2 - capital) / capital) * 100).toFixed(1) + '%');
+        const feesPaid2 = Math.round(b2.totalFeesWithBuffer || (b2.fees * 1.10));
+
+        const heroEq2 = document.getElementById('heroEquity2');
+        const heroCard2 = document.getElementById('heroCard2');
+        const heroRel2 = document.getElementById('heroRealized2');
+        const heroStat2 = document.getElementById('heroStatus2');
+
+        if (heroEq2) {
+          heroEq2.innerText = `${netOut2 >= 0 ? '+' : ''}₹${Math.round(netOut2).toLocaleString('en-IN')} (${netPct2}) ${netOut2 >= 0 ? '🟢 PROFIT' : '🔴 LOSS'}`;
+          heroEq2.className = netOut2 >= 0 ? 'hero-val-big text-emerald' : 'hero-val-big text-ruby';
+        }
+        if (heroCard2) {
+          heroCard2.className = netOut2 >= 0 ? 'hero-score-card green-glow' : 'hero-score-card red-glow';
+        }
+        if (heroRel2) {
+          heroRel2.innerHTML = `💰 <strong>IN-HAND WALLET: ₹${Math.round(finalEq2).toLocaleString('en-IN')}</strong> <span style="font-size: 13px; color: #94a3b8; font-weight: 500;">(Charges + 10% Cushion: -₹${feesPaid2.toLocaleString('en-IN')} Cut)</span>`;
+          heroRel2.className = netOut2 >= 0 ? 'hero-val-sub text-emerald' : 'hero-val-sub text-ruby';
+        }
+        if (heroStat2) {
+          const l2 = data.config2.liveAnalysis;
+          if (netOut2 < 0) {
+            heroStat2.innerText = `⚠️ DRAWDOWN OCCURRED (-₹${Math.abs(netOut2).toLocaleString('en-IN')})`;
+            heroStat2.className = 'hero-pill-badge badge-danger';
+          } else if (l2.cashBufferINR >= 0) {
+            heroStat2.innerText = `🟢 100% SAFE (Fits in ₹${(capital/1000).toFixed(0)}K Wallet)`;
+            heroStat2.className = 'hero-pill-badge badge-safe';
+          } else {
+            heroStat2.innerText = `🔴 MARGIN DEFICIT (Need ₹${Math.abs(l2.cashBufferINR).toLocaleString('en-IN')} More)`;
+            heroStat2.className = 'hero-pill-badge badge-danger';
+          }
+        }
+
+        // Slot 2 Haisiyat Scaling status
+        const h2 = b2.haisiyatScaling;
+        const hBadge2 = document.getElementById('haisiyatBadge2');
+        const hText2 = document.getElementById('haisiyatText2');
+        if (h2 && hBadge2 && hText2) {
+          if (h2.scaledTo2 && h2.finalPairs >= 2 && netOut2 >= 0) {
+            hBadge2.innerText = `🎉 हैसियत: Scaled to ${h2.finalPairs} Pairs!`;
+            hBadge2.style.background = 'rgba(16, 185, 129, 0.2)';
+            hBadge2.style.color = '#34d399';
+            hBadge2.style.borderColor = 'rgba(16, 185, 129, 0.4)';
+            hText2.innerText = `हार्वेस्ट मुनाफे से वॉलेट ₹${(h2.scaledAtEquity || b2.equity).toLocaleString('en-IN')} पहुंचा, ऑटो 2 पेयर चालू!`;
+            hText2.style.color = '#34d399';
+          } else {
+            hBadge2.innerText = `🛡️ 1 Pair Restricted (2nd Pair Locked)`;
+            hBadge2.style.background = 'rgba(245, 158, 11, 0.15)';
+            hBadge2.style.color = '#fbbf24';
+            hBadge2.style.borderColor = 'rgba(245, 158, 11, 0.3)';
+            hText2.innerText = `2 पेयर सुरक्षित हैसियत लक्ष्य: ₹${(h2.targetFor2INR || 170000).toLocaleString('en-IN')} (अभी ₹${(h2.neededMoreFor2INR || 0).toLocaleString('en-IN')} दूर)`;
+            hText2.style.color = '#fbbf24';
+          }
+        }
+
+        // Detailed Breakdown updates
+        document.getElementById('c1_trades').innerText = `${b1.closedTrades} Trades (${b1.winRate})`;
+        document.getElementById('c1_realized').innerText = `+₹${b1.realizedProfit.toLocaleString('en-IN')} Net INR`;
+        document.getElementById('c1_harvest').innerText = `${b1.harvestCount} Auto-Harvest`;
+        document.getElementById('c1_fees').innerText = `₹${b1.fees.toLocaleString('en-IN')}`;
+        document.getElementById('c1_drawdown').innerText = `₹${b1.maxDrawdown.toLocaleString('en-IN')} (${b1.maxDrawdownPct})`;
+        document.getElementById('c1_equity').innerText = `₹${b1.equity.toLocaleString('en-IN')} (${b1.totalNetProfitPct})`;
+
+        document.getElementById('c2_trades').innerText = `${b2.closedTrades} Trades (${b2.winRate})`;
+        document.getElementById('c2_realized').innerText = `+₹${b2.realizedProfit.toLocaleString('en-IN')} Net INR`;
+        document.getElementById('c2_harvest').innerText = `${b2.harvestCount} Auto-Harvest`;
+        document.getElementById('c2_fees').innerText = `₹${b2.fees.toLocaleString('en-IN')}`;
+        document.getElementById('c2_drawdown').innerText = `₹${b2.maxDrawdown.toLocaleString('en-IN')} (${b2.maxDrawdownPct})`;
+        document.getElementById('c2_equity').innerText = `₹${b2.equity.toLocaleString('en-IN')} (${b2.totalNetProfitPct})`;
+
+      } catch (err) {
+        alert('Replay failed: ' + err.message);
+      } finally {
+        btn.disabled = false;
+        btnText.innerHTML = '▶ RUN HISTORICAL REPLAY';
+      }
+    }
+
+    // Initialize on load
+    recalcLiveMetrics();
+    fetchLivePrice();
+    setInterval(fetchLivePrice, 10000);
+  </script>
+</body>
+</html>
