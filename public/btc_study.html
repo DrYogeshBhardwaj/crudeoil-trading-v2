@@ -802,14 +802,87 @@
       border-color: var(--border-subtle);
     }
 
-    /* Collapsible */
-    details summary {
-      cursor: pointer;
-      font-size: 12px;
+    /* Quick Selection Pills */
+    .pill-group {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 5px;
+      margin-top: 5px;
+      margin-bottom: 8px;
+    }
+    .pill-btn {
+      padding: 3px 8px;
+      font-size: 10px;
+      font-family: var(--font-mono);
       font-weight: 700;
-      color: var(--cyan-bright);
+      border-radius: 6px;
+      border: 1px solid var(--border-subtle);
+      background: rgba(255, 255, 255, 0.04);
+      color: var(--text-muted);
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+    .pill-btn:hover {
+      background: rgba(255, 255, 255, 0.1);
+      color: var(--text-main);
+      border-color: rgba(255, 255, 255, 0.2);
+    }
+    .pill-btn.active {
+      background: rgba(245, 158, 11, 0.2);
+      color: var(--gold-bright);
+      border-color: var(--gold-primary);
+    }
+
+    /* Pre-Trade Live In-Hand Calculator Card */
+    .precalc-card {
+      background: linear-gradient(135deg, rgba(16, 185, 129, 0.07), rgba(245, 158, 11, 0.07), rgba(6, 182, 212, 0.07));
+      border: 1px solid var(--gold-primary);
+      border-radius: 14px;
+      padding: 14px;
+      margin-top: 14px;
+      margin-bottom: 14px;
+      box-shadow: 0 4px 18px rgba(0, 0, 0, 0.45);
+    }
+    .precalc-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
       margin-bottom: 10px;
-      user-select: none;
+      padding-bottom: 8px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    }
+    .precalc-title {
+      font-size: 11px;
+      font-weight: 800;
+      color: var(--gold-bright);
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .precalc-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 11px;
+      margin-bottom: 5px;
+    }
+    .precalc-row .lbl {
+      color: var(--text-muted);
+    }
+    .precalc-row .val {
+      font-family: var(--font-mono);
+      font-weight: 700;
+      color: var(--text-main);
+    }
+    .precalc-highlight {
+      background: rgba(16, 185, 129, 0.12);
+      border: 1px solid rgba(16, 185, 129, 0.35);
+      border-radius: 8px;
+      padding: 8px 10px;
+      margin-top: 8px;
+      margin-bottom: 8px;
     }
   </style>
 </head>
@@ -931,60 +1004,110 @@
       <div class="panel">
         <div class="panel-header">
           <div class="panel-title">⚙️ Strategy Parameters</div>
-          <span class="panel-badge">Configurable</span>
+          <span class="panel-badge">Interactive</span>
         </div>
 
+        <!-- 1. Total Capital / Amount in Hand -->
         <div class="form-group">
-          <div class="form-label">Total Capital / Amount in Hand (₹)</div>
-          <input type="number" id="inputCapital" class="form-control" value="100000" step="5000">
+          <div class="form-label">
+            <span>Total Capital / Amount in Hand (₹)</span>
+            <span class="form-hint" id="capitalHint">₹1,00,000</span>
+          </div>
+          <input type="number" id="inputCapital" class="form-control" value="100000" step="5000" oninput="updatePreTradeCalculation()">
+          <div class="pill-group">
+            <button type="button" class="pill-btn" onclick="setPillValue('inputCapital', 25000)">₹25k</button>
+            <button type="button" class="pill-btn" onclick="setPillValue('inputCapital', 50000)">₹50k</button>
+            <button type="button" class="pill-btn active" onclick="setPillValue('inputCapital', 100000)">₹1 Lakh</button>
+            <button type="button" class="pill-btn" onclick="setPillValue('inputCapital', 200000)">₹2 Lakh</button>
+            <button type="button" class="pill-btn" onclick="setPillValue('inputCapital', 500000)">₹5 Lakh</button>
+          </div>
         </div>
 
+        <!-- 2. Leverage -->
         <div class="form-group">
           <div class="form-label">
             <span>Leverage: <span id="leverageDisplay" class="text-gold" style="font-family:var(--font-mono); font-weight:800;">10×</span></span>
             <span class="form-hint">1× - 50×</span>
           </div>
           <div class="range-box">
-            <input type="range" id="inputLeverage" min="1" max="50" value="10" oninput="updateLeverageDisplay(this.value)">
+            <input type="range" id="inputLeverage" min="1" max="50" value="10" oninput="updateLeverageDisplay(this.value); updatePreTradeCalculation();">
+          </div>
+          <div class="pill-group">
+            <button type="button" class="pill-btn" onclick="setLeveragePill(5)">5×</button>
+            <button type="button" class="pill-btn active" onclick="setLeveragePill(10)">10×</button>
+            <button type="button" class="pill-btn" onclick="setLeveragePill(15)">15×</button>
+            <button type="button" class="pill-btn" onclick="setLeveragePill(20)">20×</button>
+            <button type="button" class="pill-btn" onclick="setLeveragePill(25)">25×</button>
+            <button type="button" class="pill-btn" onclick="setLeveragePill(50)">50×</button>
           </div>
         </div>
 
+        <!-- 3. Quantity & Number of Pairs -->
         <div class="form-row">
           <div class="form-group">
             <div class="form-label">BTC Qty per Leg</div>
-            <input type="number" id="inputQuantity" class="form-control" value="0.001" step="0.0005" min="0.0001">
+            <input type="number" id="inputQuantity" class="form-control" value="0.001" step="0.0005" min="0.0001" oninput="updatePreTradeCalculation()">
+            <div class="pill-group">
+              <button type="button" class="pill-btn active" onclick="setPillValue('inputQuantity', 0.001)">0.001</button>
+              <button type="button" class="pill-btn" onclick="setPillValue('inputQuantity', 0.002)">0.002</button>
+              <button type="button" class="pill-btn" onclick="setPillValue('inputQuantity', 0.005)">0.005</button>
+              <button type="button" class="pill-btn" onclick="setPillValue('inputQuantity', 0.010)">0.010</button>
+            </div>
           </div>
           <div class="form-group">
             <div class="form-label">Number of Pairs</div>
-            <input type="number" id="inputMaxPairs" class="form-control" value="5" min="1" max="50">
+            <input type="number" id="inputMaxPairs" class="form-control" value="5" min="1" max="50" oninput="updatePreTradeCalculation()">
+            <div class="pill-group">
+              <button type="button" class="pill-btn" onclick="setPillValue('inputMaxPairs', 3)">3 P</button>
+              <button type="button" class="pill-btn active" onclick="setPillValue('inputMaxPairs', 5)">5 P</button>
+              <button type="button" class="pill-btn" onclick="setPillValue('inputMaxPairs', 10)">10 P</button>
+              <button type="button" class="pill-btn" onclick="setPillValue('inputMaxPairs', 15)">15 P</button>
+            </div>
           </div>
         </div>
 
+        <!-- 4. Pair Entry Diff & Reference Rate -->
         <div class="form-row">
           <div class="form-group">
             <div class="form-label">Pair Entry Diff ($)</div>
-            <input type="number" id="inputPairDiff" class="form-control" value="250" step="25" min="10">
+            <input type="number" id="inputPairDiff" class="form-control" value="250" step="25" min="10" oninput="updatePreTradeCalculation()">
+            <div class="pill-group">
+              <button type="button" class="pill-btn" onclick="setPillValue('inputPairDiff', 100)">$100</button>
+              <button type="button" class="pill-btn active" onclick="setPillValue('inputPairDiff', 250)">$250</button>
+              <button type="button" class="pill-btn" onclick="setPillValue('inputPairDiff', 500)">$500</button>
+            </div>
           </div>
           <div class="form-group">
             <div class="form-label">Reference Rate ($)</div>
-            <input type="number" id="inputRefRate" class="form-control" placeholder="Auto Market" step="10">
+            <input type="number" id="inputRefRate" class="form-control" placeholder="Auto Market" step="10" oninput="updatePreTradeCalculation()">
+            <div class="pill-group">
+              <button type="button" class="pill-btn" onclick="document.getElementById('inputRefRate').value = ''; updatePreTradeCalculation();">Live Rate</button>
+            </div>
           </div>
         </div>
 
+        <!-- 5. Target Mode & Value -->
         <div class="form-row">
           <div class="form-group">
             <div class="form-label">Target Mode</div>
-            <select id="inputTargetType" class="form-control" onchange="toggleTargetTypeUI()">
+            <select id="inputTargetType" class="form-control" onchange="toggleTargetTypeUI(); updatePreTradeCalculation();">
               <option value="PER_PAIR" selected>Per Pair Move ($)</option>
               <option value="TOTAL_PORTFOLIO">Portfolio Target (₹)</option>
             </select>
           </div>
           <div class="form-group">
             <div class="form-label" id="targetValueLabel">Target Move ($)</div>
-            <input type="number" id="inputTargetValue" class="form-control" value="150" step="10">
+            <input type="number" id="inputTargetValue" class="form-control" value="150" step="10" oninput="updatePreTradeCalculation()">
+            <div class="pill-group" id="targetPillGroup">
+              <button type="button" class="pill-btn" onclick="setPillValue('inputTargetValue', 100)">$100</button>
+              <button type="button" class="pill-btn active" onclick="setPillValue('inputTargetValue', 150)">$150</button>
+              <button type="button" class="pill-btn" onclick="setPillValue('inputTargetValue', 250)">$250</button>
+              <button type="button" class="pill-btn" onclick="setPillValue('inputTargetValue', 350)">$350</button>
+            </div>
           </div>
         </div>
 
+        <!-- 6. Harvest Mode & Direction -->
         <div class="form-row">
           <div class="form-group">
             <div class="form-label">Harvest Mode</div>
@@ -995,7 +1118,7 @@
           </div>
           <div class="form-group">
             <div class="form-label">Direction</div>
-            <select id="inputDirection" class="form-control">
+            <select id="inputDirection" class="form-control" onchange="updatePreTradeCalculation()">
               <option value="BOTH" selected>Both (Hedged Grid)</option>
               <option value="BUY">BUY Only (Long)</option>
               <option value="SELL">SELL Only (Short)</option>
@@ -1003,17 +1126,24 @@
           </div>
         </div>
 
+        <!-- 7. Loss Limit Mode & Value -->
         <div class="form-row">
           <div class="form-group">
             <div class="form-label">Loss Limit Mode</div>
-            <select id="inputLossType" class="form-control" onchange="toggleLossTypeUI()">
+            <select id="inputLossType" class="form-control" onchange="toggleLossTypeUI(); updatePreTradeCalculation();">
               <option value="PER_PAIR" selected>Per Pair SL ($)</option>
               <option value="PORTFOLIO">Portfolio SL (₹)</option>
             </select>
           </div>
           <div class="form-group">
             <div class="form-label" id="lossValueLabel">Loss Limit ($)</div>
-            <input type="number" id="inputLossValue" class="form-control" value="500" step="50">
+            <input type="number" id="inputLossValue" class="form-control" value="500" step="50" oninput="updatePreTradeCalculation()">
+            <div class="pill-group">
+              <button type="button" class="pill-btn" onclick="setPillValue('inputLossValue', 0)">No SL</button>
+              <button type="button" class="pill-btn" onclick="setPillValue('inputLossValue', 300)">$300</button>
+              <button type="button" class="pill-btn active" onclick="setPillValue('inputLossValue', 500)">$500</button>
+              <button type="button" class="pill-btn" onclick="setPillValue('inputLossValue', 1000)">$1000</button>
+            </div>
           </div>
         </div>
 
@@ -1022,7 +1152,7 @@
           <summary>🛠️ Fees, Slippage & Funding Schedule (Mudrex)</summary>
           <div style="background: rgba(0,0,0,0.3); padding:10px; border-radius:8px; margin-top:8px;">
             <div class="form-group">
-              <label><input type="checkbox" id="checkMudrexSchedule" checked onchange="toggleCustomFees(this.checked)"> Use Authoritative Mudrex Perpetual Schedule</label>
+              <label><input type="checkbox" id="checkMudrexSchedule" checked onchange="toggleCustomFees(this.checked); updatePreTradeCalculation();"> Use Authoritative Mudrex Perpetual Schedule</label>
               <div style="font-size:11px; color:var(--text-dim); margin-top:4px;">
                 Taker: 0.075% | Maker: 0.02% | GST: 18% | Slippage: ₹5/trade | Est. Funding: 0.01%/8h
               </div>
@@ -1031,30 +1161,89 @@
               <div class="form-row">
                 <div class="form-group">
                   <div class="form-label">Taker Fee Rate</div>
-                  <input type="number" id="customTakerFee" class="form-control" value="0.00075" step="0.00005">
+                  <input type="number" id="customTakerFee" class="form-control" value="0.00075" step="0.00005" oninput="updatePreTradeCalculation()">
                 </div>
                 <div class="form-group">
                   <div class="form-label">Maker Fee Rate</div>
-                  <input type="number" id="customMakerFee" class="form-control" value="0.0002" step="0.00005">
+                  <input type="number" id="customMakerFee" class="form-control" value="0.0002" step="0.00005" oninput="updatePreTradeCalculation()">
                 </div>
               </div>
               <div class="form-row">
                 <div class="form-group">
                   <div class="form-label">GST Rate</div>
-                  <input type="number" id="customGst" class="form-control" value="0.18" step="0.01">
+                  <input type="number" id="customGst" class="form-control" value="0.18" step="0.01" oninput="updatePreTradeCalculation()">
                 </div>
                 <div class="form-group">
                   <div class="form-label">Slippage Buffer (₹)</div>
-                  <input type="number" id="customSlippage" class="form-control" value="5" step="1">
+                  <input type="number" id="customSlippage" class="form-control" value="5" step="1" oninput="updatePreTradeCalculation()">
                 </div>
               </div>
             </div>
           </div>
         </details>
 
-        <div style="margin-top: 14px;">
+        <!-- 🔥 Instant Pre-Trade In-Hand Profit & Charges Calculator Card -->
+        <div class="precalc-card" id="precalcCard">
+          <div class="precalc-header">
+            <span class="precalc-title">💰 Live In-Hand Profit & Charges Preview</span>
+            <span class="badge-est" id="precalcRefRateBadge">Rate: $--</span>
+          </div>
+
+          <div class="precalc-row">
+            <span class="lbl">Total Margin Required (कुल मार्जिन ब्लॉक)</span>
+            <span class="val text-cyan" id="precalcMarginReq">₹0.00</span>
+          </div>
+          <div class="precalc-row">
+            <span class="lbl">Safe Cash Left (सुरक्षित बैलेंस)</span>
+            <span class="val" id="precalcCashLeft">₹0.00</span>
+          </div>
+          <div class="precalc-row">
+            <span class="lbl">Margin Health (सुरक्षा स्थिति)</span>
+            <span class="val text-emerald" id="precalcMarginStatus">🟢 Safe</span>
+          </div>
+
+          <div style="border-top:1px dashed rgba(255,255,255,0.08); margin:8px 0;"></div>
+
+          <div class="precalc-row">
+            <span class="lbl">1 Pair Gross Profit (सकल लाभ)</span>
+            <span class="val text-emerald" id="precalc1PairGross">+₹0.00</span>
+          </div>
+          <div class="precalc-row">
+            <span class="lbl">1 Pair Charges Cut (खर्चे + GST)</span>
+            <span class="val text-ruby" id="precalc1PairCharges">-₹0.00</span>
+          </div>
+          
+          <div class="precalc-highlight">
+            <div class="precalc-row" style="margin-bottom:0;">
+              <span class="lbl" style="color:var(--text-main); font-weight:700;">👉 1 Pair Net In-Hand Profit (जेब में शुद्ध मुनाफा)</span>
+              <span class="val text-gold" style="font-size:14px;" id="precalc1PairNet">+₹0.00</span>
+            </div>
+          </div>
+
+          <div class="precalc-highlight" style="background:rgba(245,158,11,0.12); border-color:var(--gold-primary);">
+            <div class="precalc-row" style="margin-bottom:2px;">
+              <span class="lbl" style="color:var(--text-main); font-weight:800;" id="precalcAllPairsLabel">👉 If All 5 Pairs Hit Target (कुल शुद्ध मुनाफा)</span>
+              <span class="val text-emerald" style="font-size:15px;" id="precalcAllPairsNet">+₹0.00</span>
+            </div>
+            <div class="precalc-row" style="margin-bottom:0;">
+              <span class="lbl" style="font-size:10px;">Net Return on Hand Capital (कुल ROI):</span>
+              <span class="val text-cyan" style="font-size:11px;" id="precalcRoiPct">+0.00%</span>
+            </div>
+          </div>
+
+          <div class="precalc-row">
+            <span class="lbl">Liquidation Safety (BUY / SELL)</span>
+            <span class="val text-ruby" style="font-size:10px;" id="precalcLiqSafety">$-- / $--</span>
+          </div>
+        </div>
+
+        <!-- Action Execution Buttons -->
+        <div style="display:flex; flex-direction:column; gap:8px; margin-top: 14px;">
           <button class="btn btn-gold btn-block" onclick="runSimulationEngine()">
-            ⚡ Calculate / Run Backtest
+            ⚡ Run Backtest on Historical Candles
+          </button>
+          <button class="btn btn-emerald btn-block" onclick="switchSimulationMode('LIVE'); handleStartSim();">
+            ⚡ Start Live Simulation on Real BTC Rate
           </button>
         </div>
       </div>
@@ -1433,8 +1622,157 @@
     initDefaultDates();
     startLiveRatePolling();
     initChart();
+    updatePreTradeCalculation();
     fetchHistoricalData(); // auto-fetch initial window
   });
+
+  // Quick Pill Helpers
+  function setPillValue(inputId, value) {
+    const el = document.getElementById(inputId);
+    if (el) {
+      el.value = value;
+      const container = el.parentElement;
+      if (container) {
+        container.querySelectorAll('.pill-btn').forEach(btn => btn.classList.remove('active'));
+      }
+      if (event && event.target && event.target.classList.contains('pill-btn')) {
+        event.target.classList.add('active');
+      }
+      updatePreTradeCalculation();
+    }
+  }
+
+  function setLeveragePill(val) {
+    document.getElementById('inputLeverage').value = val;
+    updateLeverageDisplay(val);
+    const container = document.getElementById('inputLeverage').closest('.form-group');
+    if (container) {
+      container.querySelectorAll('.pill-btn').forEach(btn => btn.classList.remove('active'));
+    }
+    if (event && event.target && event.target.classList.contains('pill-btn')) {
+      event.target.classList.add('active');
+    }
+    updatePreTradeCalculation();
+  }
+
+  // Pre-Trade Real-Time Calculator: Computes In-Hand Net Profit, Charges & Margin Breakdown
+  function updatePreTradeCalculation() {
+    const capital = parseFloat(document.getElementById('inputCapital').value) || 100000;
+    const leverage = parseFloat(document.getElementById('inputLeverage').value) || 10;
+    const qty = parseFloat(document.getElementById('inputQuantity').value) || 0.001;
+    const pairs = parseInt(document.getElementById('inputMaxPairs').value, 10) || 5;
+    const targetMove = parseFloat(document.getElementById('inputTargetValue').value) || 150;
+    const direction = document.getElementById('inputDirection').value;
+    const activeLegsPerPair = direction === 'BOTH' ? 2 : 1;
+    
+    // Reference price: manual or live BTC price or fallback 82000
+    const manualRef = parseFloat(document.getElementById('inputRefRate').value);
+    const refPrice = manualRef && manualRef > 0 ? manualRef : (previousPrice || 82000);
+    const usdInr = 102.00;
+
+    const refBadge = document.getElementById('precalcRefRateBadge');
+    if (refBadge) refBadge.innerText = `Ref Rate: $${refPrice.toLocaleString('en-US', { minimumFractionDigits: 1 })}`;
+    
+    const capHint = document.getElementById('capitalHint');
+    if (capHint) capHint.innerText = `₹${capital.toLocaleString('en-IN')}`;
+
+    // Fee Schedule
+    const isMudrex = document.getElementById('checkMudrexSchedule').checked;
+    const takerFeeRate = isMudrex ? 0.00075 : (parseFloat(document.getElementById('customTakerFee').value) || 0.00075);
+    const makerFeeRate = isMudrex ? 0.00020 : (parseFloat(document.getElementById('customMakerFee').value) || 0.00020);
+    const gstRate = isMudrex ? 0.18 : (parseFloat(document.getElementById('customGst').value) || 0.18);
+    const slippageBufferINR = isMudrex ? 5.0 : (parseFloat(document.getElementById('customSlippage').value) || 5.0);
+
+    // Margin Calculations
+    const marginPerLegUSD = (qty * refPrice) / leverage;
+    const marginPerLegINR = marginPerLegUSD * usdInr;
+    const totalMarginReqINR = marginPerLegINR * activeLegsPerPair * pairs;
+    const safeCashLeftINR = capital - totalMarginReqINR;
+    const marginUsedPct = capital > 0 ? (totalMarginReqINR / capital) * 100 : 0;
+
+    const elMarginReq = document.getElementById('precalcMarginReq');
+    if (elMarginReq) elMarginReq.innerText = `₹${totalMarginReqINR.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+    
+    const cashLeftEl = document.getElementById('precalcCashLeft');
+    if (cashLeftEl) {
+      cashLeftEl.innerText = `₹${Math.max(0, safeCashLeftINR).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+      cashLeftEl.className = safeCashLeftINR < 0 ? 'val text-ruby' : 'val';
+    }
+
+    const statusEl = document.getElementById('precalcMarginStatus');
+    if (statusEl) {
+      if (marginUsedPct > 100) {
+        statusEl.className = 'val text-ruby';
+        statusEl.innerText = `⚠️ Deficit (${marginUsedPct.toFixed(0)}% needed) — Reduce Pairs/Qty!`;
+      } else if (marginUsedPct > 70) {
+        statusEl.className = 'val text-gold';
+        statusEl.innerText = `🟡 High Usage (${marginUsedPct.toFixed(1)}%)`;
+      } else {
+        statusEl.className = 'val text-emerald';
+        statusEl.innerText = `🟢 Safe (${marginUsedPct.toFixed(1)}% of Capital)`;
+      }
+    }
+
+    // 1 Pair Profit & Charges Breakdown
+    const grossProfitUSD = qty * targetMove;
+    const grossProfitINR = grossProfitUSD * usdInr;
+
+    const entryFeeUSD = qty * refPrice * takerFeeRate;
+    const exitPrice = refPrice + targetMove;
+    const exitFeeUSD = qty * exitPrice * makerFeeRate;
+    const gstUSD = (entryFeeUSD + exitFeeUSD) * gstRate;
+    const slippageUSD = slippageBufferINR / usdInr;
+    const fundingUSD = (1 / 8) * 0.0001 * (qty * refPrice); // estimated 1h
+    const totalChargesUSD = entryFeeUSD + exitFeeUSD + gstUSD + slippageUSD + fundingUSD;
+    const totalChargesINR = totalChargesUSD * usdInr;
+
+    const netProfitUSD = grossProfitUSD - totalChargesUSD;
+    const netProfitINR = netProfitUSD * usdInr;
+
+    const el1PairGross = document.getElementById('precalc1PairGross');
+    if (el1PairGross) el1PairGross.innerText = `+₹${grossProfitINR.toFixed(2)} (+$${grossProfitUSD.toFixed(3)})`;
+    
+    const el1PairCharges = document.getElementById('precalc1PairCharges');
+    if (el1PairCharges) el1PairCharges.innerText = `-₹${totalChargesINR.toFixed(2)} (Fees ₹${((entryFeeUSD+exitFeeUSD+gstUSD)*usdInr).toFixed(2)} + Slip ₹5)`;
+
+    const net1PairEl = document.getElementById('precalc1PairNet');
+    if (net1PairEl) {
+      if (netProfitINR >= 0) {
+        net1PairEl.className = 'val text-gold';
+        net1PairEl.innerText = `+₹${netProfitINR.toFixed(2)} net (+ $${netProfitUSD.toFixed(3)})`;
+      } else {
+        net1PairEl.className = 'val text-ruby';
+        net1PairEl.innerText = `-₹${Math.abs(netProfitINR).toFixed(2)} (Charges exceed profit!)`;
+      }
+    }
+
+    // All Pairs Total Net Profit
+    const totalNetProfitINR = netProfitINR * pairs;
+    const roiPct = capital > 0 ? (totalNetProfitINR / capital) * 100 : 0;
+    
+    const elAllPairsLabel = document.getElementById('precalcAllPairsLabel');
+    if (elAllPairsLabel) elAllPairsLabel.innerText = `👉 If All ${pairs} Pairs Hit Target (कुल शुद्ध मुनाफा):`;
+    
+    const allNetEl = document.getElementById('precalcAllPairsNet');
+    if (allNetEl) {
+      if (totalNetProfitINR >= 0) {
+        allNetEl.className = 'val text-emerald';
+        allNetEl.innerText = `+₹${totalNetProfitINR.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+      } else {
+        allNetEl.className = 'val text-ruby';
+        allNetEl.innerText = `-₹${Math.abs(totalNetProfitINR).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+      }
+    }
+
+    const elRoi = document.getElementById('precalcRoiPct');
+    if (elRoi) elRoi.innerText = `${roiPct >= 0 ? '+' : ''}${roiPct.toFixed(2)}% ROI on Hand Capital`;
+
+    // Liquidation Safety Range
+    const buyLiq = refPrice * (1 - (1 / leverage) + 0.005);
+    const sellLiq = refPrice * (1 + (1 / leverage) - 0.005);
+    const elLiq = document.getElementById('precalcLiqSafety');
+    if (elLiq) elLiq.innerText = `BUY: $${buyLiq.toFixed(0)} | SELL: $${sellLiq.toFixed(0)}`;
+  }
 
   function initDefaultDates() {
     const today = new Date();
@@ -1574,6 +1912,11 @@
           previousPrice = d.price;
           el.innerText = `$${d.price.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
           document.getElementById('liveBtcTime').innerText = `Updated: ${new Date(d.lastTime || Date.now()).toLocaleTimeString()} (${d.source})`;
+          
+          // Keep pre-trade calculator updated if no manual ref rate is locked
+          if (!document.getElementById('inputRefRate').value) {
+            updatePreTradeCalculation();
+          }
           
           if (d.markPrice) {
             document.getElementById('liveMarkPrice').innerText = `$${d.markPrice.toLocaleString('en-US', { minimumFractionDigits: 2 })}`;
