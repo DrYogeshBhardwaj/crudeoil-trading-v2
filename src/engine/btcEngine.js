@@ -20,7 +20,7 @@ class BtcEngine {
       basketProfitTargetINR: 3000, // Harvest: ₹3,000 (User Default)
       autoPunarjanmEnabled: true, // Harvest amt auto add to wallet (Auto-Harvest)
       autoAddNewPairs: true, // Continuous re-entry when live rate moves to vacant level and margin is available
-      maxActivePairs: 10, // Circle Target: Min 10 pairs circle maintained continuously
+      maxActivePairs: 1, // Single Pair: Exactly 1 pair active at a time in Live Mudrex
       autoCleanKachraEnabled: true,
       maxFloatingLossThresholdINR: 50000,
       maxOneSidedLegs: 5,
@@ -225,7 +225,7 @@ class BtcEngine {
     // 4. Continuous Circle Replenishment:
     // Strictly respects maxActivePairs to avoid excessive pair buildup
     const currentActivePairs = this.pairs.filter(p => p.status !== 'CLOSED');
-    const circleTarget = Number(this.settings.maxActivePairs !== undefined && this.settings.maxActivePairs > 0 ? this.settings.maxActivePairs : 10);
+    const circleTarget = Number(this.settings.maxActivePairs !== undefined && this.settings.maxActivePairs > 0 ? this.settings.maxActivePairs : 1);
     const activeBuyCount = this.pairs.filter(p => p.buyPosition && p.buyPosition.status === 'OPEN').length;
     const activeSellCount = this.pairs.filter(p => p.sellPosition && p.sellPosition.status === 'OPEN').length;
     
@@ -462,8 +462,18 @@ class BtcEngine {
         return;
       }
 
-      // 2. ONE-WAY NETTING ENFORCEMENT: Check if opposing position exists on Mudrex exchange
+      // 2. EXCHANGE EXPOSURE SHIELD: If an active position already exists on Mudrex, do not stack orders!
       const positions = await mudrexLive.queryRealPositions('BTCUSDT');
+      const hasActivePosition = Array.isArray(positions) && positions.some(p => Math.abs(Number(p.quantity || p.size || 0)) > 0.0001);
+      if (hasActivePosition) {
+        const existing = positions.find(p => Math.abs(Number(p.quantity || p.size || 0)) > 0.0001);
+        console.warn(`[BTC Engine Exposure Shield] Mudrex already holds an active position (${existing?.quantity} BTC ${existing?.order_type}). Skipping additional live order to protect margin.`);
+        targetLeg.apiStatus = 'SKIPPED_ACTIVE_EXCHANGE_POSITION';
+        this.saveState();
+        return;
+      }
+
+      // 3. ONE-WAY NETTING ENFORCEMENT: Check if opposing position exists on Mudrex exchange
       const hasOpposingPosition = Array.isArray(positions) && positions.some(p => {
         const qty = Number(p.quantity || p.size || 0);
         if (Math.abs(qty) <= 0.0001) return false;
