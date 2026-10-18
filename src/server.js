@@ -1221,6 +1221,21 @@ app.post(['/api/btc-live-mudrex/action', '/api/btc-live-mudrex-pro/action', '/ap
       btcEngine.settings.basketProfitTargetINR = newTarget;
       btcEngine.saveState();
       return res.json({ success: true, message: `BTC Punarjanm target updated to ₹${newTarget.toFixed(2)} INR.`, targetINR: newTarget });
+    } else if (action === 'setTradingMode') {
+      const { mode, realOrdersDisabled } = req.body || {};
+      const targetMode = (mode || 'LIVE').toUpperCase();
+      if (targetMode !== 'LIVE' && targetMode !== 'PAPER') {
+        return res.status(400).json({ success: false, error: 'Mode must be LIVE or PAPER.' });
+      }
+      btcEngine.settings.tradingMode = targetMode;
+      btcEngine.settings.realOrdersDisabled = (targetMode === 'PAPER') ? true : (realOrdersDisabled === true ? true : false);
+      btcEngine.saveState();
+      return res.json({
+        success: true,
+        message: `BTC Engine Trading Mode set to ${targetMode} (Real Exchange Orders: ${btcEngine.settings.realOrdersDisabled ? 'DISABLED' : 'ENABLED'})`,
+        tradingMode: btcEngine.settings.tradingMode,
+        realOrdersDisabled: btcEngine.settings.realOrdersDisabled
+      });
     } else if (action === 'resetSimulator' || action === 'resetData') {
       const customQty = req.body.quantity ? Number(req.body.quantity) : 0.10;
       const customCapital = req.body.capitalINR ? Number(req.body.capitalINR) : 100000.00;

@@ -175,15 +175,18 @@ class MudrexLiveAdapter {
         return false;
       }
 
-      // Fail-Closed Rule 3: Engine settings check (allow if EITHER paperEngine OR solanaEngine is in LIVE mode)
+      // Fail-Closed Rule 3: Engine settings check (allow if EITHER paperEngine OR solanaEngine OR btcEngine is in LIVE mode)
       const paperEngine = require('./paperEngine');
       let solanaEngine = null;
+      let btcEngine = null;
       try { solanaEngine = require('./solanaEngine'); } catch(e) {}
+      try { btcEngine = require('./btcEngine'); } catch(e) {}
 
       const isPaperLive = paperEngine && paperEngine.settings && paperEngine.settings.tradingMode === 'LIVE' && !paperEngine.settings.realOrdersDisabled;
       const isSolanaLive = solanaEngine && solanaEngine.settings && solanaEngine.settings.tradingMode === 'LIVE' && !solanaEngine.settings.realOrdersDisabled;
+      const isBtcLive = btcEngine && btcEngine.settings && btcEngine.settings.tradingMode === 'LIVE' && !btcEngine.settings.realOrdersDisabled;
 
-      if (!isPaperLive && !isSolanaLive) return false;
+      if (!isPaperLive && !isSolanaLive && !isBtcLive) return false;
 
       return true;
     } catch (e) {
@@ -360,16 +363,17 @@ class MudrexLiveAdapter {
       }
     } catch (authErr) {}
 
-    // Allow Crude Oil (CLUSDT) and Solana (SOLUSDT)
+    // Allow Crude Oil (CLUSDT), Solana (SOLUSDT), and Bitcoin (BTCUSDT)
     const rawSym = (symbol || 'CLUSDT').toUpperCase();
-    if (!rawSym.includes('CL') && !rawSym.includes('SOL')) {
-      console.warn(`[Mudrex Live Adapter] REJECTED order for ${rawSym}. Only CLUSDT and SOLUSDT are permitted.`);
-      return { success: false, error: `TRADING_BLOCKED: Only Crude Oil (CLUSDT) and Solana (SOLUSDT) are permitted.` };
+    if (!rawSym.includes('CL') && !rawSym.includes('SOL') && !rawSym.includes('BTC')) {
+      console.warn(`[Mudrex Live Adapter] REJECTED order for ${rawSym}. Only CLUSDT, SOLUSDT, and BTCUSDT are permitted.`);
+      return { success: false, error: `TRADING_BLOCKED: Only Crude Oil (CLUSDT), Solana (SOLUSDT), and Bitcoin (BTCUSDT) are permitted.` };
     }
 
     const isSolana = rawSym.includes('SOL');
-    const symb = isSolana ? 'SOLUSDT' : (rawSym === 'CL-USDT' ? 'CLUSDT' : rawSym);
-    const dashSymb = isSolana ? 'SOLUSDT' : (rawSym === 'CLUSDT' ? 'CL-USDT' : rawSym);
+    const isBtc = rawSym.includes('BTC');
+    const symb = isBtc ? 'BTCUSDT' : (isSolana ? 'SOLUSDT' : (rawSym === 'CL-USDT' ? 'CLUSDT' : rawSym));
+    const dashSymb = isBtc ? 'BTCUSDT' : (isSolana ? 'SOLUSDT' : (rawSym === 'CLUSDT' ? 'CL-USDT' : rawSym));
     const sideUpper = (side || 'BUY').toUpperCase();
     const orderType = (sideUpper === 'BUY' || sideUpper === 'LONG') ? 'LONG' : 'SHORT';
     const qty = String(quantity || this.settings.contractQuantity || 1.0);
@@ -713,6 +717,24 @@ class MudrexLiveAdapter {
     }
   }
 
+
+  async queryRealPositions(symbol = null) {
+    try {
+      const res = await this.request('GET', `${this.baseUrl}/futures/positions?trade_currency=INR`);
+      if (res && res.success && res.data) {
+        const raw = res.data.data !== undefined ? res.data.data : res.data;
+        if (Array.isArray(raw)) {
+          if (!symbol) return raw;
+          const cleanSym = symbol.replace('-', '').toUpperCase();
+          return raw.filter(p => (p.symbol || '').replace('-', '').toUpperCase() === cleanSym);
+        }
+      }
+      return [];
+    } catch (e) {
+      console.warn('[Mudrex Live Adapter] Error querying real positions:', e.message);
+      return [];
+    }
+  }
 
   request(method, urlStr, bodyData = null) {
     if (Date.now() < this.rateLimitUntil) {

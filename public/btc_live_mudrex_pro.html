@@ -1263,7 +1263,7 @@
 </svg></div>
         <div class="brand-text">
           <h1>
-            BTC-Live-Mudrex-Pro <span class="page-tag" style="background: rgba(245, 158, 11, 0.15); border-color: rgba(245, 158, 11, 0.5); color: #fbbf24; font-weight: 800;">BTC PRO DESK · SIMULATOR</span>
+            BTC-Live-Mudrex-Pro <span class="page-tag" id="engineModeBadge" style="background: rgba(239, 68, 68, 0.2); border-color: #ef4444; color: #f87171; font-weight: 800;">🔴 BTC PRO DESK · LIVE MUDREX</span>
           </h1>
           <p>Bitcoin Futures Simulation Engine — BTCUSDT Hedged Pair Strategy & Mudrex Rate Sync (₹1.0 Lakh Capital)</p>
         </div>
@@ -2704,6 +2704,21 @@
       const livePrice = rate.price || 92.90;
 
       // 1. Header & Engine Status
+      const modeBadge = document.getElementById('engineModeBadge');
+      if (modeBadge) {
+        if (engine.tradingMode === 'LIVE' && !engine.realOrdersDisabled) {
+          modeBadge.innerText = '🔴 BTC PRO DESK · LIVE MUDREX';
+          modeBadge.style.background = 'rgba(239, 68, 68, 0.2)';
+          modeBadge.style.borderColor = '#ef4444';
+          modeBadge.style.color = '#f87171';
+        } else {
+          modeBadge.innerText = 'BTC PRO DESK · SIMULATOR';
+          modeBadge.style.background = 'rgba(245, 158, 11, 0.15)';
+          modeBadge.style.borderColor = 'rgba(245, 158, 11, 0.5)';
+          modeBadge.style.color = '#fbbf24';
+        }
+      }
+
       const statusLabel = document.getElementById('engineStatusLabel');
       const statusInd = document.getElementById('engineStatusIndicator');
       const toggleBtn = document.getElementById('toggleEngineBtn');
