@@ -1242,7 +1242,7 @@ app.post(['/api/btc-live-mudrex/action', '/api/btc-live-mudrex-pro/action', '/ap
       const customTargetProfitINR = (req.body.targetProfitINR || req.body.profitTargetINR || req.body.targetINR || req.body.targetMove || req.body.profitTargetMove) ? Number(req.body.targetProfitINR || req.body.profitTargetINR || req.body.targetINR || req.body.targetMove || req.body.profitTargetMove) : 1000.00;
       const customLev = req.body.leverage ? Number(req.body.leverage) : 15;
       const customGridDiff = (req.body.gridSpacing !== undefined && req.body.gridSpacing !== '') ? Number(req.body.gridSpacing) : ((req.body.pairEntryDifference !== undefined && req.body.pairEntryDifference !== '') ? Number(req.body.pairEntryDifference) : 0.00);
-      const customMaxPairs = (req.body.maxActivePairs !== undefined && req.body.maxActivePairs !== '') ? Number(req.body.maxActivePairs) : 10;
+      const customMaxPairs = (req.body.maxActivePairs !== undefined && req.body.maxActivePairs !== '') ? Number(req.body.maxActivePairs) : 1;
       const customBasketTarget = (req.body.basketProfitTargetINR || req.body.harvestINR) ? Number(req.body.basketProfitTargetINR || req.body.harvestINR) : 3000;
       const customStopLoss = (req.body.stopLossINR || req.body.stopLoss || req.body.stopLossMove) ? Number(req.body.stopLossINR || req.body.stopLoss || req.body.stopLossMove) : 500.00;
 

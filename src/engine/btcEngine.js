@@ -101,8 +101,8 @@ class BtcEngine {
             if (this.settings.gridSpacing === undefined || this.settings.gridSpacing === null) {
               this.settings.gridSpacing = 0.00;
             }
-            if (this.settings.maxActivePairs === undefined || this.settings.maxActivePairs === null) {
-              this.settings.maxActivePairs = 0;
+            if (this.settings.maxActivePairs === undefined || this.settings.maxActivePairs === null || this.settings.maxActivePairs === 0) {
+              this.settings.maxActivePairs = 1;
             }
           }
           if (data.engineStartedAt) {
@@ -764,7 +764,7 @@ class BtcEngine {
     if (customMaxPairs !== undefined && customMaxPairs !== null && !isNaN(customMaxPairs) && customMaxPairs !== '') {
       this.settings.maxActivePairs = Number(customMaxPairs);
     } else {
-      this.settings.maxActivePairs = 10;
+      this.settings.maxActivePairs = 1;
     }
     if (customBasketTarget && customBasketTarget > 0) this.settings.basketProfitTargetINR = customBasketTarget;
     if (customStopLoss && customStopLoss > 0) {

@@ -1381,19 +1381,20 @@
       <div class="ticker-block border-left" style="min-width: 270px;">
         <div class="ticker-label" style="display: flex; justify-content: space-between; align-items: center;">
           <span>⚡ ACTIVE PAIRS CIRCLE</span>
-          <span class="badge" id="heroPairsCapBadge" style="background: rgba(56, 189, 248, 0.2); color: #38bdf8; border: 1px solid rgba(56, 189, 248, 0.4); font-size: 0.68rem; padding: 2px 7px;">MIN 10 CIRCLE</span>
+          <span class="badge" id="heroPairsCapBadge" style="background: rgba(56, 189, 248, 0.2); color: #38bdf8; border: 1px solid rgba(56, 189, 248, 0.4); font-size: 0.68rem; padding: 2px 7px;">MIN 1 CIRCLE</span>
         </div>
         <div style="display: flex; align-items: baseline; gap: 8px;">
-          <div class="ticker-rate-value rate-gold" id="heroActivePairsCount">0 PAIRS</div>
-          <div style="font-size: 0.82rem; color: var(--text-dim); font-family: var(--font-mono);" id="heroPairsMaxSubtext">/ Min 10 Circle</div>
+          <div class="ticker-rate-value rate-gold" id="heroActivePairsCount">1 PAIR</div>
+          <div style="font-size: 0.82rem; color: var(--text-dim); font-family: var(--font-mono);" id="heroPairsMaxSubtext">/ Min 1 Circle</div>
         </div>
         <div style="display: flex; align-items: center; gap: 4px; margin-top: 5px; flex-wrap: wrap;">
           <div class="target-chip-group" style="display: inline-flex; align-items: center; gap: 2px; background: rgba(0,0,0,0.45); padding: 2px 4px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.12);">
             <span style="font-size: 0.65rem; color: #94a3b8; font-weight: 800;">CIRCLE:</span>
+            <button type="button" class="target-chip active" id="chipPairCap1" onclick="quickSetMaxPairs(1)">1</button>
+            <button type="button" class="target-chip" id="chipPairCap2" onclick="quickSetMaxPairs(2)">2</button>
+            <button type="button" class="target-chip" id="chipPairCap3" onclick="quickSetMaxPairs(3)">3</button>
             <button type="button" class="target-chip" id="chipPairCap5" onclick="quickSetMaxPairs(5)">5</button>
-            <button type="button" class="target-chip active" id="chipPairCap10" onclick="quickSetMaxPairs(10)">10</button>
-            <button type="button" class="target-chip" id="chipPairCap15" onclick="quickSetMaxPairs(15)">15</button>
-            <button type="button" class="target-chip" id="chipPairCap20" onclick="quickSetMaxPairs(20)">20</button>
+            <button type="button" class="target-chip" id="chipPairCap10" onclick="quickSetMaxPairs(10)">10</button>
             <button type="button" class="target-chip" onclick="quickIncreasePairs(1)" title="Circle size +1 Badhayein" style="color: #34d399; font-weight: 900; background: rgba(16, 185, 129, 0.2); border-color: #10b981;">➕+1</button>
           </div>
           <button type="button" class="btn btn-green" onclick="directAddNewPair()" style="padding: 3px 8px; font-size: 0.72rem; border-radius: 6px; font-weight: 900; display: inline-flex; align-items: center; gap: 3px;" title="1 Naya Pair Abhi Kharidein">
@@ -1567,7 +1568,7 @@
         </div>
 
         <!-- Circle Size is controlled authoritatively from Top Hero Bar (5, 10, 15, 20 etc) -->
-        <input type="hidden" id="manualSimMaxPairs" value="10" />
+        <input type="hidden" id="manualSimMaxPairs" value="1" />
 
         <!-- Input 8: Difference from Live Rates ($ Grid Spacing - Default 0 = Rate Move Hote Hi) -->
         <div style="display: flex; flex-direction: column; gap: 3px;">
@@ -2419,7 +2420,7 @@
 
     async function quickIncreasePairs(delta = 1) {
       try {
-        const cur = (cachedData && cachedData.engine && cachedData.engine.maxActivePairs !== undefined && cachedData.engine.maxActivePairs > 0) ? cachedData.engine.maxActivePairs : 10;
+        const cur = (cachedData && cachedData.engine && cachedData.engine.maxActivePairs !== undefined && cachedData.engine.maxActivePairs > 0) ? cachedData.engine.maxActivePairs : 1;
         const newMax = cur + delta;
         await quickSetMaxPairs(newMax);
       } catch (e) {
@@ -2428,8 +2429,8 @@
     }
 
     async function promptCustomMaxPairs() {
-      const cur = (cachedData && cachedData.engine && cachedData.engine.maxActivePairs !== undefined && cachedData.engine.maxActivePairs > 0) ? cachedData.engine.maxActivePairs : 10;
-      const val = prompt('Enter Min Pairs Circle Size (e.g. 10, 15, 20):', cur);
+      const cur = (cachedData && cachedData.engine && cachedData.engine.maxActivePairs !== undefined && cachedData.engine.maxActivePairs > 0) ? cachedData.engine.maxActivePairs : 1;
+      const val = prompt('Enter Min Pairs Circle Size (e.g. 1, 2, 5, 10):', cur);
       if (val === null || val.trim() === '') return;
       const num = parseInt(val, 10);
       if (isNaN(num) || num <= 0) {
@@ -2472,7 +2473,7 @@
       const leverage = leverageEl ? parseFloat(leverageEl.value) : 15;
       const harvestINR = harvestEl ? parseFloat(harvestEl.value) : 3000;
       const stopLossINR = stopLossEl ? parseFloat(stopLossEl.value) : 500;
-      const maxPairs = (cachedData && cachedData.engine && cachedData.engine.maxActivePairs) ? cachedData.engine.maxActivePairs : 10;
+      const maxPairs = (cachedData && cachedData.engine && cachedData.engine.maxActivePairs) ? cachedData.engine.maxActivePairs : 1;
       const gridDiff = (gridDiffEl && gridDiffEl.value !== '') ? parseFloat(gridDiffEl.value) : 0.0;
 
       if (isNaN(amount) || amount <= 0) {
@@ -2548,7 +2549,7 @@
       const leverage = leverageEl ? parseFloat(leverageEl.value) || 15 : 15;
       const stopLossEl = document.getElementById('manualSimStopLoss');
       const stopLossINR = stopLossEl ? parseFloat(stopLossEl.value) || 500 : 500;
-      const maxPairs = (cachedData && cachedData.engine && cachedData.engine.maxActivePairs) ? cachedData.engine.maxActivePairs : 10;
+      const maxPairs = (cachedData && cachedData.engine && cachedData.engine.maxActivePairs) ? cachedData.engine.maxActivePairs : 1;
       const gridDiffEl = document.getElementById('manualSimGridDiff');
       const gridDiff = (gridDiffEl && gridDiffEl.value !== '') ? parseFloat(gridDiffEl.value) : 0.0;
       
@@ -2837,8 +2838,8 @@
           slEl.value = (engine && engine.stopLossINR) ? Math.round(engine.stopLossINR) : 500;
         }
         const pairsEl = document.getElementById('manualSimMaxPairs');
-        if (pairsEl && !pairsEl.matches(':focus') && (!pairsEl.value || pairsEl.value === '0' || pairsEl.value === '3' || pairsEl.value === '5')) {
-          pairsEl.value = (engine && engine.maxActivePairs !== undefined && engine.maxActivePairs > 0) ? engine.maxActivePairs : 10;
+        if (pairsEl && !pairsEl.matches(':focus') && (!pairsEl.value || pairsEl.value === '0' || pairsEl.value === '3' || pairsEl.value === '5' || pairsEl.value === '10')) {
+          pairsEl.value = (engine && engine.maxActivePairs !== undefined && engine.maxActivePairs > 0) ? engine.maxActivePairs : 1;
         }
         const diffEl = document.getElementById('manualSimGridDiff');
         if (diffEl && !diffEl.matches(':focus') && (!diffEl.value || diffEl.value === '5')) {
@@ -2910,7 +2911,7 @@
       if (heroPairsEl) {
         heroPairsEl.innerText = `${pairs.length} PAIRS`;
       }
-      const capVal = (engine && engine.maxActivePairs !== undefined && engine.maxActivePairs > 0) ? engine.maxActivePairs : 10;
+      const capVal = (engine && engine.maxActivePairs !== undefined && engine.maxActivePairs > 0) ? engine.maxActivePairs : 1;
       const heroCapBadge = document.getElementById('heroPairsCapBadge');
       if (heroCapBadge) {
         heroCapBadge.innerText = `MIN ${capVal} CIRCLE`;
@@ -2920,7 +2921,7 @@
         heroMaxSub.innerText = `/ Min ${capVal} Circle`;
       }
       // Update quick chips active state
-      [5, 10, 15, 20].forEach(n => {
+      [1, 2, 3, 5, 10].forEach(n => {
         const c = document.getElementById('chipPairCap' + n);
         if (c) {
           if (capVal === n) c.classList.add('active');
