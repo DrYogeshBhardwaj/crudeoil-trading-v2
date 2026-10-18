@@ -73,6 +73,17 @@ class BtcEngine {
         }
       }
     }, 1000);
+
+    // Live Mudrex Exchange Position Reconciliation (10s interval)
+    setInterval(async () => {
+      if (this.isEngineRunning && this.settings.tradingMode === 'LIVE' && !this.settings.realOrdersDisabled) {
+        try {
+          await this.syncExchangePositionStatus();
+        } catch (e) {
+          // ignore
+        }
+      }
+    }, 10000);
   }
 
   initFromStorage() {
@@ -187,6 +198,17 @@ class BtcEngine {
         if (target && livePrice >= target) {
           this.closePositionLeg(pair.buyPosition, target, timestamp, 'BUY TARGET PROFIT HIT (HARVESTED)', usdInr);
           console.log(`[BTC Engine] Pair ${pair.pairId} BUY TARGET HIT at $${target}! +₹${Math.round(this.settings.profitTargetINR || 1000)} Net profit booked.`);
+
+          // Live Mode: The primary exchange BUY order exited and booked profit on Mudrex.
+          // Auto-complete opposing reference leg to cleanly close pair and free circle slot.
+          if (this.settings.tradingMode === 'LIVE') {
+            if (pair.sellPosition && pair.sellPosition.status === 'OPEN') {
+              pair.sellPosition.status = 'CLOSED';
+              pair.sellPosition.exitPrice = livePrice;
+              pair.sellPosition.exitTime = new Date(timestamp).toISOString();
+              pair.sellPosition.exitReason = 'PAIR_CYCLE_COMPLETED_ON_BUY_TARGET';
+            }
+          }
         }
       }
 
@@ -196,6 +218,15 @@ class BtcEngine {
         if (target && livePrice <= target) {
           this.closePositionLeg(pair.sellPosition, target, timestamp, 'SELL TARGET PROFIT HIT (HARVESTED)', usdInr);
           console.log(`[BTC Engine] Pair ${pair.pairId} SELL TARGET HIT at $${target}! +₹${Math.round(this.settings.profitTargetINR || 1000)} Net profit booked.`);
+
+          if (this.settings.tradingMode === 'LIVE') {
+            if (pair.buyPosition && pair.buyPosition.status === 'OPEN') {
+              pair.buyPosition.status = 'CLOSED';
+              pair.buyPosition.exitPrice = livePrice;
+              pair.buyPosition.exitTime = new Date(timestamp).toISOString();
+              pair.buyPosition.exitReason = 'PAIR_CYCLE_COMPLETED_ON_SELL_TARGET';
+            }
+          }
         }
       }
 
@@ -268,12 +299,33 @@ class BtcEngine {
   }
 
   createNewPair(symbol, entryPrice, timestamp = Date.now(), usdInrRate = 102.00) {
-    this.pairCounter++;
-    const pairId = `PAIR-BTC-${String(this.pairCounter).padStart(4, '0')}`;
-    const qty = this.settings.contractQuantity || 0.10;
-    const lev = this.settings.leverage || 15;
-    const profitTargetINR = this.settings.profitTargetINR || 1000.00;
-    const stopLossINR = this.settings.stopLossINR || 500.00;
+    if (this.isCreatingPair) {
+      console.warn('[BTC Engine] createNewPair skipped: operation already in progress.');
+      return null;
+    }
+
+    const activePairs = this.pairs.filter(p => p.status !== 'CLOSED');
+    const maxAllowed = Number(this.settings.maxActivePairs !== undefined && this.settings.maxActivePairs > 0 ? this.settings.maxActivePairs : 1);
+    if (activePairs.length >= maxAllowed) {
+      console.warn(`[BTC Engine] createNewPair BLOCKED: Active pairs cap reached (${activePairs.length}/${maxAllowed}).`);
+      return null;
+    }
+
+    const now = Date.now();
+    if (this.lastPairCreatedTimestamp && (now - this.lastPairCreatedTimestamp < 3000)) {
+      console.warn(`[BTC Engine] createNewPair throttled by 3-second safety cooldown.`);
+      return null;
+    }
+    this.lastPairCreatedTimestamp = now;
+    this.isCreatingPair = true;
+
+    try {
+      this.pairCounter++;
+      const pairId = `PAIR-BTC-${String(this.pairCounter).padStart(4, '0')}`;
+      const qty = this.settings.contractQuantity || 0.10;
+      const lev = this.settings.leverage || 15;
+      const profitTargetINR = this.settings.profitTargetINR || 1000.00;
+      const stopLossINR = this.settings.stopLossINR || 500.00;
 
     // Accurate Target Exit Price in USD based on desired Net INR profit
     // Net USD = profitTargetINR / usdInrRate
@@ -363,7 +415,10 @@ class BtcEngine {
       });
     }
 
-    return pair;
+      return pair;
+    } finally {
+      this.isCreatingPair = false;
+    }
   }
 
   closePositionLeg(pos, exitPrice, exitTime = Date.now(), reason = 'TARGET HIT', usdInrRate = 102.00) {
@@ -574,6 +629,34 @@ class BtcEngine {
       }
     } catch (e) {
       console.warn('[BTC Engine] Error in flattenLivePositions:', e.message);
+    }
+  }
+
+  async syncExchangePositionStatus() {
+    try {
+      const mudrexLive = require('./mudrexLiveAdapter');
+      const positions = await mudrexLive.queryRealPositions('BTCUSDT');
+      const hasActiveExchangePos = Array.isArray(positions) && positions.some(p => Math.abs(Number(p.quantity || p.size || 0)) > 0.0001);
+
+      // If Mudrex exchange has NO open position, but our local engine has an open LIVE position that was placed on Mudrex:
+      if (!hasActiveExchangePos) {
+        const livePair = this.pairs.find(p => p.status === 'OPEN' && p.buyPosition && p.buyPosition.status === 'OPEN' && (p.buyPosition.apiStatus === 'REAL_MUDREX_POSITION' || p.buyPosition.mudrexOrderId));
+        if (livePair) {
+          const cur = rateFeed.getCurrentRate('BTCUSDT') || { price: 82000, usdInrRate: 102 };
+          console.log(`[BTC Engine Reconciliation] Mudrex exchange position has closed (TP filled on exchange). Closing local pair ${livePair.pairId}.`);
+          this.closePositionLeg(livePair.buyPosition, livePair.buyPosition.targetExitPrice || cur.price, Date.now(), 'EXCHANGE_TP_ORDER_FILLED', cur.usdInrRate || 102);
+          if (livePair.sellPosition && livePair.sellPosition.status === 'OPEN') {
+            livePair.sellPosition.status = 'CLOSED';
+            livePair.sellPosition.exitPrice = cur.price;
+            livePair.sellPosition.exitTime = new Date().toISOString();
+            livePair.sellPosition.exitReason = 'PAIR_COMPLETED_ON_EXCHANGE_TP';
+          }
+          livePair.status = 'CLOSED';
+          this.saveState();
+        }
+      }
+    } catch (e) {
+      console.warn('[BTC Engine Reconciliation] Sync error:', e.message);
     }
   }
 
