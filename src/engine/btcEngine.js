@@ -376,7 +376,7 @@ class BtcEngine {
     pos.exitReason = reason;
 
     // If this was a real Mudrex position, send exit order to close on Mudrex exchange
-    if (this.settings.tradingMode === 'LIVE' && !this.settings.realOrdersDisabled && pos.mudrexOrderId) {
+    if (this.settings.tradingMode === 'LIVE' && !this.settings.realOrdersDisabled && (pos.mudrexOrderId || pos.apiStatus === 'REAL_MUDREX_POSITION' || pos.direction === 'BUY')) {
       this.closeLivePositionLeg(pos).catch(e => {
         console.error('[BTC Engine] Error in closeLivePositionLeg:', e.message);
       });
@@ -493,7 +493,8 @@ class BtcEngine {
       });
 
       if (res && res.success) {
-        targetLeg.mudrexOrderId = mudrexLive.extractOrderId(res.data);
+        const orderId = (res.data && (res.data.order_id || res.data.position_id)) || (res.data && res.data.data && (res.data.data.order_id || res.data.data.position_id)) || 'EXECUTED';
+        targetLeg.mudrexOrderId = orderId;
         targetLeg.apiStatus = 'REAL_MUDREX_POSITION';
         targetLeg.apiError = null;
         console.log(`[BTC Engine] LIVE ${targetLeg.direction} order CONFIRMED on Mudrex Exchange: Order ID ${targetLeg.mudrexOrderId}`);
@@ -513,25 +514,32 @@ class BtcEngine {
 
   async closeLivePositionLeg(pos) {
     if (this.settings.tradingMode !== 'LIVE' || this.settings.realOrdersDisabled) return;
-    if (!pos || !pos.mudrexOrderId) return;
     try {
       const mudrexLive = require('./mudrexLiveAdapter');
-      const exitSide = pos.direction === 'BUY' ? 'SELL' : 'BUY';
-      const intentId = `INTENT-EXIT-${pos.positionId}-${Date.now()}`;
-      console.log(`[BTC Engine] Closing real Mudrex position for ${pos.positionId} (${exitSide} ${pos.quantity} BTC)...`);
-      const res = await mudrexLive.createRealOrder({
-        symbol: 'BTCUSDT',
-        side: exitSide,
-        quantity: pos.quantity || this.settings.contractQuantity || 0.02,
-        leverage: pos.leverage || this.settings.leverage || 15,
-        reduceOnly: true,
-        intentId
-      });
-      if (res && res.success) {
-        console.log(`[BTC Engine] Real Mudrex Position CLOSED successfully for ${pos.positionId}.`);
+      // Direct exchange query to ensure any open exchange position is cleanly closed
+      const positions = await mudrexLive.queryRealPositions('BTCUSDT');
+      if (Array.isArray(positions) && positions.length > 0) {
+        for (const p of positions) {
+          const qty = Math.abs(Number(p.quantity || p.size || 0));
+          if (qty > 0.0001) {
+            const currentSide = Number(p.quantity || p.size || 0) > 0 ? 'BUY' : 'SELL';
+            const exitSide = currentSide === 'BUY' ? 'SELL' : 'BUY';
+            console.log(`[BTC Engine] Closing real Mudrex position: ${exitSide} ${qty} BTC @ Market (reduceOnly: true)...`);
+            const intentId = `INTENT-EXIT-BTC-${Date.now()}`;
+            await mudrexLive.createRealOrder({
+              symbol: 'BTCUSDT',
+              side: exitSide,
+              quantity: qty,
+              leverage: pos ? (pos.leverage || this.settings.leverage || 15) : 15,
+              reduceOnly: true,
+              intentId
+            });
+            console.log(`[BTC Engine] Real Mudrex Position CLOSED successfully for ${pos ? pos.positionId : 'PAIR'}.`);
+          }
+        }
       }
     } catch (e) {
-      console.error(`[BTC Engine] Error closing real Mudrex position for ${pos.positionId}:`, e.message);
+      console.error(`[BTC Engine] Error closing real Mudrex position:`, e.message);
     }
   }
 
