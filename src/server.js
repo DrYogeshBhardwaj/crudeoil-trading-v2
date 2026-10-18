@@ -7,6 +7,7 @@ const pairAddEngine = require('./engine/pairAddEngine');
 const solanaEngineV2 = require('./engine/solanaEngineV2');
 const backtest = require('./engine/backtest');
 const mcxBacktest = require('./engine/mcxBacktest');
+const btcStudyEngine = require('./engine/btcStudyEngine');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -136,6 +137,18 @@ app.get([
 ], (req, res) => res.redirect(301, '/Solana-Live-Mudrex'));
 app.get(['/mudrex-crude-calc', '/mudrex_crude_calc', '/mudrex_crude_calc.html', '/mudrex-crude-calc.html'], (req, res) => res.sendFile(path.join(__dirname, '../public/mudrex_crude_calc.html')));
 app.get(['/pair-add', '/pair_add', '/pair_add.html', '/pair-add.html'], (req, res) => res.sendFile(path.join(__dirname, '../public/pair_add.html')));
+
+// Dedicated BTC Study & Historical Backtesting / Wallet Simulator Desk
+app.get([
+  '/btc-study',
+  '/BTC-Study',
+  '/btc_study',
+  '/btc-study.html',
+  '/btc_study.html',
+  '/btc',
+  '/BTC',
+  '/btc-simulator'
+], (req, res) => res.sendFile(path.join(__dirname, '../public/btc_study.html')));
 
 app.get('/api/mudrex-debug', async (req, res) => {
   try {
@@ -1195,6 +1208,64 @@ app.post('/api/mcx/backtest', async (req, res) => {
     const config = req.body;
     const result = await mcxBacktest.runMcxBacktest(config);
     res.json(result);
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// 7c. BTC Study & Wallet Simulator Endpoints
+app.get('/api/btc-study/live-rate', (req, res) => {
+  try {
+    const rateInfo = rateFeed.getCurrentRate('BTCUSDT');
+    res.json({
+      success: true,
+      data: rateInfo
+    });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+app.post('/api/btc-study/historical-klines', async (req, res) => {
+  try {
+    const result = await btcStudyEngine.fetchHistoricalKlines(req.body);
+    res.json(result);
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+app.post('/api/btc-study/run-simulation', async (req, res) => {
+  try {
+    const { config, klines } = req.body;
+    let candleData = klines;
+    if (!candleData || candleData.length === 0) {
+      const fetchResult = await btcStudyEngine.fetchHistoricalKlines(config);
+      if (!fetchResult.success) {
+        return res.status(400).json(fetchResult);
+      }
+      candleData = fetchResult.klines;
+    }
+    const simulationResult = btcStudyEngine.runSimulation(config, candleData);
+    res.json(simulationResult);
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+app.post('/api/btc-study/compare-strategies', async (req, res) => {
+  try {
+    const { baseConfig, variations, klines } = req.body;
+    let candleData = klines;
+    if (!candleData || candleData.length === 0) {
+      const fetchResult = await btcStudyEngine.fetchHistoricalKlines(baseConfig);
+      if (!fetchResult.success) {
+        return res.status(400).json(fetchResult);
+      }
+      candleData = fetchResult.klines;
+    }
+    const comparisonResult = btcStudyEngine.compareConfigurations(baseConfig, variations, candleData);
+    res.json({ success: true, results: comparisonResult });
   } catch (err) {
     res.status(500).json({ success: false, error: err.message });
   }

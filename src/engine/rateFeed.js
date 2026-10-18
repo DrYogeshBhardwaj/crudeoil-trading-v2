@@ -135,7 +135,7 @@ class RateFeedManager {
   }
 
   fetchMarkPrices() {
-    const symbols = ['CLUSDT', 'SOLUSDT'];
+    const symbols = ['CLUSDT', 'SOLUSDT', 'BTCUSDT'];
     for (const sym of symbols) {
       const url = `https://fapi.binance.com/fapi/v1/premiumIndex?symbol=${sym}`;
       http.get(url, (res) => {
