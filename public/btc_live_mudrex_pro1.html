@@ -271,33 +271,44 @@
     }
 
     .hero-profit-card.floating-glow {
-      background: linear-gradient(135deg, rgba(88, 28, 135, 0.40), rgba(30, 27, 75, 0.92), rgba(15, 23, 42, 0.98));
-      border: 2px solid #a855f7;
-      box-shadow: 0 10px 36px rgba(168, 85, 247, 0.35), inset 0 0 30px rgba(147, 51, 234, 0.22);
-      border-top: 4px solid #c084fc;
+      background: radial-gradient(circle at 90% 10%, rgba(168, 85, 247, 0.35) 0%, transparent 60%),
+                  linear-gradient(135deg, rgba(88, 28, 135, 0.65) 0%, rgba(46, 16, 101, 0.78) 50%, rgba(15, 23, 42, 0.95) 100%);
+      border: 2.5px solid #a855f7;
+      box-shadow: 0 0 35px rgba(168, 85, 247, 0.45), inset 0 0 35px rgba(147, 51, 234, 0.32);
+      border-top: 5px solid #c084fc;
     }
 
     .hero-profit-card.floating-glow:hover {
-      box-shadow: 0 12px 42px rgba(168, 85, 247, 0.5), inset 0 0 35px rgba(147, 51, 234, 0.3);
+      box-shadow: 0 0 45px rgba(168, 85, 247, 0.65), inset 0 0 45px rgba(147, 51, 234, 0.45);
       border-color: #d8b4fe;
     }
 
     .tag-floating {
-      font-size: 0.74rem;
+      font-size: 0.78rem;
       font-weight: 900;
       color: #ffffff;
       background: linear-gradient(90deg, #7c3aed, #a855f7);
-      border: 1px solid #d8b4fe;
-      box-shadow: 0 0 14px rgba(192, 132, 252, 0.65);
-      padding: 4px 12px;
+      border: 1.5px solid #e9d5ff;
+      box-shadow: 0 0 18px rgba(192, 132, 252, 0.85);
+      padding: 5px 14px;
       border-radius: 999px;
-      letter-spacing: 0.5px;
-      animation: pulseGlow 2s infinite ease-in-out;
+      letter-spacing: 0.8px;
+      animation: pulseGlow 1.8s infinite ease-in-out;
+    }
+
+    .floating-val-profit {
+      color: #2dd4bf !important;
+      text-shadow: 0 0 24px rgba(45, 212, 191, 0.6) !important;
+    }
+
+    .floating-val-loss {
+      color: #fb7185 !important;
+      text-shadow: 0 0 24px rgba(251, 113, 133, 0.6) !important;
     }
 
     @keyframes pulseGlow {
-      0%, 100% { box-shadow: 0 0 10px rgba(168, 85, 247, 0.5); transform: scale(1); }
-      50% { box-shadow: 0 0 20px rgba(192, 132, 252, 0.9); transform: scale(1.02); }
+      0%, 100% { box-shadow: 0 0 12px rgba(168, 85, 247, 0.6); transform: scale(1); }
+      50% { box-shadow: 0 0 24px rgba(216, 180, 254, 0.95); transform: scale(1.03); }
     }
 
     .hero-sub-row {
@@ -777,12 +788,12 @@
       <div class="hero-profit-card floating-glow" id="cardUnrealisedPnl">
         <div class="card-label" style="color: #f3e8ff; font-weight: 800;">
           <span style="display: flex; align-items: center; gap: 8px;">
-            <span style="font-size: 1.15rem;">🌊</span>
-            <span style="color: #f3e8ff; letter-spacing: 0.5px;">MUDREX LIVE POSITION (UNREALISED PnL)</span>
+            <span style="font-size: 1.25rem;">🌊</span>
+            <span style="color: #f3e8ff; letter-spacing: 0.6px; text-shadow: 0 0 12px rgba(192, 132, 252, 0.75);">MUDREX LIVE POSITION (UNREALISED PnL)</span>
           </span>
           <span class="tag-floating" id="floatingTagStatus">● LIVE MUDREX BID</span>
         </div>
-        <div class="pillar-val-main jeb-profit-hero loss-red" id="unrealisedPnlINR">-₹73.94</div>
+        <div class="pillar-val-main jeb-profit-hero floating-val-loss" id="unrealisedPnlINR">-₹73.94</div>
         <div class="hero-sub-row">
           <div style="font-size: 0.95rem; font-weight: 800; color: #fb7185;" id="unrealisedPnlUSD">
             - $0.72 USD (-0.26% Floating)
@@ -1100,7 +1111,7 @@
       if (unElem) {
         const sign = unPnlINR > 0 ? '+' : (unPnlINR < 0 ? '-' : '');
         unElem.innerText = `${sign}₹${Math.abs(unPnlINR).toFixed(2)}`;
-        unElem.className = 'pillar-val-main jeb-profit-hero ' + (unPnlINR >= 0 ? 'profit-green' : 'loss-red');
+        unElem.className = 'pillar-val-main jeb-profit-hero ' + (unPnlINR >= 0 ? 'floating-val-profit' : 'floating-val-loss');
       }
 
       const unUSDElem = document.getElementById('unrealisedPnlUSD');
@@ -1108,7 +1119,7 @@
         const signUSD = unPnlUSD >= 0 ? '+' : '-';
         const signPct = unPnlPct >= 0 ? '+' : '';
         unUSDElem.innerText = `${signUSD}$${Math.abs(unPnlUSD).toFixed(2)} USD (${signPct}${unPnlPct.toFixed(2)}% Floating)`;
-        unUSDElem.style.color = unPnlUSD >= 0 ? '#34d399' : '#fb7185';
+        unUSDElem.style.color = unPnlUSD >= 0 ? '#2dd4bf' : '#fb7185';
       }
 
       const unDetElem = document.getElementById('unrealisedPosDetails');
