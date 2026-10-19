@@ -1146,7 +1146,6 @@
       document.getElementById('contractLotSize').innerText = `${lot} BTC`;
 
       // 3. Active Waves
-      const pairs = engine.pairs || [];
       if (pairs.length > 0) {
         const p1 = pairs[0] || {};
         if (p1.buy) {
