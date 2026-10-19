@@ -1164,8 +1164,8 @@ app.get(['/api/btc-live-mudrex/data', '/api/btc-live-mudrex-pro/data', '/api/btc
 app.post(['/api/btc-live-mudrex/action', '/api/btc-live-mudrex-pro/action', '/api/btc-pro/action'], async (req, res) => {
   try {
     const { action, password } = req.body || {};
-    // Per user instruction: password removed from update/reset, pair addition, pair close, pairs limit, harvest target, and punarjanm operations
-    const noPasswordActions = ['resetSimulator', 'resetData', 'addNewPair', 'closePair', 'updateMaxPairs', 'setMaxPairs', 'increaseMaxPairs', 'updateBasketTarget', 'punarjanm'];
+    // Per user instruction: password removed from update/reset, pair addition, pair close, pairs limit, harvest target, lot size, and punarjanm operations
+    const noPasswordActions = ['resetSimulator', 'resetData', 'addNewPair', 'closePair', 'updateMaxPairs', 'setMaxPairs', 'increaseMaxPairs', 'updateBasketTarget', 'punarjanm', 'updateContractQuantity', 'updateLotSize'];
     if (!noPasswordActions.includes(action) && password !== '340556') {
       return res.status(403).json({ success: false, error: 'Incorrect Admin Password. Must provide 340556.' });
     }
@@ -1242,6 +1242,27 @@ app.post(['/api/btc-live-mudrex/action', '/api/btc-live-mudrex-pro/action', '/ap
       btcEngine.settings.basketProfitTargetINR = newTarget;
       btcEngine.saveState();
       return res.json({ success: true, message: `BTC Punarjanm target updated to ₹${newTarget.toFixed(2)} INR.`, targetINR: newTarget });
+    } else if (action === 'updateContractQuantity' || action === 'updateLotSize') {
+      const newQty = Number(req.body.quantity || req.body.contractQuantity);
+      if (isNaN(newQty) || newQty <= 0) {
+        return res.status(400).json({ success: false, error: 'Contract quantity must be a positive number.' });
+      }
+      btcEngine.settings.contractQuantity = newQty;
+      // Recalculate target moves
+      const usdInr = btcEngine.settings.usdInrRate || 102.00;
+      const notionalPerLegUSD = newQty * (rateFeed.getCurrentRate('BTCUSDT')?.price || 82500);
+      const estRoundtripFeeINR = (notionalPerLegUSD * 2 * 0.000590 * 1.18 * 1.20 * usdInr) + 10.0;
+      const targetMoveUSD = Math.round((btcEngine.settings.profitTargetINR + estRoundtripFeeINR) / (newQty * usdInr));
+      btcEngine.settings.profitTargetMove = Math.max(10, targetMoveUSD);
+      btcEngine.settings.buyTargetMove = btcEngine.settings.profitTargetMove;
+      btcEngine.settings.sellTargetMove = btcEngine.settings.profitTargetMove;
+      btcEngine.saveState();
+      return res.json({ 
+        success: true, 
+        message: `BTC Lot Size updated to ${newQty} BTC (Target Move: $${btcEngine.settings.profitTargetMove}).`, 
+        contractQuantity: newQty,
+        profitTargetMove: btcEngine.settings.profitTargetMove
+      });
     } else if (action === 'setTradingMode') {
       const { mode, realOrdersDisabled } = req.body || {};
       const targetMode = (mode || 'LIVE').toUpperCase();
