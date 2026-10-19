@@ -433,8 +433,18 @@
 
     .wave-grid {
       display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 18px;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 14px;
+    }
+    @media (max-width: 1200px) {
+      .wave-grid {
+        grid-template-columns: repeat(2, 1fr);
+      }
+    }
+    @media (max-width: 640px) {
+      .wave-grid {
+        grid-template-columns: 1fr;
+      }
     }
 
     .wave-card {
@@ -805,54 +815,115 @@
       </div>
     </section>
 
-    <!-- 4. ACTIVE LIVE WAVES (BUY vs SELL) -->
+    <!-- 4. ACTIVE & PENDING B/S LIVE ORDERS (4 WORKING BIDS) -->
     <section class="active-pairs-section">
       <div class="section-title">
-        <span>⚡ Abhi Live Chal Rahe Orders (Live BUY &amp; SELL Waves)</span>
-        <span class="beacon-pill" id="activeLegsCountBadge" style="font-size: 0.72rem; padding: 3px 10px;">1 LIVE MUDREX LEG OPEN</span>
+        <span>⚡ Abhi Ke Active &amp; Pending Orders (4 B/S Working Bids)</span>
+        <span class="beacon-pill" id="activeLegsCountBadge" style="font-size: 0.72rem; padding: 3px 10px;">4 WORKING B/S BIDS</span>
       </div>
 
       <div class="wave-grid" id="activeWavesContainer">
-        <!-- Rendered dynamically -->
+        <!-- BOX 1: PAIR 1 BUY -->
         <div class="wave-card buy" id="wave1Card">
           <div class="wave-header">
-            <span class="wave-tag tag-buy" id="wave1Tag">🟢 BUY TRADE (LONG) - MUDREX ACTIVE</span>
-            <span style="font-family: var(--font-mono); font-size: 0.85rem; color: #fff;" id="wave1PairId">MUDREX-REAL-BUY</span>
+            <span class="wave-tag tag-buy" id="wave1Tag">🟢 PAIR-01 BUY (LONG)</span>
+            <span style="font-family: var(--font-mono); font-size: 0.8rem; color: #fff;" id="wave1PairId">MUDREX-REAL-BUY</span>
           </div>
           <div class="wave-metric-row">
             <div>
-              <div class="mini-stat-label">Kharid Rate (Entry)</div>
+              <div class="mini-stat-label">Kharid Rate</div>
               <div class="mini-stat-val" id="wave1Entry">$82,550.80</div>
             </div>
             <div>
-              <div class="mini-stat-label">Bechne Ka Target (Exit)</div>
+              <div class="mini-stat-label">Exit Target</div>
               <div class="mini-stat-val target-highlight" id="wave1Target">$82,859.29</div>
             </div>
             <div>
-              <div class="mini-stat-label">Target Tak Baki Duri</div>
+              <div class="mini-stat-label">Baki Duri</div>
               <div class="mini-stat-val" style="color: #34d399;" id="wave1Dist">+$308.49</div>
             </div>
           </div>
+          <div style="margin-top: 10px; display: flex; justify-content: space-between; align-items: center; border-top: 1px solid rgba(255,255,255,0.06); padding-top: 8px;">
+            <span style="font-size: 0.72rem; color: var(--text-dim);">Lot: 0.05 BTC (15x)</span>
+            <span class="badge-cycle" id="wave1StatusBadge" style="background: rgba(16,185,129,0.15); color: #34d399; border: 1px solid rgba(16,185,129,0.3); font-size: 0.72rem; padding: 2px 8px;">● LIVE ON MUDREX</span>
+          </div>
         </div>
 
-        <div class="wave-card sell" id="wave2Card" style="opacity: 0.7;">
+        <!-- BOX 2: PAIR 1 SELL -->
+        <div class="wave-card sell" id="wave2Card" style="opacity: 0.8;">
           <div class="wave-header">
-            <span class="wave-tag tag-sell" id="wave2Tag" style="background: rgba(100, 116, 139, 0.2); color: #94a3b8; border-color: rgba(148, 163, 184, 0.3);">🛡️ SHORT (SELL) - ONE-WAY SHIELD (SAFE)</span>
-            <span style="font-family: var(--font-mono); font-size: 0.85rem; color: #94a3b8;" id="wave2PairId">ONE-WAY SAFE</span>
+            <span class="wave-tag tag-sell" id="wave2Tag" style="background: rgba(100, 116, 139, 0.2); color: #94a3b8; border-color: rgba(148, 163, 184, 0.3);">🛡️ PAIR-01 SELL (SHORT)</span>
+            <span style="font-family: var(--font-mono); font-size: 0.8rem; color: #94a3b8;" id="wave2PairId">ONE-WAY SAFE</span>
           </div>
           <div class="wave-metric-row">
             <div>
-              <div class="mini-stat-label">Bech Rate (Entry)</div>
+              <div class="mini-stat-label">Bech Rate</div>
               <div class="mini-stat-val" id="wave2Entry" style="color: #94a3b8;">HEDGE OFF</div>
             </div>
             <div>
-              <div class="mini-stat-label">Wapas Kharid Target (Exit)</div>
+              <div class="mini-stat-label">Exit Target</div>
               <div class="mini-stat-val target-highlight" id="wave2Target" style="color: #94a3b8;">$82,280.05</div>
             </div>
             <div>
-              <div class="mini-stat-label">Target Tak Baki Duri</div>
+              <div class="mini-stat-label">Baki Duri</div>
               <div class="mini-stat-val" style="color: #94a3b8;" id="wave2Dist">Margin Safe</div>
             </div>
+          </div>
+          <div style="margin-top: 10px; display: flex; justify-content: space-between; align-items: center; border-top: 1px solid rgba(255,255,255,0.06); padding-top: 8px;">
+            <span style="font-size: 0.72rem; color: var(--text-dim);">Lot: 0.05 BTC (15x)</span>
+            <span class="badge-cycle" id="wave2StatusBadge" style="background: rgba(100,116,139,0.2); color: #94a3b8; border: 1px solid rgba(148,163,184,0.3); font-size: 0.72rem; padding: 2px 8px;">🛡️ ONE-WAY SAFE</span>
+          </div>
+        </div>
+
+        <!-- BOX 3: PAIR 2 BUY -->
+        <div class="wave-card buy" id="wave3Card" style="opacity: 0.85;">
+          <div class="wave-header">
+            <span class="wave-tag tag-buy" id="wave3Tag" style="background: rgba(245, 158, 11, 0.15); color: #fbbf24; border-color: rgba(245, 158, 11, 0.35);">🟡 PAIR-02 BUY (LONG)</span>
+            <span style="font-family: var(--font-mono); font-size: 0.8rem; color: #fbbf24;" id="wave3PairId">PAIR-02-BUY</span>
+          </div>
+          <div class="wave-metric-row">
+            <div>
+              <div class="mini-stat-label">Kharid Rate</div>
+              <div class="mini-stat-val" id="wave3Entry">$82,450.00</div>
+            </div>
+            <div>
+              <div class="mini-stat-label">Exit Target</div>
+              <div class="mini-stat-val target-highlight" id="wave3Target">$82,750.00</div>
+            </div>
+            <div>
+              <div class="mini-stat-label">Baki Duri</div>
+              <div class="mini-stat-val" style="color: #fbbf24;" id="wave3Dist">Pending Dip</div>
+            </div>
+          </div>
+          <div style="margin-top: 10px; display: flex; justify-content: space-between; align-items: center; border-top: 1px solid rgba(255,255,255,0.06); padding-top: 8px;">
+            <span style="font-size: 0.72rem; color: var(--text-dim);">Lot: 0.05 BTC (15x)</span>
+            <span class="badge-cycle" id="wave3StatusBadge" style="background: rgba(245,158,11,0.15); color: #fbbf24; border: 1px solid rgba(245,158,11,0.35); font-size: 0.72rem; padding: 2px 8px;">⏳ PENDING DIP BID</span>
+          </div>
+        </div>
+
+        <!-- BOX 4: PAIR 2 SELL -->
+        <div class="wave-card sell" id="wave4Card" style="opacity: 0.85;">
+          <div class="wave-header">
+            <span class="wave-tag tag-sell" id="wave4Tag" style="background: rgba(56, 189, 248, 0.15); color: #38bdf8; border-color: rgba(56, 189, 248, 0.35);">🔵 PAIR-02 SELL (SHORT)</span>
+            <span style="font-family: var(--font-mono); font-size: 0.8rem; color: #38bdf8;" id="wave4PairId">PAIR-02-SELL</span>
+          </div>
+          <div class="wave-metric-row">
+            <div>
+              <div class="mini-stat-label">Bech Rate</div>
+              <div class="mini-stat-val" id="wave4Entry">$82,650.00</div>
+            </div>
+            <div>
+              <div class="mini-stat-label">Exit Target</div>
+              <div class="mini-stat-val target-highlight" id="wave4Target">$82,350.00</div>
+            </div>
+            <div>
+              <div class="mini-stat-label">Baki Duri</div>
+              <div class="mini-stat-val" style="color: #38bdf8;" id="wave4Dist">Pending Rally</div>
+            </div>
+          </div>
+          <div style="margin-top: 10px; display: flex; justify-content: space-between; align-items: center; border-top: 1px solid rgba(255,255,255,0.06); padding-top: 8px;">
+            <span style="font-size: 0.72rem; color: var(--text-dim);">Lot: 0.05 BTC (15x)</span>
+            <span class="badge-cycle" id="wave4StatusBadge" style="background: rgba(56,189,248,0.15); color: #38bdf8; border: 1px solid rgba(56,189,248,0.35); font-size: 0.72rem; padding: 2px 8px;">⏳ PENDING RALLY BID</span>
           </div>
         </div>
       </div>
@@ -864,6 +935,10 @@
         <button class="tab-btn active" id="tabBtnTrades" onclick="showTab('trades')">
           <span>📜 Band Ho Chuke Pakke Trades (Trade History)</span>
           <span class="badge-count" id="badgeTradesCount">4</span>
+        </button>
+        <button class="tab-btn" id="tabBtnPending" onclick="showTab('pending')">
+          <span>⚡ Chalu &amp; Pending B/S Orders (Working Bids)</span>
+          <span class="badge-count" id="badgePendingCount" style="background: rgba(56,189,248,0.25); color: #38bdf8; border-color: rgba(56,189,248,0.4);">4</span>
         </button>
         <button class="tab-btn" id="tabBtnHarvest" onclick="showTab('harvest')">
           <span>👑 Punarjanm Harvest Record (Tijori Ledger)</span>
@@ -892,7 +967,28 @@
         </table>
       </div>
 
-      <!-- TAB 2: Mudrex Harvest Settlements Table -->
+      <!-- TAB 2: Working & Pending B/S Orders Table -->
+      <div id="viewPending" style="display: none;">
+        <table class="custom-table">
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>Pair / Bid ID</th>
+              <th>Side</th>
+              <th>Order Role</th>
+              <th>Kharid / Bech Rate</th>
+              <th>Exit Target Price</th>
+              <th>Live Baki Duri</th>
+              <th>Mudrex Status</th>
+            </tr>
+          </thead>
+          <tbody id="pendingOrdersBody">
+            <tr><td colspan="8" style="text-align: center; color: var(--text-dim);">Pending B/S orders load ho rahe hain...</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- TAB 3: Mudrex Harvest Settlements Table -->
       <div id="viewHarvest" style="display: none;">
         <table class="custom-table">
           <thead>
@@ -1034,8 +1130,10 @@
     function showTab(tabName) {
       activeTab = tabName;
       document.getElementById('tabBtnTrades').classList.toggle('active', tabName === 'trades');
+      document.getElementById('tabBtnPending').classList.toggle('active', tabName === 'pending');
       document.getElementById('tabBtnHarvest').classList.toggle('active', tabName === 'harvest');
       document.getElementById('viewTrades').style.display = tabName === 'trades' ? 'block' : 'none';
+      document.getElementById('viewPending').style.display = tabName === 'pending' ? 'block' : 'none';
       document.getElementById('viewHarvest').style.display = tabName === 'harvest' ? 'block' : 'none';
     }
 
@@ -1290,63 +1388,166 @@
       const lot = engine.contractQuantity || 0.05;
       document.getElementById('contractLotSize').innerText = `${lot} BTC`;
 
-      // 3. Active Waves (1:1 with real Mudrex exchange status)
+      // 3. Active & Pending 4 B/S Working Bids
       const legsBadge = document.getElementById('activeLegsCountBadge');
+      if (legsBadge) {
+        legsBadge.innerText = currentHasMudrexPosition 
+          ? `4 B/S BIDS (1 MUDREX LIVE · 1 ONE-WAY SAFE · 2 PENDING GRID)` 
+          : `4 B/S BIDS READY (100% MARGIN FREE)`;
+      }
+
+      // BOX 1: PAIR 1 BUY
       const wave1Card = document.getElementById('wave1Card');
-      const wave2Card = document.getElementById('wave2Card');
-
-      if (currentHasMudrexPosition && currentOpenEntryPrice > 0) {
-        if (legsBadge) legsBadge.innerText = `1 LIVE MUDREX LEG OPEN (${currentOpenDirection})`;
-
-        if (currentOpenDirection === 'BUY') {
-          // Real Mudrex BUY (Long) Leg Active
-          const w1Tag = document.getElementById('wave1Tag');
-          if (w1Tag) w1Tag.innerHTML = '🟢 BUY TRADE (LONG) - MUDREX ACTIVE';
-          document.getElementById('wave1Entry').innerText = `$${currentOpenEntryPrice.toFixed(2)}`;
-          document.getElementById('wave1Target').innerText = `$${currentBuyTarget.toFixed(2)}`;
-          const d1 = currentBuyTarget - price;
-          document.getElementById('wave1Dist').innerText = `${d1 >= 0 ? '+' : '-'}$${Math.abs(d1).toFixed(2)}`;
-          if (wave1Card) wave1Card.style.opacity = '1';
-
-          // Opposite SELL Leg is Safely Shielded
-          const w2Tag = document.getElementById('wave2Tag');
-          if (w2Tag) w2Tag.innerHTML = '🛡️ SHORT (SELL) - ONE-WAY SHIELD (SAFE)';
-          document.getElementById('wave2Entry').innerText = 'HEDGE OFF';
-          document.getElementById('wave2Target').innerText = `$${currentSellTarget.toFixed(2)}`;
-          document.getElementById('wave2Dist').innerText = 'Margin Safe';
-          if (wave2Card) wave2Card.style.opacity = '0.6';
-        } else {
-          // Real Mudrex SELL (Short) Leg Active
-          const w2Tag = document.getElementById('wave2Tag');
-          if (w2Tag) w2Tag.innerHTML = '🔴 SELL TRADE (SHORT) - MUDREX ACTIVE';
-          document.getElementById('wave2Entry').innerText = `$${currentOpenEntryPrice.toFixed(2)}`;
-          document.getElementById('wave2Target').innerText = `$${currentSellTarget.toFixed(2)}`;
-          const d2 = price - currentSellTarget;
-          document.getElementById('wave2Dist').innerText = `${d2 >= 0 ? '+' : '-'}$${Math.abs(d2).toFixed(2)}`;
-          if (wave2Card) wave2Card.style.opacity = '1';
-
-          const w1Tag = document.getElementById('wave1Tag');
-          if (w1Tag) w1Tag.innerHTML = '🛡️ LONG (BUY) - ONE-WAY SHIELD (SAFE)';
-          document.getElementById('wave1Entry').innerText = 'HEDGE OFF';
-          document.getElementById('wave1Target').innerText = `$${currentBuyTarget.toFixed(2)}`;
-          document.getElementById('wave1Dist').innerText = 'Margin Safe';
-          if (wave1Card) wave1Card.style.opacity = '0.6';
+      const w1Tag = document.getElementById('wave1Tag');
+      const w1Badge = document.getElementById('wave1StatusBadge');
+      if (currentHasMudrexPosition && currentOpenDirection === 'BUY') {
+        if (w1Tag) w1Tag.innerHTML = '🟢 PAIR-01 BUY (LONG)';
+        document.getElementById('wave1Entry').innerText = `$${currentOpenEntryPrice.toFixed(2)}`;
+        document.getElementById('wave1Target').innerText = `$${currentBuyTarget.toFixed(2)}`;
+        const d1 = currentBuyTarget - price;
+        document.getElementById('wave1Dist').innerText = `${d1 >= 0 ? '+' : '-'}$${Math.abs(d1).toFixed(2)}`;
+        if (w1Badge) {
+          w1Badge.innerHTML = '● LIVE ON MUDREX';
+          w1Badge.style.color = '#34d399';
+          w1Badge.style.background = 'rgba(16,185,129,0.15)';
         }
+        if (wave1Card) wave1Card.style.opacity = '1';
       } else {
-        if (legsBadge) legsBadge.innerText = '0 LIVE LEGS · 100% MARGIN FREE';
-        const w1Tag = document.getElementById('wave1Tag');
-        if (w1Tag) w1Tag.innerHTML = '⚪ BUY TRADE (LONG) - KHALI';
+        if (w1Tag) w1Tag.innerHTML = '⚪ PAIR-01 BUY (KHALI)';
         document.getElementById('wave1Entry').innerText = 'FREE';
         document.getElementById('wave1Target').innerText = `$${(price + 300).toFixed(2)}`;
         document.getElementById('wave1Dist').innerText = 'Taiyar';
-        if (wave1Card) wave1Card.style.opacity = '0.5';
+        if (w1Badge) w1Badge.innerHTML = '⏳ READY';
+        if (wave1Card) wave1Card.style.opacity = '0.7';
+      }
 
-        const w2Tag = document.getElementById('wave2Tag');
-        if (w2Tag) w2Tag.innerHTML = '⚪ SELL TRADE (SHORT) - KHALI';
+      // BOX 2: PAIR 1 SELL
+      const wave2Card = document.getElementById('wave2Card');
+      const w2Tag = document.getElementById('wave2Tag');
+      const w2Badge = document.getElementById('wave2StatusBadge');
+      if (currentHasMudrexPosition && currentOpenDirection === 'BUY') {
+        if (w2Tag) w2Tag.innerHTML = '🛡️ PAIR-01 SELL (SHORT)';
+        document.getElementById('wave2Entry').innerText = 'HEDGE OFF';
+        document.getElementById('wave2Target').innerText = `$${currentSellTarget.toFixed(2)}`;
+        document.getElementById('wave2Dist').innerText = 'Margin Safe';
+        if (w2Badge) {
+          w2Badge.innerHTML = '🛡️ ONE-WAY SAFE';
+          w2Badge.style.color = '#94a3b8';
+          w2Badge.style.background = 'rgba(100,116,139,0.2)';
+        }
+        if (wave2Card) wave2Card.style.opacity = '0.8';
+      } else {
+        if (w2Tag) w2Tag.innerHTML = '⚪ PAIR-01 SELL (KHALI)';
         document.getElementById('wave2Entry').innerText = 'FREE';
         document.getElementById('wave2Target').innerText = `$${(price - 300).toFixed(2)}`;
         document.getElementById('wave2Dist').innerText = 'Taiyar';
-        if (wave2Card) wave2Card.style.opacity = '0.5';
+        if (w2Badge) w2Badge.innerHTML = '⏳ READY';
+        if (wave2Card) wave2Card.style.opacity = '0.7';
+      }
+
+      // BOX 3: PAIR 2 BUY (Grid Dip Bid)
+      const p2 = (pairs && pairs.length > 1) ? pairs[1] : null;
+      const wave3Card = document.getElementById('wave3Card');
+      const w3Badge = document.getElementById('wave3StatusBadge');
+      if (p2 && p2.buy) {
+        document.getElementById('wave3Entry').innerText = `$${Number(p2.buy.entryPrice || price).toFixed(2)}`;
+        document.getElementById('wave3Target').innerText = `$${Number(p2.buy.targetPrice || (price + 250)).toFixed(2)}`;
+        const d3 = Number(p2.buy.targetPrice || (price + 250)) - price;
+        document.getElementById('wave3Dist').innerText = `${d3 >= 0 ? '+' : '-'}$${Math.abs(d3).toFixed(2)}`;
+        if (w3Badge) w3Badge.innerHTML = '● WORKING BID';
+      } else {
+        const dipEntry = price - 100;
+        const dipTarget = dipEntry + 308.49;
+        document.getElementById('wave3Entry').innerText = `$${dipEntry.toFixed(2)}`;
+        document.getElementById('wave3Target').innerText = `$${dipTarget.toFixed(2)}`;
+        document.getElementById('wave3Dist').innerText = `-$100.00 (Dip Level)`;
+        if (w3Badge) w3Badge.innerHTML = '⏳ PENDING DIP BID';
+      }
+
+      // BOX 4: PAIR 2 SELL (Grid Rally Bid)
+      const wave4Card = document.getElementById('wave4Card');
+      const w4Badge = document.getElementById('wave4StatusBadge');
+      if (p2 && p2.sell) {
+        document.getElementById('wave4Entry').innerText = `$${Number(p2.sell.entryPrice || price).toFixed(2)}`;
+        document.getElementById('wave4Target').innerText = `$${Number(p2.sell.targetPrice || (price - 250)).toFixed(2)}`;
+        const d4 = price - Number(p2.sell.targetPrice || (price - 250));
+        document.getElementById('wave4Dist').innerText = `${d4 >= 0 ? '+' : '-'}$${Math.abs(d4).toFixed(2)}`;
+        if (w4Badge) w4Badge.innerHTML = '● WORKING BID';
+      } else {
+        const rallyEntry = price + 100;
+        const rallyTarget = rallyEntry - 270.75;
+        document.getElementById('wave4Entry').innerText = `$${rallyEntry.toFixed(2)}`;
+        document.getElementById('wave4Target').innerText = `$${rallyTarget.toFixed(2)}`;
+        document.getElementById('wave4Dist').innerText = `+$100.00 (Rally Level)`;
+        if (w4Badge) w4Badge.innerHTML = '⏳ PENDING RALLY BID';
+      }
+
+      // TAB 2: Populating Pending & Working B/S Bids Table
+      const pendingBids = [
+        {
+          id: currentHasMudrexPosition ? 'MUDREX-REAL-BUY' : 'PAIR-01-BUY',
+          side: 'BUY',
+          role: 'Active Live Exchange Long',
+          rate: currentOpenEntryPrice > 0 ? currentOpenEntryPrice : price,
+          target: currentBuyTarget,
+          dist: buyDiffFormatted + ' Baaki',
+          status: currentHasMudrexPosition && currentOpenDirection === 'BUY' ? '● LIVE ON MUDREX' : '● WORKING'
+        },
+        {
+          id: 'PAIR-01-SELL',
+          side: 'SELL',
+          role: 'Opposing Hedge Protection',
+          rate: currentHasMudrexPosition ? 'HEDGE OFF' : price,
+          target: currentSellTarget,
+          dist: 'Margin Safe',
+          status: '🛡️ ONE-WAY SAFE'
+        },
+        {
+          id: (p2 && p2.buy) ? (p2.buy.positionId || 'PAIR-02-BUY') : 'PAIR-02-BUY (DIP)',
+          side: 'BUY',
+          role: 'Grid Dip Re-entry Bid',
+          rate: (p2 && p2.buy) ? p2.buy.entryPrice : (price - 100),
+          target: (p2 && p2.buy) ? p2.buy.targetPrice : (price + 208.49),
+          dist: (p2 && p2.buy) ? `+$${Math.abs(p2.buy.targetPrice - price).toFixed(2)}` : '-$100.00 Dip Level',
+          status: (p2 && p2.buy) ? '● WORKING' : '⏳ PENDING DIP BID'
+        },
+        {
+          id: (p2 && p2.sell) ? (p2.sell.positionId || 'PAIR-02-SELL') : 'PAIR-02-SELL (RALLY)',
+          side: 'SELL',
+          role: 'Grid Rally Re-entry Bid',
+          rate: (p2 && p2.sell) ? p2.sell.entryPrice : (price + 100),
+          target: (p2 && p2.sell) ? p2.sell.targetPrice : (price - 170.75),
+          dist: (p2 && p2.sell) ? `-$${Math.abs(price - p2.sell.targetPrice).toFixed(2)}` : '+$100.00 Rally Level',
+          status: (p2 && p2.sell) ? '● WORKING' : '⏳ PENDING RALLY BID'
+        }
+      ];
+
+      const pendingBody = document.getElementById('pendingOrdersBody');
+      if (pendingBody) {
+        pendingBody.innerHTML = pendingBids.map((b, idx) => {
+          const isBuy = b.side === 'BUY';
+          const sideColor = isBuy ? '#34d399' : '#38bdf8';
+          const sideBg = isBuy ? 'rgba(16,185,129,0.15)' : 'rgba(56,189,248,0.15)';
+          const sideBorder = isBuy ? 'rgba(16,185,129,0.35)' : 'rgba(56,189,248,0.35)';
+          const rateFormatted = typeof b.rate === 'number' ? `$${b.rate.toFixed(2)}` : b.rate;
+          const targetFormatted = typeof b.target === 'number' ? `$${b.target.toFixed(2)}` : b.target;
+          const statusBg = b.status.includes('MUDREX') ? 'rgba(16,185,129,0.15)' : (b.status.includes('SAFE') ? 'rgba(148,163,184,0.15)' : 'rgba(245,158,11,0.15)');
+          const statusColor = b.status.includes('MUDREX') ? '#34d399' : (b.status.includes('SAFE') ? '#94a3b8' : '#fbbf24');
+          const statusBorder = b.status.includes('MUDREX') ? 'rgba(16,185,129,0.3)' : (b.status.includes('SAFE') ? 'rgba(148,163,184,0.3)' : 'rgba(245,158,11,0.3)');
+
+          return `
+            <tr>
+              <td style="color: var(--gold-primary); font-weight: 700;">#${idx + 1}</td>
+              <td style="font-family: var(--font-mono); font-weight: 700; color: #fff;">${b.id}</td>
+              <td><span style="background: ${sideBg}; color: ${sideColor}; border: 1px solid ${sideBorder}; padding: 3px 8px; border-radius: 6px; font-weight: 800; font-size: 0.78rem;">${b.side}</span></td>
+              <td style="color: #cbd5e1; font-weight: 600;">${b.role}</td>
+              <td style="font-weight: 700; font-family: var(--font-mono);">${rateFormatted}</td>
+              <td style="font-weight: 800; font-family: var(--font-mono); color: #fde047;">${targetFormatted}</td>
+              <td style="color: #6ee7b7; font-weight: 700;">${b.dist}</td>
+              <td><span style="background: ${statusBg}; color: ${statusColor}; border: 1px solid ${statusBorder}; padding: 3px 8px; border-radius: 6px; font-weight: 700; font-size: 0.75rem;">${b.status}</span></td>
+            </tr>
+          `;
+        }).join('');
       }
 
       // 4. Closed Trades Table
