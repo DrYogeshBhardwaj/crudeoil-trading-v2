@@ -1250,7 +1250,7 @@
           heroCard1.className = netOut1 >= 0 ? 'hero-score-card green-glow' : 'hero-score-card red-glow';
         }
         if (heroRel1) {
-          heroRel1.innerHTML = `💰 <strong>IN-HAND WALLET: ₹${Math.round(finalEq1).toLocaleString('en-IN')}</strong> <span style="font-size: 13px; color: ${netOut1 >= 0 ? '#94a3b8' : '#f87171'}; font-weight: 500;">(Mudrex 120% Charges + GST + Slippage: -₹${feesPaid1.toLocaleString('en-IN')} Cut)</span>`;
+          heroRel1.innerHTML = `💰 <strong>IN-HAND WALLET: ₹${Math.round(finalEq1).toLocaleString('en-IN')}</strong> <span style="font-size: 13px; color: ${netOut1 >= 0 ? '#94a3b8' : '#f87171'}; font-weight: 500;">(Mudrex Statement 0.059% Taker + 18% GST + 10% Buffer: -₹${feesPaid1.toLocaleString('en-IN')} Cut)</span>`;
           heroRel1.className = netOut1 >= 0 ? 'hero-val-sub text-emerald' : 'hero-val-sub text-ruby';
         }
         if (heroStat1) {
@@ -1289,7 +1289,7 @@
           }
         }
 
-        // 2. UPDATE BIG TOP R/G SCOREBOARD FOR SLOT 2 (PURE NET OUTPUT AFTER ALL MUDREX CHARGES + 120% SHIELD)
+        // 2. UPDATE BIG TOP R/G SCOREBOARD FOR SLOT 2 (PURE NET OUTPUT AFTER ALL MUDREX CHARGES + 10% BUFFER)
         const b2 = data.config2.backtestResult;
         const netOut2 = b2.netProfitWithBuffer !== undefined ? b2.netProfitWithBuffer : Math.round(b2.equity - capital);
         const finalEq2 = b2.finalEquityWithBuffer !== undefined ? b2.finalEquityWithBuffer : Math.round(b2.equity);
@@ -1309,7 +1309,7 @@
           heroCard2.className = netOut2 >= 0 ? 'hero-score-card green-glow' : 'hero-score-card red-glow';
         }
         if (heroRel2) {
-          heroRel2.innerHTML = `💰 <strong>IN-HAND WALLET: ₹${Math.round(finalEq2).toLocaleString('en-IN')}</strong> <span style="font-size: 13px; color: ${netOut2 >= 0 ? '#94a3b8' : '#f87171'}; font-weight: 500;">(Mudrex 120% Charges + GST + Slippage: -₹${feesPaid2.toLocaleString('en-IN')} Cut)</span>`;
+          heroRel2.innerHTML = `💰 <strong>IN-HAND WALLET: ₹${Math.round(finalEq2).toLocaleString('en-IN')}</strong> <span style="font-size: 13px; color: ${netOut2 >= 0 ? '#94a3b8' : '#f87171'}; font-weight: 500;">(Mudrex Statement 0.059% Taker + 18% GST + 10% Buffer: -₹${feesPaid2.toLocaleString('en-IN')} Cut)</span>`;
           heroRel2.className = netOut2 >= 0 ? 'hero-val-sub text-emerald' : 'hero-val-sub text-ruby';
         }
         if (heroStat2) {

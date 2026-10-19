@@ -485,11 +485,14 @@ class BtcEngine {
     pos.exitTimestamp = exitTime;
     pos.exitReason = reason;
 
-    // If this was a real Mudrex position, send exit order to close on Mudrex exchange
+    // If this was a real Mudrex position, send exit order to close on Mudrex exchange ONLY if not already closed by exchange TP
     if (this.settings.tradingMode === 'LIVE' && !this.settings.realOrdersDisabled && (pos.mudrexOrderId || pos.apiStatus === 'REAL_MUDREX_POSITION' || pos.direction === 'BUY')) {
-      this.closeLivePositionLeg(pos).catch(e => {
-        console.error('[BTC Engine] Error in closeLivePositionLeg:', e.message);
-      });
+      const isAlreadyClosedOnExchange = reason && (reason.includes('EXCHANGE_TP') || reason.includes('EXCHANGE'));
+      if (!isAlreadyClosedOnExchange) {
+        this.closeLivePositionLeg(pos).catch(e => {
+          console.error('[BTC Engine] Error in closeLivePositionLeg:', e.message);
+        });
+      }
     }
 
     const qty = pos.quantity || this.settings.contractQuantity || 0.001;
@@ -870,17 +873,19 @@ class BtcEngine {
     else this.settings.startingCapitalINR = 100000.00;
     if (customTargetProfitINR && customTargetProfitINR > 0) {
       this.settings.profitTargetINR = customTargetProfitINR;
-      const qty = this.settings.contractQuantity || 0.10;
+      const qty = this.settings.contractQuantity || 0.06;
       const usdInr = this.settings.usdInrRate || 102.00;
       const curRate = rateFeed.getCurrentRate('BTCUSDT') || { price: 82000.00 };
       const curPrice = Number(curRate.price || 82000.00);
       const targetUSD = customTargetProfitINR / usdInr;
-      const entryFeeUSD = curPrice * qty * (this.settings.takerFeeRate || 0.00075);
-      const slippageUSD = (this.settings.slippageBufferINR || 5.0) / usdInr;
+      const baseFeeRate = 0.000590; // Mudrex statement official rate 0.0590% taker
+      const multiplier = Number(this.settings.conservativeFeeMultiplier || 1.10); // +10% extra buffer
+      const effectiveFeeRate = baseFeeRate * multiplier;
       const gstMul = 1 + (this.settings.gstRate || 0.18);
-      const makerFeeMul = (this.settings.makerFeeRate || 0.0002) * gstMul;
-      const calcBuyTarget = ((targetUSD + (entryFeeUSD * gstMul) + slippageUSD + (curPrice * qty)) / (qty * (1 - makerFeeMul)));
-      const requiredMoveUSD = Number((calcBuyTarget - curPrice).toFixed(2));
+      const roundtripFeeUSD = (curPrice * qty * 2 * effectiveFeeRate * gstMul);
+      const slippageUSD = (this.settings.slippageBufferINR || 10.0) / usdInr;
+      const grossNeededUSD = targetUSD + roundtripFeeUSD + slippageUSD;
+      const requiredMoveUSD = Number((grossNeededUSD / qty).toFixed(2));
       this.settings.profitTargetMove = requiredMoveUSD;
       this.settings.buyTargetMove = requiredMoveUSD;
       this.settings.sellTargetMove = requiredMoveUSD;

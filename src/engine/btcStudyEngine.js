@@ -855,8 +855,8 @@ class BTCStudyEngine {
       const maxAffordablePairs = Math.max(0, Math.floor(capital / marginPerPairINR));
       const adverseBufferUSD = cashBufferINR > 0 ? (cashBufferINR / (safeQty * usdInr)) : 0;
       
-      // Official Mudrex statement fee: 0.059% * 2 * 1.18 GST * 1.20 (120% shield) + ₹10 slippage buffer
-      const estRoundtripFeeINR = (notionalPerLegUSD * 2 * 0.000590 * 1.18 * 1.20 * usdInr) + 10.0;
+      // Official Mudrex statement fee: 0.059% * 2 * 1.18 GST * 1.10 (+10% extra buffer) + ₹10 slippage buffer
+      const estRoundtripFeeINR = (notionalPerLegUSD * 2 * 0.000590 * 1.18 * 1.10 * usdInr) + 10.0;
       const grossNeededINR = targetProfitINR + estRoundtripFeeINR;
       const targetMoveUSD = grossNeededINR / (safeQty * usdInr);
 
@@ -881,6 +881,7 @@ class BTCStudyEngine {
       simEngine.storagePath = null;
       simEngine.saveState = () => {};
       simEngine.isSimulation = true;
+      simEngine.settings.conservativeFeeMultiplier = 1.10; // Statement +10% extra buffer
       simEngine.resetData(
         safeQty,
         capital,
