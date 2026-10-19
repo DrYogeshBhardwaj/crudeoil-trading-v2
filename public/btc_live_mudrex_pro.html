@@ -1069,6 +1069,16 @@
       letter-spacing: 0.5px;
     }
 
+    .pnl-positive {
+      color: var(--accent-green-bright) !important;
+      font-weight: 800 !important;
+    }
+
+    .pnl-negative {
+      color: #ef4444 !important;
+      font-weight: 800 !important;
+    }
+
     .exit-price-big {
       font-size: 1.05rem !important;
       font-weight: 800 !important;
@@ -3070,9 +3080,8 @@
       
       // Card 1: TOTAL AMOUNT (IN HAND) - Free Margin in Mudrex Futures
       if (wallet.isRealMudrexWallet && wallet.realFuturesBalanceINR) {
-        document.getElementById('kpiAvailableMarginINR').innerText = `₹${Math.round(wallet.realFuturesBalanceINR).toLocaleString('en-IN')}`;
-        const totalFut = wallet.totalFuturesEquityINR || (wallet.realFuturesBalanceINR + lockedValINR);
-        document.getElementById('kpiAvailableMarginUSD').innerText = `Free Margin (Total Futures: ₹${Math.round(totalFut).toLocaleString('en-IN')})`;
+        document.getElementById('kpiAvailableMarginINR').innerText = `₹${Math.round(availValINR).toLocaleString('en-IN')}`;
+        document.getElementById('kpiAvailableMarginUSD').innerText = `Wallet: ₹${Math.round(wallet.realFuturesBalanceINR).toLocaleString('en-IN')} (Locked: ₹${Math.round(lockedValINR).toLocaleString('en-IN')})`;
       } else {
         document.getElementById('kpiAvailableMarginINR').innerText = `₹${Math.round(availValINR).toLocaleString('en-IN')}`;
         document.getElementById('kpiAvailableMarginUSD').innerText = `Total: ₹${Math.round(startingCap).toLocaleString('en-IN')} - Cost: ₹${Math.round(lockedValINR).toLocaleString('en-IN')}`;
@@ -3085,8 +3094,7 @@
       // Card 3: TOTAL ACCOUNT EQUITY - Matches Mudrex Est. Total Value 1:1!
       if (wallet.isRealMudrexWallet && wallet.realTotalPortfolioINR) {
         document.getElementById('kpiEquityINR').innerText = `₹${Math.round(wallet.realTotalPortfolioINR).toLocaleString('en-IN')}`;
-        const totalFut = wallet.totalFuturesEquityINR || (wallet.realFuturesBalanceINR + lockedValINR);
-        document.getElementById('kpiEquityUSD').innerText = `Est. Total (Spot: ₹${Math.round(wallet.realSpotBalanceINR || 0).toLocaleString('en-IN')} + Futures: ₹${Math.round(totalFut).toLocaleString('en-IN')})`;
+        document.getElementById('kpiEquityUSD').innerText = `Est. Total (Spot: ₹${Math.round(wallet.realSpotBalanceINR || 0).toLocaleString('en-IN')} + Futures: ₹${Math.round(wallet.realFuturesBalanceINR || 0).toLocaleString('en-IN')})`;
       } else {
         document.getElementById('kpiEquityINR').innerText = `₹${Math.round(wallet.equityINR || 0).toLocaleString('en-IN')}`;
         document.getElementById('kpiEquityUSD').innerText = `$${Math.round(wallet.equityUSD || 0).toLocaleString('en-IN')} Total Net Worth`;
@@ -3861,13 +3869,8 @@
 
       tbody.innerHTML = sortedList.map(cp => {
         let netINR = cp.netProfitINR !== undefined ? cp.netProfitINR : (cp.netProfitUSD * 102);
-        // If it was an Exchange TP filled order or Target order, ensure net profit reflects the true ₹1,000 target profit
-        if (cp.exitReason && (cp.exitReason.includes('EXCHANGE_TP') || cp.exitReason.includes('TARGET')) && Math.abs(netINR - 460) < 60) {
-          netINR = 1000.00;
-        }
-
         const pnlClass = netINR >= 0 ? 'pnl-positive' : 'pnl-negative';
-        const sign = netINR >= 0 ? '+' : '';
+        const sign = netINR > 0 ? '+' : (netINR < 0 ? '-' : '');
         const isHarvest = (cp.direction && (cp.direction.includes('BASKET') || cp.direction.includes('HARVEST'))) || 
                           (cp.positionId && (cp.positionId.includes('HARVEST') || cp.positionId.includes('Punarjanm')));
         const side = isHarvest ? '✨ PUNARJANM' : (cp.direction || (cp.positionId && cp.positionId.includes('BUY') ? 'BUY' : 'SELL'));
@@ -3919,10 +3922,12 @@
       let rowsHtml = '';
 
       // 1. Current Active Cycle (In Progress)
+      const curSign = curCycleProfit >= 0 ? '+' : '-';
+      const curColor = curCycleProfit >= 0 ? '#34d399' : '#f87171';
       rowsHtml += `
         <tr style="background: rgba(168, 85, 247, 0.08); border-left: 3px solid #c084fc;">
           <td><strong style="color: #c084fc; font-size: 0.88rem;">⚡ ${curCycleName} (Active)</strong></td>
-          <td><strong style="color: #34d399; font-size: 0.95rem;">+₹${curCycleProfit.toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</strong></td>
+          <td><strong style="color: ${curColor}; font-size: 0.95rem;">${curSign}₹${Math.abs(curCycleProfit).toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</strong></td>
           <td><span style="color: #94a3b8;">Oscillating Live</span></td>
           <td><span style="color: #94a3b8;">In Progress</span></td>
           <td>
