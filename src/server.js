@@ -1271,12 +1271,54 @@ app.post(['/api/btc-live-mudrex/action', '/api/btc-live-mudrex-pro/action', '/ap
       }
       btcEngine.settings.tradingMode = targetMode;
       btcEngine.settings.realOrdersDisabled = (targetMode === 'PAPER') ? true : (realOrdersDisabled === true ? true : false);
+      const mudrexLive = require('./engine/mudrexLiveAdapter');
+      mudrexLive.settings.liveExecutionGate = (targetMode === 'LIVE' && !btcEngine.settings.realOrdersDisabled) ? 'APPROVED' : 'LOCKED';
+      mudrexLive.saveState();
+
+      let liveOrderInfo = null;
+      if (targetMode === 'LIVE' && !btcEngine.settings.realOrdersDisabled) {
+        // Enforce 0.06 BTC safe size and $267 target move (for ₹1,000 net after 120% charges)
+        btcEngine.settings.contractQuantity = 0.06;
+        btcEngine.settings.profitTargetMove = 267.00;
+        btcEngine.settings.buyTargetMove = 267.00;
+        btcEngine.settings.sellTargetMove = 267.00;
+        btcEngine.settings.maxActivePairs = 1;
+
+        // Check if there are stale paper pairs (unfulfilled on exchange)
+        const openPaperPairs = btcEngine.pairs.filter(p => p.status === 'OPEN' && !p.buyPosition?.mudrexOrderId);
+        const cur = rateFeed.getCurrentRate('BTCUSDT') || { price: 82000, usdInrRate: 102 };
+        if (openPaperPairs.length > 0) {
+          openPaperPairs.forEach(p => {
+            if (p.buyPosition && p.buyPosition.status === 'OPEN') {
+              btcEngine.closePositionLeg(p.buyPosition, cur.price, Date.now(), 'UPGRADED_TO_LIVE_MUDREX_ORDER', cur.usdInrRate);
+            }
+            if (p.sellPosition && p.sellPosition.status === 'OPEN') {
+              btcEngine.closePositionLeg(p.sellPosition, cur.price, Date.now(), 'UPGRADED_TO_LIVE_MUDREX_ORDER', cur.usdInrRate);
+            }
+            p.status = 'CLOSED';
+          });
+          console.log(`[BTC Engine] Closed ${openPaperPairs.length} paper pairs. Now creating fresh live 0.06 BTC pair for Mudrex...`);
+        }
+
+        const activePairs = btcEngine.pairs.filter(p => p.status === 'OPEN');
+        if (activePairs.length === 0) {
+          const freshPair = btcEngine.createNewPair('BTCUSDT', cur.price, Date.now(), cur.usdInrRate);
+          liveOrderInfo = freshPair;
+          console.log(`[BTC Engine] Created fresh LIVE 0.06 BTC pair ${freshPair?.pairId} and dispatched to Mudrex!`);
+        }
+      }
+
       btcEngine.saveState();
       return res.json({
         success: true,
-        message: `BTC Engine Trading Mode set to ${targetMode} (Real Exchange Orders: ${btcEngine.settings.realOrdersDisabled ? 'DISABLED' : 'ENABLED'})`,
+        message: targetMode === 'LIVE' && !btcEngine.settings.realOrdersDisabled
+          ? `✅ MUDREX UNLOCKED: BTC Live Trading ACTIVE at 0.06 BTC per pair! Live order dispatched to Mudrex exchange.`
+          : `🔒 MUDREX LOCKED: BTC Engine switched to PAPER SIMULATOR mode. Real exchange orders stopped.`,
         tradingMode: btcEngine.settings.tradingMode,
-        realOrdersDisabled: btcEngine.settings.realOrdersDisabled
+        realOrdersDisabled: btcEngine.settings.realOrdersDisabled,
+        liveExecutionGate: mudrexLive.settings.liveExecutionGate,
+        contractQuantity: btcEngine.settings.contractQuantity,
+        liveOrder: liveOrderInfo ? { pairId: liveOrderInfo.pairId, symbol: liveOrderInfo.symbol, quantity: liveOrderInfo.quantity } : null
       });
     } else if (action === 'resetSimulator' || action === 'resetData') {
       const customQty = req.body.quantity ? Number(req.body.quantity) : 0.10;

@@ -1322,6 +1322,10 @@
           <span>⚡ MUDREX DATA</span>
           <span class="badge" id="navMudrexBadge" style="background: rgba(0,0,0,0.4); font-size: 0.72rem; padding: 2px 6px; border-radius: 4px; margin-left: 4px;">0 BTC</span>
         </button>
+        <button class="btn" id="btnTradingModeToggle" onclick="promptTradingModeToggle()" style="background: rgba(239, 68, 68, 0.2); border: 1.5px solid #ef4444; color: #fca5a5; font-weight: 800; cursor: pointer; display: inline-flex; align-items: center; gap: 6px;" title="Click to Unlock/Lock Real Mudrex Live Orders">
+          <span id="btnTradingModeIcon">🔒</span>
+          <span id="btnTradingModeLabel">MUDREX: PAPER LOCK</span>
+        </button>
         <button class="btn" id="resetSimulatorBtn" onclick="executeDirectReset()" style="background: rgba(239, 68, 68, 0.2); border: 1px solid #ef4444; color: #fca5a5; font-weight: 800; cursor: pointer;" title="Reset Simulator without password">
           <span>🔄 RESET SIMULATOR</span>
         </button>
@@ -2446,6 +2450,39 @@
       await quickSetLotSize(num);
     }
 
+    async function promptTradingModeToggle() {
+      const isCurrentlyLive = cachedData && cachedData.engine && cachedData.engine.tradingMode === 'LIVE' && !cachedData.engine.realOrdersDisabled;
+      const targetMode = isCurrentlyLive ? 'PAPER' : 'LIVE';
+      const promptMsg = isCurrentlyLive
+        ? 'Enter Admin PIN (340556) to LOCK Mudrex into PAPER mode (Stop all real exchange orders):'
+        : '⚠️ ATTENTION: You are about to UNLOCK REAL MUDREX LIVE TRADING with real wallet capital!\n\nEnter Admin PIN (340556) to UNLOCK:';
+      
+      const pin = prompt(promptMsg);
+      if (!pin) return;
+
+      try {
+        const res = await fetch('/api/btc-live-mudrex/action', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ 
+            action: 'setTradingMode', 
+            mode: targetMode, 
+            realOrdersDisabled: targetMode === 'PAPER', 
+            password: pin 
+          })
+        });
+        const json = await res.json();
+        if (json.success) {
+          alert(`✅ ${json.message}`);
+          await fetchTerminalData();
+        } else {
+          alert('Failed: ' + (json.error || 'Incorrect PIN'));
+        }
+      } catch (err) {
+        alert('Error: ' + err.message);
+      }
+    }
+
     async function directAddNewPair() {
       try {
         const res = await fetch('/api/btc-live-mudrex/action', {
@@ -2786,6 +2823,29 @@
           modeBadge.style.background = 'rgba(245, 158, 11, 0.15)';
           modeBadge.style.borderColor = 'rgba(245, 158, 11, 0.5)';
           modeBadge.style.color = '#fbbf24';
+        }
+      }
+
+      // 1a. Mudrex Live Orders Lock / Unlock Toggle Button
+      const btnToggle = document.getElementById('btnTradingModeToggle');
+      const iconToggle = document.getElementById('btnTradingModeIcon');
+      const lblToggle = document.getElementById('btnTradingModeLabel');
+      const isLiveOrdersOn = engine.tradingMode === 'LIVE' && !engine.realOrdersDisabled;
+      if (btnToggle && iconToggle && lblToggle) {
+        if (isLiveOrdersOn) {
+          btnToggle.style.background = 'rgba(16, 185, 129, 0.25)';
+          btnToggle.style.borderColor = '#10b981';
+          btnToggle.style.color = '#34d399';
+          iconToggle.innerText = '🟢';
+          lblToggle.innerText = 'MUDREX: UNLOCKED (LIVE ORDERS ON)';
+          btnToggle.title = 'Live Mudrex Orders Active! Click to Enter PIN 340556 to Lock back to PAPER mode.';
+        } else {
+          btnToggle.style.background = 'rgba(239, 68, 68, 0.2)';
+          btnToggle.style.borderColor = '#ef4444';
+          btnToggle.style.color = '#fca5a5';
+          iconToggle.innerText = '🔒';
+          lblToggle.innerText = 'MUDREX: PAPER LOCK (CLICK TO UNLOCK)';
+          btnToggle.title = 'Mudrex is Locked in PAPER mode. Click to Enter PIN 340556 to Unlock Real Live Orders.';
         }
       }
 

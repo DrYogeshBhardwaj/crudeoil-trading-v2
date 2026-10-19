@@ -608,6 +608,12 @@ class MudrexLiveAdapter {
           pairsToCheck.push(...solanaEngine.pairs);
         }
       } catch (e) {}
+      try {
+        const btcEngine = require('./btcEngine');
+        if (btcEngine && Array.isArray(btcEngine.pairs) && btcEngine.isEngineRunning && btcEngine.settings && btcEngine.settings.tradingMode === 'LIVE' && !btcEngine.settings.realOrdersDisabled) {
+          pairsToCheck.push(...btcEngine.pairs);
+        }
+      } catch (e) {}
 
       for (const pair of pairsToCheck) {
         if (pair.status === 'CLOSED') continue;
@@ -636,7 +642,7 @@ class MudrexLiveAdapter {
         if (Date.now() < this.rateLimitUntil) continue;
 
         const posSymbol = (pos.symbol || pair.symbol || 'CLUSDT').toUpperCase();
-        if (!posSymbol.includes('CL') && !posSymbol.includes('SOL')) {
+        if (!posSymbol.includes('CL') && !posSymbol.includes('SOL') && !posSymbol.includes('BTC')) {
           console.warn(`[Mudrex Live Adapter] Skipping unsupported position: ${pos.positionId} (${posSymbol})`);
           continue;
         }
