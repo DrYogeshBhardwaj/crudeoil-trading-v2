@@ -125,37 +125,50 @@ class BtcEngine {
         }
       }
 
-      // Purge any phantom simulated trades (e.g. fake -₹8,108.33 from simulated PAIR-BTC-0010)
+      // Purge any phantom flushed or simulated trades
       this.closedPositions = (this.closedPositions || []).filter(p => {
-        if (p.positionId === 'PAIR-BTC-0010-SELL' || p.positionId === 'PAIR-BTC-0010-BUY') return false;
-        if (p.netProfitINR < -5000 && p.source !== 'MUDREX_EXCHANGE_VERIFIED') return false;
+        if (!p) return false;
+        if (p.exitReason && p.exitReason.includes('Flushed')) return false;
+        if (p.positionId && (p.positionId.includes('PAIR-BTC-0010') || p.positionId.includes('PAIR-BTC-0001') || p.positionId.includes('PAIR-BTC-0002') || p.positionId.includes('PAIR-BTC-0003'))) return false;
+        if (p.source !== 'MUDREX_EXCHANGE_VERIFIED' && !p.positionId.includes('MUDREX-REAL')) return false;
         return true;
       });
 
-      // Clear phantom punarjanm cycles that referenced the fake -₹8,108 loss
-      if (this.punarjanmCycles && this.punarjanmCycles.some(c => (c.harvestedProfitINR || 0) < -5000)) {
-        this.punarjanmCycles = [];
-        this.punarjanmCount = 0;
+      // Clean up punarjanm cycles: preserve positive harvest cycles and clear flushed count
+      if (this.punarjanmCycles && Array.isArray(this.punarjanmCycles)) {
+        this.punarjanmCycles = this.punarjanmCycles
+          .filter(c => (c.harvestedProfitINR || 0) > 0)
+          .map(c => ({
+            ...c,
+            flushedTrades: 0
+          }));
+        this.punarjanmCount = this.punarjanmCycles.length;
+        if (this.punarjanmCycles.length > 0) {
+          this.lastPunarjanmSummary = this.punarjanmCycles[this.punarjanmCycles.length - 1];
+        }
       }
 
-      // 3. Authoritative Seed Fallback (Ensures exact 1:1 match with real Mudrex trades)
+      // Always ensure the verified present Mudrex trades are loaded
       const seedPath = path.join(__dirname, 'btc_state_seed.json');
-      if ((this.closedPositions.length < 13 || this.closedPositions.some(p => p.positionId && p.positionId.includes('PAIR-BTC-0010'))) && fs.existsSync(seedPath)) {
+      if ((this.closedPositions.length === 0 || this.closedPositions.some(p => p.exitReason && p.exitReason.includes('Flushed'))) && fs.existsSync(seedPath)) {
         try {
           const sRaw = fs.readFileSync(seedPath, 'utf8');
           if (sRaw) {
             const sData = JSON.parse(sRaw);
             if (Array.isArray(sData.closedPositions) && sData.closedPositions.length > 0) {
               this.closedPositions = sData.closedPositions;
-              console.log(`[BTC Engine] Authoritative Seed: Restored ${this.closedPositions.length} verified real Mudrex trades.`);
+              console.log(`[BTC Engine] Authoritative Seed: Loaded ${this.closedPositions.length} verified real Mudrex trades.`);
             }
-            this.punarjanmCount = 0;
-            this.punarjanmCycles = [];
+            if (Array.isArray(sData.punarjanmCycles)) {
+              this.punarjanmCycles = sData.punarjanmCycles;
+            }
+            this.punarjanmCount = sData.punarjanmCount || 1;
           }
         } catch (sErr) {
           console.warn('[BTC Engine] Error loading seed data:', sErr.message);
         }
       }
+      this.saveState();
     } catch (e) {
       console.warn('[BTC Engine] Error initializing from storage:', e.message);
     }
@@ -732,19 +745,14 @@ class BtcEngine {
     this.punarjanmCount++;
     const cycleId = `PUNARJANM-BTC-${this.punarjanmCount}`;
 
-    // Flushes stale/open pairs into closed history WITH full 120% Mudrex charges and real market PnL
+    // In Punarjanm Rebirth: Cleanly close open pairs to free circle slots WITHOUT creating fake negative trade rows
     let flushedTrades = 0;
     for (const pair of this.pairs) {
       if (pair.status === 'CLOSED') continue;
-      if (pair.buyPosition && pair.buyPosition.status === 'OPEN') {
-        this.closePositionLeg(pair.buyPosition, livePrice, Date.now(), `${cycleId} Flushed in Basket Profit Harvest`, usdInrRate);
-        flushedTrades++;
-      }
-      if (pair.sellPosition && pair.sellPosition.status === 'OPEN') {
-        this.closePositionLeg(pair.sellPosition, livePrice, Date.now(), `${cycleId} Flushed in Basket Profit Harvest`, usdInrRate);
-        flushedTrades++;
-      }
+      if (pair.buyPosition) pair.buyPosition.status = 'CLOSED';
+      if (pair.sellPosition) pair.sellPosition.status = 'CLOSED';
       pair.status = 'CLOSED';
+      flushedTrades++;
     }
 
     const harvestProfitINR = cycleRealizedINR > 0 ? cycleRealizedINR : Math.max(0, summary.floatingNetINR);
