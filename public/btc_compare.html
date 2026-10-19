@@ -632,10 +632,10 @@
     <!-- Quick Timeframe Presets -->
     <div class="preset-row">
       <span class="preset-label">Timeframe Preset:</span>
-      <button type="button" class="preset-btn active" onclick="setTimeframePreset('short')">⚡ 11 Jan 23:00 - 12 Jan 02:00 (3h Pump)</button>
-      <button type="button" class="preset-btn" onclick="setTimeframePreset('swing')">🌊 11 Jan - 14 Jan (3-Day Volatility)</button>
-      <button type="button" class="preset-btn" onclick="setTimeframePreset('crash')">📉 11 Jan - 11 Feb (1-Month Crash)</button>
       <button type="button" class="preset-btn" onclick="setTimeframePreset('recent')">🔥 Last 24 Hours</button>
+      <button type="button" class="preset-btn" onclick="setTimeframePreset('1month')">🌊 15-Sep to 16-Oct (1 Month)</button>
+      <button type="button" class="preset-btn active" onclick="setTimeframePreset('2months')">🚀 15-Aug to 16-Oct (2 Months Full)</button>
+      <button type="button" class="preset-btn" onclick="setTimeframePreset('short')">⚡ 11-12 Jan Pump</button>
       <button type="button" class="preset-btn" onclick="setTimeframePreset('custom')">📅 Custom Date</button>
     </div>
 
@@ -699,6 +699,16 @@
         <label class="form-label" for="inputToHour">To Hour (0-23)</label>
         <input type="number" id="inputToHour" class="form-input" value="23" min="0" max="23" onchange="onDateParamChange()">
       </div>
+      <div class="form-group">
+        <label class="form-label" for="inputInterval">Candle Interval</label>
+        <select id="inputInterval" class="form-input" style="font-weight: 700; color: #38bdf8; background: #0f172a; border-color: rgba(56, 189, 248, 0.4);">
+          <option value="auto" selected>⚡ Auto (Best Resolution)</option>
+          <option value="1m">1m (Max ~10 Days)</option>
+          <option value="5m">5m (Max ~50 Days)</option>
+          <option value="15m">15m (Multi-Month)</option>
+          <option value="1h">1h (Multi-Month / Year)</option>
+        </select>
+      </div>
       <div class="form-group" style="justify-content: flex-end;">
         <label style="display: inline-flex; align-items: center; gap: 8px; cursor: pointer; color: #38bdf8; font-size: 13px; font-weight: 700; background: rgba(56, 189, 248, 0.1); border: 1px solid rgba(56, 189, 248, 0.3); padding: 8px 12px; border-radius: 8px; margin-bottom: 6px;">
           <input type="checkbox" id="chkAutoHaisiyat" checked onchange="onConfigParamChange()" style="width: 17px; height: 17px; accent-color: #38bdf8;">
@@ -708,6 +718,24 @@
           <span id="btnRunText">▶ RUN HISTORICAL REPLAY</span>
         </button>
       </div>
+    </div>
+  </div>
+
+  <!-- REPLAY WINDOW VERIFICATION BANNER -->
+  <div id="replayInfoBar" style="background: rgba(30, 41, 59, 0.85); border: 1px solid rgba(56, 189, 248, 0.4); border-radius: 12px; padding: 14px 20px; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 14px; box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);">
+    <div style="display: flex; align-items: center; gap: 12px;">
+      <span style="font-size: 22px;">📅</span>
+      <div>
+        <div style="font-size: 11px; text-transform: uppercase; color: #38bdf8; font-weight: 800; letter-spacing: 0.05em;">Real Replayed Timeframe (Binance Real Candle Data)</div>
+        <div style="font-size: 15px; font-weight: 800; color: #f8fafc; font-family: var(--font-mono);" id="lblReplayRangeText">
+          15-Oct-2026, 00:00 → 16-Oct-2026, 23:59 (2.0 Days | 2,880 Candles @ 1m)
+        </div>
+      </div>
+    </div>
+    <div style="display: flex; gap: 20px; font-family: var(--font-mono); font-size: 13px; align-items: center;">
+      <div><span style="color: #94a3b8;">Start Price:</span> <strong id="lblReplayStartPrice" class="text-gold">$0</strong></div>
+      <div><span style="color: #94a3b8;">End Price:</span> <strong id="lblReplayEndPrice" class="text-gold">$0</strong></div>
+      <div><span style="color: #94a3b8;">BTC Move:</span> <strong id="lblReplayMove" class="text-emerald">$0</strong></div>
     </div>
   </div>
 
@@ -1055,21 +1083,24 @@
       const activeBtn = (window.event && (window.event.currentTarget || window.event.target));
       if (activeBtn) activeBtn.classList.add('active');
 
-      if (type === 'short') {
+      if (type === '1month') {
+        document.getElementById('inputFromDate').value = '2026-09-15';
+        document.getElementById('inputFromHour').value = '0';
+        document.getElementById('inputToDate').value = '2026-10-16';
+        document.getElementById('inputToHour').value = '23';
+        if (document.getElementById('inputInterval')) document.getElementById('inputInterval').value = 'auto';
+      } else if (type === '2months') {
+        document.getElementById('inputFromDate').value = '2026-08-15';
+        document.getElementById('inputFromHour').value = '0';
+        document.getElementById('inputToDate').value = '2026-10-16';
+        document.getElementById('inputToHour').value = '23';
+        if (document.getElementById('inputInterval')) document.getElementById('inputInterval').value = 'auto';
+      } else if (type === 'short') {
         document.getElementById('inputFromDate').value = '2026-01-11';
         document.getElementById('inputFromHour').value = '23';
         document.getElementById('inputToDate').value = '2026-01-12';
         document.getElementById('inputToHour').value = '2';
-      } else if (type === 'swing') {
-        document.getElementById('inputFromDate').value = '2026-01-11';
-        document.getElementById('inputFromHour').value = '0';
-        document.getElementById('inputToDate').value = '2026-01-14';
-        document.getElementById('inputToHour').value = '23';
-      } else if (type === 'crash') {
-        document.getElementById('inputFromDate').value = '2026-01-11';
-        document.getElementById('inputFromHour').value = '0';
-        document.getElementById('inputToDate').value = '2026-02-11';
-        document.getElementById('inputToHour').value = '23';
+        if (document.getElementById('inputInterval')) document.getElementById('inputInterval').value = '1m';
       } else if (type === 'recent') {
         // Last 24 Hours
         const dTo = new Date();
@@ -1078,6 +1109,7 @@
         document.getElementById('inputFromHour').value = '0';
         document.getElementById('inputToDate').value = dTo.toISOString().split('T')[0];
         document.getElementById('inputToHour').value = '23';
+        if (document.getElementById('inputInterval')) document.getElementById('inputInterval').value = 'auto';
       } else if (type === 'custom') {
         document.getElementById('inputFromDate').focus();
         return;
@@ -1154,7 +1186,7 @@
         toDate: document.getElementById('inputToDate').value,
         fromHour: parseInt(document.getElementById('inputFromHour').value, 10),
         toHour: parseInt(document.getElementById('inputToHour').value, 10),
-        interval: '1m',
+        interval: (document.getElementById('inputInterval') ? document.getElementById('inputInterval').value : 'auto'),
         capital: capital,
         qty1: qty1,
         qty2: qty2,
@@ -1176,6 +1208,26 @@
         if (!data || !data.success) {
           alert('Error running replay: ' + (data.error || 'Server error'));
           return;
+        }
+
+        // 0. UPDATE REPLAY WINDOW VERIFICATION BANNER
+        if (data.timeframe) {
+          const tf = data.timeframe;
+          const rangeEl = document.getElementById('lblReplayRangeText');
+          const startEl = document.getElementById('lblReplayStartPrice');
+          const endEl = document.getElementById('lblReplayEndPrice');
+          const moveEl = document.getElementById('lblReplayMove');
+          
+          if (rangeEl) {
+            const spanText = tf.replayedSpanDays ? `${tf.replayedSpanDays} Days` : `${tf.candleCount} Candles`;
+            rangeEl.innerText = `${tf.fromDate} (${tf.fromHour}:00) → ${tf.toDate} (${tf.toHour}:59) | ${spanText} | ${tf.candleCount.toLocaleString()} Candles @ ${tf.interval}`;
+          }
+          if (startEl && tf.startingPrice) startEl.innerText = `$${Math.round(tf.startingPrice).toLocaleString()}`;
+          if (endEl && tf.endingPrice) endEl.innerText = `$${Math.round(tf.endingPrice).toLocaleString()}`;
+          if (moveEl && tf.priceChangeUSD !== undefined) {
+            moveEl.innerText = `${tf.priceChangeUSD >= 0 ? '+' : ''}$${tf.priceChangeUSD.toLocaleString()}`;
+            moveEl.className = tf.priceChangeUSD >= 0 ? 'text-emerald' : 'text-ruby';
+          }
         }
 
         // 1. UPDATE BIG TOP R/G SCOREBOARD FOR SLOT 1 (PURE NET OUTPUT AFTER ALL MUDREX CHARGES + 120% SHIELD)

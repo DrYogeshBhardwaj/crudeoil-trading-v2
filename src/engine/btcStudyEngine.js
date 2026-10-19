@@ -28,7 +28,7 @@ class BTCStudyEngine {
     toDate,
     fromHour = 0,
     toHour = 23,
-    interval = '1m'
+    interval = 'auto'
   }) {
     if (!fromDate || !toDate) {
       throw new Error('fromDate and toDate (YYYY-MM-DD) are required.');
@@ -58,8 +58,25 @@ class BTCStudyEngine {
       };
     }
 
+    // Auto-detect optimal candle interval based on date span if 'auto' or unselected
+    let effectiveInterval = interval;
+    const spanHours = (endTime - startTime) / (3600 * 1000);
+    const spanDays = spanHours / 24;
+
+    if (!effectiveInterval || effectiveInterval === 'auto') {
+      if (spanDays <= 3) {
+        effectiveInterval = '1m';
+      } else if (spanDays <= 14) {
+        effectiveInterval = '5m';
+      } else if (spanDays <= 65) {
+        effectiveInterval = '15m';
+      } else {
+        effectiveInterval = '1h';
+      }
+    }
+
     try {
-      const klines = await this._fetchPaginatedKlines(symbol, interval, startTime, endTime);
+      const klines = await this._fetchPaginatedKlines(symbol, effectiveInterval, startTime, endTime);
 
       if (!klines || klines.length === 0) {
         return {
@@ -85,11 +102,15 @@ class BTCStudyEngine {
 
       const priceDiff = Number((endingRate - startingRate).toFixed(2));
       const priceDiffPercent = Number(((priceDiff / startingRate) * 100).toFixed(2));
+      const firstTime = klines[0].openTime;
+      const lastTime = klines[klines.length - 1].closeTime;
+      const replayedSpanDays = Number(((lastTime - firstTime) / (24 * 3600 * 1000)).toFixed(1));
 
       return {
         success: true,
         symbol,
-        interval,
+        interval: effectiveInterval,
+        requestedInterval: interval,
         fromDate,
         toDate,
         fromHour: startHourNum,
@@ -103,8 +124,9 @@ class BTCStudyEngine {
           priceDiff,
           priceDiffPercent,
           totalVolume: Number(totalVolume.toFixed(4)),
-          firstCandleTime: new Date(klines[0].openTime).toISOString(),
-          lastCandleTime: new Date(klines[klines.length - 1].closeTime).toISOString()
+          firstCandleTime: new Date(firstTime).toISOString(),
+          lastCandleTime: new Date(lastTime).toISOString(),
+          replayedSpanDays
         },
         klines
       };
@@ -121,7 +143,8 @@ class BTCStudyEngine {
   async _fetchPaginatedKlines(symbol, interval, startTime, endTime) {
     const allKlines = [];
     let currentStart = startTime;
-    const maxCandlesTotal = 4000; // Cap to keep simulation responsive
+    // Cap increased to 15,000 candles so multi-month 15m/5m replays complete the entire date range
+    const maxCandlesTotal = 15000;
 
     while (currentStart < endTime && allKlines.length < maxCandlesTotal) {
       const batchLimit = Math.min(1000, maxCandlesTotal - allKlines.length);
@@ -792,7 +815,7 @@ class BTCStudyEngine {
     toDate = '2026-01-12',
     fromHour = 23,
     toHour = 2,
-    interval = '1m',
+    interval = 'auto',
     capital = 87375,
     qty1 = 0.02,
     qty2 = 0.06,
@@ -952,6 +975,7 @@ class BTCStudyEngine {
           maxDrawdownPct: ((maxDrawdown / peakEquity) * 100).toFixed(1) + '%',
           harvestCount: simEngine.punarjanmCount,
           activePairs: m.engine.pairsCount,
+          haisiyatStatus: (simEngine.settings.maxActivePairs >= 2 && m.wallet.equityINR >= reqFor2) ? 'SCALED' : (canRun2 ? 'AFFORDABLE' : 'RESTRICTED'),
           haisiyatScaling: {
             enabled: autoHaisiyatScaling,
             initialPairs,
@@ -976,8 +1000,12 @@ class BTCStudyEngine {
         toDate,
         fromHour,
         toHour,
-        interval,
+        interval: fetchRes.interval,
+        requestedInterval: interval,
         candleCount: klines.length,
+        firstCandleTime: fetchRes.stats?.firstCandleTime,
+        lastCandleTime: fetchRes.stats?.lastCandleTime,
+        replayedSpanDays: fetchRes.stats?.replayedSpanDays,
         startingPrice: klines[0].open,
         endingPrice: klines[klines.length - 1].close,
         priceChangeUSD: Math.round(klines[klines.length - 1].close - klines[0].open)

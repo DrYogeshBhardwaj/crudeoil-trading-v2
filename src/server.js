@@ -37,6 +37,18 @@ app.get([
   res.sendFile(path.join(__dirname, '../public/shubhmani.html'));
 });
 
+app.get(['/BTC-Compare', '/btc-compare', '/btc_compare', '/btc_compare.html'], (req, res) => {
+  res.sendFile(path.join(__dirname, '../public/btc_compare.html'));
+});
+
+app.get(['/BTC-Live-Mudrex-Pro', '/btc-live-mudrex-pro', '/btc_live_mudrex_pro', '/btc_live_mudrex_pro.html'], (req, res) => {
+  res.sendFile(path.join(__dirname, '../public/btc_live_mudrex_pro.html'));
+});
+
+app.get(['/BTC-Study', '/btc-study', '/btc_study', '/btc_study.html'], (req, res) => {
+  res.sendFile(path.join(__dirname, '../public/btc_study.html'));
+});
+
 app.use(express.static(path.join(__dirname, '../public'), {
   etag: false,
   maxAge: 0,
