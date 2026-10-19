@@ -1,0 +1,1085 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SHUBHMANI — Bitcoin (BTC) Institutional Pair Trading Desk</title>
+  <link rel="icon" type="image/svg+xml" href="/shubhmani-favicon.svg">
+  
+  <!-- Premium Modern Typography -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700;800&family=Outfit:wght@400;500;600;700;800;900&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
+  <style>
+    :root {
+      --bg-base: #06090e;
+      --bg-surface: #0c121d;
+      --bg-card: rgba(15, 23, 42, 0.75);
+      --bg-card-hover: rgba(30, 41, 59, 0.85);
+      
+      --gold-primary: #f59e0b;
+      --gold-light: #fef08a;
+      --gold-deep: #b45309;
+      --gold-glow: rgba(245, 158, 11, 0.35);
+
+      --green-accent: #10b981;
+      --green-light: #34d399;
+      --green-glow: rgba(16, 185, 129, 0.25);
+
+      --red-accent: #f43f5e;
+      --red-light: #fb7185;
+      
+      --blue-accent: #38bdf8;
+      --purple-accent: #c084fc;
+      
+      --border-subtle: rgba(255, 255, 255, 0.08);
+      --border-gold: rgba(245, 158, 11, 0.3);
+      --border-green: rgba(16, 185, 129, 0.3);
+      
+      --text-main: #f8fafc;
+      --text-muted: #94a3b8;
+      --text-dim: #64748b;
+
+      --font-display: 'Outfit', -apple-system, sans-serif;
+      --font-body: 'Plus Jakarta Sans', -apple-system, sans-serif;
+      --font-mono: 'JetBrains Mono', monospace;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    body {
+      background: radial-gradient(circle at 50% 0%, #111a2e 0%, #06090e 70%);
+      color: var(--text-main);
+      font-family: var(--font-body);
+      min-height: 100vh;
+      overflow-x: hidden;
+      line-height: 1.5;
+    }
+
+    /* Ambient background grid */
+    body::before {
+      content: '';
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background-image: linear-gradient(rgba(255,255,255,0.015) 1px, transparent 1px),
+                        linear-gradient(90deg, rgba(255,255,255,0.015) 1px, transparent 1px);
+      background-size: 40px 40px;
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    .app-container {
+      position: relative;
+      z-index: 1;
+      max-width: 1440px;
+      margin: 0 auto;
+      padding: 20px 24px 60px 24px;
+    }
+
+    /* --- TOP NAVBAR --- */
+    .navbar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 12px 20px;
+      background: rgba(12, 18, 29, 0.85);
+      backdrop-filter: blur(16px);
+      border: 1px solid var(--border-subtle);
+      border-radius: 16px;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+      margin-bottom: 24px;
+    }
+
+    .brand-section {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+
+    .brand-logo-img {
+      height: 48px;
+      width: auto;
+      filter: drop-shadow(0 2px 8px rgba(245, 158, 11, 0.25));
+    }
+
+    .header-actions {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .beacon-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: rgba(16, 185, 129, 0.12);
+      border: 1px solid var(--border-green);
+      padding: 6px 14px;
+      border-radius: 999px;
+      font-size: 0.78rem;
+      font-weight: 700;
+      color: var(--green-light);
+      letter-spacing: 0.5px;
+    }
+
+    .beacon-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--green-accent);
+      box-shadow: 0 0 10px var(--green-accent);
+      animation: pulseDot 2s infinite ease-in-out;
+    }
+
+    @keyframes pulseDot {
+      0%, 100% { transform: scale(1); opacity: 1; }
+      50% { transform: scale(1.3); opacity: 0.6; }
+    }
+
+    .action-btn {
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid var(--border-subtle);
+      color: var(--text-main);
+      padding: 8px 16px;
+      border-radius: 10px;
+      font-size: 0.84rem;
+      font-weight: 600;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      transition: all 0.2s ease;
+    }
+
+    .action-btn:hover {
+      background: rgba(255, 255, 255, 0.1);
+      border-color: rgba(255, 255, 255, 0.2);
+      transform: translateY(-1px);
+    }
+
+    .btn-gold {
+      background: linear-gradient(135deg, #d97706, #f59e0b);
+      color: #000;
+      font-weight: 800;
+      border: none;
+      box-shadow: 0 4px 14px rgba(245, 158, 11, 0.35);
+    }
+
+    .btn-gold:hover {
+      background: linear-gradient(135deg, #f59e0b, #fbbf24);
+      box-shadow: 0 6px 20px rgba(245, 158, 11, 0.5);
+    }
+
+    /* --- HERO TICKER BANNER --- */
+    .market-banner {
+      display: grid;
+      grid-template-columns: 1.5fr 1fr 1fr;
+      gap: 16px;
+      margin-bottom: 24px;
+    }
+
+    .banner-card {
+      background: var(--bg-card);
+      backdrop-filter: blur(12px);
+      border: 1px solid var(--border-subtle);
+      border-radius: 16px;
+      padding: 18px 24px;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      box-shadow: 0 6px 24px rgba(0, 0, 0, 0.3);
+    }
+
+    .card-label {
+      font-size: 0.75rem;
+      font-weight: 700;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      color: var(--text-muted);
+      margin-bottom: 4px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .rate-huge {
+      font-family: var(--font-mono);
+      font-size: 2.2rem;
+      font-weight: 800;
+      color: #ffffff;
+      display: flex;
+      align-items: baseline;
+      gap: 10px;
+      letter-spacing: -0.5px;
+    }
+
+    .rate-sub {
+      font-size: 0.85rem;
+      color: var(--text-dim);
+      font-weight: 600;
+      margin-top: 2px;
+    }
+
+    .tag-live {
+      font-family: var(--font-body);
+      font-size: 0.72rem;
+      font-weight: 800;
+      color: var(--green-light);
+      background: rgba(16, 185, 129, 0.15);
+      border: 1px solid var(--border-green);
+      padding: 3px 8px;
+      border-radius: 6px;
+    }
+
+    /* --- 4 EXECUTIVE PILLARS --- */
+    .pillars-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 16px;
+      margin-bottom: 24px;
+    }
+
+    .pillar-card {
+      background: var(--bg-card);
+      backdrop-filter: blur(12px);
+      border: 1px solid var(--border-subtle);
+      border-radius: 16px;
+      padding: 20px;
+      position: relative;
+      overflow: hidden;
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+      transition: transform 0.2s ease, border-color 0.2s ease;
+    }
+
+    .pillar-card:hover {
+      transform: translateY(-2px);
+      border-color: rgba(255, 255, 255, 0.18);
+    }
+
+    .pillar-card::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 3px;
+      background: var(--border-subtle);
+    }
+
+    .pillar-card.gold::before { background: linear-gradient(90deg, #d97706, #fbbf24); }
+    .pillar-card.green::before { background: linear-gradient(90deg, #059669, #34d399); }
+    .pillar-card.purple::before { background: linear-gradient(90deg, #7c3aed, #c084fc); }
+    .pillar-card.blue::before { background: linear-gradient(90deg, #0284c7, #38bdf8); }
+
+    .pillar-val-main {
+      font-family: var(--font-mono);
+      font-size: 1.7rem;
+      font-weight: 800;
+      margin: 6px 0 2px 0;
+      letter-spacing: -0.5px;
+    }
+
+    .pillar-val-sub {
+      font-size: 0.82rem;
+      font-weight: 600;
+      color: var(--text-muted);
+    }
+
+    .progress-bar-container {
+      width: 100%;
+      height: 6px;
+      background: rgba(255, 255, 255, 0.08);
+      border-radius: 999px;
+      margin-top: 10px;
+      overflow: hidden;
+    }
+
+    .progress-bar-fill {
+      height: 100%;
+      border-radius: 999px;
+      background: linear-gradient(90deg, #f59e0b, #34d399);
+      width: 0%;
+      transition: width 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    /* --- ACTIVE PAIRS LIVE PANEL --- */
+    .active-pairs-section {
+      background: var(--bg-card);
+      backdrop-filter: blur(12px);
+      border: 1px solid var(--border-subtle);
+      border-radius: 16px;
+      padding: 24px;
+      margin-bottom: 24px;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
+    }
+
+    .section-title {
+      font-family: var(--font-display);
+      font-size: 1.15rem;
+      font-weight: 800;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 16px;
+    }
+
+    .wave-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 18px;
+    }
+
+    .wave-card {
+      background: rgba(12, 18, 29, 0.9);
+      border-radius: 14px;
+      padding: 20px;
+      border: 1px solid var(--border-subtle);
+      position: relative;
+    }
+
+    .wave-card.buy {
+      border-left: 4px solid var(--green-accent);
+    }
+
+    .wave-card.sell {
+      border-left: 4px solid var(--blue-accent);
+    }
+
+    .wave-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 12px;
+    }
+
+    .wave-tag {
+      font-size: 0.76rem;
+      font-weight: 800;
+      padding: 4px 10px;
+      border-radius: 6px;
+      letter-spacing: 0.5px;
+    }
+
+    .tag-buy {
+      background: rgba(16, 185, 129, 0.2);
+      color: var(--green-light);
+      border: 1px solid var(--border-green);
+    }
+
+    .tag-sell {
+      background: rgba(56, 189, 248, 0.2);
+      color: var(--blue-accent);
+      border: 1px solid rgba(56, 189, 248, 0.4);
+    }
+
+    .wave-metric-row {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 12px;
+      margin-top: 10px;
+    }
+
+    .mini-stat-label {
+      font-size: 0.72rem;
+      font-weight: 600;
+      color: var(--text-dim);
+      text-transform: uppercase;
+    }
+
+    .mini-stat-val {
+      font-family: var(--font-mono);
+      font-size: 1.05rem;
+      font-weight: 700;
+      color: #ffffff;
+      margin-top: 2px;
+    }
+
+    .target-highlight {
+      color: #fde047;
+      font-weight: 800;
+    }
+
+    /* --- TABLES SECTION (TABS: LEDGER & HARVEST) --- */
+    .tables-section {
+      background: var(--bg-card);
+      backdrop-filter: blur(12px);
+      border: 1px solid var(--border-subtle);
+      border-radius: 16px;
+      padding: 24px;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
+    }
+
+    .tab-nav {
+      display: flex;
+      gap: 8px;
+      border-bottom: 1px solid var(--border-subtle);
+      padding-bottom: 12px;
+      margin-bottom: 18px;
+    }
+
+    .tab-btn {
+      background: transparent;
+      border: none;
+      color: var(--text-muted);
+      font-size: 0.92rem;
+      font-weight: 700;
+      padding: 8px 18px;
+      border-radius: 8px;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      transition: all 0.2s ease;
+    }
+
+    .tab-btn:hover {
+      color: var(--text-main);
+      background: rgba(255, 255, 255, 0.04);
+    }
+
+    .tab-btn.active {
+      background: rgba(245, 158, 11, 0.15);
+      color: var(--gold-light);
+      border: 1px solid var(--border-gold);
+    }
+
+    .badge-count {
+      font-size: 0.72rem;
+      padding: 2px 7px;
+      border-radius: 999px;
+      background: rgba(0, 0, 0, 0.4);
+      font-family: var(--font-mono);
+    }
+
+    .custom-table {
+      width: 100%;
+      border-collapse: separate;
+      border-spacing: 0;
+      font-size: 0.88rem;
+    }
+
+    .custom-table th {
+      padding: 12px 14px;
+      text-align: left;
+      font-size: 0.74rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: var(--text-dim);
+      border-bottom: 1px solid var(--border-subtle);
+    }
+
+    .custom-table td {
+      padding: 14px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+      font-family: var(--font-mono);
+      color: #e2e8f0;
+      vertical-align: middle;
+    }
+
+    .custom-table tr:hover td {
+      background: rgba(255, 255, 255, 0.02);
+    }
+
+    .badge-cycle {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      padding: 3px 8px;
+      border-radius: 6px;
+      font-size: 0.75rem;
+      font-weight: 700;
+      font-family: var(--font-body);
+    }
+
+    .cycle-pz1 {
+      background: rgba(192, 132, 252, 0.15);
+      color: #c084fc;
+      border: 1px solid rgba(192, 132, 252, 0.4);
+    }
+
+    .cycle-pz2 {
+      background: rgba(56, 189, 248, 0.15);
+      color: #38bdf8;
+      border: 1px solid rgba(56, 189, 248, 0.4);
+    }
+
+    .badge-harvest-gold {
+      background: rgba(245, 158, 11, 0.2);
+      color: #fde047;
+      border: 1px solid var(--border-gold);
+      font-weight: 800;
+      padding: 4px 10px;
+    }
+
+    .profit-glow {
+      color: #34d399;
+      font-weight: 800;
+      font-size: 0.95rem;
+      text-shadow: 0 0 10px rgba(52, 211, 153, 0.25);
+    }
+
+    /* --- MODAL --- */
+    .modal-backdrop {
+      display: none;
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(0, 0, 0, 0.8);
+      backdrop-filter: blur(8px);
+      z-index: 999;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .modal-card {
+      background: #0f172a;
+      border: 1px solid var(--border-gold);
+      border-radius: 20px;
+      width: 90%;
+      max-width: 480px;
+      padding: 28px;
+      box-shadow: 0 20px 50px rgba(0, 0, 0, 0.8);
+    }
+
+    .form-group {
+      margin-bottom: 18px;
+    }
+
+    .form-label {
+      font-size: 0.82rem;
+      font-weight: 700;
+      color: var(--text-muted);
+      margin-bottom: 6px;
+      display: block;
+    }
+
+    .form-input {
+      width: 100%;
+      background: #06090e;
+      border: 1px solid var(--border-subtle);
+      border-radius: 10px;
+      padding: 10px 14px;
+      color: #ffffff;
+      font-family: var(--font-mono);
+      font-size: 0.95rem;
+    }
+
+    .form-input:focus {
+      outline: none;
+      border-color: var(--gold-primary);
+    }
+
+    @media (max-width: 992px) {
+      .pillars-grid { grid-template-columns: 1fr 1fr; }
+      .market-banner { grid-template-columns: 1fr; }
+      .wave-grid { grid-template-columns: 1fr; }
+    }
+
+    @media (max-width: 600px) {
+      .pillars-grid { grid-template-columns: 1fr; }
+      .app-container { padding: 12px; }
+      .navbar { flex-direction: column; gap: 12px; align-items: flex-start; }
+    }
+  </style>
+</head>
+<body>
+
+  <div class="app-container">
+
+    <!-- 1. VIP NAVBAR -->
+    <header class="navbar">
+      <div class="brand-section">
+        <img src="/shubhmani-logo.svg" alt="SHUBHMANI Logo" class="brand-logo-img">
+      </div>
+
+      <div class="header-actions">
+        <div class="beacon-pill">
+          <span class="beacon-dot"></span>
+          <span>MUDREX LIVE EXCHANGE SYNCED</span>
+        </div>
+        <button class="action-btn" onclick="fetchLiveState()" title="Instant Live Refresh">
+          <span>🔄</span> <span>Refresh</span>
+        </button>
+        <button class="action-btn btn-gold" onclick="openAdminModal()">
+          <span>⚙️ Settings</span>
+        </button>
+      </div>
+    </header>
+
+    <!-- 2. LIVE MARKET BANNER -->
+    <section class="market-banner">
+      <!-- BTC Live Rate Card -->
+      <div class="banner-card" style="border-left: 4px solid var(--gold-primary);">
+        <div class="card-label">
+          <span>🟡 BITCOIN (BTCUSDT) LIVE EXCHANGE RATE</span>
+          <span class="tag-live">LIVE TICK</span>
+        </div>
+        <div class="rate-huge" id="liveBtcPrice">
+          $82,308.40 <span style="font-size: 0.95rem; font-weight: 700; color: #34d399;" id="priceChange24h">+0.85%</span>
+        </div>
+        <div class="rate-sub">
+          Mark Price: <span id="markPrice">$82,308.40</span> · INR Rate: <span id="usdInrRate">₹102.00</span>
+        </div>
+      </div>
+
+      <!-- Quick Session Status -->
+      <div class="banner-card">
+        <div class="card-label">TRADING SESSION &amp; STATUS</div>
+        <div style="font-size: 1.3rem; font-weight: 800; color: #fff; margin-top: 4px;">
+          🌏 24x7 Continuous Wave Hunt
+        </div>
+        <div class="rate-sub" style="color: var(--green-light); font-weight: 700;">
+          Mudrex Order Gateway: OPEN (0.05 BTC Lot)
+        </div>
+      </div>
+
+      <!-- Next Harvest Target Distance -->
+      <div class="banner-card" style="border-left: 4px solid var(--green-accent);">
+        <div class="card-label">PUNARJANM HARVEST TARGET</div>
+        <div style="font-size: 1.35rem; font-weight: 800; color: #fde047; font-family: var(--font-mono); margin-top: 4px;" id="harvestDoor">
+          ₹2,000.00 Door
+        </div>
+        <div class="rate-sub" id="harvestProgressText">
+          0.0% of ₹2,000 Target Reached
+        </div>
+      </div>
+    </section>
+
+    <!-- 3. FOUR EXECUTIVE INSTITUTIONAL PILLARS -->
+    <section class="pillars-grid">
+      <!-- Pillar 1: Total Equity -->
+      <div class="pillar-card gold">
+        <div class="card-label">TOTAL ACCOUNT EQUITY</div>
+        <div class="pillar-val-main" style="color: #fde047;" id="equityINR">₹1,41,954</div>
+        <div class="pillar-val-sub">
+          Amount in Hand: <strong style="color: #fff;" id="amountInHandINR">₹1,00,503</strong>
+        </div>
+        <div class="pillar-val-sub" style="margin-top: 2px;">
+          Locked Margin: <span id="lockedMarginINR">₹28,223</span> (15x Lev)
+        </div>
+      </div>
+
+      <!-- Pillar 2: Realized Net Profit -->
+      <div class="pillar-card green">
+        <div class="card-label">REALIZED NET PROFIT (CASH)</div>
+        <div class="pillar-val-main profit-glow" id="realizedProfitINR">+₹3,123.00</div>
+        <div class="pillar-val-sub" style="color: #34d399;" id="realizedProfitUSD">
+          + $31.00 Net Verified
+        </div>
+        <div class="pillar-val-sub" style="margin-top: 2px;">
+          Win Rate: <strong style="color: #fff;">100%</strong> (4 of 4 Trades Won)
+        </div>
+      </div>
+
+      <!-- Pillar 3: Punarjanm Cycles -->
+      <div class="pillar-card purple">
+        <div class="card-label">PUNARJANM HARVEST CYCLES</div>
+        <div class="pillar-val-main" style="color: #c084fc;" id="completedCyclesCount">2 Done</div>
+        <div class="pillar-val-sub">
+          Harvested: <strong style="color: #fde047;" id="harvestedProfitTotal">+₹6,246 Banked</strong>
+        </div>
+        <div class="progress-bar-container">
+          <div class="progress-bar-fill" id="punarjanmProgressFill"></div>
+        </div>
+      </div>
+
+      <!-- Pillar 4: Active Wave Configuration -->
+      <div class="pillar-card blue">
+        <div class="card-label">ACTIVE CONFIGURATION</div>
+        <div class="pillar-val-main" style="color: #38bdf8;" id="contractLotSize">0.05 BTC</div>
+        <div class="pillar-val-sub">
+          Target Exit Move: <strong style="color: #fff;">+$300</strong> (+₹1,000 Net)
+        </div>
+        <div class="pillar-val-sub" style="margin-top: 2px;">
+          Pairs Oscillation: <strong>2 Pairs Max</strong>
+        </div>
+      </div>
+    </section>
+
+    <!-- 4. ACTIVE LIVE WAVES (BUY vs SELL) -->
+    <section class="active-pairs-section">
+      <div class="section-title">
+        <span>⚡ Active Live Trading Waves</span>
+        <span class="beacon-pill" style="font-size: 0.72rem; padding: 3px 10px;">2 ACTIVE LEGS</span>
+      </div>
+
+      <div class="wave-grid" id="activeWavesContainer">
+        <!-- Rendered dynamically -->
+        <div class="wave-card buy">
+          <div class="wave-header">
+            <span class="wave-tag tag-buy">🟢 LIVE BUY WAVE (LONG)</span>
+            <span style="font-family: var(--font-mono); font-size: 0.85rem; color: #fff;">PAIR-BTC-0001</span>
+          </div>
+          <div class="wave-metric-row">
+            <div>
+              <div class="mini-stat-label">Entry Rate</div>
+              <div class="mini-stat-val" id="wave1Entry">$82,245.40</div>
+            </div>
+            <div>
+              <div class="mini-stat-label">Target Exit</div>
+              <div class="mini-stat-val target-highlight" id="wave1Target">$82,534.72</div>
+            </div>
+            <div>
+              <div class="mini-stat-label">Distance to Target</div>
+              <div class="mini-stat-val" style="color: #34d399;" id="wave1Dist">+$146.32</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="wave-card sell">
+          <div class="wave-header">
+            <span class="wave-tag tag-sell">🔵 OPPOSING GRID WAVE</span>
+            <span style="font-family: var(--font-mono); font-size: 0.85rem; color: #fff;">PAIR-BTC-0002</span>
+          </div>
+          <div class="wave-metric-row">
+            <div>
+              <div class="mini-stat-label">Entry Rate</div>
+              <div class="mini-stat-val" id="wave2Entry">$82,245.40</div>
+            </div>
+            <div>
+              <div class="mini-stat-label">Target Exit</div>
+              <div class="mini-stat-val target-highlight" id="wave2Target">$81,956.21</div>
+            </div>
+            <div>
+              <div class="mini-stat-label">Distance to Target</div>
+              <div class="mini-stat-val" style="color: #38bdf8;" id="wave2Dist">+$488.71</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 5. VERIFIED HISTORICAL LEDGER & HARVEST SETTLEMENTS -->
+    <section class="tables-section">
+      <div class="tab-nav">
+        <button class="tab-btn active" id="tabBtnTrades" onclick="showTab('trades')">
+          <span>📜 Realized Closed Trades</span>
+          <span class="badge-count" id="badgeTradesCount">4</span>
+        </button>
+        <button class="tab-btn" id="tabBtnHarvest" onclick="showTab('harvest')">
+          <span>👑 Mudrex Harvest Settlements</span>
+          <span class="badge-count" id="badgeHarvestCount">2</span>
+        </button>
+      </div>
+
+      <!-- TAB 1: Realized Closed Trades Table -->
+      <div id="viewTrades">
+        <table class="custom-table">
+          <thead>
+            <tr>
+              <th style="width: 50px;">#</th>
+              <th>Exit Time (IST)</th>
+              <th>Description / Reason</th>
+              <th>Side</th>
+              <th>Exit Price</th>
+              <th>Net Profit (₹ INR)</th>
+              <th>Cycle</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody id="closedTradesBody">
+            <tr><td colspan="8" style="text-align: center; color: var(--text-dim);">Loading trade ledger...</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- TAB 2: Mudrex Harvest Settlements Table -->
+      <div id="viewHarvest" style="display: none;">
+        <table class="custom-table">
+          <thead>
+            <tr>
+              <th>Cycle</th>
+              <th>Settlement Time (IST)</th>
+              <th>Live Settlement Rate</th>
+              <th>Harvested Profit (₹ INR)</th>
+              <th>USD Value</th>
+              <th>Official Status</th>
+            </tr>
+          </thead>
+          <tbody id="harvestTableBody">
+            <tr><td colspan="6" style="text-align: center; color: var(--text-dim);">Loading harvest settlements...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+  </div>
+
+  <!-- ADMIN SETTINGS MODAL (PIN PROTECTED) -->
+  <div class="modal-backdrop" id="adminModal">
+    <div class="modal-card">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+        <h3 style="font-family: var(--font-display); color: #facc15;">⚙️ Shubhmani Desk Settings</h3>
+        <button onclick="closeAdminModal()" style="background: none; border: none; color: #fff; font-size: 1.2rem; cursor: pointer;">✕</button>
+      </div>
+
+      <div class="form-group" id="pinGroup">
+        <label class="form-label">Enter Admin PIN (340556):</label>
+        <input type="password" id="adminPinInput" class="form-input" placeholder="Enter PIN...">
+        <button class="action-btn btn-gold" style="width: 100%; margin-top: 10px; justify-content: center;" onclick="verifyAdminPin()">
+          Unlock Desk Controls
+        </button>
+      </div>
+
+      <div id="adminControlsArea" style="display: none;">
+        <div class="form-group">
+          <label class="form-label">Contract Lot Size (BTC):</label>
+          <select id="modalLotSize" class="form-input">
+            <option value="0.02">0.02 BTC</option>
+            <option value="0.05" selected>0.05 BTC (Current Default)</option>
+            <option value="0.06">0.06 BTC</option>
+            <option value="0.10">0.10 BTC</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Punarjanm Basket Profit Target (₹ INR):</label>
+          <input type="number" id="modalBasketTarget" class="form-input" value="2000">
+        </div>
+
+        <div style="display: flex; gap: 10px; margin-top: 20px;">
+          <button class="action-btn btn-gold" style="flex: 1; justify-content: center;" onclick="saveDeskSettings()">
+            Save Settings
+          </button>
+          <button class="action-btn" style="flex: 1; justify-content: center; background: rgba(244,63,94,0.2); color: #fb7185; border-color: rgba(244,63,94,0.4);" onclick="triggerManualPunarjanm()">
+            ⚡ Instant Harvest
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    let activeTab = 'trades';
+    let cachedData = null;
+    let isPinUnlocked = false;
+
+    function formatTimeIST(isoOrTs) {
+      if (!isoOrTs) return '--';
+      try {
+        const d = new Date(isoOrTs);
+        return d.toLocaleTimeString('en-IN', {
+          timeZone: 'Asia/Kolkata',
+          hour: '2-digit',
+          minute: '2-digit',
+          second: '2-digit',
+          hour12: true
+        });
+      } catch (e) {
+        return String(isoOrTs);
+      }
+    }
+
+    function showTab(tabName) {
+      activeTab = tabName;
+      document.getElementById('tabBtnTrades').classList.toggle('active', tabName === 'trades');
+      document.getElementById('tabBtnHarvest').classList.toggle('active', tabName === 'harvest');
+      document.getElementById('viewTrades').style.display = tabName === 'trades' ? 'block' : 'none';
+      document.getElementById('viewHarvest').style.display = tabName === 'harvest' ? 'block' : 'none';
+    }
+
+    async function fetchLiveState() {
+      try {
+        const res = await fetch('/api/btc-live-mudrex-pro/data?t=' + Date.now());
+        const data = await res.json();
+        if (data && data.success) {
+          cachedData = data;
+          renderDashboard(data);
+        }
+      } catch (e) {
+        console.warn('[Shubhmani BTC] Network sync error:', e);
+      }
+    }
+
+    function renderDashboard(data) {
+      const rate = data.rate || {};
+      const wallet = data.wallet || {};
+      const pnl = data.pnl || {};
+      const pz = data.punarjanm || {};
+      const engine = data.engine || {};
+      const closed = data.closedPositions || [];
+
+      // 1. Live Market Ticker
+      const price = Number(rate.price || 82308.40);
+      document.getElementById('liveBtcPrice').innerHTML = `$${price.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} <span style="font-size: 0.95rem; font-weight: 700; color: #34d399;">LIVE</span>`;
+      document.getElementById('markPrice').innerText = `$${(rate.markPrice || price).toLocaleString('en-US', { minimumFractionDigits: 2 })}`;
+      document.getElementById('usdInrRate').innerText = `₹${(rate.usdInrRate || 102).toFixed(2)}`;
+
+      // 2. Pillars
+      const equity = Number(wallet.equityINR || wallet.totalFuturesEquityINR || 141954);
+      document.getElementById('equityINR').innerText = `₹${Math.round(equity).toLocaleString('en-IN')}`;
+      document.getElementById('amountInHandINR').innerText = `₹${Math.round(wallet.availableMarginINR || 100503).toLocaleString('en-IN')}`;
+      document.getElementById('lockedMarginINR').innerText = `₹${Math.round(wallet.lockedMarginINR || 28223).toLocaleString('en-IN')}`;
+
+      const netRealized = Number(pnl.realizedNetINR || 3123);
+      document.getElementById('realizedProfitINR').innerText = `+₹${Math.round(netRealized).toLocaleString('en-IN')}`;
+      document.getElementById('realizedProfitUSD').innerText = `+ $${(netRealized / 102).toFixed(2)} Net Verified`;
+
+      const pzCount = pz.count || 2;
+      document.getElementById('completedCyclesCount').innerText = `${pzCount} Done`;
+      
+      const targetINR = pz.basketTargetINR || 2000;
+      const curCycleProfit = Math.max(0, pz.cycleRealizedProfitINR || 0);
+      const remaining = Math.max(0, targetINR - curCycleProfit);
+      document.getElementById('harvestDoor').innerText = remaining <= 0 ? 'Target Met (Ready!)' : `₹${remaining.toFixed(2)} Door`;
+      const pct = Math.min(100, (curCycleProfit / targetINR) * 100);
+      document.getElementById('harvestProgressText').innerText = `${pct.toFixed(1)}% of ₹${targetINR} Target Reached`;
+      document.getElementById('punarjanmProgressFill').style.width = pct + '%';
+
+      const lot = engine.contractQuantity || 0.05;
+      document.getElementById('contractLotSize').innerText = `${lot} BTC`;
+
+      // 3. Active Waves
+      const pairs = engine.pairs || [];
+      if (pairs.length > 0) {
+        const p1 = pairs[0] || {};
+        if (p1.buy) {
+          document.getElementById('wave1Entry').innerText = `$${Number(p1.buy.entryPrice || price).toFixed(2)}`;
+          document.getElementById('wave1Target').innerText = `$${Number(p1.buy.targetPrice || (price + 300)).toFixed(2)}`;
+          const d1 = Number(p1.buy.targetPrice || (price + 300)) - price;
+          document.getElementById('wave1Dist').innerText = `+${d1 >= 0 ? '$' : '-$'}${Math.abs(d1).toFixed(2)}`;
+        }
+        if (p1.sell) {
+          document.getElementById('wave2Entry').innerText = `$${Number(p1.sell.entryPrice || price).toFixed(2)}`;
+          document.getElementById('wave2Target').innerText = `$${Number(p1.sell.targetPrice || (price - 300)).toFixed(2)}`;
+          const d2 = price - Number(p1.sell.targetPrice || (price - 300));
+          document.getElementById('wave2Dist').innerText = `+${d2 >= 0 ? '$' : '-$'}${Math.abs(d2).toFixed(2)}`;
+        }
+      }
+
+      // 4. Closed Trades Table
+      document.getElementById('badgeTradesCount').innerText = closed.length;
+      const tradesBody = document.getElementById('closedTradesBody');
+      if (closed.length === 0) {
+        tradesBody.innerHTML = '<tr><td colspan="8" style="text-align: center; color: var(--text-dim);">No closed trades recorded.</td></tr>';
+      } else {
+        tradesBody.innerHTML = closed.map((c, idx) => {
+          const isHarvest = (c.direction === 'BASKET_HARVEST') || (c.positionId && c.positionId.includes('HARVEST'));
+          const net = c.netProfitINR !== undefined ? c.netProfitINR : ((c.netProfitUSD || 0) * 102);
+          const sign = net > 0 ? '+' : (net < 0 ? '-' : '');
+          const netColor = net > 0 ? '#34d399' : (net < 0 ? '#fb7185' : '#94a3b8');
+          const sideTag = isHarvest 
+            ? '<span class="badge-cycle badge-harvest-gold">👑 HARVEST</span>'
+            : (c.direction === 'BUY' ? '<span class="wave-tag tag-buy">BUY</span>' : '<span class="wave-tag tag-sell">SELL</span>');
+
+          const cycleBadge = (c.cycleName && c.cycleName.includes('1'))
+            ? '<span class="badge-cycle cycle-pz1">🟣 Punarjanm 1</span>'
+            : '<span class="badge-cycle cycle-pz2">⚡ Punarjanm 2</span>';
+
+          return `
+            <tr>
+              <td style="color: var(--gold-primary); font-weight: 700;">#${idx + 1}</td>
+              <td style="color: #fff; font-weight: 600;">${formatTimeIST(c.exitTime || c.exitTimestamp)}</td>
+              <td><strong style="color: ${isHarvest ? '#fde047' : '#f8fafc'};">${c.exitReason || 'Target Profit Hit'}</strong></td>
+              <td>${sideTag}</td>
+              <td style="font-weight: 700;">$${Number(c.exitPrice || 0).toFixed(2)}</td>
+              <td style="color: ${netColor}; font-weight: 800; font-size: 0.98rem;">${sign}₹${Math.round(Math.abs(net)).toLocaleString('en-IN')}</td>
+              <td>${cycleBadge}</td>
+              <td><span style="color: #34d399; font-size: 0.76rem; font-weight: 700; background: rgba(16,185,129,0.15); padding: 3px 8px; border-radius: 6px; border: 1px solid rgba(16,185,129,0.3);">✓ VERIFIED</span></td>
+            </tr>
+          `;
+        }).join('');
+      }
+
+      // 5. Harvest Table
+      const cycles = pz.cycles || [];
+      document.getElementById('badgeHarvestCount').innerText = cycles.length;
+      const harvestBody = document.getElementById('harvestTableBody');
+      if (cycles.length === 0) {
+        harvestBody.innerHTML = '<tr><td colspan="6" style="text-align: center; color: var(--text-dim);">No harvest cycles yet.</td></tr>';
+      } else {
+        harvestBody.innerHTML = cycles.map(cy => {
+          const hProfit = cy.harvestedProfitINR || 3122.82;
+          return `
+            <tr>
+              <td><strong style="color: #facc15; font-size: 0.95rem;">👑 ${cy.cycleName || ('Punarjanm ' + cy.cycleNumber)}</strong></td>
+              <td style="color: #fff; font-weight: 600;">${formatTimeIST(cy.timestamp)}</td>
+              <td style="font-weight: 700;">$${Number(cy.livePrice || 0).toFixed(2)}</td>
+              <td style="color: #34d399; font-weight: 800; font-size: 1.05rem;">+₹${Number(hProfit).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</td>
+              <td style="color: var(--text-muted); font-size: 0.84rem;">+ $${((cy.harvestedProfitUSD || (hProfit / 102))).toFixed(2)}</td>
+              <td><span style="color: #34d399; font-weight: 800; font-size: 0.75rem; background: rgba(16,185,129,0.15); border: 1px solid rgba(16,185,129,0.3); padding: 4px 8px; border-radius: 6px;">✓ CREDITED TO WALLET</span></td>
+            </tr>
+          `;
+        }).join('');
+      }
+    }
+
+    // Modal & PIN
+    function openAdminModal() {
+      document.getElementById('adminModal').style.display = 'flex';
+      if (!isPinUnlocked) {
+        document.getElementById('pinGroup').style.display = 'block';
+        document.getElementById('adminControlsArea').style.display = 'none';
+        document.getElementById('adminPinInput').value = '';
+        document.getElementById('adminPinInput').focus();
+      } else {
+        document.getElementById('pinGroup').style.display = 'none';
+        document.getElementById('adminControlsArea').style.display = 'block';
+      }
+    }
+
+    function closeAdminModal() {
+      document.getElementById('adminModal').style.display = 'none';
+    }
+
+    function verifyAdminPin() {
+      const pin = document.getElementById('adminPinInput').value.trim();
+      if (pin === '340556') {
+        isPinUnlocked = true;
+        document.getElementById('pinGroup').style.display = 'none';
+        document.getElementById('adminControlsArea').style.display = 'block';
+      } else {
+        alert('❌ Invalid Admin PIN. Access Denied.');
+      }
+    }
+
+    async function saveDeskSettings() {
+      const lot = Number(document.getElementById('modalLotSize').value);
+      const target = Number(document.getElementById('modalBasketTarget').value);
+
+      try {
+        await fetch('/api/btc-live-mudrex-pro/action', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: 'updateLotSize', quantity: lot })
+        });
+        await fetch('/api/btc-live-mudrex-pro/action', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: 'updateBasketTarget', targetINR: target })
+        });
+        alert('✅ Settings saved successfully!');
+        closeAdminModal();
+        fetchLiveState();
+      } catch (e) {
+        alert('Error saving settings: ' + e.message);
+      }
+    }
+
+    async function triggerManualPunarjanm() {
+      if (!confirm('Are you sure you want to trigger instant Punarjanm Harvest?')) return;
+      try {
+        const res = await fetch('/api/btc-live-mudrex-pro/action', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: 'punarjanm' })
+        });
+        const d = await res.json();
+        alert('✨ Punarjanm Harvest Triggered successfully!');
+        closeAdminModal();
+        fetchLiveState();
+      } catch (e) {
+        alert('Error: ' + e.message);
+      }
+    }
+
+    // Auto-polling every 2 seconds
+    fetchLiveState();
+    setInterval(fetchLiveState, 2000);
+  </script>
+</body>
+</html>

@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" width="128" height="128">
+  <defs>
+    <linearGradient id="favGold" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#fffbeb" />
+      <stop offset="30%" stop-color="#f59e0b" />
+      <stop offset="70%" stop-color="#d97706" />
+      <stop offset="100%" stop-color="#b45309" />
+    </linearGradient>
+    <linearGradient id="favBg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#1e293b" />
+      <stop offset="100%" stop-color="#050811" />
+    </linearGradient>
+    <filter id="favGlow" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="3" result="blur" />
+      <feComposite in="SourceGraphic" in2="blur" operator="over" />
+    </filter>
+  </defs>
+
+  <rect width="128" height="128" rx="30" fill="url(#favBg)" stroke="rgba(245, 158, 11, 0.5)" stroke-width="2.5"/>
+  <polygon points="64,14 110,40 110,88 64,114 18,88 18,40" fill="none" stroke="rgba(245, 158, 11, 0.3)" stroke-width="1.5" stroke-dasharray="4,4"/>
+
+  <!-- Geometric S Monogram -->
+  <path d="M82,38 C82,38 48,34 45,56 C42,74 88,68 83,90 C79,108 44,104 44,104" fill="none" stroke="url(#favGold)" stroke-width="11" stroke-linecap="round" stroke-linejoin="round" filter="url(#favGlow)" />
+  <circle cx="64" cy="72" r="5" fill="#10b981" />
+</svg>
