@@ -735,24 +735,16 @@ class BtcEngine {
     this.punarjanmCount++;
     const cycleId = `PUNARJANM-BTC-${this.punarjanmCount}`;
 
-    // Flushes stale/open pairs into closed history WITHOUT recording negative standalone paper losses
+    // Flushes stale/open pairs into closed history WITH full 120% Mudrex charges and real market PnL
     let flushedTrades = 0;
     for (const pair of this.pairs) {
       if (pair.status === 'CLOSED') continue;
       if (pair.buyPosition && pair.buyPosition.status === 'OPEN') {
-        pair.buyPosition.status = 'CLOSED';
-        pair.buyPosition.exitPrice = livePrice;
-        pair.buyPosition.exitTime = new Date().toISOString();
-        pair.buyPosition.exitTimestamp = Date.now();
-        pair.buyPosition.exitReason = `${cycleId} Flushed in Basket Profit Harvest`;
+        this.closePositionLeg(pair.buyPosition, livePrice, Date.now(), `${cycleId} Flushed in Basket Profit Harvest`, usdInrRate);
         flushedTrades++;
       }
       if (pair.sellPosition && pair.sellPosition.status === 'OPEN') {
-        pair.sellPosition.status = 'CLOSED';
-        pair.sellPosition.exitPrice = livePrice;
-        pair.sellPosition.exitTime = new Date().toISOString();
-        pair.sellPosition.exitTimestamp = Date.now();
-        pair.sellPosition.exitReason = `${cycleId} Flushed in Basket Profit Harvest`;
+        this.closePositionLeg(pair.sellPosition, livePrice, Date.now(), `${cycleId} Flushed in Basket Profit Harvest`, usdInrRate);
         flushedTrades++;
       }
       pair.status = 'CLOSED';
