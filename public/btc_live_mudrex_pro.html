@@ -1523,7 +1523,7 @@
           </label>
           <div style="position: relative; display: flex; align-items: center;">
             <span style="position: absolute; left: 8px; color: #f59e0b; font-weight: 800; font-size: 0.90rem;">₹</span>
-            <input type="number" id="manualSimAmount" value="100000" step="10000" min="10000" 
+            <input type="number" id="manualSimAmount" value="86938" step="5000" min="10000" 
               style="background: rgba(0, 0, 0, 0.65); border: 1.5px solid rgba(245, 158, 11, 0.45); border-radius: 8px; color: #ffffff; font-size: 0.90rem; font-weight: 800; font-family: var(--font-mono); padding: 7px 10px 7px 22px; width: 130px; outline: none;"
               oninput="updateManualSimPreview();" />
           </div>
@@ -1548,7 +1548,7 @@
             <span>⚡ BTC STARTING (LOT)</span>
           </label>
           <div style="position: relative; display: flex; align-items: center;">
-            <input type="number" id="manualSimSolQty" value="0.10" step="0.01" min="0.001" max="100"
+            <input type="number" id="manualSimSolQty" value="0.06" step="0.01" min="0.001" max="100"
               style="background: rgba(0, 0, 0, 0.65); border: 1.5px solid rgba(251, 191, 36, 0.45); border-radius: 8px; color: #ffffff; font-size: 0.90rem; font-weight: 800; font-family: var(--font-mono); padding: 7px 35px 7px 10px; width: 105px; outline: none;"
               oninput="updateManualSimPreview();" />
             <span style="position: absolute; right: 8px; color: #fbbf24; font-weight: 800; font-size: 0.72rem;">BTC</span>
@@ -1575,7 +1575,7 @@
           </label>
           <div style="position: relative; display: flex; align-items: center;">
             <span style="position: absolute; left: 8px; color: #c084fc; font-weight: 800; font-size: 0.90rem;">₹</span>
-            <input type="number" id="manualSimHarvestINR" value="3000" step="100" min="100" max="100000"
+            <input type="number" id="manualSimHarvestINR" value="2000" step="100" min="100" max="100000"
               style="background: rgba(0, 0, 0, 0.65); border: 1.5px solid rgba(192, 132, 252, 0.45); border-radius: 8px; color: #ffffff; font-size: 0.90rem; font-weight: 800; font-family: var(--font-mono); padding: 7px 10px 7px 22px; width: 100px; outline: none;"
               oninput="updateManualSimPreview();" />
           </div>
@@ -1659,10 +1659,11 @@
           <div style="display: flex; align-items: center; gap: 6px;">
             <span style="font-size: 0.68rem; color: #00ffa3; text-transform: uppercase; font-weight: 800; letter-spacing: 0.5px;">LOT SIZE (BTC):</span>
             <div class="target-chip-group" style="display: inline-flex; align-items: center; gap: 3px; background: rgba(0,0,0,0.45); padding: 2px 5px; border-radius: 7px; border: 1px solid rgba(0, 255, 163, 0.35);">
-              <button type="button" class="target-chip" id="chipLot1" onclick="quickSetLotSize(1)">1 BTC</button>
-              <button type="button" class="target-chip" id="chipLot2" onclick="quickSetLotSize(2)">2 BTC</button>
-              <button type="button" class="target-chip active" id="chipLot3" onclick="quickSetLotSize(3)">3 BTC</button>
-              <button type="button" class="target-chip" id="chipLot5" onclick="quickSetLotSize(5)">5 BTC</button>
+              <button type="button" class="target-chip" id="chipLot002" onclick="quickSetLotSize(0.02)">0.02 BTC</button>
+              <button type="button" class="target-chip" id="chipLot004" onclick="quickSetLotSize(0.04)">0.04 BTC</button>
+              <button type="button" class="target-chip active" id="chipLot006" onclick="quickSetLotSize(0.06)">0.06 BTC</button>
+              <button type="button" class="target-chip" id="chipLot008" onclick="quickSetLotSize(0.08)">0.08 BTC</button>
+              <button type="button" class="target-chip" id="chipLot010" onclick="quickSetLotSize(0.10)">0.10 BTC</button>
               <button type="button" class="target-chip" onclick="promptCustomLotSize()" title="Custom Lot Size">✏️</button>
             </div>
           </div>
@@ -2622,16 +2623,18 @@
       const livePrice = (cachedData && cachedData.rate && cachedData.rate.price) || 82000.00;
       const usdInr = (cachedData && cachedData.rate && cachedData.rate.usdInrRate) || 102.00;
       
-      // Margin per hedged leg at leverage
-      const budgetDivisor = maxPairs > 0 ? maxPairs : 10;
+      // Margin per hedged leg at leverage (BUY + SELL legs = 2x)
       const legMarginINR = (livePrice * btcQty * usdInr) / leverage;
-      const pairCostINR = Math.round(amount / budgetDivisor);
-      const inHandINR = Math.max(0, amount - pairCostINR);
+      const pairMarginINR = Math.round(legMarginINR * 2);
+      const totalPairsMargin = pairMarginINR * maxPairs;
+      const inHandINR = Math.round(amount - totalPairsMargin);
+      const inHandColor = inHandINR >= 0 ? '#10b981' : '#ef4444';
+      const inHandText = inHandINR >= 0 ? `+₹${inHandINR.toLocaleString('en-IN')} (Safe)` : `-₹${Math.abs(inHandINR).toLocaleString('en-IN')} (Deficit)`;
 
       const capLabel = `${maxPairs} Pairs Circle`;
       const diffLabel = gridDiff > 0 ? `$${gridDiff} diff` : '0 diff (Value move hote hi)';
 
-      previewEl.innerHTML = `Pair Cost: <strong style="color: #c084fc;">-₹${pairCostINR.toLocaleString('en-IN')}</strong> · In Hand: <strong style="color: #38bdf8;">₹${inHandINR.toLocaleString('en-IN')}</strong> · <strong style="color: #fbbf24;">${capLabel} (${diffLabel})</strong><br>Target: <strong style="color: #10b981;">+₹${Math.round(targetProfitINR).toLocaleString('en-IN')}</strong> · Loss SL: <strong style="color: #ef4444;">-₹${Math.round(stopLossINR).toLocaleString('en-IN')}</strong> · <span style="color:#10b981; font-weight:700;">Auto-Wallet: ON</span>`;
+      previewEl.innerHTML = `Pair Margin (15x): <strong style="color: #c084fc;">₹${pairMarginINR.toLocaleString('en-IN')}</strong> · In Hand Cash: <strong style="color: ${inHandColor};">${inHandText}</strong> · <strong style="color: #fbbf24;">${capLabel} (${diffLabel})</strong><br>Target: <strong style="color: #10b981;">+₹${Math.round(targetProfitINR).toLocaleString('en-IN')}</strong> · Loss SL: <strong style="color: #ef4444;">-₹${Math.round(stopLossINR).toLocaleString('en-IN')}</strong> · <span style="color:#10b981; font-weight:700;">Auto-Wallet: ON</span>`;
     }
 
     async function quickSetBasketTarget(targetINR) {

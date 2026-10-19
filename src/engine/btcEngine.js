@@ -5,19 +5,19 @@ const rateFeed = require('./rateFeed');
 class BtcEngine {
   constructor() {
     this.settings = {
-      startingCapitalINR: 100000.00, // Total amt: ₹1,00,000 (1 Lakh User Default)
-      contractQuantity: 0.10, // BTC starting: 0.10 BTC (User Default)
-      leverage: 15, // Leverage: 15x (User Default)
+      startingCapitalINR: 86938.00, // Total amt: ₹86,938 (Real Mudrex Futures Wallet)
+      contractQuantity: 0.06, // Best Safe Config: 0.06 BTC (Fits within wallet with safe margin)
+      leverage: 15, // Leverage: 15x
       instrument: 'BTCUSDT',
-      profitTargetINR: 1000.00, // Exit profit: ₹1,000 INR net per hit (User Default)
-      stopLossINR: 500.00, // Loss: ₹500 INR (User Default)
-      profitTargetMove: 190.00, // Approximate USD move for ₹1,000 INR
-      buyTargetMove: 190.00,
-      sellTargetMove: 190.00,
-      stopLossMove: 50.00, // Approximate USD move for ₹500 INR
-      gridSpacing: 0.00, // User: "📊 DIFF RATE ($) also 0 kar dijiye default"
+      profitTargetINR: 1000.00, // Exit profit: ₹1,000 INR net per hit
+      stopLossINR: 500.00, // Loss: ₹500 INR
+      profitTargetMove: 267.00, // Precise USD move for ₹1,000 INR on 0.06 BTC after 120% charges
+      buyTargetMove: 267.00,
+      sellTargetMove: 267.00,
+      stopLossMove: 130.00,
+      gridSpacing: 0.00, // Rate move hote hi entry
       priceBucketSize: 0.00,
-      basketProfitTargetINR: 3000, // Harvest: ₹3,000 (User Default)
+      basketProfitTargetINR: 2000, // Harvest: ₹2,000 Punarjanm Auto-Harvest
       autoPunarjanmEnabled: true, // Harvest amt auto add to wallet (Auto-Harvest)
       autoAddNewPairs: true, // Continuous re-entry when live rate moves to vacant level and margin is available
       maxActivePairs: 1, // Single Pair: Exactly 1 pair active at a time in Live Mudrex
