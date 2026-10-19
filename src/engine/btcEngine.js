@@ -155,17 +155,18 @@ class BtcEngine {
             const sData = JSON.parse(sRaw);
             if (Array.isArray(sData.closedPositions) && sData.closedPositions.length > 0) {
               const hasPz2 = this.closedPositions.some(p => p.positionId && p.positionId.includes('PUNARJANM-BTC-2'));
-              if (this.closedPositions.length === 0 || !hasPz2 || this.closedPositions.some(p => p.exitReason && p.exitReason.includes('Flushed'))) {
+              if (this.closedPositions.length <= 4 || this.closedPositions.length > 10 || !hasPz2 || this.closedPositions.some(p => p.exitReason && p.exitReason.includes('Flushed'))) {
                 this.closedPositions = sData.closedPositions;
                 console.log(`[BTC Engine] Authoritative Seed: Loaded ${this.closedPositions.length} verified real Mudrex trades.`);
               }
             }
-            if (Array.isArray(sData.punarjanmCycles) && (this.punarjanmCycles.length < sData.punarjanmCycles.length)) {
-              this.punarjanmCycles = sData.punarjanmCycles;
+            if (Array.isArray(sData.punarjanmCycles)) {
+              if (this.punarjanmCycles.length > 2 || this.punarjanmCycles.length === 0) {
+                this.punarjanmCycles = sData.punarjanmCycles;
+              }
             }
-            if (sData.punarjanmCount && sData.punarjanmCount > (this.punarjanmCount || 0)) {
-              this.punarjanmCount = sData.punarjanmCount;
-            }
+            this.punarjanmCount = sData.punarjanmCount || 2;
+            this.lastPunarjanmTime = Date.now();
           }
         } catch (sErr) {
           console.warn('[BTC Engine] Error loading seed data:', sErr.message);
@@ -743,8 +744,9 @@ class BtcEngine {
     let sum = 0;
     const sinceTime = this.lastPunarjanmTime || 0;
     for (const cp of this.closedPositions) {
+      if (cp.direction === 'BASKET_HARVEST' || cp.isHarvestSummary) continue; // Skip harvest records to avoid cycle trigger loops!
       const exitTs = cp.exitTimestamp || (cp.exitTime ? new Date(cp.exitTime).getTime() : 0);
-      if (exitTs >= sinceTime) {
+      if (exitTs > sinceTime) {
         sum += (cp.netProfitINR !== undefined ? cp.netProfitINR : ((cp.grossProfitINR || 0) - (cp.totalChargesINR || 0)));
       }
     }
