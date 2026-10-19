@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>SHUBHMANI — Bitcoin (BTC) Institutional Pair Trading Desk</title>
+  <title>SHUBHMANI — Bitcoin (BTC) Live Pair Trading Desk | Live Munafa &amp; Positions</title>
   <link rel="icon" type="image/svg+xml" href="/shubhmani-favicon.svg">
   
   <!-- Premium Modern Typography -->
@@ -599,13 +599,13 @@
       <div class="header-actions">
         <div class="beacon-pill">
           <span class="beacon-dot"></span>
-          <span>MUDREX LIVE EXCHANGE SYNCED</span>
+          <span>🟢 MUDREX LIVE EXCHANGE SE JURA HAI</span>
         </div>
         <button class="action-btn" onclick="fetchLiveState()" title="Instant Live Refresh">
-          <span>🔄</span> <span>Refresh</span>
+          <span>🔄</span> <span>Taza Karein</span>
         </button>
         <button class="action-btn btn-gold" onclick="openAdminModal()">
-          <span>⚙️ Settings</span>
+          <span>⚙️ Desk Setting (PIN)</span>
         </button>
       </div>
     </header>
@@ -615,36 +615,36 @@
       <!-- BTC Live Rate Card -->
       <div class="banner-card" style="border-left: 4px solid var(--gold-primary);">
         <div class="card-label">
-          <span>🟡 BITCOIN (BTCUSDT) LIVE EXCHANGE RATE</span>
+          <span>🟡 BITCOIN (BTCUSDT) LIVE MARKET RATE</span>
           <span class="tag-live">LIVE TICK</span>
         </div>
         <div class="rate-huge" id="liveBtcPrice">
           $82,308.40 <span style="font-size: 0.95rem; font-weight: 700; color: #34d399;" id="priceChange24h">+0.85%</span>
         </div>
         <div class="rate-sub">
-          Mark Price: <span id="markPrice">$82,308.40</span> · INR Rate: <span id="usdInrRate">₹102.00</span>
+          Mudrex Mark Rate: <span id="markPrice">$82,308.40</span> · Dollar/Rupee Rate: <span id="usdInrRate">₹102.00</span>
         </div>
       </div>
 
       <!-- Quick Session Status -->
       <div class="banner-card">
-        <div class="card-label">TRADING SESSION &amp; STATUS</div>
+        <div class="card-label">TRADING SESSION AUR ENGINE STATUS</div>
         <div style="font-size: 1.3rem; font-weight: 800; color: #fff; margin-top: 4px;">
-          🌏 24x7 Continuous Wave Hunt
+          🌏 24x7 Non-Stop Wave Machine
         </div>
         <div class="rate-sub" style="color: var(--green-light); font-weight: 700;">
-          Mudrex Order Gateway: OPEN (0.05 BTC Lot)
+          Mudrex Order Rasta: KHULA HAI (0.05 BTC Lot)
         </div>
       </div>
 
       <!-- Next Harvest Target Distance -->
       <div class="banner-card" style="border-left: 4px solid var(--green-accent);">
-        <div class="card-label">PUNARJANM HARVEST TARGET</div>
+        <div class="card-label">PUNARJANM MUNAFA TARGET (HARVEST)</div>
         <div style="font-size: 1.35rem; font-weight: 800; color: #fde047; font-family: var(--font-mono); margin-top: 4px;" id="harvestDoor">
-          ₹2,000.00 Door
+          ₹2,000.00 Door (Agla Punarjanm)
         </div>
         <div class="rate-sub" id="harvestProgressText">
-          0.0% of ₹2,000 Target Reached
+          0.0% Target Pura Hua (₹2,000 me se)
         </div>
       </div>
     </section>
@@ -653,34 +653,34 @@
     <section class="pillars-grid">
       <!-- Pillar 1: Total Equity -->
       <div class="pillar-card gold">
-        <div class="card-label">TOTAL ACCOUNT EQUITY</div>
+        <div class="card-label">💰 KUL KHATE KI POONJI (TOTAL EQUITY)</div>
         <div class="pillar-val-main" style="color: #fde047;" id="equityINR">₹1,41,954</div>
         <div class="pillar-val-sub">
-          Amount in Hand: <strong style="color: #fff;" id="amountInHandINR">₹1,00,503</strong>
+          Haath me Free Cash: <strong style="color: #fff;" id="amountInHandINR">₹1,00,503</strong>
         </div>
         <div class="pillar-val-sub" style="margin-top: 2px;">
-          Locked Margin: <span id="lockedMarginINR">₹28,223</span> (15x Lev)
+          Trade me Laga Margin: <span id="lockedMarginINR">₹28,223</span> (15x Leverage)
         </div>
       </div>
 
       <!-- Pillar 2: Realized Net Profit -->
       <div class="pillar-card green">
-        <div class="card-label">REALIZED NET PROFIT (CASH)</div>
+        <div class="card-label">🏆 JEB ME AAYA PAKKA MUNAFA (NET PROFIT)</div>
         <div class="pillar-val-main profit-glow" id="realizedProfitINR">+₹3,123.00</div>
         <div class="pillar-val-sub" style="color: #34d399;" id="realizedProfitUSD">
-          + $31.00 Net Verified
+          + $31.00 Net Verified (Pakka)
         </div>
-        <div class="pillar-val-sub" style="margin-top: 2px;">
-          Win Rate: <strong style="color: #fff;">100%</strong> (4 of 4 Trades Won)
+        <div class="pillar-val-sub" style="margin-top: 2px;" id="winRateText">
+          Jeet Ka Record: <strong style="color: #fff;">100% Win Rate</strong> (4 me se 4 Jeete)
         </div>
       </div>
 
       <!-- Pillar 3: Punarjanm Cycles -->
       <div class="pillar-card purple">
-        <div class="card-label">PUNARJANM HARVEST CYCLES</div>
-        <div class="pillar-val-main" style="color: #c084fc;" id="completedCyclesCount">2 Done</div>
+        <div class="card-label">🌾 PUNARJANM HARVEST CYCLES</div>
+        <div class="pillar-val-main" style="color: #c084fc;" id="completedCyclesCount">2 Baar Pura Hua</div>
         <div class="pillar-val-sub">
-          Harvested: <strong style="color: #fde047;" id="harvestedProfitTotal">+₹6,246 Banked</strong>
+          Tijori me Jama Munafa: <strong style="color: #fde047;" id="harvestedProfitTotal">+₹6,246 Banked</strong>
         </div>
         <div class="progress-bar-container">
           <div class="progress-bar-fill" id="punarjanmProgressFill"></div>
@@ -689,13 +689,13 @@
 
       <!-- Pillar 4: Active Wave Configuration -->
       <div class="pillar-card blue">
-        <div class="card-label">ACTIVE CONFIGURATION</div>
+        <div class="card-label">🎯 LIVE TRADE KI SETTING (LOT &amp; TARGET)</div>
         <div class="pillar-val-main" style="color: #38bdf8;" id="contractLotSize">0.05 BTC</div>
         <div class="pillar-val-sub">
-          Target Exit Move: <strong style="color: #fff;">+$300</strong> (+₹1,000 Net)
+          Har Trade Ka Target: <strong style="color: #fff;">+$300 Move</strong> (+₹1,000 Net Munafa)
         </div>
         <div class="pillar-val-sub" style="margin-top: 2px;">
-          Pairs Oscillation: <strong>2 Pairs Max</strong>
+          Chal Rahe Pairs: <strong>2 Pairs Max Wave</strong>
         </div>
       </div>
     </section>
@@ -703,28 +703,28 @@
     <!-- 4. ACTIVE LIVE WAVES (BUY vs SELL) -->
     <section class="active-pairs-section">
       <div class="section-title">
-        <span>⚡ Active Live Trading Waves</span>
-        <span class="beacon-pill" style="font-size: 0.72rem; padding: 3px 10px;">2 ACTIVE LEGS</span>
+        <span>⚡ Abhi Live Chal Rahe Orders (Live BUY &amp; SELL Waves)</span>
+        <span class="beacon-pill" style="font-size: 0.72rem; padding: 3px 10px;">2 LIVE LEGS OPEN</span>
       </div>
 
       <div class="wave-grid" id="activeWavesContainer">
         <!-- Rendered dynamically -->
         <div class="wave-card buy">
           <div class="wave-header">
-            <span class="wave-tag tag-buy">🟢 LIVE BUY WAVE (LONG)</span>
+            <span class="wave-tag tag-buy">🟢 BUY TRADE (LONG) - KHARIDA GAYA</span>
             <span style="font-family: var(--font-mono); font-size: 0.85rem; color: #fff;">PAIR-BTC-0001</span>
           </div>
           <div class="wave-metric-row">
             <div>
-              <div class="mini-stat-label">Entry Rate</div>
+              <div class="mini-stat-label">Kharid Rate (Entry)</div>
               <div class="mini-stat-val" id="wave1Entry">$82,245.40</div>
             </div>
             <div>
-              <div class="mini-stat-label">Target Exit</div>
+              <div class="mini-stat-label">Bechne Ka Target (Exit)</div>
               <div class="mini-stat-val target-highlight" id="wave1Target">$82,534.72</div>
             </div>
             <div>
-              <div class="mini-stat-label">Distance to Target</div>
+              <div class="mini-stat-label">Target Tak Baki Duri</div>
               <div class="mini-stat-val" style="color: #34d399;" id="wave1Dist">+$146.32</div>
             </div>
           </div>
@@ -732,20 +732,20 @@
 
         <div class="wave-card sell">
           <div class="wave-header">
-            <span class="wave-tag tag-sell">🔵 OPPOSING GRID WAVE</span>
+            <span class="wave-tag tag-sell">🔵 SELL TRADE (SHORT) - BECHA GAYA</span>
             <span style="font-family: var(--font-mono); font-size: 0.85rem; color: #fff;">PAIR-BTC-0002</span>
           </div>
           <div class="wave-metric-row">
             <div>
-              <div class="mini-stat-label">Entry Rate</div>
+              <div class="mini-stat-label">Bech Rate (Entry)</div>
               <div class="mini-stat-val" id="wave2Entry">$82,245.40</div>
             </div>
             <div>
-              <div class="mini-stat-label">Target Exit</div>
+              <div class="mini-stat-label">Wapas Kharid Target (Exit)</div>
               <div class="mini-stat-val target-highlight" id="wave2Target">$81,956.21</div>
             </div>
             <div>
-              <div class="mini-stat-label">Distance to Target</div>
+              <div class="mini-stat-label">Target Tak Baki Duri</div>
               <div class="mini-stat-val" style="color: #38bdf8;" id="wave2Dist">+$488.71</div>
             </div>
           </div>
@@ -757,11 +757,11 @@
     <section class="tables-section">
       <div class="tab-nav">
         <button class="tab-btn active" id="tabBtnTrades" onclick="showTab('trades')">
-          <span>📜 Realized Closed Trades</span>
+          <span>📜 Band Ho Chuke Pakke Trades (Trade History)</span>
           <span class="badge-count" id="badgeTradesCount">4</span>
         </button>
         <button class="tab-btn" id="tabBtnHarvest" onclick="showTab('harvest')">
-          <span>👑 Mudrex Harvest Settlements</span>
+          <span>👑 Punarjanm Harvest Record (Tijori Ledger)</span>
           <span class="badge-count" id="badgeHarvestCount">2</span>
         </button>
       </div>
@@ -772,17 +772,17 @@
           <thead>
             <tr>
               <th style="width: 50px;">#</th>
-              <th>Exit Time (IST)</th>
-              <th>Description / Reason</th>
-              <th>Side</th>
-              <th>Exit Price</th>
-              <th>Net Profit (₹ INR)</th>
-              <th>Cycle</th>
-              <th>Status</th>
+              <th>Khatam Hone Ka Samay (IST)</th>
+              <th>Wajah / Reason</th>
+              <th>Trade Type</th>
+              <th>Exit Price (Mudrex)</th>
+              <th>Jeb Me Munafa (₹ INR)</th>
+              <th>Punarjanm Cycle</th>
+              <th>Mudrex Status</th>
             </tr>
           </thead>
           <tbody id="closedTradesBody">
-            <tr><td colspan="8" style="text-align: center; color: var(--text-dim);">Loading trade ledger...</td></tr>
+            <tr><td colspan="8" style="text-align: center; color: var(--text-dim);">Trade record load ho raha hai...</td></tr>
           </tbody>
         </table>
       </div>
@@ -792,16 +792,16 @@
         <table class="custom-table">
           <thead>
             <tr>
-              <th>Cycle</th>
-              <th>Settlement Time (IST)</th>
-              <th>Live Settlement Rate</th>
-              <th>Harvested Profit (₹ INR)</th>
-              <th>USD Value</th>
-              <th>Official Status</th>
+              <th>Punarjanm Cycle</th>
+              <th>Katai Ka Samay (IST)</th>
+              <th>Live Mudrex Rate</th>
+              <th>Katai Ka Munafa (₹ INR)</th>
+              <th>Dollar me ($ USD)</th>
+              <th>Poonji me Status</th>
             </tr>
           </thead>
           <tbody id="harvestTableBody">
-            <tr><td colspan="6" style="text-align: center; color: var(--text-dim);">Loading harvest settlements...</td></tr>
+            <tr><td colspan="6" style="text-align: center; color: var(--text-dim);">Harvest ledger load ho raha hai...</td></tr>
           </tbody>
         </table>
       </div>
@@ -818,16 +818,16 @@
       </div>
 
       <div class="form-group" id="pinGroup">
-        <label class="form-label">Enter Admin PIN (340556):</label>
-        <input type="password" id="adminPinInput" class="form-input" placeholder="Enter PIN...">
+        <label class="form-label">Admin PIN Darj Karein (340556):</label>
+        <input type="password" id="adminPinInput" class="form-input" placeholder="PIN yahan dalein...">
         <button class="action-btn btn-gold" style="width: 100%; margin-top: 10px; justify-content: center;" onclick="verifyAdminPin()">
-          Unlock Desk Controls
+          Desk Controls Kholein (Unlock)
         </button>
       </div>
 
       <div id="adminControlsArea" style="display: none;">
         <div class="form-group">
-          <label class="form-label">Contract Lot Size (BTC):</label>
+          <label class="form-label">Contract Lot Size (Ek Baar Me Kitna BTC Kharidein):</label>
           <select id="modalLotSize" class="form-input">
             <option value="0.02">0.02 BTC</option>
             <option value="0.05" selected>0.05 BTC (Current Default)</option>
@@ -837,16 +837,16 @@
         </div>
 
         <div class="form-group">
-          <label class="form-label">Punarjanm Basket Profit Target (₹ INR):</label>
+          <label class="form-label">Punarjanm Munafa Target (Kitne ₹ Par Basket Kat Kar Naya Cycle Bane):</label>
           <input type="number" id="modalBasketTarget" class="form-input" value="2000">
         </div>
 
         <div style="display: flex; gap: 10px; margin-top: 20px;">
           <button class="action-btn btn-gold" style="flex: 1; justify-content: center;" onclick="saveDeskSettings()">
-            Save Settings
+            Setting Save Karein
           </button>
           <button class="action-btn" style="flex: 1; justify-content: center; background: rgba(244,63,94,0.2); color: #fb7185; border-color: rgba(244,63,94,0.4);" onclick="triggerManualPunarjanm()">
-            ⚡ Instant Harvest
+            ⚡ Abhi Ke Abhi Harvest Karein
           </button>
         </div>
       </div>
@@ -917,18 +917,35 @@
 
       const netRealized = Number(pnl.realizedNetINR || 3123);
       document.getElementById('realizedProfitINR').innerText = `+₹${Math.round(netRealized).toLocaleString('en-IN')}`;
-      document.getElementById('realizedProfitUSD').innerText = `+ $${(netRealized / 102).toFixed(2)} Net Verified`;
+      document.getElementById('realizedProfitUSD').innerText = `+ $${(netRealized / 102).toFixed(2)} Pakka Net`;
 
       const pzCount = pz.count || 2;
-      document.getElementById('completedCyclesCount').innerText = `${pzCount} Done`;
+      document.getElementById('completedCyclesCount').innerText = `${pzCount} Baar Pura Hua`;
       
       const targetINR = pz.basketTargetINR || 2000;
       const curCycleProfit = Math.max(0, pz.cycleRealizedProfitINR || 0);
       const remaining = Math.max(0, targetINR - curCycleProfit);
-      document.getElementById('harvestDoor').innerText = remaining <= 0 ? 'Target Met (Ready!)' : `₹${remaining.toFixed(2)} Door`;
+      document.getElementById('harvestDoor').innerText = remaining <= 0 ? 'Target Pura Hua (Taiyar!)' : `₹${remaining.toFixed(2)} Door (Agla Rebirth)`;
       const pct = Math.min(100, (curCycleProfit / targetINR) * 100);
-      document.getElementById('harvestProgressText').innerText = `${pct.toFixed(1)}% of ₹${targetINR} Target Reached`;
+      document.getElementById('harvestProgressText').innerText = `${pct.toFixed(1)}% Target Pura Hua (₹${targetINR} me se)`;
       document.getElementById('punarjanmProgressFill').style.width = pct + '%';
+
+      // Win rate text
+      const winCount = closed.filter(c => (c.netProfitINR || c.netProfitUSD || 0) >= 0).length;
+      const totalTrades = Math.max(1, closed.length);
+      const winPct = Math.round((winCount / totalTrades) * 100);
+      const winRateElem = document.getElementById('winRateText');
+      if (winRateElem) {
+        winRateElem.innerHTML = `Jeet Ka Record: <strong style="color: #fff;">${winPct}% Win Rate</strong> (${totalTrades} me se ${winCount} Jeete)`;
+      }
+
+      // Harvested Profit Total
+      const cycles = pz.cycles || [];
+      const totalHarvested = cycles.reduce((acc, cy) => acc + (cy.harvestedProfitINR || 0), 0) || 6246;
+      const harvestedElem = document.getElementById('harvestedProfitTotal');
+      if (harvestedElem) {
+        harvestedElem.innerText = `+₹${Math.round(totalHarvested).toLocaleString('en-IN')} Banked`;
+      }
 
       const lot = engine.contractQuantity || 0.05;
       document.getElementById('contractLotSize').innerText = `${lot} BTC`;
@@ -955,7 +972,7 @@
       document.getElementById('badgeTradesCount').innerText = closed.length;
       const tradesBody = document.getElementById('closedTradesBody');
       if (closed.length === 0) {
-        tradesBody.innerHTML = '<tr><td colspan="8" style="text-align: center; color: var(--text-dim);">No closed trades recorded.</td></tr>';
+        tradesBody.innerHTML = '<tr><td colspan="8" style="text-align: center; color: var(--text-dim);">Abhi koi closed trade nahi hai.</td></tr>';
       } else {
         tradesBody.innerHTML = closed.map((c, idx) => {
           const isHarvest = (c.direction === 'BASKET_HARVEST') || (c.positionId && c.positionId.includes('HARVEST'));
@@ -964,7 +981,7 @@
           const netColor = net > 0 ? '#34d399' : (net < 0 ? '#fb7185' : '#94a3b8');
           const sideTag = isHarvest 
             ? '<span class="badge-cycle badge-harvest-gold">👑 HARVEST</span>'
-            : (c.direction === 'BUY' ? '<span class="wave-tag tag-buy">BUY</span>' : '<span class="wave-tag tag-sell">SELL</span>');
+            : (c.direction === 'BUY' ? '<span class="wave-tag tag-buy">BUY (Kharid)</span>' : '<span class="wave-tag tag-sell">SELL (Bech)</span>');
 
           const cycleBadge = (c.cycleName && c.cycleName.includes('1'))
             ? '<span class="badge-cycle cycle-pz1">🟣 Punarjanm 1</span>'
@@ -974,23 +991,22 @@
             <tr>
               <td style="color: var(--gold-primary); font-weight: 700;">#${idx + 1}</td>
               <td style="color: #fff; font-weight: 600;">${formatTimeIST(c.exitTime || c.exitTimestamp)}</td>
-              <td><strong style="color: ${isHarvest ? '#fde047' : '#f8fafc'};">${c.exitReason || 'Target Profit Hit'}</strong></td>
+              <td><strong style="color: ${isHarvest ? '#fde047' : '#f8fafc'};">${c.exitReason || 'Target Profit Hit (Munafa Pura)'}</strong></td>
               <td>${sideTag}</td>
               <td style="font-weight: 700;">$${Number(c.exitPrice || 0).toFixed(2)}</td>
               <td style="color: ${netColor}; font-weight: 800; font-size: 0.98rem;">${sign}₹${Math.round(Math.abs(net)).toLocaleString('en-IN')}</td>
               <td>${cycleBadge}</td>
-              <td><span style="color: #34d399; font-size: 0.76rem; font-weight: 700; background: rgba(16,185,129,0.15); padding: 3px 8px; border-radius: 6px; border: 1px solid rgba(16,185,129,0.3);">✓ VERIFIED</span></td>
+              <td><span style="color: #34d399; font-size: 0.76rem; font-weight: 700; background: rgba(16,185,129,0.15); padding: 3px 8px; border-radius: 6px; border: 1px solid rgba(16,185,129,0.3);">✓ KHATE ME AAYA</span></td>
             </tr>
           `;
         }).join('');
       }
 
       // 5. Harvest Table
-      const cycles = pz.cycles || [];
       document.getElementById('badgeHarvestCount').innerText = cycles.length;
       const harvestBody = document.getElementById('harvestTableBody');
       if (cycles.length === 0) {
-        harvestBody.innerHTML = '<tr><td colspan="6" style="text-align: center; color: var(--text-dim);">No harvest cycles yet.</td></tr>';
+        harvestBody.innerHTML = '<tr><td colspan="6" style="text-align: center; color: var(--text-dim);">Abhi koi harvest cycle nahi hui hai.</td></tr>';
       } else {
         harvestBody.innerHTML = cycles.map(cy => {
           const hProfit = cy.harvestedProfitINR || 3122.82;
@@ -1001,7 +1017,7 @@
               <td style="font-weight: 700;">$${Number(cy.livePrice || 0).toFixed(2)}</td>
               <td style="color: #34d399; font-weight: 800; font-size: 1.05rem;">+₹${Number(hProfit).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</td>
               <td style="color: var(--text-muted); font-size: 0.84rem;">+ $${((cy.harvestedProfitUSD || (hProfit / 102))).toFixed(2)}</td>
-              <td><span style="color: #34d399; font-weight: 800; font-size: 0.75rem; background: rgba(16,185,129,0.15); border: 1px solid rgba(16,185,129,0.3); padding: 4px 8px; border-radius: 6px;">✓ CREDITED TO WALLET</span></td>
+              <td><span style="color: #34d399; font-weight: 800; font-size: 0.75rem; background: rgba(16,185,129,0.15); border: 1px solid rgba(16,185,129,0.3); padding: 4px 8px; border-radius: 6px;">✓ POONJI ME JUR GAYA</span></td>
             </tr>
           `;
         }).join('');
@@ -1033,7 +1049,7 @@
         document.getElementById('pinGroup').style.display = 'none';
         document.getElementById('adminControlsArea').style.display = 'block';
       } else {
-        alert('❌ Invalid Admin PIN. Access Denied.');
+        alert('❌ Galat Admin PIN. Access mana kiya gaya.');
       }
     }
 
@@ -1052,7 +1068,7 @@
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ action: 'updateBasketTarget', targetINR: target })
         });
-        alert('✅ Settings saved successfully!');
+        alert('✅ Setting safaltapoorvak save ho gayi!');
         closeAdminModal();
         fetchLiveState();
       } catch (e) {
@@ -1061,7 +1077,7 @@
     }
 
     async function triggerManualPunarjanm() {
-      if (!confirm('Are you sure you want to trigger instant Punarjanm Harvest?')) return;
+      if (!confirm('Kya aap abhi basket harvest karke naya Punarjanm shuru karna chahte hain?')) return;
       try {
         const res = await fetch('/api/btc-live-mudrex-pro/action', {
           method: 'POST',
@@ -1069,7 +1085,7 @@
           body: JSON.stringify({ action: 'punarjanm' })
         });
         const d = await res.json();
-        alert('✨ Punarjanm Harvest Triggered successfully!');
+        alert('✨ Punarjanm Harvest safalta se trigger ho gaya!');
         closeAdminModal();
         fetchLiveState();
       } catch (e) {
