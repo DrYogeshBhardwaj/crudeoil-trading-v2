@@ -238,10 +238,76 @@
       border-radius: 6px;
     }
 
-    /* --- 4 EXECUTIVE PILLARS --- */
+    /* --- DUAL HERO METRICS (JEB ME AAYA & MUDREX LIVE UNREALISED) --- */
+    .dual-hero-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+      margin-bottom: 22px;
+    }
+
+    .hero-profit-card {
+      background: var(--bg-card);
+      backdrop-filter: blur(12px);
+      border: 1.5px solid var(--border-subtle);
+      border-radius: 16px;
+      padding: 20px 24px;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+      position: relative;
+      overflow: hidden;
+      transition: transform 0.2s ease, border-color 0.2s ease;
+    }
+
+    .hero-profit-card:hover {
+      transform: translateY(-2px);
+    }
+
+    .hero-profit-card.green {
+      background: linear-gradient(135deg, rgba(16, 185, 129, 0.10), rgba(15, 23, 42, 0.95));
+      border-color: rgba(52, 211, 153, 0.45);
+    }
+
+    .hero-profit-card.floating-glow {
+      background: linear-gradient(135deg, rgba(56, 189, 248, 0.08), rgba(15, 23, 42, 0.95));
+      border-color: rgba(56, 189, 248, 0.4);
+    }
+
+    .tag-verified {
+      font-size: 0.72rem;
+      font-weight: 800;
+      color: #34d399;
+      background: rgba(16, 185, 129, 0.15);
+      border: 1px solid rgba(16, 185, 129, 0.35);
+      padding: 3px 8px;
+      border-radius: 6px;
+    }
+
+    .tag-floating {
+      font-size: 0.72rem;
+      font-weight: 800;
+      color: #38bdf8;
+      background: rgba(56, 189, 248, 0.15);
+      border: 1px solid rgba(56, 189, 248, 0.35);
+      padding: 3px 8px;
+      border-radius: 6px;
+    }
+
+    .hero-sub-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-top: 6px;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    /* --- 3 EXECUTIVE PILLARS (NICHE SECTION) --- */
     .pillars-grid {
       display: grid;
-      grid-template-columns: 1fr 1.35fr 1fr 1fr;
+      grid-template-columns: repeat(3, 1fr);
       gap: 16px;
       margin-bottom: 24px;
     }
@@ -683,53 +749,39 @@
       </div>
     </section>
 
-    <!-- 3. FOUR EXECUTIVE INSTITUTIONAL PILLARS -->
-    <section class="pillars-grid">
-      <!-- Pillar 1: Total Equity -->
-      <div class="pillar-card gold">
-        <div class="card-label">💰 KUL KHATE KI POONJI (TOTAL EQUITY)</div>
-        <div class="pillar-val-main" style="color: #fde047;" id="equityINR">₹1,49,117</div>
-        <div class="pillar-val-sub">
-          Haath me Free Cash: <strong style="color: #fff;" id="amountInHandINR">₹1,01,867</strong>
+    <!-- 3. DUAL HERO METRICS: JEB ME AAYA (PAKKA) & MUDREX LIVE UNREALISED PnL (KACHHA) -->
+    <section class="dual-hero-grid">
+      <!-- Hero 1: Realized Net Profit (SABSE BADA HERO TEXT IN R/G) -->
+      <div class="hero-profit-card green">
+        <div class="card-label" style="color: #6ee7b7; font-weight: 800;">
+          <span>🏆 JEB ME AAYA PAKKA MUNAFA (NET PROFIT)</span>
+          <span class="tag-verified">✓ KHATE ME PAKKA</span>
         </div>
-        <div class="pillar-val-sub" style="margin-top: 2px;">
-          Trade me Laga Margin: <span id="lockedMarginINR">₹34,075</span> (15x Leverage)
-        </div>
-      </div>
-
-      <!-- Pillar 2: Realized Net Profit (SABSE BADA HERO TEXT IN R/G) -->
-      <div class="pillar-card green" style="background: linear-gradient(135deg, rgba(16, 185, 129, 0.12), rgba(15, 23, 42, 0.95)); border: 1.5px solid rgba(52, 211, 153, 0.45);">
-        <div class="card-label" style="color: #6ee7b7; font-weight: 800;">🏆 JEB ME AAYA PAKKA MUNAFA (NET PROFIT)</div>
         <div class="pillar-val-main jeb-profit-hero profit-green" id="realizedProfitINR">+₹3,425</div>
-        <div class="pillar-val-sub" style="color: #34d399; font-size: 0.92rem; font-weight: 700;" id="realizedProfitUSD">
-          + $33.58 Net Verified (Pakka)
-        </div>
-        <div class="pillar-val-sub" style="margin-top: 4px;" id="winRateText">
-          Jeet Ka Record: <strong style="color: #fff;">67% Win Rate</strong> (9 me se 6 Jeete)
-        </div>
-      </div>
-
-      <!-- Pillar 3: Punarjanm Cycles -->
-      <div class="pillar-card purple">
-        <div class="card-label">🌾 PUNARJANM HARVEST CYCLES</div>
-        <div class="pillar-val-main" style="color: #c084fc;" id="completedCyclesCount">2 Baar Pura Hua</div>
-        <div class="pillar-val-sub">
-          Tijori me Jama Munafa: <strong style="color: #fde047;" id="harvestedProfitTotal">+₹6,246 Banked</strong>
-        </div>
-        <div class="progress-bar-container">
-          <div class="progress-bar-fill" id="punarjanmProgressFill"></div>
+        <div class="hero-sub-row">
+          <div style="color: #34d399; font-size: 0.95rem; font-weight: 700;" id="realizedProfitUSD">
+            + $33.58 Net Verified (Pakka)
+          </div>
+          <div style="color: var(--text-dim); font-size: 0.85rem;" id="winRateText">
+            Jeet Ka Record: <strong style="color: #fff;">67% Win Rate</strong> (9 me se 6 Jeete)
+          </div>
         </div>
       </div>
 
-      <!-- Pillar 4: Active Wave Configuration -->
-      <div class="pillar-card blue">
-        <div class="card-label">🎯 LIVE TRADE KI SETTING (LOT &amp; TARGET)</div>
-        <div class="pillar-val-main" style="color: #38bdf8;" id="contractLotSize">0.05 BTC</div>
-        <div class="pillar-val-sub">
-          Har Trade Ka Target: <strong style="color: #fff;">+$300 Move</strong> (+₹1,000 Net Munafa)
+      <!-- Hero 2: Mudrex Live Open Position Unrealised PnL -->
+      <div class="hero-profit-card floating-glow" id="cardUnrealisedPnl">
+        <div class="card-label" style="color: #38bdf8; font-weight: 800;">
+          <span>🌊 MUDREX LIVE POSITION (UNREALISED PnL)</span>
+          <span class="tag-floating" id="floatingTagStatus">● LIVE MUDREX BID</span>
         </div>
-        <div class="pillar-val-sub" style="margin-top: 2px;">
-          Chal Rahe Pairs: <strong>2 Pairs Max Wave</strong>
+        <div class="pillar-val-main jeb-profit-hero loss-red" id="unrealisedPnlINR">-₹73.94</div>
+        <div class="hero-sub-row">
+          <div style="font-size: 0.95rem; font-weight: 800; color: #fb7185;" id="unrealisedPnlUSD">
+            - $0.72 USD (-0.26% Floating)
+          </div>
+          <div style="color: var(--text-muted); font-size: 0.82rem;" id="unrealisedPosDetails">
+            0.05 BTC Long · Entry: $82,328.90 · Margin: ₹28,223
+          </div>
         </div>
       </div>
     </section>
@@ -841,6 +893,45 @@
       </div>
     </section>
 
+    <!-- 6. EXECUTIVE ACCOUNT & ENGINE SETTINGS (POONJI, PUNARJANM & SETTINGS) -->
+    <section class="pillars-grid" style="margin-top: 24px; margin-bottom: 24px;">
+      <!-- Pillar 1: Total Equity -->
+      <div class="pillar-card gold">
+        <div class="card-label">💰 KUL KHATE KI POONJI (TOTAL EQUITY)</div>
+        <div class="pillar-val-main" style="color: #fde047;" id="equityINR">₹1,49,117</div>
+        <div class="pillar-val-sub">
+          Haath me Free Cash: <strong style="color: #fff;" id="amountInHandINR">₹1,01,867</strong>
+        </div>
+        <div class="pillar-val-sub" style="margin-top: 2px;">
+          Trade me Laga Margin: <span id="lockedMarginINR">₹28,223</span> (15x Leverage)
+        </div>
+      </div>
+
+      <!-- Pillar 2: Punarjanm Cycles -->
+      <div class="pillar-card purple">
+        <div class="card-label">🌾 PUNARJANM HARVEST CYCLES</div>
+        <div class="pillar-val-main" style="color: #c084fc;" id="completedCyclesCount">2 Baar Pura Hua</div>
+        <div class="pillar-val-sub">
+          Tijori me Jama Munafa: <strong style="color: #fde047;" id="harvestedProfitTotal">+₹6,246 Banked</strong>
+        </div>
+        <div class="progress-bar-container">
+          <div class="progress-bar-fill" id="punarjanmProgressFill"></div>
+        </div>
+      </div>
+
+      <!-- Pillar 3: Active Wave Configuration -->
+      <div class="pillar-card blue">
+        <div class="card-label">🎯 LIVE TRADE KI SETTING (LOT &amp; TARGET)</div>
+        <div class="pillar-val-main" style="color: #38bdf8;" id="contractLotSize">0.05 BTC</div>
+        <div class="pillar-val-sub">
+          Har Trade Ka Target: <strong style="color: #fff;">+$300 Move</strong> (+₹1,000 Net Munafa)
+        </div>
+        <div class="pillar-val-sub" style="margin-top: 2px;">
+          Chal Rahe Pairs: <strong>2 Pairs Max Wave</strong>
+        </div>
+      </div>
+    </section>
+
   </div>
 
   <!-- ADMIN SETTINGS MODAL (PIN PROTECTED) -->
@@ -933,6 +1024,11 @@
     let currentBuyTarget = 82461.14;
     let currentSellTarget = 81882.79;
 
+    let currentOpenEntryPrice = 82328.90;
+    let currentOpenQuantity = 0.05;
+    let currentOpenDirection = 'BUY';
+    let currentOpenMarginINR = 28223.04;
+
     function recalculatePriceDistances(price) {
       if (!price || isNaN(price)) return;
       currentLivePrice = Number(price);
@@ -982,6 +1078,35 @@
       if (sellMath) {
         sellMath.innerText = `$${currentLivePrice.toFixed(2)} (Live) - $${currentSellTarget.toFixed(2)} (Target) = ${sellDiffFormatted} Baaki`;
       }
+
+      // 4. Mudrex Live Open Position Unrealised PnL calculation (Exact 1:1 with Mudrex exchange)
+      const diff = (currentOpenDirection === 'BUY') 
+        ? (currentLivePrice - currentOpenEntryPrice)
+        : (currentOpenEntryPrice - currentLivePrice);
+      
+      const unPnlUSD = diff * currentOpenQuantity;
+      const unPnlINR = unPnlUSD * 102;
+      const unPnlPct = (diff / currentOpenEntryPrice) * 15 * 100; // 15x leverage
+
+      const unElem = document.getElementById('unrealisedPnlINR');
+      if (unElem) {
+        const sign = unPnlINR > 0 ? '+' : (unPnlINR < 0 ? '-' : '');
+        unElem.innerText = `${sign}₹${Math.abs(unPnlINR).toFixed(2)}`;
+        unElem.className = 'pillar-val-main jeb-profit-hero ' + (unPnlINR >= 0 ? 'profit-green' : 'loss-red');
+      }
+
+      const unUSDElem = document.getElementById('unrealisedPnlUSD');
+      if (unUSDElem) {
+        const signUSD = unPnlUSD >= 0 ? '+' : '-';
+        const signPct = unPnlPct >= 0 ? '+' : '';
+        unUSDElem.innerText = `${signUSD}$${Math.abs(unPnlUSD).toFixed(2)} USD (${signPct}${unPnlPct.toFixed(2)}% Floating)`;
+        unUSDElem.style.color = unPnlUSD >= 0 ? '#34d399' : '#fb7185';
+      }
+
+      const unDetElem = document.getElementById('unrealisedPosDetails');
+      if (unDetElem) {
+        unDetElem.innerText = `${currentOpenQuantity} BTC ${currentOpenDirection === 'BUY' ? 'Long' : 'Short'} · Entry: $${currentOpenEntryPrice.toFixed(2)} · Margin: ₹${Math.round(currentOpenMarginINR).toLocaleString('en-IN')}`;
+      }
     }
 
     function initBinanceTickerWS() {
@@ -1017,7 +1142,12 @@
       const pairs = engine.pairs || [];
       if (pairs.length > 0) {
         const p1 = pairs[0] || {};
-        if (p1.buy && p1.buy.targetPrice) currentBuyTarget = Number(p1.buy.targetPrice);
+        if (p1.buy) {
+          if (p1.buy.entryPrice) currentOpenEntryPrice = Number(p1.buy.entryPrice);
+          if (p1.buy.quantity) currentOpenQuantity = Number(p1.buy.quantity);
+          if (p1.buy.marginINR) currentOpenMarginINR = Number(p1.buy.marginINR);
+          if (p1.buy.targetPrice) currentBuyTarget = Number(p1.buy.targetPrice);
+        }
         if (p1.sell && p1.sell.targetPrice) currentSellTarget = Number(p1.sell.targetPrice);
       }
       if (!currentBuyTarget) currentBuyTarget = price + 300;
