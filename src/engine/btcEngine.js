@@ -233,12 +233,6 @@ class BtcEngine {
     if (!livePrice || livePrice <= 0 || !this.isEngineRunning) return;
     this.lastProcessedRate = livePrice;
 
-    // In LIVE mode with real Mudrex orders, execution and TP are managed natively on Mudrex exchange.
-    // Avoid running simulated in-memory closes or phantom basket flushes.
-    if (this.settings.tradingMode === 'LIVE' && !this.settings.realOrdersDisabled) {
-      return;
-    }
-
     const usdInr = this.settings.usdInrRate || 102.00;
 
     // 1. Initial pair creation if no pairs exist
