@@ -176,10 +176,113 @@
       box-shadow: 0 6px 20px rgba(245, 158, 11, 0.5);
     }
 
+    /* --- VIDEO GAME RADAR STRIP --- */
+    .video-game-radar {
+      background: linear-gradient(135deg, rgba(15, 23, 42, 0.95), rgba(8, 12, 22, 0.95));
+      border: 1px solid var(--border-gold);
+      border-radius: 16px;
+      padding: 14px 22px;
+      margin-bottom: 16px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 16px;
+      box-shadow: 0 8px 30px rgba(0, 0, 0, 0.6), inset 0 0 20px rgba(245, 158, 11, 0.05);
+    }
+
+    .radar-node {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      flex: 1;
+    }
+
+    .radar-node.sell {
+      justify-content: flex-start;
+    }
+
+    .radar-node.buy {
+      justify-content: flex-end;
+    }
+
+    .radar-badge {
+      font-size: 0.76rem;
+      font-weight: 800;
+      padding: 5px 12px;
+      border-radius: 8px;
+      letter-spacing: 0.5px;
+    }
+
+    .radar-badge.red {
+      background: rgba(244, 63, 94, 0.15);
+      color: #fb7185;
+      border: 1px solid rgba(244, 63, 94, 0.35);
+    }
+
+    .radar-badge.green {
+      background: rgba(16, 185, 129, 0.15);
+      color: #34d399;
+      border: 1px solid rgba(16, 185, 129, 0.35);
+    }
+
+    .radar-val-box {
+      display: flex;
+      flex-direction: column;
+    }
+
+    .radar-val {
+      font-family: var(--font-mono);
+      font-size: 1.45rem;
+      font-weight: 800;
+      letter-spacing: -0.5px;
+      line-height: 1.2;
+    }
+
+    .radar-val.red { color: #fb7185; text-shadow: 0 0 12px rgba(244, 63, 94, 0.3); }
+    .radar-val.green { color: #34d399; text-shadow: 0 0 12px rgba(16, 185, 129, 0.3); }
+
+    .radar-dist-tag {
+      font-size: 0.85rem;
+      font-weight: 800;
+      font-family: var(--font-mono);
+    }
+
+    .radar-dist-tag.red { color: #fca5a5; }
+    .radar-dist-tag.green { color: #6ee7b7; }
+
+    .radar-center-track {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      background: rgba(0, 0, 0, 0.55);
+      padding: 8px 24px;
+      border-radius: 999px;
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      box-shadow: 0 4px 16px rgba(0,0,0,0.4);
+    }
+
+    .radar-live-price {
+      font-family: var(--font-mono);
+      font-size: 1.6rem;
+      font-weight: 900;
+      color: #ffffff;
+      letter-spacing: -0.5px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .radar-arrows {
+      font-size: 0.82rem;
+      font-weight: 800;
+      letter-spacing: 1px;
+      font-family: var(--font-mono);
+    }
+
     /* --- HERO TICKER BANNER --- */
     .market-banner {
       display: grid;
-      grid-template-columns: 1.5fr 1fr 1fr;
+      grid-template-columns: 1.15fr 1fr 1fr;
       gap: 16px;
       margin-bottom: 24px;
     }
@@ -610,41 +713,84 @@
       </div>
     </header>
 
-    <!-- 2. LIVE MARKET BANNER -->
+    <!-- 2. MONEY VIDEO GAME HUD (ONE CONTINUOUS RADAR STRIP + 3 CARDS) -->
+    <div class="video-game-radar">
+      <!-- Left: SELL Exit Target (Red) -->
+      <div class="radar-node sell">
+        <span class="radar-badge red">🔴 SELL EXIT</span>
+        <div class="radar-val-box">
+          <span class="radar-val red" id="radarSellTarget">$81,882.79</span>
+          <span class="radar-dist-tag red" id="radarSellDist">-$312.11 Door (Neeche)</span>
+        </div>
+      </div>
+
+      <!-- Center: LIVE PRICE RADAR -->
+      <div class="radar-center-track">
+        <span class="radar-arrows" style="color: #fb7185;">◀◀ SELL</span>
+        <div class="radar-live-price">
+          <span class="beacon-dot" style="background: #f59e0b; box-shadow: 0 0 10px #f59e0b;"></span>
+          <span id="radarLivePrice">$82,194.90</span>
+        </div>
+        <span class="radar-arrows" style="color: #34d399;">BUY ▶▶</span>
+      </div>
+
+      <!-- Right: BUY Exit Target (Green) -->
+      <div class="radar-node buy">
+        <div class="radar-val-box" style="text-align: right;">
+          <span class="radar-val green" id="radarBuyTarget">$82,461.14</span>
+          <span class="radar-dist-tag green" id="radarBuyDist">+$266.24 Door (Upar)</span>
+        </div>
+        <span class="radar-badge green">🟢 BUY EXIT</span>
+      </div>
+    </div>
+
+    <!-- 3 HERO COCKPIT CARDS (LIVE RATE, BUY TARGET, SELL TARGET) -->
     <section class="market-banner">
-      <!-- BTC Live Rate Card -->
+      <!-- Card 1: BTC Live Rate Card -->
       <div class="banner-card" style="border-left: 4px solid var(--gold-primary);">
         <div class="card-label">
           <span>🟡 BITCOIN (BTCUSDT) LIVE MARKET RATE</span>
           <span class="tag-live">LIVE TICK</span>
         </div>
         <div class="rate-huge" id="liveBtcPrice">
-          $82,308.40 <span style="font-size: 0.95rem; font-weight: 700; color: #34d399;" id="priceChange24h">+0.85%</span>
+          $82,194.90 <span style="font-size: 0.95rem; font-weight: 700; color: #34d399;" id="priceChange24h">LIVE</span>
         </div>
         <div class="rate-sub">
-          Mudrex Mark Rate: <span id="markPrice">$82,308.40</span> · Dollar/Rupee Rate: <span id="usdInrRate">₹102.00</span>
+          Mudrex Mark Rate: <span id="markPrice">$82,194.90</span> · Dollar/Rupee: <span id="usdInrRate">₹102.00</span>
         </div>
       </div>
 
-      <!-- Quick Session Status -->
-      <div class="banner-card">
-        <div class="card-label">TRADING SESSION AUR ENGINE STATUS</div>
-        <div style="font-size: 1.3rem; font-weight: 800; color: #fff; margin-top: 4px;">
-          🌏 24x7 Non-Stop Wave Machine
+      <!-- Card 2: BUY Target Exit Callout (+₹1,000) -->
+      <div class="banner-card" style="border-left: 4px solid var(--green-accent); background: linear-gradient(135deg, rgba(16, 185, 129, 0.08), rgba(15, 23, 42, 0.75));">
+        <div class="card-label" style="color: #34d399;">
+          <span>🟢 BUY TARGET EXIT (+₹1,000 MUNAFA)</span>
+          <span class="tag-buy" style="font-size: 0.68rem; padding: 2px 6px;">LONG EXIT</span>
         </div>
-        <div class="rate-sub" style="color: var(--green-light); font-weight: 700;">
-          Mudrex Order Rasta: KHULA HAI (0.05 BTC Lot)
+        <div class="rate-huge" style="color: #34d399;" id="buyTargetRate">
+          $82,461.14
+        </div>
+        <div class="rate-sub" style="font-size: 0.95rem; font-weight: 800; color: #6ee7b7; font-family: var(--font-mono);" id="buyTargetDist">
+          +$266.24 Door (Live se Upar)
+        </div>
+        <div class="rate-sub" style="font-size: 0.76rem; color: #94a3b8; font-family: var(--font-mono); margin-top: 3px;" id="buyCompareMath">
+          $82,461.14 (Target) - $82,194.90 (Live) = +$266.24
         </div>
       </div>
 
-      <!-- Next Harvest Target Distance -->
-      <div class="banner-card" style="border-left: 4px solid var(--green-accent);">
-        <div class="card-label">PUNARJANM MUNAFA TARGET (HARVEST)</div>
-        <div style="font-size: 1.35rem; font-weight: 800; color: #fde047; font-family: var(--font-mono); margin-top: 4px;" id="harvestDoor">
-          ₹2,000.00 Door (Agla Punarjanm)
+      <!-- Card 3: SELL Target Exit Callout (+₹1,000) -->
+      <div class="banner-card" style="border-left: 4px solid var(--red-accent); background: linear-gradient(135deg, rgba(244, 63, 94, 0.08), rgba(15, 23, 42, 0.75));">
+        <div class="card-label" style="color: #fb7185;">
+          <span>🔴 SELL TARGET EXIT (+₹1,000 MUNAFA)</span>
+          <span class="tag-sell" style="font-size: 0.68rem; padding: 2px 6px; background: rgba(244,63,94,0.15); color: #fb7185; border: 1px solid rgba(244,63,94,0.3);">SHORT EXIT</span>
         </div>
-        <div class="rate-sub" id="harvestProgressText">
-          0.0% Target Pura Hua (₹2,000 me se)
+        <div class="rate-huge" style="color: #fb7185;" id="sellTargetRate">
+          $81,882.79
+        </div>
+        <div class="rate-sub" style="font-size: 0.95rem; font-weight: 800; color: #fca5a5; font-family: var(--font-mono);" id="sellTargetDist">
+          -$312.11 Door (Live se Neeche)
+        </div>
+        <div class="rate-sub" style="font-size: 0.76rem; color: #94a3b8; font-family: var(--font-mono); margin-top: 3px;" id="sellCompareMath">
+          $82,194.90 (Live) - $81,882.79 (Target) = -$312.11
         </div>
       </div>
     </section>
@@ -903,11 +1049,62 @@
       const engine = data.engine || {};
       const closed = data.closedPositions || [];
 
-      // 1. Live Market Ticker
+      // 1. Live Market Ticker & Target Radar
       const price = Number(rate.price || 82308.40);
       document.getElementById('liveBtcPrice').innerHTML = `$${price.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} <span style="font-size: 0.95rem; font-weight: 700; color: #34d399;">LIVE</span>`;
       document.getElementById('markPrice').innerText = `$${(rate.markPrice || price).toLocaleString('en-US', { minimumFractionDigits: 2 })}`;
       document.getElementById('usdInrRate').innerText = `₹${(rate.usdInrRate || 102).toFixed(2)}`;
+
+      // Calculate Active B/S Targets & Distances
+      const pairs = engine.pairs || [];
+      let buyTarget = 0;
+      let sellTarget = 0;
+      if (pairs.length > 0) {
+        const p1 = pairs[0] || {};
+        if (p1.buy) buyTarget = Number(p1.buy.targetPrice || (price + 300));
+        if (p1.sell) sellTarget = Number(p1.sell.targetPrice || (price - 300));
+      }
+      if (!buyTarget) buyTarget = price + 300;
+      if (!sellTarget) sellTarget = price - 300;
+
+      // BUY distance: Target Exit - Live Price (Positive means target is above live price)
+      const buyDiff = buyTarget - price;
+      const buyDiffSign = buyDiff >= 0 ? '+' : '-';
+      const buyDiffText = `${buyDiffSign}$${Math.abs(buyDiff).toFixed(2)}`;
+
+      // SELL distance: Live Price - Target Exit (Downwards distance)
+      const sellDiff = price - sellTarget;
+      const sellDiffSign = sellDiff >= 0 ? '-' : '+';
+      const sellDiffText = `${sellDiffSign}$${Math.abs(sellDiff).toFixed(2)}`;
+
+      // Update Money Video Game Radar Strip (Ek Line me Live Comparison)
+      const radarLive = document.getElementById('radarLivePrice');
+      if (radarLive) radarLive.innerText = `$${price.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+
+      const radarBuyTgt = document.getElementById('radarBuyTarget');
+      if (radarBuyTgt) radarBuyTgt.innerText = `$${buyTarget.toFixed(2)}`;
+      const radarBuyDst = document.getElementById('radarBuyDist');
+      if (radarBuyDst) radarBuyDst.innerText = `${buyDiffText} Door (Upar)`;
+
+      const radarSellTgt = document.getElementById('radarSellTarget');
+      if (radarSellTgt) radarSellTgt.innerText = `$${sellTarget.toFixed(2)}`;
+      const radarSellDst = document.getElementById('radarSellDist');
+      if (radarSellDst) radarSellDst.innerText = `${sellDiffText} Door (Neeche)`;
+
+      // Update 3 Hero Cockpit Cards
+      const buyTgtRate = document.getElementById('buyTargetRate');
+      if (buyTgtRate) buyTgtRate.innerText = `$${buyTarget.toFixed(2)}`;
+      const buyTgtDist = document.getElementById('buyTargetDist');
+      if (buyTgtDist) buyTgtDist.innerText = `${buyDiffText} Door (Live se Upar)`;
+      const buyMath = document.getElementById('buyCompareMath');
+      if (buyMath) buyMath.innerText = `$${buyTarget.toFixed(2)} (Target) - $${price.toFixed(2)} (Live) = ${buyDiffText}`;
+
+      const sellTgtRate = document.getElementById('sellTargetRate');
+      if (sellTgtRate) sellTgtRate.innerText = `$${sellTarget.toFixed(2)}`;
+      const sellTgtDist = document.getElementById('sellTargetDist');
+      if (sellTgtDist) sellTgtDist.innerText = `${sellDiffText} Door (Live se Neeche)`;
+      const sellMath = document.getElementById('sellCompareMath');
+      if (sellMath) sellMath.innerText = `$${price.toFixed(2)} (Live) - $${sellTarget.toFixed(2)} (Target) = ${sellDiffText}`;
 
       // 2. Pillars
       const equity = Number(wallet.equityINR || wallet.totalFuturesEquityINR || 141954);
@@ -921,14 +1118,12 @@
 
       const pzCount = pz.count || 2;
       document.getElementById('completedCyclesCount').innerText = `${pzCount} Baar Pura Hua`;
-      
+
       const targetINR = pz.basketTargetINR || 2000;
       const curCycleProfit = Math.max(0, pz.cycleRealizedProfitINR || 0);
-      const remaining = Math.max(0, targetINR - curCycleProfit);
-      document.getElementById('harvestDoor').innerText = remaining <= 0 ? 'Target Pura Hua (Taiyar!)' : `₹${remaining.toFixed(2)} Door (Agla Rebirth)`;
       const pct = Math.min(100, (curCycleProfit / targetINR) * 100);
-      document.getElementById('harvestProgressText').innerText = `${pct.toFixed(1)}% Target Pura Hua (₹${targetINR} me se)`;
-      document.getElementById('punarjanmProgressFill').style.width = pct + '%';
+      const pzFill = document.getElementById('punarjanmProgressFill');
+      if (pzFill) pzFill.style.width = pct + '%';
 
       // Win rate text
       const winCount = closed.filter(c => (c.netProfitINR || c.netProfitUSD || 0) >= 0).length;
