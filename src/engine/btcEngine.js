@@ -88,7 +88,8 @@ class BtcEngine {
 
   initFromStorage() {
     try {
-      if (fs.existsSync(this.storagePath)) {
+      let loaded = false;
+      if (this.storagePath && fs.existsSync(this.storagePath)) {
         const raw = fs.readFileSync(this.storagePath, 'utf8');
         if (raw) {
           const data = JSON.parse(raw);
@@ -119,7 +120,52 @@ class BtcEngine {
           if (data.engineStartedAt) {
             this.engineStartedAt = data.engineStartedAt;
           }
+          loaded = true;
           console.log(`[BTC Engine] Restored state from storage: ${this.pairs.length} pairs, ${this.closedPositions.length} closed trades.`);
+        }
+      }
+
+      // 2. Check /tmp backup fallback if storage had no closed positions
+      const backupPath = '/tmp/btc_engine_state_backup.json';
+      if ((!loaded || this.closedPositions.length === 0) && fs.existsSync(backupPath)) {
+        try {
+          const bRaw = fs.readFileSync(backupPath, 'utf8');
+          if (bRaw) {
+            const bData = JSON.parse(bRaw);
+            if (Array.isArray(bData.closedPositions) && bData.closedPositions.length > 0) {
+              this.closedPositions = bData.closedPositions;
+              console.log(`[BTC Engine] Restored ${this.closedPositions.length} closed trades from /tmp backup.`);
+            }
+            if (Array.isArray(bData.pairs) && this.pairs.length === 0) {
+              this.pairs = bData.pairs;
+            }
+          }
+        } catch (e) {}
+      }
+
+      // 3. Authoritative Seed Fallback (Ensures redeployments never wipe trade history)
+      const seedPath = path.join(__dirname, 'btc_state_seed.json');
+      if (this.closedPositions.length === 0 && fs.existsSync(seedPath)) {
+        try {
+          const sRaw = fs.readFileSync(seedPath, 'utf8');
+          if (sRaw) {
+            const sData = JSON.parse(sRaw);
+            if (Array.isArray(sData.closedPositions) && sData.closedPositions.length > 0) {
+              this.closedPositions = sData.closedPositions;
+              console.log(`[BTC Engine] Authoritative Seed: Restored ${this.closedPositions.length} historical closed trades.`);
+            }
+            if (Array.isArray(sData.pairs) && this.pairs.length === 0) {
+              this.pairs = sData.pairs;
+            }
+            if (typeof sData.punarjanmCount === 'number' && !this.punarjanmCount) {
+              this.punarjanmCount = sData.punarjanmCount;
+            }
+            if (typeof sData.pairCounter === 'number' && !this.pairCounter) {
+              this.pairCounter = sData.pairCounter;
+            }
+          }
+        } catch (sErr) {
+          console.warn('[BTC Engine] Error loading seed data:', sErr.message);
         }
       }
     } catch (e) {
@@ -139,7 +185,16 @@ class BtcEngine {
         engineStartedAt: this.engineStartedAt,
         savedAt: new Date().toISOString()
       };
-      fs.writeFileSync(this.storagePath, JSON.stringify(state, null, 2), 'utf8');
+      if (this.storagePath) {
+        const dir = path.dirname(this.storagePath);
+        if (!fs.existsSync(dir)) {
+          try { fs.mkdirSync(dir, { recursive: true }); } catch (de) {}
+        }
+        fs.writeFileSync(this.storagePath, JSON.stringify(state, null, 2), 'utf8');
+      }
+      try {
+        fs.writeFileSync('/tmp/btc_engine_state_backup.json', JSON.stringify(state, null, 2), 'utf8');
+      } catch (tmpErr) {}
     } catch (e) {
       console.warn('[BTC Engine] Could not save state:', e.message);
     }
