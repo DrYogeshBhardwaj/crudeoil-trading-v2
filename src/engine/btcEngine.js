@@ -485,7 +485,7 @@ class BtcEngine {
     pos.exitReason = reason;
 
     // If this was a real Mudrex position, send exit order to close on Mudrex exchange ONLY if not already closed by exchange TP
-    if (this.settings.tradingMode === 'LIVE' && !this.settings.realOrdersDisabled && (pos.mudrexOrderId || pos.apiStatus === 'REAL_MUDREX_POSITION' || pos.direction === 'BUY')) {
+    if (this.settings.tradingMode === 'LIVE' && !this.settings.realOrdersDisabled && pos.mudrexOrderId && pos.apiStatus === 'REAL_MUDREX_POSITION') {
       const isAlreadyClosedOnExchange = reason && (reason.includes('EXCHANGE_TP') || reason.includes('EXCHANGE'));
       if (!isAlreadyClosedOnExchange) {
         this.closeLivePositionLeg(pos).catch(e => {
@@ -638,6 +638,7 @@ class BtcEngine {
 
   async closeLivePositionLeg(pos) {
     if (this.settings.tradingMode !== 'LIVE' || this.settings.realOrdersDisabled) return;
+    if (!pos || !pos.mudrexOrderId || pos.apiStatus !== 'REAL_MUDREX_POSITION') return;
     try {
       const mudrexLive = require('./mudrexLiveAdapter');
       // Direct exchange query to ensure any open exchange position is cleanly closed
