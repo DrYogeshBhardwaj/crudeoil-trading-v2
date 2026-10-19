@@ -868,6 +868,7 @@ class BTCStudyEngine {
       // Minimum ₹30,000 for 0.02 BTC, ~₹35,000 for 0.04 BTC, ~₹50,000 for 0.06 BTC
       const safeBufferReq = Math.max(30000, Math.round(safeQty * 850000));
       const reqFor2 = Math.round((2 * marginPerPairFull) + safeBufferReq);
+      const canRun2 = capital >= reqFor2;
 
       // ALWAYS honor user's starting maxPairs (e.g. 1 pair). Never forcefully start with 2 pairs!
       let currentMaxPairs = maxPairs;
