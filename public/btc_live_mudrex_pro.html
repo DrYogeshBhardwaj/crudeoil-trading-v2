@@ -3005,10 +3005,11 @@
       const lockedValUSD = typeof wallet.lockedMarginUSD === 'number' ? wallet.lockedMarginUSD : 0;
       const openPairsCount = (engine && engine.pairs) ? engine.pairs.length : 0;
       
-      // Card 1: TOTAL AMOUNT (IN HAND) - Matches Mudrex Futures Wallet 1:1!
+      // Card 1: TOTAL AMOUNT (IN HAND) - Free Margin in Mudrex Futures
       if (wallet.isRealMudrexWallet && wallet.realFuturesBalanceINR) {
         document.getElementById('kpiAvailableMarginINR').innerText = `₹${Math.round(wallet.realFuturesBalanceINR).toLocaleString('en-IN')}`;
-        document.getElementById('kpiAvailableMarginUSD').innerText = `Real Mudrex Futures Wallet ($${Math.round(availValUSD).toLocaleString()})`;
+        const totalFut = wallet.totalFuturesEquityINR || (wallet.realFuturesBalanceINR + lockedValINR);
+        document.getElementById('kpiAvailableMarginUSD').innerText = `Free Margin (Total Futures: ₹${Math.round(totalFut).toLocaleString('en-IN')})`;
       } else {
         document.getElementById('kpiAvailableMarginINR').innerText = `₹${Math.round(availValINR).toLocaleString('en-IN')}`;
         document.getElementById('kpiAvailableMarginUSD').innerText = `Total: ₹${Math.round(startingCap).toLocaleString('en-IN')} - Cost: ₹${Math.round(lockedValINR).toLocaleString('en-IN')}`;
@@ -3021,7 +3022,8 @@
       // Card 3: TOTAL ACCOUNT EQUITY - Matches Mudrex Est. Total Value 1:1!
       if (wallet.isRealMudrexWallet && wallet.realTotalPortfolioINR) {
         document.getElementById('kpiEquityINR').innerText = `₹${Math.round(wallet.realTotalPortfolioINR).toLocaleString('en-IN')}`;
-        document.getElementById('kpiEquityUSD').innerText = `Est. Total (Spot: ₹${Math.round(wallet.realSpotBalanceINR || 0).toLocaleString('en-IN')} + Fut: ₹${Math.round(wallet.realFuturesBalanceINR || 0).toLocaleString('en-IN')})`;
+        const totalFut = wallet.totalFuturesEquityINR || (wallet.realFuturesBalanceINR + lockedValINR);
+        document.getElementById('kpiEquityUSD').innerText = `Est. Total (Spot: ₹${Math.round(wallet.realSpotBalanceINR || 0).toLocaleString('en-IN')} + Futures: ₹${Math.round(totalFut).toLocaleString('en-IN')})`;
       } else {
         document.getElementById('kpiEquityINR').innerText = `₹${Math.round(wallet.equityINR || 0).toLocaleString('en-IN')}`;
         document.getElementById('kpiEquityUSD').innerText = `$${Math.round(wallet.equityUSD || 0).toLocaleString('en-IN')} Total Net Worth`;

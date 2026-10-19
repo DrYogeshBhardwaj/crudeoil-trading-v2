@@ -981,10 +981,11 @@ class BtcEngine {
     } catch (e) {}
 
     // Wallet accounting (strictly avoiding double-counting)
-    const startingCapital = realFuturesBalance !== null ? realFuturesBalance : Number(this.settings.startingCapitalINR || 100000.00);
     const usedMarginINR = floating.dynamicMarginUsedINR;
+    const totalFuturesEquityINR = realFuturesBalance !== null ? Number((realFuturesBalance + usedMarginINR).toFixed(2)) : Number(this.settings.startingCapitalINR || 100000.00);
+    const startingCapital = totalFuturesEquityINR;
     const availableMarginINR = realFuturesBalance !== null ? realFuturesBalance : Math.max(0, startingCapital + totalRealizedINR - usedMarginINR);
-    const equityINR = realTotalPortfolio !== null ? Number((realTotalPortfolio + floating.floatingNetINR).toFixed(2)) : (startingCapital + totalRealizedINR + floating.floatingNetINR);
+    const equityINR = realTotalPortfolio !== null ? Number((realTotalPortfolio + usedMarginINR + floating.floatingNetINR).toFixed(2)) : (startingCapital + totalRealizedINR + floating.floatingNetINR);
 
     // Open pairs formatted for Pro Desk UI
     const openPairsFormatted = this.pairs.filter(p => p.status !== 'CLOSED').map(p => {
@@ -1076,6 +1077,7 @@ class BtcEngine {
         startingCapitalINR: startingCapital,
         usdInrRate: usdInr,
         realFuturesBalanceINR: realFuturesBalance,
+        totalFuturesEquityINR: totalFuturesEquityINR,
         realSpotBalanceINR: realSpotBalance,
         realTotalPortfolioINR: realTotalPortfolio,
         isRealMudrexWallet: realFuturesBalance !== null
