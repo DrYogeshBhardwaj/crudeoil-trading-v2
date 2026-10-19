@@ -799,7 +799,7 @@
             - $0.72 USD (-0.26% Floating)
           </div>
           <div style="color: #e9d5ff; font-size: 0.84rem; font-weight: 600;" id="unrealisedPosDetails">
-            0.05 BTC Long · Entry: $82,328.90 · Margin: ₹28,223
+            0.05 BTC Long · Entry: $82,550.80 · Margin: ₹28,299
           </div>
         </div>
       </div>
@@ -809,49 +809,49 @@
     <section class="active-pairs-section">
       <div class="section-title">
         <span>⚡ Abhi Live Chal Rahe Orders (Live BUY &amp; SELL Waves)</span>
-        <span class="beacon-pill" style="font-size: 0.72rem; padding: 3px 10px;">2 LIVE LEGS OPEN</span>
+        <span class="beacon-pill" id="activeLegsCountBadge" style="font-size: 0.72rem; padding: 3px 10px;">1 LIVE MUDREX LEG OPEN</span>
       </div>
 
       <div class="wave-grid" id="activeWavesContainer">
         <!-- Rendered dynamically -->
-        <div class="wave-card buy">
+        <div class="wave-card buy" id="wave1Card">
           <div class="wave-header">
-            <span class="wave-tag tag-buy">🟢 BUY TRADE (LONG) - KHARIDA GAYA</span>
-            <span style="font-family: var(--font-mono); font-size: 0.85rem; color: #fff;">PAIR-BTC-0001</span>
+            <span class="wave-tag tag-buy" id="wave1Tag">🟢 BUY TRADE (LONG) - MUDREX ACTIVE</span>
+            <span style="font-family: var(--font-mono); font-size: 0.85rem; color: #fff;" id="wave1PairId">MUDREX-REAL-BUY</span>
           </div>
           <div class="wave-metric-row">
             <div>
               <div class="mini-stat-label">Kharid Rate (Entry)</div>
-              <div class="mini-stat-val" id="wave1Entry">$82,245.40</div>
+              <div class="mini-stat-val" id="wave1Entry">$82,550.80</div>
             </div>
             <div>
               <div class="mini-stat-label">Bechne Ka Target (Exit)</div>
-              <div class="mini-stat-val target-highlight" id="wave1Target">$82,534.72</div>
+              <div class="mini-stat-val target-highlight" id="wave1Target">$82,859.29</div>
             </div>
             <div>
               <div class="mini-stat-label">Target Tak Baki Duri</div>
-              <div class="mini-stat-val" style="color: #34d399;" id="wave1Dist">+$146.32</div>
+              <div class="mini-stat-val" style="color: #34d399;" id="wave1Dist">+$308.49</div>
             </div>
           </div>
         </div>
 
-        <div class="wave-card sell">
+        <div class="wave-card sell" id="wave2Card" style="opacity: 0.7;">
           <div class="wave-header">
-            <span class="wave-tag tag-sell">🔵 SELL TRADE (SHORT) - BECHA GAYA</span>
-            <span style="font-family: var(--font-mono); font-size: 0.85rem; color: #fff;">PAIR-BTC-0002</span>
+            <span class="wave-tag tag-sell" id="wave2Tag" style="background: rgba(100, 116, 139, 0.2); color: #94a3b8; border-color: rgba(148, 163, 184, 0.3);">🛡️ SHORT (SELL) - ONE-WAY SHIELD (SAFE)</span>
+            <span style="font-family: var(--font-mono); font-size: 0.85rem; color: #94a3b8;" id="wave2PairId">ONE-WAY SAFE</span>
           </div>
           <div class="wave-metric-row">
             <div>
               <div class="mini-stat-label">Bech Rate (Entry)</div>
-              <div class="mini-stat-val" id="wave2Entry">$82,245.40</div>
+              <div class="mini-stat-val" id="wave2Entry" style="color: #94a3b8;">HEDGE OFF</div>
             </div>
             <div>
               <div class="mini-stat-label">Wapas Kharid Target (Exit)</div>
-              <div class="mini-stat-val target-highlight" id="wave2Target">$81,956.21</div>
+              <div class="mini-stat-val target-highlight" id="wave2Target" style="color: #94a3b8;">$82,280.05</div>
             </div>
             <div>
               <div class="mini-stat-label">Target Tak Baki Duri</div>
-              <div class="mini-stat-val" style="color: #38bdf8;" id="wave2Dist">+$488.71</div>
+              <div class="mini-stat-val" style="color: #94a3b8;" id="wave2Dist">Margin Safe</div>
             </div>
           </div>
         </div>
@@ -1093,23 +1093,33 @@
         buyMath.innerText = `$${currentBuyTarget.toFixed(2)} (Target) - $${currentLivePrice.toFixed(2)} (Live) = ${buyDiffFormatted} Baaki`;
       }
 
-      // 3. SELL Target Calculation: Live Price - Target Exit (How much is remaining to reach target downwards)
-      const sellDiff = currentLivePrice - currentSellTarget;
-      const sellDiffSign = sellDiff >= 0 ? '-' : '+';
-      const sellDiffFormatted = `${sellDiffSign}$${Math.abs(sellDiff).toFixed(2)}`;
-
+      // 3. SELL Target Calculation: Live Price - Target Exit
       const sellTgtRate = document.getElementById('sellTargetRate');
       if (sellTgtRate) sellTgtRate.innerText = `$${currentSellTarget.toFixed(2)}`;
 
       const sellTgtDist = document.getElementById('sellTargetDist');
-      if (sellTgtDist) {
-        const signColor = sellDiff >= 0 ? '#fb7185' : '#34d399';
-        sellTgtDist.innerHTML = `<span style="font-size: 1.25rem; font-weight: 900; color: ${signColor};">${sellDiffFormatted}</span> <span style="font-size: 0.85rem; color: #fca5a5; font-weight: 700;">Baaki (Live se Neeche)</span>`;
-      }
-
       const sellMath = document.getElementById('sellCompareMath');
-      if (sellMath) {
-        sellMath.innerText = `$${currentLivePrice.toFixed(2)} (Live) - $${currentSellTarget.toFixed(2)} (Target) = ${sellDiffFormatted} Baaki`;
+
+      if (currentHasMudrexPosition && currentOpenDirection === 'BUY') {
+        if (sellTgtDist) {
+          sellTgtDist.innerHTML = `<span style="font-size: 1.15rem; font-weight: 800; color: #94a3b8;">🛡️ ONE-WAY SAFE</span> <span style="font-size: 0.82rem; color: #cbd5e1; font-weight: 600;">(Long Active)</span>`;
+        }
+        if (sellMath) {
+          sellMath.innerText = `Mudrex par 1 Long active hai. Opposing Short safe margin protection ke tahat reserve hai.`;
+        }
+      } else {
+        const sellDiff = currentLivePrice - currentSellTarget;
+        const sellDiffSign = sellDiff >= 0 ? '-' : '+';
+        const sellDiffFormatted = `${sellDiffSign}$${Math.abs(sellDiff).toFixed(2)}`;
+
+        if (sellTgtDist) {
+          const signColor = sellDiff >= 0 ? '#fb7185' : '#34d399';
+          sellTgtDist.innerHTML = `<span style="font-size: 1.25rem; font-weight: 900; color: ${signColor};">${sellDiffFormatted}</span> <span style="font-size: 0.85rem; color: #fca5a5; font-weight: 700;">Baaki (Live se Neeche)</span>`;
+        }
+
+        if (sellMath) {
+          sellMath.innerText = `$${currentLivePrice.toFixed(2)} (Live) - $${currentSellTarget.toFixed(2)} (Target) = ${sellDiffFormatted} Baaki`;
+        }
       }
 
       // 4. Mudrex Live Open Position Unrealised PnL calculation (Only when Mudrex actually has an open position!)
@@ -1139,7 +1149,7 @@
 
         const unDetElem = document.getElementById('unrealisedPosDetails');
         if (unDetElem) {
-          unDetElem.innerText = `${currentOpenQuantity} BTC ${currentOpenDirection === 'BUY' ? 'Long' : 'Short'} · Entry: $${currentOpenEntryPrice.toFixed(2)} · Margin: ₹${Math.round(currentOpenMarginINR).toLocaleString('en-IN')}`;
+          unDetElem.innerText = `${currentOpenQuantity} BTC ${currentOpenDirection === 'BUY' ? 'Long' : 'Short'} · Entry: $${currentOpenEntryPrice.toFixed(2)} · Margin: ₹${Math.round(currentOpenMarginINR || 28299).toLocaleString('en-IN')}`;
         }
       }
     }
@@ -1280,21 +1290,63 @@
       const lot = engine.contractQuantity || 0.05;
       document.getElementById('contractLotSize').innerText = `${lot} BTC`;
 
-      // 3. Active Waves
-      if (pairs.length > 0) {
-        const p1 = pairs[0] || {};
-        if (p1.buy) {
-          document.getElementById('wave1Entry').innerText = `$${Number(p1.buy.entryPrice || price).toFixed(2)}`;
-          document.getElementById('wave1Target').innerText = `$${Number(p1.buy.targetPrice || (price + 300)).toFixed(2)}`;
-          const d1 = Number(p1.buy.targetPrice || (price + 300)) - price;
-          document.getElementById('wave1Dist').innerText = `+${d1 >= 0 ? '$' : '-$'}${Math.abs(d1).toFixed(2)}`;
+      // 3. Active Waves (1:1 with real Mudrex exchange status)
+      const legsBadge = document.getElementById('activeLegsCountBadge');
+      const wave1Card = document.getElementById('wave1Card');
+      const wave2Card = document.getElementById('wave2Card');
+
+      if (currentHasMudrexPosition && currentOpenEntryPrice > 0) {
+        if (legsBadge) legsBadge.innerText = `1 LIVE MUDREX LEG OPEN (${currentOpenDirection})`;
+
+        if (currentOpenDirection === 'BUY') {
+          // Real Mudrex BUY (Long) Leg Active
+          const w1Tag = document.getElementById('wave1Tag');
+          if (w1Tag) w1Tag.innerHTML = '🟢 BUY TRADE (LONG) - MUDREX ACTIVE';
+          document.getElementById('wave1Entry').innerText = `$${currentOpenEntryPrice.toFixed(2)}`;
+          document.getElementById('wave1Target').innerText = `$${currentBuyTarget.toFixed(2)}`;
+          const d1 = currentBuyTarget - price;
+          document.getElementById('wave1Dist').innerText = `${d1 >= 0 ? '+' : '-'}$${Math.abs(d1).toFixed(2)}`;
+          if (wave1Card) wave1Card.style.opacity = '1';
+
+          // Opposite SELL Leg is Safely Shielded
+          const w2Tag = document.getElementById('wave2Tag');
+          if (w2Tag) w2Tag.innerHTML = '🛡️ SHORT (SELL) - ONE-WAY SHIELD (SAFE)';
+          document.getElementById('wave2Entry').innerText = 'HEDGE OFF';
+          document.getElementById('wave2Target').innerText = `$${currentSellTarget.toFixed(2)}`;
+          document.getElementById('wave2Dist').innerText = 'Margin Safe';
+          if (wave2Card) wave2Card.style.opacity = '0.6';
+        } else {
+          // Real Mudrex SELL (Short) Leg Active
+          const w2Tag = document.getElementById('wave2Tag');
+          if (w2Tag) w2Tag.innerHTML = '🔴 SELL TRADE (SHORT) - MUDREX ACTIVE';
+          document.getElementById('wave2Entry').innerText = `$${currentOpenEntryPrice.toFixed(2)}`;
+          document.getElementById('wave2Target').innerText = `$${currentSellTarget.toFixed(2)}`;
+          const d2 = price - currentSellTarget;
+          document.getElementById('wave2Dist').innerText = `${d2 >= 0 ? '+' : '-'}$${Math.abs(d2).toFixed(2)}`;
+          if (wave2Card) wave2Card.style.opacity = '1';
+
+          const w1Tag = document.getElementById('wave1Tag');
+          if (w1Tag) w1Tag.innerHTML = '🛡️ LONG (BUY) - ONE-WAY SHIELD (SAFE)';
+          document.getElementById('wave1Entry').innerText = 'HEDGE OFF';
+          document.getElementById('wave1Target').innerText = `$${currentBuyTarget.toFixed(2)}`;
+          document.getElementById('wave1Dist').innerText = 'Margin Safe';
+          if (wave1Card) wave1Card.style.opacity = '0.6';
         }
-        if (p1.sell) {
-          document.getElementById('wave2Entry').innerText = `$${Number(p1.sell.entryPrice || price).toFixed(2)}`;
-          document.getElementById('wave2Target').innerText = `$${Number(p1.sell.targetPrice || (price - 300)).toFixed(2)}`;
-          const d2 = price - Number(p1.sell.targetPrice || (price - 300));
-          document.getElementById('wave2Dist').innerText = `+${d2 >= 0 ? '$' : '-$'}${Math.abs(d2).toFixed(2)}`;
-        }
+      } else {
+        if (legsBadge) legsBadge.innerText = '0 LIVE LEGS · 100% MARGIN FREE';
+        const w1Tag = document.getElementById('wave1Tag');
+        if (w1Tag) w1Tag.innerHTML = '⚪ BUY TRADE (LONG) - KHALI';
+        document.getElementById('wave1Entry').innerText = 'FREE';
+        document.getElementById('wave1Target').innerText = `$${(price + 300).toFixed(2)}`;
+        document.getElementById('wave1Dist').innerText = 'Taiyar';
+        if (wave1Card) wave1Card.style.opacity = '0.5';
+
+        const w2Tag = document.getElementById('wave2Tag');
+        if (w2Tag) w2Tag.innerHTML = '⚪ SELL TRADE (SHORT) - KHALI';
+        document.getElementById('wave2Entry').innerText = 'FREE';
+        document.getElementById('wave2Target').innerText = `$${(price - 300).toFixed(2)}`;
+        document.getElementById('wave2Dist').innerText = 'Taiyar';
+        if (wave2Card) wave2Card.style.opacity = '0.5';
       }
 
       // 4. Closed Trades Table

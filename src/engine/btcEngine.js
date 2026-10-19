@@ -767,6 +767,54 @@ class BtcEngine {
           }
         }
         this.saveState();
+      } else {
+        // Mudrex exchange DOES hold an active position - sync 1:1!
+        const p = activeExchangePos;
+        const exQty = Math.abs(Number(p.quantity || p.size || 0.05));
+        const exSide = Number(p.quantity || p.size || 0) > 0 ? 'BUY' : 'SELL';
+        const exEntry = Number(p.entry_price || p.entryPrice || 82550.8);
+        const exLev = Number(p.leverage || 15);
+        let exMargin = Number(p.initial_margin || p.margin || 0);
+        if (exMargin <= 0) {
+          exMargin = Number(((exQty * exEntry * 102.84) / exLev).toFixed(2));
+        }
+        const exTarget = exSide === 'BUY' ? Number((exEntry + 308.49).toFixed(2)) : Number((exEntry - 270.75).toFixed(2));
+
+        this.pairs = [{
+          pairId: 'MUDREX-REAL-PAIR',
+          symbol: 'BTCUSDT',
+          entryPrice: exEntry,
+          createdAt: new Date().toISOString(),
+          createdTimestamp: Date.now(),
+          quantity: exQty,
+          leverage: exLev,
+          status: 'OPEN',
+          buyPosition: exSide === 'BUY' ? {
+            positionId: 'MUDREX-REAL-BUY',
+            pairId: 'MUDREX-REAL-PAIR',
+            direction: 'BUY',
+            symbol: 'BTCUSDT',
+            entryPrice: exEntry,
+            targetExitPrice: exTarget,
+            quantity: exQty,
+            leverage: exLev,
+            marginINR: exMargin,
+            status: 'OPEN'
+          } : null,
+          sellPosition: exSide === 'SELL' ? {
+            positionId: 'MUDREX-REAL-SELL',
+            pairId: 'MUDREX-REAL-PAIR',
+            direction: 'SELL',
+            symbol: 'BTCUSDT',
+            entryPrice: exEntry,
+            targetExitPrice: exTarget,
+            quantity: exQty,
+            leverage: exLev,
+            marginINR: exMargin,
+            status: 'OPEN'
+          } : null
+        }];
+        this.saveState();
       }
     } catch (e) {
       console.warn('[BTC Engine Reconciliation] Sync error:', e.message);
@@ -1231,7 +1279,7 @@ class BtcEngine {
         direction: this.lastMudrexExchangeStatus?.position ? (Number(this.lastMudrexExchangeStatus.position.quantity || this.lastMudrexExchangeStatus.position.size || 0) > 0 ? 'BUY' : 'SELL') : 'NONE',
         entryPrice: this.lastMudrexExchangeStatus?.position ? Number(this.lastMudrexExchangeStatus.position.entry_price || this.lastMudrexExchangeStatus.position.entryPrice || 0) : 0,
         unrealisedPnlINR: this.lastMudrexExchangeStatus?.position ? Number(this.lastMudrexExchangeStatus.position.pnl || this.lastMudrexExchangeStatus.position.unrealisedPnl || 0) : 0,
-        marginINR: this.lastMudrexExchangeStatus?.position ? Number(this.lastMudrexExchangeStatus.position.margin || 0) : 0
+        marginINR: this.lastMudrexExchangeStatus?.position ? Number(this.lastMudrexExchangeStatus.position.initial_margin || this.lastMudrexExchangeStatus.position.margin || (((Math.abs(Number(this.lastMudrexExchangeStatus.position.quantity || 0.05)) * Number(this.lastMudrexExchangeStatus.position.entry_price || this.lastMudrexExchangeStatus.position.entryPrice || 82550.8) * 102.84) / Number(this.lastMudrexExchangeStatus.position.leverage || 15)).toFixed(2))) : 0
       },
       pnl: {
         totalRealizedINR: Number(totalRealizedINR.toFixed(2)),
