@@ -29,9 +29,8 @@ class BtcEngine {
       gstRate: 0.18, // 18% GST on trading fees
       conservativeFeeMultiplier: 1.20,
       slippageBufferINR: 5.0, // ₹5.00 slippage buffer
-      usdInrRate: 102.00, // Mudrex INR Futures Rate
-      tradingMode: 'PAPER', // EMERGENCY WALLET SHIELD: Live real orders completely stopped
-      realOrdersDisabled: true // EMERGENCY SAFETY LOCK: Zero orders sent to Mudrex
+      tradingMode: 'LIVE', // Real Mudrex trading mode
+      realOrdersDisabled: false // Real orders enabled on Mudrex exchange
     };
 
     this.pairs = [];
@@ -127,9 +126,8 @@ class BtcEngine {
 
       // Purge any phantom flushed or simulated trades
       this.closedPositions = (this.closedPositions || []).filter(p => {
-        if (!p) return false;
-        if (p.exitReason && p.exitReason.includes('Flushed')) return false;
-        if (p.positionId && (p.positionId.includes('PAIR-BTC-0010') || p.positionId.includes('PAIR-BTC-0001') || p.positionId.includes('PAIR-BTC-0002') || p.positionId.includes('PAIR-BTC-0003'))) return false;
+        if (p.exitReason && (p.exitReason.includes('Flushed') || p.exitReason.includes('UPGRADED_TO_LIVE_MUDREX_ORDER'))) return false;
+        if (p.positionId && !p.positionId.includes('MUDREX-REAL') && p.source !== 'MUDREX_EXCHANGE_VERIFIED') return false;
         if (p.source !== 'MUDREX_EXCHANGE_VERIFIED' && !p.positionId.includes('MUDREX-REAL')) return false;
         return true;
       });

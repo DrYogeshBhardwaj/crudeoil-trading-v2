@@ -1277,28 +1277,29 @@ app.post(['/api/btc-live-mudrex/action', '/api/btc-live-mudrex-pro/action', '/ap
 
       let liveOrderInfo = null;
       if (targetMode === 'LIVE' && !btcEngine.settings.realOrdersDisabled) {
-        // Enforce 0.06 BTC safe size and $267 target move (for ₹1,000 net after 120% charges)
-        btcEngine.settings.contractQuantity = 0.06;
-        btcEngine.settings.profitTargetMove = 267.00;
-        btcEngine.settings.buyTargetMove = 267.00;
-        btcEngine.settings.sellTargetMove = 267.00;
-        btcEngine.settings.maxActivePairs = 1;
+        // Enforce 0.05 BTC and 2 Pairs setup
+        btcEngine.settings.contractQuantity = 0.05;
+        btcEngine.settings.profitTargetMove = 300.00;
+        btcEngine.settings.buyTargetMove = 300.00;
+        btcEngine.settings.sellTargetMove = 300.00;
+        btcEngine.settings.maxActivePairs = 2;
 
-        // Check if there are stale paper pairs (unfulfilled on exchange)
+        // Cleanly close paper pairs WITHOUT fee deduction or fake negative trade rows
         const openPaperPairs = btcEngine.pairs.filter(p => p.status === 'OPEN' && !p.buyPosition?.mudrexOrderId);
-        const cur = rateFeed.getCurrentRate('BTCUSDT') || { price: 82000, usdInrRate: 102 };
         if (openPaperPairs.length > 0) {
           openPaperPairs.forEach(p => {
-            if (p.buyPosition && p.buyPosition.status === 'OPEN') {
-              btcEngine.closePositionLeg(p.buyPosition, cur.price, Date.now(), 'UPGRADED_TO_LIVE_MUDREX_ORDER', cur.usdInrRate);
-            }
-            if (p.sellPosition && p.sellPosition.status === 'OPEN') {
-              btcEngine.closePositionLeg(p.sellPosition, cur.price, Date.now(), 'UPGRADED_TO_LIVE_MUDREX_ORDER', cur.usdInrRate);
-            }
+            if (p.buyPosition) p.buyPosition.status = 'CLOSED';
+            if (p.sellPosition) p.sellPosition.status = 'CLOSED';
             p.status = 'CLOSED';
           });
-          console.log(`[BTC Engine] Closed ${openPaperPairs.length} paper pairs. Now creating fresh live 0.06 BTC pair for Mudrex...`);
+          console.log(`[BTC Engine] Cleanly closed ${openPaperPairs.length} paper pairs without phantom trades.`);
         }
+
+        // Purge any phantom upgraded trades
+        btcEngine.closedPositions = (btcEngine.closedPositions || []).filter(p => {
+          if (!p || !p.exitReason) return true;
+          return !p.exitReason.includes('UPGRADED_TO_LIVE_MUDREX_ORDER') && !p.exitReason.includes('Flushed');
+        });
 
         const activePairs = btcEngine.pairs.filter(p => p.status === 'OPEN');
         if (activePairs.length === 0) {
