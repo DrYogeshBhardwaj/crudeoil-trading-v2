@@ -30,8 +30,8 @@ class BtcEngine {
       conservativeFeeMultiplier: 1.20,
       slippageBufferINR: 5.0, // ₹5.00 slippage buffer
       usdInrRate: 102.00, // Mudrex INR Futures Rate
-      tradingMode: 'LIVE', // Switched to LIVE per user request
-      realOrdersDisabled: false // Live exchange orders enabled
+      tradingMode: 'PAPER', // EMERGENCY WALLET SHIELD: Live real orders completely stopped
+      realOrdersDisabled: true // EMERGENCY SAFETY LOCK: Zero orders sent to Mudrex
     };
 
     this.pairs = [];
