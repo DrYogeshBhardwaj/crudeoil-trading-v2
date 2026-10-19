@@ -968,11 +968,11 @@ class BtcEngine {
     const floating = this.calculateFloatingSummary(livePrice);
 
     // Authoritative Mudrex Wallet Balance synchronization (1:1 with Mudrex Futures)
-    let realFuturesBalance = 88045.14; // Mudrex official Futures Wallet balance
+    let realFuturesBalance = 136211.94; // Mudrex official Futures Wallet balance
     let realSpotBalance = 13227.28;
-    let realTotalPortfolio = 99421.73;
-    let mudrexLockedMargin = 34178.43;
-    let mudrexAvailableMargin = 53866.70;
+    let realTotalPortfolio = 149439.22;
+    let mudrexLockedMargin = 0;
+    let mudrexAvailableMargin = realFuturesBalance;
     try {
       const mudrexLive = require('./mudrexLiveAdapter');
       const auth = mudrexLive.lastAuthCheckRes;
@@ -980,6 +980,18 @@ class BtcEngine {
         realFuturesBalance = Number(auth.futuresBalance.toFixed(2));
         realSpotBalance = typeof auth.spotBalance === 'number' ? Number(auth.spotBalance.toFixed(2)) : 13227.28;
         realTotalPortfolio = typeof auth.totalPortfolioBalance === 'number' ? Number(auth.totalPortfolioBalance.toFixed(2)) : (realFuturesBalance + realSpotBalance);
+        const lockedRaw = auth.raw?.futures?.data?.locked_amount;
+        if (typeof lockedRaw === 'number' && lockedRaw > 0) {
+          mudrexLockedMargin = Number(lockedRaw.toFixed(2));
+        } else {
+          const openPairs = this.pairs.filter(p => p.status === 'OPEN');
+          mudrexLockedMargin = openPairs.length * ((this.settings.contractQuantity || 0.06) * livePrice * usdInr / (this.settings.leverage || 15)) * 2;
+        }
+        mudrexAvailableMargin = Math.max(0, realFuturesBalance - mudrexLockedMargin);
+      } else {
+        const openPairs = this.pairs.filter(p => p.status === 'OPEN');
+        mudrexLockedMargin = openPairs.length * ((this.settings.contractQuantity || 0.06) * livePrice * usdInr / (this.settings.leverage || 15)) * 2;
+        mudrexAvailableMargin = Math.max(0, realFuturesBalance - mudrexLockedMargin);
       }
     } catch (e) {}
 
