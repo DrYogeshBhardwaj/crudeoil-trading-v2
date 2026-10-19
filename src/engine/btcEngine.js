@@ -146,21 +146,26 @@ class BtcEngine {
         }
       }
 
-      // Always ensure the verified present Mudrex trades are loaded
+      // Always ensure the verified present Mudrex trades and harvests are loaded
       const seedPath = path.join(__dirname, 'btc_state_seed.json');
-      if ((this.closedPositions.length === 0 || this.closedPositions.some(p => p.exitReason && p.exitReason.includes('Flushed'))) && fs.existsSync(seedPath)) {
+      if (fs.existsSync(seedPath)) {
         try {
           const sRaw = fs.readFileSync(seedPath, 'utf8');
           if (sRaw) {
             const sData = JSON.parse(sRaw);
             if (Array.isArray(sData.closedPositions) && sData.closedPositions.length > 0) {
-              this.closedPositions = sData.closedPositions;
-              console.log(`[BTC Engine] Authoritative Seed: Loaded ${this.closedPositions.length} verified real Mudrex trades.`);
+              const hasPz2 = this.closedPositions.some(p => p.positionId && p.positionId.includes('PUNARJANM-BTC-2'));
+              if (this.closedPositions.length === 0 || !hasPz2 || this.closedPositions.some(p => p.exitReason && p.exitReason.includes('Flushed'))) {
+                this.closedPositions = sData.closedPositions;
+                console.log(`[BTC Engine] Authoritative Seed: Loaded ${this.closedPositions.length} verified real Mudrex trades.`);
+              }
             }
-            if (Array.isArray(sData.punarjanmCycles)) {
+            if (Array.isArray(sData.punarjanmCycles) && (this.punarjanmCycles.length < sData.punarjanmCycles.length)) {
               this.punarjanmCycles = sData.punarjanmCycles;
             }
-            this.punarjanmCount = sData.punarjanmCount || 1;
+            if (sData.punarjanmCount && sData.punarjanmCount > (this.punarjanmCount || 0)) {
+              this.punarjanmCount = sData.punarjanmCount;
+            }
           }
         } catch (sErr) {
           console.warn('[BTC Engine] Error loading seed data:', sErr.message);
@@ -486,6 +491,7 @@ class BtcEngine {
     pos.exitTime = new Date(exitTime).toISOString();
     pos.exitTimestamp = exitTime;
     pos.exitReason = reason;
+    pos.cycleName = pos.cycleName || ('Punarjanm ' + (this.punarjanmCount + 1));
 
     // If this was a real Mudrex position, send exit order to close on Mudrex exchange ONLY if not already closed by exchange TP
     if (this.settings.tradingMode === 'LIVE' && !this.settings.realOrdersDisabled && pos.mudrexOrderId && pos.apiStatus === 'REAL_MUDREX_POSITION') {
@@ -751,12 +757,31 @@ class BtcEngine {
     this.punarjanmCount++;
     const cycleId = `PUNARJANM-BTC-${this.punarjanmCount}`;
 
-    // In Punarjanm Rebirth: Cleanly close open pairs to free circle slots WITHOUT creating fake negative trade rows
+    // In Punarjanm Rebirth: Cleanly close open pairs to free circle slots & archive ended pairs into history
     let flushedTrades = 0;
+    const endedTime = new Date().toISOString();
+    const endedTs = Date.now();
     for (const pair of this.pairs) {
       if (pair.status === 'CLOSED') continue;
-      if (pair.buyPosition) pair.buyPosition.status = 'CLOSED';
-      if (pair.sellPosition) pair.sellPosition.status = 'CLOSED';
+      if (pair.buyPosition && pair.buyPosition.status === 'OPEN') {
+        pair.buyPosition.status = 'CLOSED';
+        pair.buyPosition.exitPrice = livePrice;
+        pair.buyPosition.exitTime = endedTime;
+        pair.buyPosition.exitTimestamp = endedTs;
+        pair.buyPosition.exitReason = `PUNARJANM ${this.punarjanmCount} REBIRTH (ENDED)`;
+        pair.buyPosition.cycleName = `Punarjanm ${this.punarjanmCount}`;
+        pair.buyPosition.netProfitINR = 0;
+        pair.buyPosition.netProfitUSD = 0;
+        this.closedPositions.unshift({ ...pair.buyPosition });
+      }
+      if (pair.sellPosition && pair.sellPosition.status === 'OPEN') {
+        pair.sellPosition.status = 'CLOSED';
+        pair.sellPosition.exitPrice = livePrice;
+        pair.sellPosition.exitTime = endedTime;
+        pair.sellPosition.exitTimestamp = endedTs;
+        pair.sellPosition.exitReason = `PUNARJANM ${this.punarjanmCount} REBIRTH (ENDED)`;
+        pair.sellPosition.cycleName = `Punarjanm ${this.punarjanmCount}`;
+      }
       pair.status = 'CLOSED';
       flushedTrades++;
     }
@@ -771,10 +796,41 @@ class BtcEngine {
       livePrice,
       harvestedProfitINR: harvestProfitINR,
       harvestedProfitUSD: Number((harvestProfitINR / usdInrRate).toFixed(2)),
-      harvestedTrades: this.closedPositions.filter(c => (c.exitTimestamp || 0) >= (this.lastPunarjanmTime || 0)).length,
+      harvestedTrades: this.closedPositions.filter(c => (c.exitTimestamp || 0) >= (this.lastPunarjanmTime || 0) && c.direction !== 'BASKET_HARVEST').length,
       flushedTrades,
       triggerReason
     };
+
+    // Official Golden Harvest Record into closedPositions so it shows in Closed Trades History & Harvest filter
+    if (harvestProfitINR > 0) {
+      const harvestRecord = {
+        positionId: `HARVEST-${cycleId}`,
+        pairId: `BASKET-${cycleId}`,
+        symbol: 'BTCUSDT',
+        direction: 'BASKET_HARVEST',
+        quantity: this.settings.contractQuantity || 0.05,
+        leverage: this.settings.leverage || 15,
+        entryPrice: livePrice,
+        exitPrice: livePrice,
+        marginINR: 0,
+        entryTime: new Date(Date.now() - 60000).toISOString(),
+        exitTime: new Date().toISOString(),
+        exitTimestamp: Date.now(),
+        exitReason: `👑 ${cycleRecord.cycleName} BASKET PROFIT HARVEST`,
+        cycleName: cycleRecord.cycleName,
+        grossProfitUSD: cycleRecord.harvestedProfitUSD,
+        grossProfitINR: cycleRecord.harvestedProfitINR,
+        totalChargesINR: 0,
+        totalChargesUSD: 0,
+        netProfitINR: cycleRecord.harvestedProfitINR,
+        netProfitUSD: cycleRecord.harvestedProfitUSD,
+        status: 'CLOSED',
+        ledger: 'LIVE',
+        isHarvestSummary: true,
+        source: 'MUDREX_PUNARJANM_HARVEST'
+      };
+      this.closedPositions.unshift(harvestRecord);
+    }
 
     this.punarjanmCycles.unshift(cycleRecord);
     this.lastPunarjanmSummary = cycleRecord;
@@ -962,6 +1018,7 @@ class BtcEngine {
     let slippageINR = 0;
 
     for (const cp of this.closedPositions) {
+      if (cp.direction === 'BASKET_HARVEST' || cp.isHarvestSummary) continue; // Prevent double-counting harvest summaries with individual trade profits
       const net = cp.netProfitINR !== undefined ? cp.netProfitINR : ((cp.grossProfitINR || 0) - (cp.totalChargesINR || 0));
       totalRealizedINR += net;
       totalRealizedUSD += (cp.netProfitUSD || net / usdInr);

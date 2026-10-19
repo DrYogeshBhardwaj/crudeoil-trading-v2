@@ -3877,12 +3877,14 @@
         const badgeClass = isHarvest ? 'badge-harvest' : (side === 'BUY' ? 'badge-buy' : 'badge-sell');
 
         // Determine Punarjanm Cycle label
-        const exitTs = getClosedTimestamp(cp);
-        const pz1Time = 1792355106566; // Punarjanm 1 harvest timestamp
         let cycleBadge = `<span style="color: #38bdf8; font-weight: 700; font-size: 0.82rem;">⚡ Punarjanm 2</span>`;
         if (isHarvest) {
           cycleBadge = `<span class="badge" style="background: rgba(245,158,11,0.25); color: #facc15; border: 1px solid rgba(245,158,11,0.45); font-weight: 800;">👑 BASKET HARVEST</span>`;
-        } else if (exitTs < pz1Time || (cp.pairId && ['PAIR-BTC-0001','PAIR-BTC-0002','PAIR-BTC-0003'].includes(cp.pairId))) {
+        } else if (cp.cycleName) {
+          const color = cp.cycleName.includes('1') ? '#c084fc' : (cp.cycleName.includes('2') ? '#38bdf8' : '#34d399');
+          const icon = cp.cycleName.includes('1') ? '🟣' : (cp.cycleName.includes('2') ? '⚡' : '✨');
+          cycleBadge = `<span style="color: ${color}; font-weight: 700; font-size: 0.82rem;">${icon} ${cp.cycleName}</span>`;
+        } else if (cp.positionId && (cp.positionId.includes('0001') || cp.positionId.includes('0002') || (cp.pairId && cp.pairId.includes('MUDREX')))) {
           cycleBadge = `<span style="color: #c084fc; font-weight: 700; font-size: 0.82rem;">🟣 Punarjanm 1</span>`;
         }
 
@@ -4307,17 +4309,32 @@
     function renderHarvestTab(closedPositions, punarjanm, usdInr) {
       usdInr = usdInr || 102.0;
       const allTrades = closedPositions || [];
-      const harvestList = allTrades.filter(cp => 
+      let harvestList = allTrades.filter(cp => 
         (cp.direction && (cp.direction.includes('BASKET') || cp.direction.includes('HARVEST'))) ||
         (cp.positionId && (cp.positionId.includes('HARVEST') || cp.positionId.includes('Punarjanm')))
       );
+
+      // If closedPositions doesn't have harvest rows yet, seamlessly populate from punarjanm.cycles
+      if (harvestList.length === 0 && punarjanm && Array.isArray(punarjanm.cycles) && punarjanm.cycles.length > 0) {
+        harvestList = punarjanm.cycles.map((c, idx) => ({
+          positionId: `HARVEST-${c.cycleId || ('PUNARJANM-' + (c.cycleNumber || (idx + 1)))}`,
+          pairId: c.cycleId || `CYCLE-${idx + 1}`,
+          direction: 'BASKET_HARVEST',
+          quantity: 0.05,
+          exitPrice: c.livePrice,
+          exitTime: c.timestamp,
+          exitReason: `👑 ${c.cycleName || ('Punarjanm ' + (c.cycleNumber || (idx + 1)))} Basket Harvest`,
+          netProfitINR: c.harvestedProfitINR || 0,
+          netProfitUSD: c.harvestedProfitUSD || 0
+        }));
+      }
 
       let totalHarvestNetINR = 0;
       let totalBarrels = 0;
       for (const h of harvestList) {
         const net = h.netProfitINR !== undefined ? h.netProfitINR : ((h.netProfitUSD || 0) * usdInr);
         totalHarvestNetINR += net;
-        totalBarrels += Number(h.quantity || 2.0);
+        totalBarrels += Number(h.quantity || 0.05);
       }
       const totalHarvestNetUSD = totalHarvestNetINR / usdInr;
       const cycleCount = harvestList.length;
