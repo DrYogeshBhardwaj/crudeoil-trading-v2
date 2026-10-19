@@ -155,7 +155,7 @@ class BtcEngine {
             const sData = JSON.parse(sRaw);
             if (Array.isArray(sData.closedPositions) && sData.closedPositions.length > 0) {
               const hasPz2 = this.closedPositions.some(p => p.positionId && p.positionId.includes('PUNARJANM-BTC-2'));
-              if (this.closedPositions.length <= 4 || this.closedPositions.length > 10 || !hasPz2 || this.closedPositions.some(p => p.exitReason && p.exitReason.includes('Flushed'))) {
+              if (sData.closedPositions.length > this.closedPositions.length || this.closedPositions.length <= 4 || !hasPz2 || this.closedPositions.some(p => p.exitReason && p.exitReason.includes('Flushed'))) {
                 this.closedPositions = sData.closedPositions;
                 console.log(`[BTC Engine] Authoritative Seed: Loaded ${this.closedPositions.length} verified real Mudrex trades.`);
               }
