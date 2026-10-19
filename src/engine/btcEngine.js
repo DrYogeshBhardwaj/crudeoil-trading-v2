@@ -5,22 +5,22 @@ const rateFeed = require('./rateFeed');
 class BtcEngine {
   constructor() {
     this.settings = {
-      startingCapitalINR: 86938.00, // Total amt: ₹86,938 (Real Mudrex Futures Wallet)
-      contractQuantity: 0.06, // Best Safe Config: 0.06 BTC (Fits within wallet with safe margin)
+      startingCapitalINR: 136211.94, // Real Mudrex Futures Wallet: ₹1,36,211.94
+      contractQuantity: 0.05, // THE GOLD STANDARD: 0.05 BTC (Fastest speed with guaranteed ₹23,400 safety buffer)
       leverage: 15, // Leverage: 15x
       instrument: 'BTCUSDT',
       profitTargetINR: 1000.00, // Exit profit: ₹1,000 INR net per hit
       stopLossINR: 500.00, // Loss: ₹500 INR
-      profitTargetMove: 267.00, // Precise USD move for ₹1,000 INR on 0.06 BTC after 120% charges
-      buyTargetMove: 267.00,
-      sellTargetMove: 267.00,
-      stopLossMove: 130.00,
+      profitTargetMove: 300.00, // Precise USD move for ₹1,000 INR net on 0.05 BTC after all Mudrex charges + 10% buffer
+      buyTargetMove: 300.00,
+      sellTargetMove: 300.00,
+      stopLossMove: 150.00,
       gridSpacing: 0.00, // Rate move hote hi entry
       priceBucketSize: 0.00,
       basketProfitTargetINR: 2000, // Harvest: ₹2,000 Punarjanm Auto-Harvest
       autoPunarjanmEnabled: true, // Harvest amt auto add to wallet (Auto-Harvest)
       autoAddNewPairs: true, // Continuous re-entry when live rate moves to vacant level and margin is available
-      maxActivePairs: 1, // Single Pair: Exactly 1 pair active at a time in Live Mudrex
+      maxActivePairs: 2, // DUAL PAIR MACHINE GUN: Exactly 2 pairs active at a time
       autoCleanKachraEnabled: true,
       maxFloatingLossThresholdINR: 50000,
       maxOneSidedLegs: 5,
