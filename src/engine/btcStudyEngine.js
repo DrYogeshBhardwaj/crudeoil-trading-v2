@@ -832,7 +832,8 @@ class BTCStudyEngine {
       const maxAffordablePairs = Math.max(0, Math.floor(capital / marginPerPairINR));
       const adverseBufferUSD = cashBufferINR > 0 ? (cashBufferINR / (safeQty * usdInr)) : 0;
       
-      const estRoundtripFeeINR = notionalPerLegUSD * 0.00095 * 1.18 * usdInr;
+      // Official Mudrex statement fee: 0.059% * 2 * 1.18 GST * 1.20 (120% shield) + ₹10 slippage buffer
+      const estRoundtripFeeINR = (notionalPerLegUSD * 2 * 0.000590 * 1.18 * 1.20 * usdInr) + 10.0;
       const grossNeededINR = targetProfitINR + estRoundtripFeeINR;
       const targetMoveUSD = grossNeededINR / (safeQty * usdInr);
 
@@ -942,11 +943,11 @@ class BTCStudyEngine {
           closedTrades: m.pnl.closedTradesCount,
           winRate: m.pnl.closedTradesCount > 0 ? ((m.pnl.winCount / m.pnl.closedTradesCount) * 100).toFixed(1) + '%' : '0%',
           fees: Math.round(m.pnl.tradingFeesINR),
-          extra10PctFees: Math.round(m.pnl.tradingFeesINR * 0.10),
-          totalFeesWithBuffer: Math.round(m.pnl.tradingFeesINR * 1.10),
-          netProfitWithBuffer: Math.round((m.wallet.equityINR - capital) - (m.pnl.tradingFeesINR * 0.10)),
-          finalEquityWithBuffer: Math.round(m.wallet.equityINR - (m.pnl.tradingFeesINR * 0.10)),
-          netProfitPctWithBuffer: ((((m.wallet.equityINR - (m.pnl.tradingFeesINR * 0.10)) - capital) / capital) * 100).toFixed(1) + '%',
+          extra10PctFees: Math.round(m.pnl.tradingFeesINR * 0.20),
+          totalFeesWithBuffer: Math.round(m.pnl.tradingFeesINR),
+          netProfitWithBuffer: Math.round(m.wallet.equityINR - capital),
+          finalEquityWithBuffer: Math.round(m.wallet.equityINR),
+          netProfitPctWithBuffer: ((((m.wallet.equityINR) - capital) / capital) * 100).toFixed(1) + '%',
           maxDrawdown: Math.round(maxDrawdown),
           maxDrawdownPct: ((maxDrawdown / peakEquity) * 100).toFixed(1) + '%',
           harvestCount: simEngine.punarjanmCount,

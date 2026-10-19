@@ -502,15 +502,17 @@ class BtcEngine {
 
     const entryNotional = pos.entryPrice * qty;
     const exitNotional = exitPrice * qty;
-    const takerFeeRate = this.settings.takerFeeRate || 0.00075;
-    const makerFeeRate = this.settings.makerFeeRate || 0.0002;
-    const isTarget = reason.includes('TARGET') || reason.includes('TP') || reason.includes('HARVEST');
-    const exitFeeRate = isTarget ? makerFeeRate : takerFeeRate;
-
-    const entryFeeUSD = entryNotional * takerFeeRate;
-    const exitFeeUSD = exitNotional * exitFeeRate;
+    
+    // Mudrex Statement Real Fee: 0.0590% taker on ALL market fills (Entry and Exit)
+    // Applied with 120% ultra-conservative shield buffer (multiplier 1.20) as requested by user
+    const baseFeeRate = 0.000590; // 0.0590% Mudrex official statement rate
+    const multiplier = Number(this.settings.conservativeFeeMultiplier || 1.20);
+    const effectiveFeeRate = baseFeeRate * multiplier; // 0.0708% per fill with 120% safety shield
+    
+    const entryFeeUSD = entryNotional * effectiveFeeRate;
+    const exitFeeUSD = exitNotional * effectiveFeeRate;
     const gstUSD = (entryFeeUSD + exitFeeUSD) * (this.settings.gstRate || 0.18);
-    const slippageUSD = (this.settings.slippageBufferINR || 5.0) / usdInrRate;
+    const slippageUSD = (this.settings.slippageBufferINR || 10.0) / usdInrRate;
     const totalChargesUSD = entryFeeUSD + exitFeeUSD + gstUSD + slippageUSD;
 
     const netUSD = grossUSD - totalChargesUSD;
