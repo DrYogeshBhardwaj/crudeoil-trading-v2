@@ -219,9 +219,13 @@ class BtcEngine {
 
   handleRateEvent(type, data) {
     if ((type === 'tick' || type === 'rate_updated') && data && data.symbol === 'BTCUSDT' && this.isEngineRunning) {
-      const price = Number(data.price);
-      if (price && price > 0) {
-        this.evaluatePriceTick(price, data.time || Date.now());
+      try {
+        const price = Number(data.price);
+        if (price && price > 0) {
+          this.evaluatePriceTick(price, data.time || Date.now());
+        }
+      } catch (err) {
+        console.error('[BTC Engine] Error in handleRateEvent:', err.message);
       }
     }
   }
@@ -356,7 +360,7 @@ class BtcEngine {
       const minSpacing = Number(this.settings.gridSpacing || 0);
       const tolerance = (minSpacing > 0) ? minSpacing : 0.05;
 
-      for (const p of currentActivePairs) {
+      for (const p of tradingPairs) {
         if (p.buyPosition && p.buyPosition.status === 'OPEN') {
           if (Math.abs(livePrice - p.buyPosition.entryPrice) < tolerance) {
             isRateOccupied = true;
@@ -376,7 +380,7 @@ class BtcEngine {
         const hasAmtInHand = (metrics.wallet.equityINR > 0) && (metrics.wallet.availableMarginINR >= 1000);
 
         if (hasAmtInHand) {
-          console.log(`[BTC Engine] Circle Replenish: Live rate moved to vacant rate $${livePrice.toFixed(2)}. Adding pair ${currentActivePairs.length + 1}/${circleTarget} to circle.`);
+          console.log(`[BTC Engine] Circle Replenish: Live rate moved to vacant rate $${livePrice.toFixed(2)}. Adding pair ${tradingPairs.length + 1}/${maxTradingPairs} to circle.`);
           this.createNewPair('BTCUSDT', livePrice, timestamp, usdInr);
         }
       }
@@ -771,44 +775,88 @@ class BtcEngine {
         }
         const exTarget = exSide === 'BUY' ? Number((exEntry + 308.49).toFixed(2)) : Number((exEntry - 270.75).toFixed(2));
 
-        const realPairObj = {
-          pairId: 'MUDREX-REAL-PAIR',
-          symbol: 'BTCUSDT',
-          entryPrice: exEntry,
-          createdAt: new Date().toISOString(),
-          createdTimestamp: Date.now(),
-          quantity: exQty,
-          leverage: exLev,
-          status: 'OPEN',
-          buyPosition: exSide === 'BUY' ? {
-            positionId: 'MUDREX-REAL-BUY',
+        let realPairObj = this.pairs.find(p => p.pairId === 'MUDREX-REAL-PAIR');
+        if (!realPairObj) {
+          realPairObj = {
             pairId: 'MUDREX-REAL-PAIR',
-            direction: 'BUY',
             symbol: 'BTCUSDT',
             entryPrice: exEntry,
-            targetExitPrice: exTarget,
+            createdAt: new Date().toISOString(),
+            createdTimestamp: Date.now(),
             quantity: exQty,
             leverage: exLev,
-            marginINR: exMargin,
-            status: 'OPEN'
-          } : null,
-          sellPosition: exSide === 'SELL' ? {
-            positionId: 'MUDREX-REAL-SELL',
-            pairId: 'MUDREX-REAL-PAIR',
-            direction: 'SELL',
-            symbol: 'BTCUSDT',
-            entryPrice: exEntry,
-            targetExitPrice: exTarget,
-            quantity: exQty,
-            leverage: exLev,
-            marginINR: exMargin,
-            status: 'OPEN'
-          } : null
-        };
-
-        // PRESERVE ALL OTHER ACTIVE PAIRS! NEVER WIPE!
-        const otherPairs = this.pairs.filter(p => p.pairId !== 'MUDREX-REAL-PAIR');
-        this.pairs = [realPairObj, ...otherPairs];
+            status: 'OPEN',
+            buyPosition: exSide === 'BUY' ? {
+              positionId: 'MUDREX-REAL-BUY',
+              pairId: 'MUDREX-REAL-PAIR',
+              direction: 'BUY',
+              symbol: 'BTCUSDT',
+              entryPrice: exEntry,
+              targetExitPrice: exTarget,
+              quantity: exQty,
+              leverage: exLev,
+              marginINR: exMargin,
+              status: 'OPEN'
+            } : null,
+            sellPosition: exSide === 'SELL' ? {
+              positionId: 'MUDREX-REAL-SELL',
+              pairId: 'MUDREX-REAL-PAIR',
+              direction: 'SELL',
+              symbol: 'BTCUSDT',
+              entryPrice: exEntry,
+              targetExitPrice: exTarget,
+              quantity: exQty,
+              leverage: exLev,
+              marginINR: exMargin,
+              status: 'OPEN'
+            } : null
+          };
+          this.pairs.unshift(realPairObj);
+        } else {
+          realPairObj.entryPrice = exEntry;
+          realPairObj.status = 'OPEN';
+          if (exSide === 'BUY') {
+            if (!realPairObj.buyPosition) {
+              realPairObj.buyPosition = {
+                positionId: 'MUDREX-REAL-BUY',
+                pairId: 'MUDREX-REAL-PAIR',
+                direction: 'BUY',
+                symbol: 'BTCUSDT',
+                entryPrice: exEntry,
+                targetExitPrice: exTarget,
+                quantity: exQty,
+                leverage: exLev,
+                marginINR: exMargin,
+                status: 'OPEN'
+              };
+            } else {
+              realPairObj.buyPosition.entryPrice = exEntry;
+              realPairObj.buyPosition.targetExitPrice = exTarget;
+              realPairObj.buyPosition.marginINR = exMargin;
+              realPairObj.buyPosition.status = 'OPEN';
+            }
+          } else if (exSide === 'SELL') {
+            if (!realPairObj.sellPosition) {
+              realPairObj.sellPosition = {
+                positionId: 'MUDREX-REAL-SELL',
+                pairId: 'MUDREX-REAL-PAIR',
+                direction: 'SELL',
+                symbol: 'BTCUSDT',
+                entryPrice: exEntry,
+                targetExitPrice: exTarget,
+                quantity: exQty,
+                leverage: exLev,
+                marginINR: exMargin,
+                status: 'OPEN'
+              };
+            } else {
+              realPairObj.sellPosition.entryPrice = exEntry;
+              realPairObj.sellPosition.targetExitPrice = exTarget;
+              realPairObj.sellPosition.marginINR = exMargin;
+              realPairObj.sellPosition.status = 'OPEN';
+            }
+          }
+        }
         this.saveState();
       }
     } catch (e) {
