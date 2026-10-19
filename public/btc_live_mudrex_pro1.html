@@ -1483,113 +1483,124 @@
       }
 
       // TAB 2: Populating Pending & Working B/S Bids Table
-      const pendingBids = [
-        {
-          id: currentHasMudrexPosition ? 'MUDREX-REAL-BUY' : 'PAIR-01-BUY',
-          side: 'BUY',
-          role: 'Active Live Exchange Long',
-          rate: currentOpenEntryPrice > 0 ? currentOpenEntryPrice : price,
-          target: currentBuyTarget,
-          dist: buyDiffFormatted + ' Baaki',
-          status: currentHasMudrexPosition && currentOpenDirection === 'BUY' ? '● LIVE ON MUDREX' : '● WORKING'
-        },
-        {
-          id: 'PAIR-01-SELL',
-          side: 'SELL',
-          role: 'Opposing Hedge Protection',
-          rate: currentHasMudrexPosition ? 'HEDGE OFF' : price,
-          target: currentSellTarget,
-          dist: 'Margin Safe',
-          status: '🛡️ ONE-WAY SAFE'
-        },
-        {
-          id: (p2 && p2.buy) ? (p2.buy.positionId || 'PAIR-02-BUY') : 'PAIR-02-BUY (DIP)',
-          side: 'BUY',
-          role: 'Grid Dip Re-entry Bid',
-          rate: (p2 && p2.buy) ? p2.buy.entryPrice : (price - 100),
-          target: (p2 && p2.buy) ? p2.buy.targetPrice : (price + 208.49),
-          dist: (p2 && p2.buy) ? `+$${Math.abs(p2.buy.targetPrice - price).toFixed(2)}` : '-$100.00 Dip Level',
-          status: (p2 && p2.buy) ? '● WORKING' : '⏳ PENDING DIP BID'
-        },
-        {
-          id: (p2 && p2.sell) ? (p2.sell.positionId || 'PAIR-02-SELL') : 'PAIR-02-SELL (RALLY)',
-          side: 'SELL',
-          role: 'Grid Rally Re-entry Bid',
-          rate: (p2 && p2.sell) ? p2.sell.entryPrice : (price + 100),
-          target: (p2 && p2.sell) ? p2.sell.targetPrice : (price - 170.75),
-          dist: (p2 && p2.sell) ? `-$${Math.abs(price - p2.sell.targetPrice).toFixed(2)}` : '+$100.00 Rally Level',
-          status: (p2 && p2.sell) ? '● WORKING' : '⏳ PENDING RALLY BID'
+      try {
+        const buyDistSign = (currentBuyTarget - price) >= 0 ? '+' : '-';
+        const buyDistText = `${buyDistSign}$${Math.abs(currentBuyTarget - price).toFixed(2)} Baaki`;
+
+        const pendingBids = [
+          {
+            id: currentHasMudrexPosition ? 'MUDREX-REAL-BUY' : 'PAIR-01-BUY',
+            side: 'BUY',
+            role: 'Active Live Exchange Long',
+            rate: currentOpenEntryPrice > 0 ? currentOpenEntryPrice : price,
+            target: currentBuyTarget,
+            dist: buyDistText,
+            status: currentHasMudrexPosition && currentOpenDirection === 'BUY' ? '● LIVE ON MUDREX' : '● WORKING'
+          },
+          {
+            id: 'PAIR-01-SELL',
+            side: 'SELL',
+            role: 'Opposing Hedge Protection',
+            rate: currentHasMudrexPosition ? 'HEDGE OFF' : price,
+            target: currentSellTarget,
+            dist: 'Margin Safe',
+            status: '🛡️ ONE-WAY SAFE'
+          },
+          {
+            id: (p2 && p2.buy) ? (p2.buy.positionId || 'PAIR-02-BUY') : 'PAIR-02-BUY (DIP)',
+            side: 'BUY',
+            role: 'Grid Dip Re-entry Bid',
+            rate: (p2 && p2.buy) ? p2.buy.entryPrice : (price - 100),
+            target: (p2 && p2.buy) ? p2.buy.targetPrice : (price + 208.49),
+            dist: (p2 && p2.buy) ? `+$${Math.abs((p2.buy.targetPrice || price) - price).toFixed(2)}` : '-$100.00 Dip Level',
+            status: (p2 && p2.buy) ? '● WORKING' : '⏳ PENDING DIP BID'
+          },
+          {
+            id: (p2 && p2.sell) ? (p2.sell.positionId || 'PAIR-02-SELL') : 'PAIR-02-SELL (RALLY)',
+            side: 'SELL',
+            role: 'Grid Rally Re-entry Bid',
+            rate: (p2 && p2.sell) ? p2.sell.entryPrice : (price + 100),
+            target: (p2 && p2.sell) ? p2.sell.targetPrice : (price - 170.75),
+            dist: (p2 && p2.sell) ? `-$${Math.abs(price - (p2.sell.targetPrice || price)).toFixed(2)}` : '+$100.00 Rally Level',
+            status: (p2 && p2.sell) ? '● WORKING' : '⏳ PENDING RALLY BID'
+          }
+        ];
+
+        const pendingBody = document.getElementById('pendingOrdersBody');
+        if (pendingBody) {
+          pendingBody.innerHTML = pendingBids.map((b, idx) => {
+            const isBuy = b.side === 'BUY';
+            const sideColor = isBuy ? '#34d399' : '#38bdf8';
+            const sideBg = isBuy ? 'rgba(16,185,129,0.15)' : 'rgba(56,189,248,0.15)';
+            const sideBorder = isBuy ? 'rgba(16,185,129,0.35)' : 'rgba(56,189,248,0.35)';
+            const rateFormatted = typeof b.rate === 'number' ? `$${b.rate.toFixed(2)}` : b.rate;
+            const targetFormatted = typeof b.target === 'number' ? `$${b.target.toFixed(2)}` : b.target;
+            const statusBg = b.status.includes('MUDREX') ? 'rgba(16,185,129,0.15)' : (b.status.includes('SAFE') ? 'rgba(148,163,184,0.15)' : 'rgba(245,158,11,0.15)');
+            const statusColor = b.status.includes('MUDREX') ? '#34d399' : (b.status.includes('SAFE') ? '#94a3b8' : '#fbbf24');
+            const statusBorder = b.status.includes('MUDREX') ? 'rgba(16,185,129,0.3)' : (b.status.includes('SAFE') ? 'rgba(148,163,184,0.3)' : 'rgba(245,158,11,0.3)');
+
+            return `
+              <tr>
+                <td style="color: var(--gold-primary); font-weight: 700;">#${idx + 1}</td>
+                <td style="font-family: var(--font-mono); font-weight: 700; color: #fff;">${b.id}</td>
+                <td><span style="background: ${sideBg}; color: ${sideColor}; border: 1px solid ${sideBorder}; padding: 3px 8px; border-radius: 6px; font-weight: 800; font-size: 0.78rem;">${b.side}</span></td>
+                <td style="color: #cbd5e1; font-weight: 600;">${b.role}</td>
+                <td style="font-weight: 700; font-family: var(--font-mono);">${rateFormatted}</td>
+                <td style="font-weight: 800; font-family: var(--font-mono); color: #fde047;">${targetFormatted}</td>
+                <td style="color: #6ee7b7; font-weight: 700;">${b.dist}</td>
+                <td><span style="background: ${statusBg}; color: ${statusColor}; border: 1px solid ${statusBorder}; padding: 3px 8px; border-radius: 6px; font-weight: 700; font-size: 0.75rem;">${b.status}</span></td>
+              </tr>
+            `;
+          }).join('');
         }
-      ];
-
-      const pendingBody = document.getElementById('pendingOrdersBody');
-      if (pendingBody) {
-        pendingBody.innerHTML = pendingBids.map((b, idx) => {
-          const isBuy = b.side === 'BUY';
-          const sideColor = isBuy ? '#34d399' : '#38bdf8';
-          const sideBg = isBuy ? 'rgba(16,185,129,0.15)' : 'rgba(56,189,248,0.15)';
-          const sideBorder = isBuy ? 'rgba(16,185,129,0.35)' : 'rgba(56,189,248,0.35)';
-          const rateFormatted = typeof b.rate === 'number' ? `$${b.rate.toFixed(2)}` : b.rate;
-          const targetFormatted = typeof b.target === 'number' ? `$${b.target.toFixed(2)}` : b.target;
-          const statusBg = b.status.includes('MUDREX') ? 'rgba(16,185,129,0.15)' : (b.status.includes('SAFE') ? 'rgba(148,163,184,0.15)' : 'rgba(245,158,11,0.15)');
-          const statusColor = b.status.includes('MUDREX') ? '#34d399' : (b.status.includes('SAFE') ? '#94a3b8' : '#fbbf24');
-          const statusBorder = b.status.includes('MUDREX') ? 'rgba(16,185,129,0.3)' : (b.status.includes('SAFE') ? 'rgba(148,163,184,0.3)' : 'rgba(245,158,11,0.3)');
-
-          return `
-            <tr>
-              <td style="color: var(--gold-primary); font-weight: 700;">#${idx + 1}</td>
-              <td style="font-family: var(--font-mono); font-weight: 700; color: #fff;">${b.id}</td>
-              <td><span style="background: ${sideBg}; color: ${sideColor}; border: 1px solid ${sideBorder}; padding: 3px 8px; border-radius: 6px; font-weight: 800; font-size: 0.78rem;">${b.side}</span></td>
-              <td style="color: #cbd5e1; font-weight: 600;">${b.role}</td>
-              <td style="font-weight: 700; font-family: var(--font-mono);">${rateFormatted}</td>
-              <td style="font-weight: 800; font-family: var(--font-mono); color: #fde047;">${targetFormatted}</td>
-              <td style="color: #6ee7b7; font-weight: 700;">${b.dist}</td>
-              <td><span style="background: ${statusBg}; color: ${statusColor}; border: 1px solid ${statusBorder}; padding: 3px 8px; border-radius: 6px; font-weight: 700; font-size: 0.75rem;">${b.status}</span></td>
-            </tr>
-          `;
-        }).join('');
+      } catch (e) {
+        console.warn('Error populating pending orders table:', e);
       }
 
       // 4. Closed Trades Table
-      document.getElementById('badgeTradesCount').innerText = closed.length;
-      const tradesBody = document.getElementById('closedTradesBody');
-      if (closed.length === 0) {
-        tradesBody.innerHTML = '<tr><td colspan="8" style="text-align: center; color: var(--text-dim);">Abhi koi closed trade nahi hai.</td></tr>';
-      } else {
-        tradesBody.innerHTML = closed.map((c, idx) => {
-          const isHarvest = (c.direction === 'BASKET_HARVEST') || (c.positionId && c.positionId.includes('HARVEST'));
-          const net = c.netProfitINR !== undefined ? c.netProfitINR : ((c.netProfitUSD || 0) * 102);
-          const sign = net > 0 ? '+' : (net < 0 ? '-' : '');
-          const netColor = net > 0 ? '#34d399' : (net < 0 ? '#fb7185' : '#94a3b8');
-          const sideTag = isHarvest 
-            ? '<span class="badge-cycle badge-harvest-gold">👑 HARVEST</span>'
-            : (c.direction === 'BUY' ? '<span class="wave-tag tag-buy">BUY (Kharid)</span>' : '<span class="wave-tag tag-sell">SELL (Bech)</span>');
+      try {
+        document.getElementById('badgeTradesCount').innerText = closed.length;
+        const tradesBody = document.getElementById('closedTradesBody');
+        if (closed.length === 0) {
+          tradesBody.innerHTML = '<tr><td colspan="8" style="text-align: center; color: var(--text-dim);">Abhi koi closed trade nahi hai.</td></tr>';
+        } else {
+          tradesBody.innerHTML = closed.map((c, idx) => {
+            const isHarvest = (c.direction === 'BASKET_HARVEST') || (c.positionId && c.positionId.includes('HARVEST'));
+            const net = c.netProfitINR !== undefined ? c.netProfitINR : ((c.netProfitUSD || 0) * 102);
+            const sign = net > 0 ? '+' : (net < 0 ? '-' : '');
+            const netColor = net > 0 ? '#34d399' : (net < 0 ? '#fb7185' : '#94a3b8');
+            const sideTag = isHarvest 
+              ? '<span class="badge-cycle badge-harvest-gold">👑 HARVEST</span>'
+              : (c.direction === 'BUY' ? '<span class="wave-tag tag-buy">BUY (Kharid)</span>' : '<span class="wave-tag tag-sell">SELL (Bech)</span>');
 
-          const cycleBadge = (c.cycleName && c.cycleName.includes('1'))
-            ? '<span class="badge-cycle cycle-pz1">🟣 Punarjanm 1</span>'
-            : ((c.cycleName && c.cycleName.includes('2'))
-              ? '<span class="badge-cycle cycle-pz2">⚡ Punarjanm 2</span>'
-              : '<span class="badge-cycle" style="background: rgba(245,158,11,0.15); color: #fde047; border: 1px solid rgba(245,158,11,0.4);">🔥 Punarjanm 3</span>');
+            const cycleBadge = (c.cycleName && c.cycleName.includes('1'))
+              ? '<span class="badge-cycle cycle-pz1">🟣 Punarjanm 1</span>'
+              : ((c.cycleName && c.cycleName.includes('2'))
+                ? '<span class="badge-cycle cycle-pz2">⚡ Punarjanm 2</span>'
+                : '<span class="badge-cycle" style="background: rgba(245,158,11,0.15); color: #fde047; border: 1px solid rgba(245,158,11,0.4);">🔥 Punarjanm 3</span>');
 
-          const statusBadge = net < 0
-            ? '<span style="color: #fb7185; font-size: 0.76rem; font-weight: 700; background: rgba(244,63,94,0.15); padding: 3px 8px; border-radius: 6px; border: 1px solid rgba(244,63,94,0.3);">✓ SETTLED (MUDREX)</span>'
-            : (net === 0 
-              ? '<span style="color: #94a3b8; font-size: 0.76rem; font-weight: 700; background: rgba(255,255,255,0.05); padding: 3px 8px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.1);">✓ REBIRTH ENDED</span>'
-              : '<span style="color: #34d399; font-size: 0.76rem; font-weight: 700; background: rgba(16,185,129,0.15); padding: 3px 8px; border-radius: 6px; border: 1px solid rgba(16,185,129,0.3);">✓ KHATE ME AAYA</span>');
+            const statusBadge = net < 0
+              ? '<span style="color: #fb7185; font-size: 0.76rem; font-weight: 700; background: rgba(244,63,94,0.15); padding: 3px 8px; border-radius: 6px; border: 1px solid rgba(244,63,94,0.3);">✓ SETTLED (MUDREX)</span>'
+              : (net === 0 
+                ? '<span style="color: #94a3b8; font-size: 0.76rem; font-weight: 700; background: rgba(255,255,255,0.05); padding: 3px 8px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.1);">✓ REBIRTH ENDED</span>'
+                : '<span style="color: #34d399; font-size: 0.76rem; font-weight: 700; background: rgba(16,185,129,0.15); padding: 3px 8px; border-radius: 6px; border: 1px solid rgba(16,185,129,0.3);">✓ KHATE ME AAYA</span>');
 
-          return `
-            <tr>
-              <td style="color: var(--gold-primary); font-weight: 700;">#${idx + 1}</td>
-              <td style="color: #fff; font-weight: 600;">${formatTimeIST(c.exitTime || c.exitTimestamp)}</td>
-              <td><strong style="color: ${isHarvest ? '#fde047' : (net < 0 ? '#fb7185' : '#f8fafc')};">${c.exitReason || 'Target Profit Hit (Munafa Pura)'}</strong></td>
-              <td>${sideTag}</td>
-              <td style="font-weight: 700;">$${Number(c.exitPrice || 0).toFixed(2)}</td>
-              <td style="color: ${netColor}; font-weight: 800; font-size: 0.98rem;">${sign}₹${Math.round(Math.abs(net)).toLocaleString('en-IN')}</td>
-              <td>${cycleBadge}</td>
-              <td>${statusBadge}</td>
-            </tr>
-          `;
-        }).join('');
+            return `
+              <tr>
+                <td style="color: var(--gold-primary); font-weight: 700;">#${idx + 1}</td>
+                <td style="color: #fff; font-weight: 600;">${formatTimeIST(c.exitTime || c.exitTimestamp)}</td>
+                <td><strong style="color: ${isHarvest ? '#fde047' : (net < 0 ? '#fb7185' : '#f8fafc')};">${c.exitReason || 'Target Profit Hit (Munafa Pura)'}</strong></td>
+                <td>${sideTag}</td>
+                <td style="font-weight: 700;">$${Number(c.exitPrice || 0).toFixed(2)}</td>
+                <td style="color: ${netColor}; font-weight: 800; font-size: 0.98rem;">${sign}₹${Math.round(Math.abs(net)).toLocaleString('en-IN')}</td>
+                <td>${cycleBadge}</td>
+                <td>${statusBadge}</td>
+              </tr>
+            `;
+          }).join('');
+        }
+      } catch (e) {
+        console.error('Error rendering closed trades:', e);
       }
 
       // 5. Harvest Table
