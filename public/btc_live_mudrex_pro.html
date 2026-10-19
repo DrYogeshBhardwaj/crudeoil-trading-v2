@@ -2889,8 +2889,8 @@
       if (!manualSimInputsModified) {
         const amtEl = document.getElementById('manualSimAmount');
         const qtyEl = document.getElementById('manualSimSolQty');
-        if (amtEl && !amtEl.matches(':focus') && (!amtEl.value || amtEl.value === '300000' || amtEl.value === '80000')) {
-          amtEl.value = 100000;
+        if (amtEl && !amtEl.matches(':focus') && (!amtEl.value || amtEl.value === '100000' || amtEl.value === '300000' || amtEl.value === '80000')) {
+          amtEl.value = (wallet && wallet.realFuturesBalanceINR) ? Math.round(wallet.realFuturesBalanceINR) : 87396;
         }
         if (qtyEl && !qtyEl.matches(':focus') && (!qtyEl.value || qtyEl.value === '3' || qtyEl.value === '3.0')) {
           qtyEl.value = (engine && engine.contractQuantity) || 0.10;
@@ -3005,17 +3005,27 @@
       const lockedValUSD = typeof wallet.lockedMarginUSD === 'number' ? wallet.lockedMarginUSD : 0;
       const openPairsCount = (engine && engine.pairs) ? engine.pairs.length : 0;
       
-      // Card 1: TOTAL AMOUNT (IN HAND) - Starting Capital minus Pair Cost plus Realized PnL
-      document.getElementById('kpiAvailableMarginINR').innerText = `₹${Math.round(availValINR).toLocaleString('en-IN')}`;
-      document.getElementById('kpiAvailableMarginUSD').innerText = `Total: ₹${Math.round(startingCap).toLocaleString('en-IN')} - Cost: ₹${Math.round(lockedValINR).toLocaleString('en-IN')}`;
+      // Card 1: TOTAL AMOUNT (IN HAND) - Matches Mudrex Futures Wallet 1:1!
+      if (wallet.isRealMudrexWallet && wallet.realFuturesBalanceINR) {
+        document.getElementById('kpiAvailableMarginINR').innerText = `₹${Math.round(wallet.realFuturesBalanceINR).toLocaleString('en-IN')}`;
+        document.getElementById('kpiAvailableMarginUSD').innerText = `Real Mudrex Futures Wallet ($${Math.round(availValUSD).toLocaleString()})`;
+      } else {
+        document.getElementById('kpiAvailableMarginINR').innerText = `₹${Math.round(availValINR).toLocaleString('en-IN')}`;
+        document.getElementById('kpiAvailableMarginUSD').innerText = `Total: ₹${Math.round(startingCap).toLocaleString('en-IN')} - Cost: ₹${Math.round(lockedValINR).toLocaleString('en-IN')}`;
+      }
 
       // Card 2: PAIR COST DEDUCTED
       document.getElementById('kpiLockedMarginINR').innerText = `₹${Math.round(lockedValINR).toLocaleString('en-IN')}`;
       document.getElementById('kpiLockedMarginUSD').innerText = `${openPairsCount} Pairs Active (${engine.leverage || 15}x Lev)`;
 
-      // Card 3: TOTAL ACCOUNT EQUITY
-      document.getElementById('kpiEquityINR').innerText = `₹${Math.round(wallet.equityINR || 0).toLocaleString('en-IN')}`;
-      document.getElementById('kpiEquityUSD').innerText = `$${Math.round(wallet.equityUSD || 0).toLocaleString('en-IN')} Total Net Worth`;
+      // Card 3: TOTAL ACCOUNT EQUITY - Matches Mudrex Est. Total Value 1:1!
+      if (wallet.isRealMudrexWallet && wallet.realTotalPortfolioINR) {
+        document.getElementById('kpiEquityINR').innerText = `₹${Math.round(wallet.realTotalPortfolioINR).toLocaleString('en-IN')}`;
+        document.getElementById('kpiEquityUSD').innerText = `Est. Total (Spot: ₹${Math.round(wallet.realSpotBalanceINR || 0).toLocaleString('en-IN')} + Fut: ₹${Math.round(wallet.realFuturesBalanceINR || 0).toLocaleString('en-IN')})`;
+      } else {
+        document.getElementById('kpiEquityINR').innerText = `₹${Math.round(wallet.equityINR || 0).toLocaleString('en-IN')}`;
+        document.getElementById('kpiEquityUSD').innerText = `$${Math.round(wallet.equityUSD || 0).toLocaleString('en-IN')} Total Net Worth`;
+      }
 
       // Card 4: REALIZED NET PROFIT/LOSS with full dynamic R/G (Red/Green) styling per user instruction
       const rINR = Number.isFinite(pnl.totalRealizedINR) ? pnl.totalRealizedINR : (Number.isFinite(pnl.realizedNetINR) ? pnl.realizedNetINR : 0);

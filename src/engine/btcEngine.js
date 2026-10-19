@@ -966,11 +966,25 @@ class BtcEngine {
     // Floating summary
     const floating = this.calculateFloatingSummary(livePrice);
 
+    // Authoritative Mudrex Wallet Balance synchronization
+    let realFuturesBalance = null;
+    let realSpotBalance = null;
+    let realTotalPortfolio = null;
+    try {
+      const mudrexLive = require('./mudrexLiveAdapter');
+      const auth = mudrexLive.lastAuthCheckRes;
+      if (auth && auth.success && typeof auth.futuresBalance === 'number' && auth.futuresBalance > 0) {
+        realFuturesBalance = Number(auth.futuresBalance.toFixed(2));
+        realSpotBalance = typeof auth.spotBalance === 'number' ? Number(auth.spotBalance.toFixed(2)) : 0;
+        realTotalPortfolio = typeof auth.totalPortfolioBalance === 'number' ? Number(auth.totalPortfolioBalance.toFixed(2)) : (realFuturesBalance + realSpotBalance);
+      }
+    } catch (e) {}
+
     // Wallet accounting (strictly avoiding double-counting)
-    const startingCapital = Number(this.settings.startingCapitalINR || 100000.00);
+    const startingCapital = realFuturesBalance !== null ? realFuturesBalance : Number(this.settings.startingCapitalINR || 100000.00);
     const usedMarginINR = floating.dynamicMarginUsedINR;
-    const availableMarginINR = Math.max(0, startingCapital + totalRealizedINR - usedMarginINR);
-    const equityINR = startingCapital + totalRealizedINR + floating.floatingNetINR;
+    const availableMarginINR = realFuturesBalance !== null ? realFuturesBalance : Math.max(0, startingCapital + totalRealizedINR - usedMarginINR);
+    const equityINR = realTotalPortfolio !== null ? Number((realTotalPortfolio + floating.floatingNetINR).toFixed(2)) : (startingCapital + totalRealizedINR + floating.floatingNetINR);
 
     // Open pairs formatted for Pro Desk UI
     const openPairsFormatted = this.pairs.filter(p => p.status !== 'CLOSED').map(p => {
@@ -1060,7 +1074,11 @@ class BtcEngine {
         equityINR: Number(equityINR.toFixed(2)),
         equityUSD: Number((equityINR / usdInr).toFixed(2)),
         startingCapitalINR: startingCapital,
-        usdInrRate: usdInr
+        usdInrRate: usdInr,
+        realFuturesBalanceINR: realFuturesBalance,
+        realSpotBalanceINR: realSpotBalance,
+        realTotalPortfolioINR: realTotalPortfolio,
+        isRealMudrexWallet: realFuturesBalance !== null
       },
       engine: {
         status: this.engineStatus,
