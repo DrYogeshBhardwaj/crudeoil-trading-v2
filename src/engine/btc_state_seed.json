@@ -13,6 +13,8 @@
     "sellTargetMove": 300.0,
     "gridSpacing": 0.0,
     "basketProfitTargetINR": 2000,
+    "mudrexAutoHarvestTargetNetINR": 1000,
+    "mudrexAutoHarvestEnabled": true,
     "autoPunarjanmEnabled": true,
     "autoAddNewPairs": true,
     "maxActivePairs": 2,

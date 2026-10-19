@@ -1170,7 +1170,7 @@ app.post(['/api/btc-live-mudrex/action', '/api/btc-live-mudrex-pro/action', '/ap
   try {
     const { action, password } = req.body || {};
     // Per user instruction: password removed from update/reset, pair addition, pair close, pairs limit, harvest target, lot size, and punarjanm operations
-    const noPasswordActions = ['resetSimulator', 'resetData', 'addNewPair', 'closePair', 'updateMaxPairs', 'setMaxPairs', 'increaseMaxPairs', 'updateBasketTarget', 'punarjanm', 'updateContractQuantity', 'updateLotSize'];
+    const noPasswordActions = ['resetSimulator', 'resetData', 'addNewPair', 'closePair', 'updateMaxPairs', 'setMaxPairs', 'increaseMaxPairs', 'updateBasketTarget', 'updateMudrexHarvestTarget', 'punarjanm', 'updateContractQuantity', 'updateLotSize'];
     if (!noPasswordActions.includes(action) && password !== '340556') {
       return res.status(403).json({ success: false, error: 'Incorrect Admin Password. Must provide 340556.' });
     }
@@ -1247,6 +1247,18 @@ app.post(['/api/btc-live-mudrex/action', '/api/btc-live-mudrex-pro/action', '/ap
       btcEngine.settings.basketProfitTargetINR = newTarget;
       btcEngine.saveState();
       return res.json({ success: true, message: `BTC Punarjanm target updated to ₹${newTarget.toFixed(2)} INR.`, targetINR: newTarget });
+    } else if (action === 'updateMudrexHarvestTarget') {
+      const newTarget = Number(req.body.targetINR);
+      if (isNaN(newTarget) || newTarget <= 0) {
+        return res.status(400).json({ success: false, error: 'Target INR must be a positive number.' });
+      }
+      btcEngine.settings.mudrexAutoHarvestTargetNetINR = newTarget;
+      btcEngine.saveState();
+      return res.json({ 
+        success: true, 
+        message: `Mudrex Live Harvest Target updated to ₹${newTarget} Net In-Hand.`, 
+        mudrexAutoHarvestTargetNetINR: newTarget 
+      });
     } else if (action === 'updateContractQuantity' || action === 'updateLotSize') {
       const newQty = Number(req.body.quantity || req.body.contractQuantity);
       if (isNaN(newQty) || newQty <= 0) {

@@ -18,6 +18,8 @@ class BtcEngine {
       gridSpacing: 0.00, // Rate move hote hi entry
       priceBucketSize: 0.00,
       basketProfitTargetINR: 2000, // Harvest: ₹2,000 Punarjanm Auto-Harvest
+      mudrexAutoHarvestTargetNetINR: 1000, // Harvest: ₹1,000 Net In-Hand Mudrex Live Position Target
+      mudrexAutoHarvestEnabled: true,
       autoPunarjanmEnabled: true, // Harvest amt auto add to wallet (Auto-Harvest)
       autoAddNewPairs: true, // Continuous re-entry when live rate moves to vacant level and margin is available
       maxActivePairs: 2, // DUAL PAIR MACHINE GUN: Exactly 2 pairs active at a time
@@ -312,6 +314,37 @@ class BtcEngine {
       if (totalNetCycleProfitINR >= basketThreshold) {
         console.log(`[BTC Engine] Punarjanm Auto-Harvest Triggered! Target: ₹${basketThreshold} | Cycle Realized: ₹${cycleRealizedINR} | Floating: ₹${summary.floatingNetINR} | Total Net: ₹${totalNetCycleProfitINR}`);
         this.executePunarjanm('AUTO_BASKET_TARGET_HIT', livePrice, usdInr);
+        return;
+      }
+    }
+
+    // 3b. Check Mudrex Live Position (Purple Box) Auto-Harvest Target
+    if (this.settings.mudrexAutoHarvestEnabled) {
+      const netTargetINR = Number(this.settings.mudrexAutoHarvestTargetNetINR || 1000);
+      const lot = Number(this.settings.contractQuantity || 0.05);
+      const estNotionalINR = lot * livePrice * (this.settings.usdInrRate || 102);
+      const estExitFeeINR = (estNotionalINR * 0.00059 * 1.18); // Taker fee + GST (~₹290)
+      const grossTriggerINR = netTargetINR + estExitFeeINR;
+
+      // Check current open live pair
+      const liveOpenBuy = this.pairs.find(p => p.status !== 'CLOSED' && p.buyPosition && p.buyPosition.status === 'OPEN');
+      const liveOpenSell = this.pairs.find(p => p.status !== 'CLOSED' && p.sellPosition && p.sellPosition.status === 'OPEN');
+      
+      let maxGrossPnlINR = 0;
+      if (liveOpenBuy && liveOpenBuy.buyPosition) {
+        const diff = livePrice - Number(liveOpenBuy.buyPosition.entryPrice || 0);
+        const grossINR = diff * lot * (this.settings.usdInrRate || 102);
+        if (grossINR > maxGrossPnlINR) maxGrossPnlINR = grossINR;
+      }
+      if (liveOpenSell && liveOpenSell.sellPosition) {
+        const diff = Number(liveOpenSell.sellPosition.entryPrice || 0) - livePrice;
+        const grossINR = diff * lot * (this.settings.usdInrRate || 102);
+        if (grossINR > maxGrossPnlINR) maxGrossPnlINR = grossINR;
+      }
+
+      if (maxGrossPnlINR >= grossTriggerINR) {
+        console.log(`[BTC Engine] 🌊 MUDREX AUTO-HARVEST TRIGGERED! Purple Card Gross: +₹${maxGrossPnlINR.toFixed(2)} >= Trigger: ₹${grossTriggerINR.toFixed(2)} (Net In-Hand Target: ₹${netTargetINR}). Executing auto-harvest & rebirth...`);
+        this.executePunarjanm('AUTO_MUDREX_PURPLE_TARGET_HIT', livePrice, usdInr);
         return;
       }
     }
@@ -1180,6 +1213,8 @@ class BtcEngine {
         currentCycleName: `Punarjanm ${this.punarjanmCount + 1}`,
         lastCycleName: this.punarjanmCount > 0 ? `Punarjanm ${this.punarjanmCount}` : 'None',
         basketTargetINR: this.settings.basketProfitTargetINR || 3000,
+        mudrexHarvestTargetNetINR: this.settings.mudrexAutoHarvestTargetNetINR || 1000,
+        mudrexGrossTriggerINR: Math.round((this.settings.mudrexAutoHarvestTargetNetINR || 1000) + ((this.settings.contractQuantity || 0.05) * livePrice * (this.settings.usdInrRate || 102) * 0.00059 * 1.18)),
         cycleRealizedProfitINR: this.getCycleRealizedProfitINR(),
         autoEnabled: this.settings.autoPunarjanmEnabled,
         lastSummary: this.lastPunarjanmSummary,

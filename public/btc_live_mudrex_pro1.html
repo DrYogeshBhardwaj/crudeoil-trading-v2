@@ -981,8 +981,21 @@
         </div>
 
         <div class="form-group">
-          <label class="form-label">Punarjanm Munafa Target (Kitne ₹ Par Basket Kat Kar Naya Cycle Bane):</label>
+          <label class="form-label">Punarjanm Basket Target (Purana Basket Harvest Threshold):</label>
           <input type="number" id="modalBasketTarget" class="form-input" value="2000">
+        </div>
+
+        <div class="form-group" style="background: rgba(168, 85, 247, 0.12); padding: 14px; border-radius: 12px; border: 1.5px solid rgba(168, 85, 247, 0.4);">
+          <label class="form-label" style="color: #e9d5ff; font-weight: 800;">
+            🔮 Mudrex Live Munafa (Purple Card) Auto-Harvest Target (₹ Net In-Hand):
+          </label>
+          <div style="display: flex; gap: 10px; align-items: center;">
+            <input type="number" id="modalMudrexHarvestTarget" class="form-input" value="1000" step="50" oninput="updateGrossCalcPreview()" style="font-weight: 800; font-size: 1.1rem; color: #2dd4bf;">
+            <span style="font-weight: 800; color: #c084fc; white-space: nowrap;">₹ In-Hand</span>
+          </div>
+          <div style="font-size: 0.82rem; color: #d8b4fe; margin-top: 6px; line-height: 1.4;" id="mudrexGrossTriggerHint">
+            Charges jodkar Gross Trigger: <strong style="color: #fff;" id="previewGrossTrigger">~₹1,290</strong> (Purple box me ye aate hi background me Mudrex exchange par auto-harvest ho jayega).
+          </div>
         </div>
 
         <div style="display: flex; gap: 10px; margin-top: 20px;">
@@ -1222,6 +1235,14 @@
         harvestedElem.innerText = `+₹${Math.round(totalHarvested).toLocaleString('en-IN')} Banked`;
       }
 
+      if (!isPinUnlocked) {
+        const modalMudrexElem = document.getElementById('modalMudrexHarvestTarget');
+        if (modalMudrexElem && pz.mudrexHarvestTargetNetINR) {
+          modalMudrexElem.value = pz.mudrexHarvestTargetNetINR;
+          updateGrossCalcPreview();
+        }
+      }
+
       const lot = engine.contractQuantity || 0.05;
       document.getElementById('contractLotSize').innerText = `${lot} BTC`;
 
@@ -1335,9 +1356,17 @@
       }
     }
 
+    function updateGrossCalcPreview() {
+      const net = Number(document.getElementById('modalMudrexHarvestTarget')?.value || 1000);
+      const gross = Math.round(net + 290);
+      const elem = document.getElementById('previewGrossTrigger');
+      if (elem) elem.innerText = `~₹${gross.toLocaleString('en-IN')}`;
+    }
+
     async function saveDeskSettings() {
       const lot = Number(document.getElementById('modalLotSize').value);
       const target = Number(document.getElementById('modalBasketTarget').value);
+      const mudrexNetTarget = Number(document.getElementById('modalMudrexHarvestTarget')?.value || 1000);
 
       try {
         await fetch('/api/btc-live-mudrex-pro/action', {
@@ -1349,6 +1378,11 @@
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ action: 'updateBasketTarget', targetINR: target })
+        });
+        await fetch('/api/btc-live-mudrex-pro/action', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: 'updateMudrexHarvestTarget', targetINR: mudrexNetTarget })
         });
         alert('✅ Setting safaltapoorvak save ho gayi!');
         closeAdminModal();
