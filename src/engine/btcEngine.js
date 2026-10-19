@@ -261,15 +261,12 @@ class BtcEngine {
           this.closePositionLeg(pair.buyPosition, target, timestamp, 'BUY TARGET PROFIT HIT (HARVESTED)', usdInr);
           console.log(`[BTC Engine] Pair ${pair.pairId} BUY TARGET HIT at $${target}! +₹${Math.round(this.settings.profitTargetINR || 1000)} Net profit booked.`);
 
-          // Live Mode: The primary exchange BUY order exited and booked profit on Mudrex.
-          // Auto-complete opposing reference leg to cleanly close pair and free circle slot.
-          if (this.settings.tradingMode === 'LIVE') {
-            if (pair.sellPosition && pair.sellPosition.status === 'OPEN') {
-              pair.sellPosition.status = 'CLOSED';
-              pair.sellPosition.exitPrice = livePrice;
-              pair.sellPosition.exitTime = new Date(timestamp).toISOString();
-              pair.sellPosition.exitReason = 'PAIR_CYCLE_COMPLETED_ON_BUY_TARGET';
-            }
+          // Auto-complete opposing reference leg to cleanly close pair and free circle slot immediately
+          if (pair.sellPosition && pair.sellPosition.status === 'OPEN') {
+            pair.sellPosition.status = 'CLOSED';
+            pair.sellPosition.exitPrice = livePrice;
+            pair.sellPosition.exitTime = new Date(timestamp).toISOString();
+            pair.sellPosition.exitReason = 'PAIR_CYCLE_COMPLETED_ON_BUY_TARGET';
           }
         }
       }
@@ -281,15 +278,12 @@ class BtcEngine {
           this.closePositionLeg(pair.sellPosition, target, timestamp, 'SELL TARGET PROFIT HIT (HARVESTED)', usdInr);
           console.log(`[BTC Engine] Pair ${pair.pairId} SELL TARGET HIT at $${target}! +₹${Math.round(this.settings.profitTargetINR || 1000)} Net profit booked.`);
 
-          if (this.settings.tradingMode === 'LIVE') {
-            // Live Mode Shield: Opposing paper SELL leg target hit must NEVER mark real Mudrex BUY position closed.
-            // Real BUY positions must remain open on Mudrex exchange until their Take Profit hits!
-            if (pair.buyPosition && pair.buyPosition.status === 'OPEN' && !pair.buyPosition.mudrexOrderId && pair.buyPosition.apiStatus !== 'REAL_MUDREX_POSITION') {
-              pair.buyPosition.status = 'CLOSED';
-              pair.buyPosition.exitPrice = livePrice;
-              pair.buyPosition.exitTime = new Date(timestamp).toISOString();
-              pair.buyPosition.exitReason = 'PAIR_CYCLE_COMPLETED_ON_SELL_TARGET';
-            }
+          // Auto-complete opposing reference leg (if not protected real Mudrex position)
+          if (pair.buyPosition && pair.buyPosition.status === 'OPEN' && !pair.buyPosition.mudrexOrderId && pair.buyPosition.apiStatus !== 'REAL_MUDREX_POSITION') {
+            pair.buyPosition.status = 'CLOSED';
+            pair.buyPosition.exitPrice = livePrice;
+            pair.buyPosition.exitTime = new Date(timestamp).toISOString();
+            pair.buyPosition.exitReason = 'PAIR_CYCLE_COMPLETED_ON_SELL_TARGET';
           }
         }
       }
@@ -349,15 +343,13 @@ class BtcEngine {
       }
     }
 
-    // 4. Continuous Circle Replenishment:
-    // Strictly respects maxActivePairs to avoid excessive pair buildup
-    const currentActivePairs = this.pairs.filter(p => p.status !== 'CLOSED');
-    const circleTarget = Number(this.settings.maxActivePairs !== undefined && this.settings.maxActivePairs > 0 ? this.settings.maxActivePairs : 1);
-    const activeBuyCount = this.pairs.filter(p => p.buyPosition && p.buyPosition.status === 'OPEN').length;
-    const activeSellCount = this.pairs.filter(p => p.sellPosition && p.sellPosition.status === 'OPEN').length;
+    // 4. Continuous Circle Replenishment (Machine Gun Auto-Fire):
+    // Count active trading pairs (excluding reference MUDREX-REAL-PAIR)
+    const tradingPairs = this.pairs.filter(p => p.status !== 'CLOSED' && p.pairId !== 'MUDREX-REAL-PAIR');
+    const maxTradingPairs = Number(this.settings.maxActivePairs !== undefined && this.settings.maxActivePairs > 0 ? this.settings.maxActivePairs : 2);
     
-    // Strict Cap: Only replenish if active pairs count is strictly below circleTarget
-    const needsCircleReplenish = (currentActivePairs.length < circleTarget);
+    // Replenish whenever trading pairs are below allowed limit
+    const needsCircleReplenish = (tradingPairs.length < maxTradingPairs);
 
     if (this.settings.autoAddNewPairs && needsCircleReplenish) {
       let isRateOccupied = false;
@@ -400,10 +392,10 @@ class BtcEngine {
       return null;
     }
 
-    const activePairs = this.pairs.filter(p => p.status !== 'CLOSED');
-    const maxAllowed = Number(this.settings.maxActivePairs !== undefined && this.settings.maxActivePairs > 0 ? this.settings.maxActivePairs : 1);
-    if (activePairs.length >= maxAllowed) {
-      console.warn(`[BTC Engine] createNewPair BLOCKED: Active pairs cap reached (${activePairs.length}/${maxAllowed}).`);
+    const tradingPairs = this.pairs.filter(p => p.status !== 'CLOSED' && p.pairId !== 'MUDREX-REAL-PAIR');
+    const maxAllowed = Number(this.settings.maxActivePairs !== undefined && this.settings.maxActivePairs > 0 ? this.settings.maxActivePairs : 2);
+    if (tradingPairs.length >= maxAllowed) {
+      console.warn(`[BTC Engine] createNewPair BLOCKED: Trading pairs cap reached (${tradingPairs.length}/${maxAllowed}).`);
       return null;
     }
 
@@ -757,16 +749,15 @@ class BtcEngine {
         checkedAt: Date.now()
       };
 
-      // If Mudrex exchange has NO open position:
+      // If Mudrex exchange has NO open position, only close MUDREX-REAL-PAIR:
       if (!hasActiveExchangePos) {
-        for (const pair of this.pairs) {
-          if (pair.status === 'OPEN') {
-            pair.status = 'CLOSED';
-            if (pair.buyPosition && pair.buyPosition.status === 'OPEN') pair.buyPosition.status = 'CLOSED';
-            if (pair.sellPosition && pair.sellPosition.status === 'OPEN') pair.sellPosition.status = 'CLOSED';
-          }
+        const realPair = this.pairs.find(p => p.pairId === 'MUDREX-REAL-PAIR');
+        if (realPair && realPair.status === 'OPEN') {
+          realPair.status = 'CLOSED';
+          if (realPair.buyPosition) realPair.buyPosition.status = 'CLOSED';
+          if (realPair.sellPosition) realPair.sellPosition.status = 'CLOSED';
+          this.saveState();
         }
-        this.saveState();
       } else {
         // Mudrex exchange DOES hold an active position - sync 1:1!
         const p = activeExchangePos;
@@ -780,7 +771,7 @@ class BtcEngine {
         }
         const exTarget = exSide === 'BUY' ? Number((exEntry + 308.49).toFixed(2)) : Number((exEntry - 270.75).toFixed(2));
 
-        this.pairs = [{
+        const realPairObj = {
           pairId: 'MUDREX-REAL-PAIR',
           symbol: 'BTCUSDT',
           entryPrice: exEntry,
@@ -813,7 +804,11 @@ class BtcEngine {
             marginINR: exMargin,
             status: 'OPEN'
           } : null
-        }];
+        };
+
+        // PRESERVE ALL OTHER ACTIVE PAIRS! NEVER WIPE!
+        const otherPairs = this.pairs.filter(p => p.pairId !== 'MUDREX-REAL-PAIR');
+        this.pairs = [realPairObj, ...otherPairs];
         this.saveState();
       }
     } catch (e) {
