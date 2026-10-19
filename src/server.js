@@ -1305,7 +1305,7 @@ app.post(['/api/btc-live-mudrex/action', '/api/btc-live-mudrex-pro/action', '/ap
         if (activePairs.length === 0) {
           const freshPair = btcEngine.createNewPair('BTCUSDT', cur.price, Date.now(), cur.usdInrRate);
           liveOrderInfo = freshPair;
-          console.log(`[BTC Engine] Created fresh LIVE 0.06 BTC pair ${freshPair?.pairId} and dispatched to Mudrex!`);
+          console.log(`[BTC Engine] Created fresh LIVE ${btcEngine.settings.contractQuantity} BTC pair ${freshPair?.pairId} and dispatched to Mudrex!`);
         }
       }
 
@@ -1313,7 +1313,7 @@ app.post(['/api/btc-live-mudrex/action', '/api/btc-live-mudrex-pro/action', '/ap
       return res.json({
         success: true,
         message: targetMode === 'LIVE' && !btcEngine.settings.realOrdersDisabled
-          ? `✅ MUDREX UNLOCKED: BTC Live Trading ACTIVE at 0.06 BTC per pair! Live order dispatched to Mudrex exchange.`
+          ? `✅ MUDREX UNLOCKED: BTC Live Trading ACTIVE at ${btcEngine.settings.contractQuantity} BTC per pair! Live order dispatched to Mudrex exchange.`
           : `🔒 MUDREX LOCKED: BTC Engine switched to PAPER SIMULATOR mode. Real exchange orders stopped.`,
         tradingMode: btcEngine.settings.tradingMode,
         realOrdersDisabled: btcEngine.settings.realOrdersDisabled,

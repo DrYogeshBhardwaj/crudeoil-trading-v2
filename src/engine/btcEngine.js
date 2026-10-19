@@ -274,7 +274,9 @@ class BtcEngine {
           console.log(`[BTC Engine] Pair ${pair.pairId} SELL TARGET HIT at $${target}! +₹${Math.round(this.settings.profitTargetINR || 1000)} Net profit booked.`);
 
           if (this.settings.tradingMode === 'LIVE') {
-            if (pair.buyPosition && pair.buyPosition.status === 'OPEN') {
+            // Live Mode Shield: Opposing paper SELL leg target hit must NEVER mark real Mudrex BUY position closed.
+            // Real BUY positions must remain open on Mudrex exchange until their Take Profit hits!
+            if (pair.buyPosition && pair.buyPosition.status === 'OPEN' && !pair.buyPosition.mudrexOrderId && pair.buyPosition.apiStatus !== 'REAL_MUDREX_POSITION') {
               pair.buyPosition.status = 'CLOSED';
               pair.buyPosition.exitPrice = livePrice;
               pair.buyPosition.exitTime = new Date(timestamp).toISOString();
@@ -296,11 +298,12 @@ class BtcEngine {
     // 3. Check Punarjanm Auto-Harvest Basket Target (Cycle Realized Profit + Floating Profit)
     if (this.settings.autoPunarjanmEnabled) {
       const summary = this.calculateFloatingSummary(livePrice);
-      const basketThreshold = this.settings.basketProfitTargetINR || 3000;
+      const basketThreshold = this.settings.basketProfitTargetINR || 2000;
       const cycleRealizedINR = this.getCycleRealizedProfitINR();
       const totalNetCycleProfitINR = cycleRealizedINR + summary.floatingNetINR;
 
-      if (cycleRealizedINR >= basketThreshold || summary.floatingNetINR >= basketThreshold || totalNetCycleProfitINR >= basketThreshold) {
+      // Airtight Harvest: Only trigger when total net profit (cash in hand + floating) strictly meets basket threshold
+      if (totalNetCycleProfitINR >= basketThreshold) {
         console.log(`[BTC Engine] Punarjanm Auto-Harvest Triggered! Target: ₹${basketThreshold} | Cycle Realized: ₹${cycleRealizedINR} | Floating: ₹${summary.floatingNetINR} | Total Net: ₹${totalNetCycleProfitINR}`);
         this.executePunarjanm('AUTO_BASKET_TARGET_HIT', livePrice, usdInr);
         return;
@@ -675,16 +678,26 @@ class BtcEngine {
       for (const p of positions) {
         const qty = Math.abs(Number(p.quantity || p.size || 0));
         if (qty > 0.0001) {
-          const side = Number(p.quantity || p.size || 0) > 0 ? 'SELL' : 'BUY';
-          console.log(`[BTC Engine] Punarjanm Flattening: Closing Mudrex position of ${qty} BTC (${side})...`);
-          await mudrexLive.createRealOrder({
-            symbol: 'BTCUSDT',
-            side,
-            quantity: qty,
-            leverage: this.settings.leverage || 15,
-            reduceOnly: true,
-            intentId: `INTENT-PUNARJANM-FLATTEN-${Date.now()}`
-          });
+          const entryPrice = Number(p.entry_price || p.entryPrice || 0);
+          const currentPrice = Number(p.mark_price || p.currentPrice || entryPrice);
+          const pnl = Number(p.pnl || p.unrealisedPnl || 0);
+          
+          // Safety Shield: Only market-close if position is in net profit.
+          // NEVER market-close a position floating in a dip at a loss! Leave its exchange Take Profit order intact.
+          if (pnl >= 0 || currentPrice >= entryPrice) {
+            const side = Number(p.quantity || p.size || 0) > 0 ? 'SELL' : 'BUY';
+            console.log(`[BTC Engine] Punarjanm Flattening: Closing profitable Mudrex position of ${qty} BTC (${side})...`);
+            await mudrexLive.createRealOrder({
+              symbol: 'BTCUSDT',
+              side,
+              quantity: qty,
+              leverage: this.settings.leverage || 15,
+              reduceOnly: true,
+              intentId: `INTENT-PUNARJANM-FLATTEN-${Date.now()}`
+            });
+          } else {
+            console.log(`[BTC Engine] Punarjanm Shield: Open Mudrex position of ${qty} BTC is floating (PnL: ${pnl}). Leaving exchange Take Profit order intact.`);
+          }
         }
       }
     } catch (e) {
