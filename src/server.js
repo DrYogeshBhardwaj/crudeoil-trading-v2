@@ -46,6 +46,7 @@ app.get(['/BTC-Live-Mudrex-Pro', '/btc-live-mudrex-pro', '/btc_live_mudrex_pro',
 });
 
 app.get(['/BTC-Live-Mudrex-Pro1', '/btc-live-mudrex-pro1', '/btc_live_mudrex_pro1', '/btc_live_mudrex_pro1.html', '/shubhmani-btc', '/SHUBHMANI-BTC'], (req, res) => {
+  res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
   res.sendFile(path.join(__dirname, '../public/btc_live_mudrex_pro1.html'));
 });
 
