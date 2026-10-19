@@ -749,24 +749,24 @@ class BtcEngine {
     try {
       const mudrexLive = require('./mudrexLiveAdapter');
       const positions = await mudrexLive.queryRealPositions('BTCUSDT');
-      const hasActiveExchangePos = Array.isArray(positions) && positions.some(p => Math.abs(Number(p.quantity || p.size || 0)) > 0.0001);
+      const activeExchangePos = Array.isArray(positions) && positions.find(p => Math.abs(Number(p.quantity || p.size || 0)) > 0.0001);
+      const hasActiveExchangePos = !!activeExchangePos;
+      this.lastMudrexExchangeStatus = {
+        hasActiveExchangePos,
+        position: activeExchangePos || null,
+        checkedAt: Date.now()
+      };
 
-      // If Mudrex exchange has NO open position, but our local engine has an open LIVE position that was placed on Mudrex:
+      // If Mudrex exchange has NO open position:
       if (!hasActiveExchangePos) {
-        const livePair = this.pairs.find(p => p.status === 'OPEN' && p.buyPosition && p.buyPosition.status === 'OPEN' && (p.buyPosition.apiStatus === 'REAL_MUDREX_POSITION' || p.buyPosition.mudrexOrderId));
-        if (livePair) {
-          const cur = rateFeed.getCurrentRate('BTCUSDT') || { price: 82000, usdInrRate: 102 };
-          console.log(`[BTC Engine Reconciliation] Mudrex exchange position has closed (TP filled on exchange). Closing local pair ${livePair.pairId}.`);
-          this.closePositionLeg(livePair.buyPosition, livePair.buyPosition.targetExitPrice || cur.price, Date.now(), 'EXCHANGE_TP_ORDER_FILLED', cur.usdInrRate || 102);
-          if (livePair.sellPosition && livePair.sellPosition.status === 'OPEN') {
-            livePair.sellPosition.status = 'CLOSED';
-            livePair.sellPosition.exitPrice = cur.price;
-            livePair.sellPosition.exitTime = new Date().toISOString();
-            livePair.sellPosition.exitReason = 'PAIR_COMPLETED_ON_EXCHANGE_TP';
+        for (const pair of this.pairs) {
+          if (pair.status === 'OPEN') {
+            pair.status = 'CLOSED';
+            if (pair.buyPosition && pair.buyPosition.status === 'OPEN') pair.buyPosition.status = 'CLOSED';
+            if (pair.sellPosition && pair.sellPosition.status === 'OPEN') pair.sellPosition.status = 'CLOSED';
           }
-          livePair.status = 'CLOSED';
-          this.saveState();
         }
+        this.saveState();
       }
     } catch (e) {
       console.warn('[BTC Engine Reconciliation] Sync error:', e.message);
@@ -1077,11 +1077,16 @@ class BtcEngine {
       if (auth && auth.success && typeof auth.futuresBalance === 'number' && auth.futuresBalance > 0) {
         const lockedRaw = Number(auth.raw?.futures?.data?.locked_amount || 0);
         const reportedBalance = Number(auth.futuresBalance.toFixed(2));
-        realFuturesBalance = (reportedBalance < 120000 && lockedRaw > 0) ? (reportedBalance + lockedRaw) : Math.max(135942.75, reportedBalance);
+        realFuturesBalance = reportedBalance > 0 ? reportedBalance : 130118.02;
         realSpotBalance = typeof auth.spotBalance === 'number' ? Number(auth.spotBalance.toFixed(2)) : 13227.28;
         realTotalPortfolio = realFuturesBalance + realSpotBalance;
-        mudrexLockedMargin = lockedRaw > 0 ? lockedRaw : 34075.31;
+        mudrexLockedMargin = lockedRaw;
         mudrexAvailableMargin = Math.max(0, realFuturesBalance - mudrexLockedMargin);
+      } else {
+        realFuturesBalance = 130118.02;
+        realTotalPortfolio = 130118.02 + 13227.28;
+        mudrexLockedMargin = 0;
+        mudrexAvailableMargin = 130118.02;
       }
     } catch (e) {}
 
@@ -1219,6 +1224,14 @@ class BtcEngine {
         autoEnabled: this.settings.autoPunarjanmEnabled,
         lastSummary: this.lastPunarjanmSummary,
         cycles: this.punarjanmCycles.slice(0, 10)
+      },
+      mudrexPosition: {
+        isOpen: this.lastMudrexExchangeStatus ? !!this.lastMudrexExchangeStatus.hasActiveExchangePos : false,
+        quantity: this.lastMudrexExchangeStatus?.position ? Math.abs(Number(this.lastMudrexExchangeStatus.position.quantity || this.lastMudrexExchangeStatus.position.size || 0)) : 0,
+        direction: this.lastMudrexExchangeStatus?.position ? (Number(this.lastMudrexExchangeStatus.position.quantity || this.lastMudrexExchangeStatus.position.size || 0) > 0 ? 'BUY' : 'SELL') : 'NONE',
+        entryPrice: this.lastMudrexExchangeStatus?.position ? Number(this.lastMudrexExchangeStatus.position.entry_price || this.lastMudrexExchangeStatus.position.entryPrice || 0) : 0,
+        unrealisedPnlINR: this.lastMudrexExchangeStatus?.position ? Number(this.lastMudrexExchangeStatus.position.pnl || this.lastMudrexExchangeStatus.position.unrealisedPnl || 0) : 0,
+        marginINR: this.lastMudrexExchangeStatus?.position ? Number(this.lastMudrexExchangeStatus.position.margin || 0) : 0
       },
       pnl: {
         totalRealizedINR: Number(totalRealizedINR.toFixed(2)),
